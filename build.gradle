@@ -1,0 +1,51 @@
+
+
+subprojects {
+    apply plugin: 'java'
+
+    repositories {
+        maven {
+            url "http://repository.jetbrains.com/all"
+        }
+        mavenCentral()
+    }
+
+
+    configurations {
+        provided
+    }
+
+    sourceSets {
+        extra {
+            java {
+                srcDir 'src/extra/java'
+            }
+        }
+        main {
+            compileClasspath += configurations.provided
+            compileClasspath += extra.output
+        }
+    }
+}
+task (tcDist, type: Zip) {
+    dependsOn(':server:jar', ':agent:tcDist')
+
+
+    into('agent') {
+        from tasks.getByPath(':agent:tcDist')
+    }
+
+    into('server') {
+        from tasks.getByPath(':server:jar')
+        from project(':server').configurations.runtime
+    }
+
+    archiveName = 'docker-cloud.zip'
+    destinationDir = file('build')
+    from 'teamcity-plugin.xml'
+}
+
+
+task clean(type: Delete) {
+    delete 'build'
+}
