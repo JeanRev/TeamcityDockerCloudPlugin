@@ -37,6 +37,8 @@ abstract class ContainerTestTask implements Runnable {
 
         this.phase = phase;
         this.status = status;
+
+        testTaskHandler.notifyStatus(phase, status, msg, null);
     }
 
 
@@ -61,7 +63,11 @@ abstract class ContainerTestTask implements Runnable {
             if (status != Status.PENDING) {
                 throw new IllegalStateException("Cannot run task in status " + status + ".");
             }
-            status = work();
+            Status newStatus = work();
+            if (status != newStatus) {
+                testTaskHandler.notifyStatus(phase, newStatus, null, null);
+            }
+            status = newStatus;
         } catch (Exception e) {
             status = Status.FAILURE;
         } finally {

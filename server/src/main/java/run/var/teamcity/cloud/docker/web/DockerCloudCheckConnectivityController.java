@@ -53,7 +53,7 @@ public class DockerCloudCheckConnectivityController extends BaseFormXmlControlle
             Element versionElt = new Element("version");
             setAttr(versionElt, "docker", version.getAsString("Version", null));
             setAttr(versionElt, "api", version.getAsString("ApiVersion", null));
-            setAttr(versionElt, "os", version.getAsString("OperatingSystem", null));
+            setAttr(versionElt, "os", version.getAsString("Os", null));
             setAttr(versionElt, "arch", version.getAsString("Arch", null));
             setAttr(versionElt, "kernel", version.getAsString("KernelVersion", null));
             setAttr(versionElt, "build", version.getAsString("GitCommit", null));

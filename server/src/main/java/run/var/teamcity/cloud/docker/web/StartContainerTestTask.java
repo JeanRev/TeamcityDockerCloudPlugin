@@ -14,12 +14,14 @@ class StartContainerTestTask extends ContainerTestTask {
 
     private final static int AGENT_WAIT_TIMEOUT_SEC = 120;
 
+    private final String containerId;
     private final UUID instanceUuid;
     private long containerStartTime = -1;
 
 
-    StartContainerTestTask(ContainerTestTaskHandler testTaskHandler, UUID instanceUuid) {
+    StartContainerTestTask(ContainerTestTaskHandler testTaskHandler, String containerId, UUID instanceUuid) {
         super(testTaskHandler, Phase.START);
+        this.containerId = containerId;
         this.instanceUuid = instanceUuid;
     }
 
@@ -32,11 +34,13 @@ class StartContainerTestTask extends ContainerTestTask {
 
             containerStartTime = System.currentTimeMillis();
 
+            client.startContainer(containerId);
+
             setPhase(Phase.WAIT_FOR_AGENT);
 
             return Status.PENDING;
         } else if (testTaskHandler.isBuildAgentDetected()) {
-            // Build agent detected.
+            // Build agent detected.task, 0, REFRESH_TASK_RATE_SEC, TimeUnit.SECONDS
             return Status.SUCCESS;
         }
 

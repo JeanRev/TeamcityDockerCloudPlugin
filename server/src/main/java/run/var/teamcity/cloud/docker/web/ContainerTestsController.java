@@ -129,13 +129,6 @@ public class ContainerTestsController extends BaseFormXmlController {
         test.setCurrentTask(schedule(disposeTask));
     }
 
-    private boolean checkTestPhase(ContainerSpecTest test, Phase expectedPhase, HttpServletResponse response) {
-        ScheduledFutureWithRunnable<? extends ContainerTestTask> future = test.getCurrentTaskFuture();
-        if (future == null) {
-        }
-        return false;
-    }
-
     private void dispose(UUID uuid) {
         assert !lock.isHeldByCurrentThread();
 
@@ -235,7 +228,7 @@ public class ContainerTestsController extends BaseFormXmlController {
 
 
     private void submitStartTask(ContainerSpecTest test) {
-        StartContainerTestTask testTask = new StartContainerTestTask(test, test.getUuid());
+        StartContainerTestTask testTask = new StartContainerTestTask(test, test.getContainerId(), test.getUuid());
         test.setCurrentTask(schedule(testTask));
     }
 
@@ -268,8 +261,7 @@ public class ContainerTestsController extends BaseFormXmlController {
 
             @SuppressWarnings("unchecked")
             ScheduledFutureWithRunnable<T> futureTask = (ScheduledFutureWithRunnable<T>) executorService
-                    .scheduleAtFixedRate
-                            (task, 0, REFRESH_TASK_RATE_SEC, TimeUnit.SECONDS);
+                    .submit(task);
             return futureTask;
 
         } finally {
@@ -421,7 +413,7 @@ public class ContainerTestsController extends BaseFormXmlController {
                     ContainerTestTask containerTestTask = (ContainerTestTask) task;
                     ContainerSpecTest test = (ContainerSpecTest) containerTestTask.getTestTaskHandler();
 
-                    if (t == null) {
+                    if (t == null && future.isDone()) {
                         try {
                            future.get();
                         } catch (Exception e) {

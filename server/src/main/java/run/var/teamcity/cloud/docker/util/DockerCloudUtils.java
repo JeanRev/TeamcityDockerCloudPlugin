@@ -53,7 +53,7 @@ public final class DockerCloudUtils {
     /**
      * Docker cloud parameter: use default Docker socket on the local machine.
      */
-    public static final String USE_DEFAULT_SOCKET_PARAM = NS_PREFIX + "use_default_socket";
+    public static final String USE_DEFAULT_UNIX_SOCKET_PARAM = NS_PREFIX + "use_default_unix_socket";
     /**
      * Docker cloud parameter: Docker instance URI.
      */

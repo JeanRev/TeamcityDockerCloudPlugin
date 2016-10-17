@@ -36,16 +36,16 @@
         <th>Docker instance:&nbsp;<l:star/></th>
         <td>
             <p>
-                <props:radioButtonProperty name="<%=DockerCloudUtils.USE_DEFAULT_SOCKET_PARAM%>" id="dockerCloudUseLocalInstance"
+                <props:radioButtonProperty name="<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>" id="dockerCloudUseLocalInstance"
                                            value="true"/>
                 <label for="dockerCloudUseLocalInstance">Use local Docker instance</label>
             </p>
             <p>
-                <props:radioButtonProperty name="<%=DockerCloudUtils.USE_DEFAULT_SOCKET_PARAM%>" id="dockerCloudUseCustomInstance"
+                <props:radioButtonProperty name="<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>" id="dockerCloudUseCustomInstance"
                                            value="false"/>
                 <label for="dockerCloudUseCustomInstance">Use custom Docker instance URL</label>
             </p>
-            <span class="error" id="error_<%=DockerCloudUtils.USE_DEFAULT_SOCKET_PARAM%>"></span>
+            <span class="error" id="error_<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>"></span>
             <p>
                 <label for="dockerCloudDockerAddress">Address:&nbsp;<span id="addressStar"><l:star/></span>&nbsp;</label><props:textProperty name="<%=DockerCloudUtils.INSTANCE_URI%>" id="dockerCloudDockerAddress"
                                                                                                                                              className="longField"/>
@@ -61,8 +61,12 @@
 
 <h2 class="noBorder section-header">Agent Images</h2>
 
-<props:hiddenProperty name="<%=DockerCloudUtils.IMAGES_PARAM%>"/>
     <props:hiddenProperty name="run.var.teamcity.docker.cloud.tested_image"/>
+
+    <%--<props:hiddenProperty name="run.var.teamcity.docker.cloud.img_param"/>--%>
+    <jsp:useBean id="propertiesBean" scope="request" type="jetbrains.buildServer.controllers.BasePropertiesBean"/>
+    <c:set var="imagesData" value="${propertiesBean.properties['run.var.teamcity.docker.cloud.img_param']}"/>
+    <input type="hidden" name="prop:run.var.teamcity.docker.cloud.img_param" id="run.var.teamcity.docker.cloud.img_param" value="<c:out value="${imagesData}"/>"/>
 
 <table class="settings" style="width: 75%; margin-left: 25%">
     <thead>
@@ -91,17 +95,14 @@
                 <tr>
                     <th><label for="dockerCloudImage_Profile">Profile name:&nbsp;<l:star/></label></th>
                     <td>
-                        <input type="text" id="dockerCloudImage_Profile" class="longField"/>
+                        <input type="text" id="dockerCloudImage_Profile" class="mediumField"/>
                         <span class="error" id="dockerCloudImage_Profile_error"></span>
-    <span class="smallNote">
-      Docker image name to be started.
-    </span>
                     </td>
                 </tr>
                 <tr>
                     <th><label for="dockerCloudImage_Image">Docker image:&nbsp;<l:star/></label></th>
                     <td>
-                        <input type="text" id="dockerCloudImage_Image" class="longField"/>
+                        <input type="text" id="dockerCloudImage_Image" class="mediumField"/>
                         <span class="error" id="dockerCloudImage_Image_error"></span>
     <span class="smallNote">
       Docker image name to be started.
@@ -111,11 +112,8 @@
                 <tr>
                     <th><label for="dockerCloudImage_Image">Maximum instance count:&nbsp;</label></th>
                     <td>
-                        <input type="text" id="dockerCloudImage_MaxInstanceCount" class="longField"/>
+                        <input type="text" id="dockerCloudImage_MaxInstanceCount" class="mediumField"/>
                         <span class="error" id="dockerCloudImage_MaxInstanceCount_error"></span>
-    <span class="smallNote">
-      Docker image name to be started.
-    </span>
                     </td>
                 </tr>
                 <tr>
@@ -123,22 +121,16 @@
                     <td>
                         <p>
                             <input type="checkbox" id="dockerCloudImage_RmOnExit"/>
-                            <label for="dockerCloudImage_RmOnExit">Delete container on when cloud agent is stopped</label>
-                        </p>
-                        <p>
-                            <input type="checkbox" id="dockerCloudImage_BindAgentProps"/>
-                            <label for="dockerCloudImage_BindAgentProps">Bind agent properties file</label>
-                            <span class="smallNoteAttention" id="dockerCloudImage_BindAgentProps_warning"></span>
+                            <label for="dockerCloudImage_RmOnExit">Delete container when cloud agent is stopped</label>
                         </p>
                     </td>
                 </tr>
-                <tr>
-                    <th><label for="dockerCloudImage_AgentHome">Agent home directory&nbsp;<l:star/></label></th>
-                    <td>
-                        <input type="text" id="dockerCloudImage_AgentHome" class="longField"/>
-                        <span class="error" id="dockerCloudImage_AgentHome_error"></span>
-                    </td>
-                </tr>
+
+            </table>
+        </div>
+        <div id="dockerCloudImageTab_run">
+
+            <table class="dockerCloudSettings runnerFormTable">
                 <tr>
                     <th><label for="dockerCloudImage_User">User:</label></th>
                     <td><input type="text" id="dockerCloudImage_User"/></td>
@@ -148,8 +140,12 @@
                         <label for="dockerCloudImage_WorkingDir">Working directory:</label>
                     </th>
                     <td>
-                        <input type="text" id="dockerCloudImage_WorkingDir" class="longField"/>
+                        <input type="text" id="dockerCloudImage_WorkingDir"/>
                     </td>
+                </tr>
+                <tr>
+                    <th><label for="dockerCloudImage_StopSignal">Stop signal:</label></th>
+                    <td><input type="text" id="dockerCloudImage_StopSignal" /></td>
                 </tr>
             </table>
             <h4>Command:</h4>
@@ -169,36 +165,12 @@
                     </tbody>
                 </table>
             </div>
-        </div>
-        <div id="dockerCloudImageTab_run">
-            <table class="dockerCloudSettings runnerFormTable">
-                <tr>
-                    <th><label for="dockerCloudImage_StopSignal">Stop signal:</label></th>
-                    <td><input type="text" id="dockerCloudImage_StopSignal" data-bind="value: StopSignal" /></td>
-                </tr>
-            </table>
-            <h4>Volumes:</h4>
-            <table class="settings">
-                <thead>
-                <tr><th class="name" style="width: 35%">Host directory</th><th class="name" style="width: 35%">Container directory&nbsp;<l:star/></th><th class="name center" style="width: 20%;">Read only</th><th class="dockerCloudCtrlCell"></th></tr>
-                </thead>
-                <tbody id="dockerCloudImage_Volumes">
-                </tbody>
-            </table>
             <h4>Environment variables:</h4>
             <table class="settings">
                 <thead>
                 <tr><th class="name" style="width: 45%;">Name&nbsp;<l:star/></th><th class="name" style="width: 45%;">Value</th><th class="dockerCloudCtrlCell"></th></tr>
                 </thead>
                 <tbody id="dockerCloudImage_Env">
-                </tbody>
-            </table>
-            <h4>Labels:</h4>
-            <table class="settings">
-                <thead>
-                <tr><th class="name" style="width: 45%;">Key&nbsp;<l:star/></th><th class="name" style="width: 45%;">Value</th><th class="dockerCloudCtrlCell"></th></tr>
-                </thead>
-                <tbody id="dockerCloudImage_Labels">
                 </tbody>
             </table>
         </div>
@@ -311,7 +283,8 @@
         <h4>Extra hosts:</h4>
         <table class="settings">
             <thead>
-            <tr><th class="name" style="width: 47%;">Name&nbsp;<l:star/></th><th class="name" style="width: 47%;">IP Address&nbsp;<l:star/></th><th class="dockerCloudCtrlCell"></th></tr>
+            <tr><th class="name" style="width: 45%;">Name&nbsp;<l:star/></th><th class="name" style="width: 45%;">IP
+                Address&nbsp;<l:star/></th><th class="dockerCloudCtrlCell"></th></tr>
             </thead>
             <tbody id="dockerCloudImage_ExtraHosts">
             </tbody>
@@ -319,7 +292,7 @@
         <h4>Link container:</h4>
         <table class="settings">
             <thead>
-            <tr><th class="name" style="width: 47%;">Container&nbsp;<l:star/></th><th class="name" style="width: 47%;">Alias&nbsp;<l:star/></th><th class="dockerCloudCtrlCell"></th></tr>
+            <tr><th class="name" style="width: 45%;">Container&nbsp;<l:star/></th><th class="name" style="width: 45%;">Alias&nbsp;<l:star/></th><th class="dockerCloudCtrlCell"></th></tr>
             </thead>
             <tbody id="dockerCloudImage_Links">
             </tbody>
@@ -356,7 +329,7 @@
                             <option value="MiB">MiB</option>
                             <option value="GiB">GiB</option>
                         </select>
-                        <span class="error" id="dockerCloudImage_Swap_error"></span>
+                        <span class="error" id="dockerCloudImage_MemorySwap_error"></span>
                     </p>
                 </td>
             </tr>
@@ -364,30 +337,35 @@
                 <th><label for="dockerCloudImage_CpusetCpus">cpuset - CPUs:</label></th>
                 <td>
                     <input type="text" id="dockerCloudImage_CpusetCpus" class="textField"/>
+                    <span class="error" id="dockerCloudImage_CpusetCpus_error"></span>
                 </td>
             </tr>
             <tr>
                 <th><label for="dockerCloudImage_CpusetMems">cpuset - MEMs:</label></th>
                 <td>
                     <input type="text" class="textField" id="dockerCloudImage_CpusetMems"/>
+                    <span class="error" id="dockerCloudImage_CpusetMems_error"></span>
                 </td>
             </tr>
             <tr>
                 <th><label for="dockerCloudImage_CpuShares">CPU Shares:</label></th>
                 <td>
                     <input type="text" class="textField" id="dockerCloudImage_CpuShares"/>
+                    <span class="error" id="dockerCloudImage_CpuShares_error"></span>
                 </td>
             </tr>
             <tr>
                 <th><label for="dockerCloudImage_CpuPeriod">CPU Period:</label></th>
                 <td>
                     <input type="text" class="textField" id="dockerCloudImage_CpuPeriod"/>
+                    <span class="error" id="dockerCloudImage_CpuPeriod_error"></span>
                 </td>
             </tr>
             <tr>
                 <th><label for="dockerCloudImage_BlkioWeight">Bulk IO weight:</label></th>
                 <td>
                     <input type="text" id="dockerCloudImage_BlkioWeight" class="textField"/>
+                    <span class="error" id="dockerCloudImage_BlkioWeight_error"></span>
                 </td>
             </tr>
         </table>
@@ -395,7 +373,9 @@
         <h4>Ulimit:</h4>
         <table class="settings">
             <thead>
-            <tr><th class="name" style="width: 32%">Name&nbsp;<l:star/></th><th class="name" style="width: 31%">Soft limit&nbsp;<l:star/></th><th class="name" style="width: 31%">Hard limit&nbsp;<l:star/></th><th class="dockerCloudCtrlCell"></th></tr>
+            <tr><th class="name" style="width: 30%">Name&nbsp;<l:star/></th><th class="name" style="width: 30%">Soft
+                limit&nbsp;<l:star/></th><th class="name" style="width: 30%">Hard limit&nbsp;<l:star/></th><th
+                    class="dockerCloudCtrlCell"></th></tr>
             </thead>
             <tbody id="dockerCloudImage_Ulimits">
 
@@ -419,10 +399,26 @@
                 </td>
             </tr>
         </table>
+        <h4>Volumes:</h4>
+        <table class="settings">
+            <thead>
+            <tr><th class="name" style="width: 35%">Host directory</th><th class="name" style="width: 35%">Container directory&nbsp;<l:star/></th><th class="name center" style="width: 20%;">Read only</th><th class="dockerCloudCtrlCell"></th></tr>
+            </thead>
+            <tbody id="dockerCloudImage_Volumes">
+            </tbody>
+        </table>
+        <h4>Labels:</h4>
+        <table class="settings">
+            <thead>
+            <tr><th class="name" style="width: 45%;">Key&nbsp;<l:star/></th><th class="name" style="width: 45%;">Value</th><th class="dockerCloudCtrlCell"></th></tr>
+            </thead>
+            <tbody id="dockerCloudImage_Labels">
+            </tbody>
+        </table>
         <h4>Logging options:</h4>
         <table class="settings">
             <thead>
-            <tr><th class="name" style="width: 47%;">Option Key&nbsp;<l:star/></th><th class="name" style="width: 47%;">Option Value</th><th class="dockerCloudCtrlCell"></th></tr>
+            <tr><th class="name" style="width: 45%;">Option Key&nbsp;<l:star/></th><th class="name" style="width: 45%;">Option Value</th><th class="dockerCloudCtrlCell"></th></tr>
             </thead>
             <tbody id="dockerCloudImage_LogConfig">
             </tbody>
@@ -430,7 +426,9 @@
         <h4>Devices:</h4>
         <table class="settings">
             <thead>
-            <tr><th class="name" style="width: 32%;">Host path&nbsp;<l:star/></th><th class="name" style="width: 32%;">Container path&nbsp;<l:star/></th><th class="name" style="width: 30%;">CGroup permissions&nbsp;<l:star/></th><th class="dockerCloudCtrlCell"></th></tr>
+            <tr><th class="name" style="width: 30%;">Host path&nbsp;<l:star/></th><th class="name"
+                                                                                     style="width: 30%;">Container
+                path&nbsp;<l:star/></th><th class="name" style="width: 30%;">CGroup permissions&nbsp;<l:star/></th><th class="dockerCloudCtrlCell"></th></tr>
             </thead>
             <tbody id="dockerCloudImage_Devices">
             </tbody>

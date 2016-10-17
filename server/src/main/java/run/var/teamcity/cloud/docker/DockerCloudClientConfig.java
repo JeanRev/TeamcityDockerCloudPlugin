@@ -6,13 +6,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-import run.var.teamcity.cloud.docker.util.Node;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -57,15 +55,11 @@ public class DockerCloudClientConfig {
 
         List<InvalidProperty> invalidProperties = new ArrayList<>();
 
-        String imageName = notEmpty("Image name is required", DockerCloudUtils.IMAGES_PARAM, properties, invalidProperties);
-        if(imageName != null && WHITESPACE.matcher(imageName).find()) {
-            invalidProperties.add(new InvalidProperty(DockerCloudUtils.IMAGES_PARAM, "Invalid image name"));
-        }
-
-        String useLocalInstanceStr = notEmpty("Select an instance type", DockerCloudUtils.INSTANCE_URI, properties, invalidProperties);
-        boolean useDefaultLocalInstance = Boolean.parseBoolean(useLocalInstanceStr);
+        String useDefaultInstanceStr = notEmpty("Select an instance type", DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, properties,
+                invalidProperties);
+        boolean useDefaultUnixSocket = Boolean.parseBoolean(useDefaultInstanceStr);
         URI instanceURL = null;
-        if (useDefaultLocalInstance) {
+        if (useDefaultUnixSocket) {
             instanceURL = DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI;
         } else  {
             String instanceURLStr = notEmpty("Instance URL ist not set", DockerCloudUtils.INSTANCE_URI, properties, invalidProperties);
@@ -101,6 +95,10 @@ public class DockerCloudClientConfig {
                     invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Not a valid URI"));
                 }
             }
+        }
+
+        if (!invalidProperties.isEmpty()) {
+            throw new DockerCloudClientConfigException(invalidProperties);
         }
 
         return new DockerCloudClientConfig(instanceURL);

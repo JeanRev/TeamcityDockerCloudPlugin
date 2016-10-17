@@ -28,8 +28,8 @@ public class TestContainerStatusMsg {
     private final String msg;
     private final Status status;
     private final UUID taskUuid;
-    private Phase phase;
-    private Throwable throwable;
+    private final Phase phase;
+    private final Throwable throwable;
 
     public TestContainerStatusMsg(UUID uuid, Phase phase, Status status, String msg, Throwable failure) {
         this.taskUuid = uuid;
@@ -37,16 +37,6 @@ public class TestContainerStatusMsg {
         this.status = status;
         this.msg = msg;
         this.throwable = failure;
-    }
-
-    TestContainerStatusMsg progress(Phase phase) {
-        this.phase = phase;
-        return this;
-    }
-
-    TestContainerStatusMsg throwable(Throwable throwable) {
-        this.throwable = throwable;
-        return this;
     }
 
     public String getMsg() {
@@ -71,7 +61,9 @@ public class TestContainerStatusMsg {
 
     public Element toExternalForm() {
         Element root = new Element("statusMsg");
-        addChildElement(root, "msg", msg);
+        if (msg != null) {
+            addChildElement(root, "msg", msg);
+        }
         addChildElement(root, "status", status);
         addChildElement(root, "phase", phase);
         addChildElement(root, "taskUuid", taskUuid);

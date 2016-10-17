@@ -44,7 +44,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.hasWebSocketSupport = 'WebSocket' in window;
 
                 self.$image = $j("#dockerCloudImage_Image");
-                self.$autoBindAgentCB = $j("#dockerCloudImage_BindAgentProps");
                 self.$checkConnectionBtn = $j("#dockerCloudCheckConnectionBtn");
                 self.$checkConnectionError = $j('#dockerCloudCheckConnectionError');
                 self.$newImageBtn = $j('#dockerShowDialogButton');
@@ -52,6 +51,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$imageDialogCancelBtn = $j('#dockerCancelAddImageButton');
                 self.$imagesTable = $j('#dockerCloudImagesTable');
                 self.$images = $j(BS.Util.escapeId(imagesId));
+                console.log("Load image from " + BS.Util.escapeId(imagesId) + " (" + imagesId + ")");
                 self.$dockerAddress = $j("#dockerCloudDockerAddress");
                 self.$useLocalInstance = $j("#dockerCloudUseLocalInstance");
                 self.$useCustomInstance = $j("#dockerCloudUseCustomInstance");
@@ -68,7 +68,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$imageDataOkBtn = $j("#dockerAddImageButton");
                 self.$imageDataDialogTitle = $j("#DockerImageDialogTitle");
                 self.$warnAutoBind = $j("#dockerCloudWarnAutoBind");
-                self.$agentHome = $j("#dockerCloudImage_AgentHome");
                 self.$swapUnit = $j("#dockerCloudImage_MemorySwapUnit");
                 self.$swapUnlimited = $j("#dockerCloudImage_MemorySwapUnlimited");
                 self.$memoryUnit = $j("#dockerCloudImage_MemoryUnit");
@@ -84,6 +83,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$imageTestContainerStartBtn = $j("#dockerStartImageTest");
                 self.$dockerTestContainerOutput = $j("#dockerTestContainerOutput");
                 self.$testedImage = $j(BS.Util.escapeId("run.var.teamcity.docker.cloud.tested_image"));
+
 
                 self._initImagesData();
                 self._initTabs();
@@ -179,7 +179,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         Profile: 'my_image',
                         RmOnExit: true,
                         BindAgentProps: true,
-                        AgentHome: "/opt/agent",
                         MaxInstanceCount: 2,
                         Version: 1
                     },
@@ -237,10 +236,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }];
 
                 var json = self.$images.val();
-                images = json ? JSON.parse(self.$images.val()) : [];
+                console.log("Image data: " + self.$images.val().length + " " + self.$images.val());
 
+                images = json ? JSON.parse(self.$images.val()) : [];
                 self.imagesData = {};
+                console.log(images.length + " images to be loaded.");
                 $j.each(images, function(i, image) {
+                    console.log("Loading profile: " + image.Administration.Profile);
                     self.imagesData[image.Administration.Profile] = image;
                 });
 
@@ -347,7 +349,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self._updateAllTablesMandoryStarsVisibility();
                 self.selectTabWithId("dockerCloudImageTab_general");
                 self.imageDataTabbedPane.setActiveCaption("dockerCloudImageTab_general");
-                
+
                 self.$imageDialogSubmitBtn.val(existingImage ? 'Save' : 'Add').data('image-id', profileName).data('profile', profileName);
 
                 BS.DockerImageDialog.showCentered();
@@ -464,7 +466,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'RmOnExit');
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'BindAgentProps');
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'AgentHome');
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'MaxInstanceCount');
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'Profile');
 
@@ -634,7 +635,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 viewModel.Profile = admin.Profile;
                 viewModel.RmOnExit = admin.RmOnExit;
                 viewModel.BindAgentProps = admin.BindAgentProps;
-                viewModel.AgentHome = admin.AgentHome;
                 viewModel.MaxInstanceCount = admin.MaxInstanceCount;
 
                 viewModel.Hostname = container.Hostname;
@@ -760,10 +760,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
             _initTabs: function () {
                 self.tabs = [{ id: "dockerCloudImageTab_general", lbl: "General" },
-                    { id: "dockerCloudImageTab_privileges", lbl: "Privileges" },
                     { id: "dockerCloudImageTab_run", lbl: "Run" },
                     { id: "dockerCloudImageTab_network", lbl: "Network" },
                     { id: "dockerCloudImageTab_resources", lbl: "Resources" },
+                    { id: "dockerCloudImageTab_privileges", lbl: "Privileges" },
                     { id: "dockerCloudImageTab_advanced", lbl: "Advanced" }];
 
                 var imageDataTabbedPane = new TabbedPane();
@@ -831,16 +831,12 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
             /* HANDLERS */
             _bindHandlers: function () {
-                self.$useLocalInstance.change(self._addressState).change();
-                self.$useCustomInstance.change(self._addressState).change();
+                console.log("Binding handlers now");
+
+                self._addressState();
 
                 self.$checkConnectionBtn.on('click', self._checkConnectionClickHandler);
                 self.$newImageBtn.on('click', self._showImageDialogClickHandler);
-
-                self.$autoBindAgentCB.change(function() {
-                    self.$agentHome.closest('tr').toggle(self.$autoBindAgentCB.is(':checked'));
-                    self.$agentHome.blur();
-                });
 
                 self.$imageDialogSubmitBtn.click(function() {
 
@@ -871,6 +867,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.showEditDialog($j(this));
                     return false;
                 });
+
+
 
                 var networkMode = $j("#dockerCloudImage_NetworkMode");
                 var customNetwork = $j("#dockerCloudImage_NetworkCustom");
@@ -936,15 +934,26 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     $row.remove();
                     self._updateTableMandoryStarsVisibility($table);
                 });
-                self.$dialog.on("click", ".dockerCloudAddBtn", function() {
+
+
+                self.$dialog.on("click", ".dockerCloudAddBtn", function(e) {
+                    // TODO: improve event binding. This handler will sometimes get called twice here if we do not
+                    // stop propagation.
+                    e.stopPropagation();
+                    console.log("Add handler invoked");
                     var $elt = $j(this);
 
+                    // Fetch closest table.
                     var $tableBody = $elt.closest("tbody");
                     var key = $tableBody.attr("id");
                     var index = $j.data($tableBody, "index") || 0;
                     index++;
                     var $table = $elt.closest("table");
-                    $elt.closest("tr").before('<tr>' + self.arrayTemplates[key].replace(/IDX/g, index) + '<td class="center dockerCloudCtrlCell">' + self.arrayTemplates.deleteCell + '</td></tr>');
+                    console.log('Adding entry ' + index + ' to table ' + key);
+                    console.log('<tr>' + self.arrayTemplates[key].replace(/IDX/g, index) + '<td' +
+                        ' class="center dockerCloudCtrlCell">' + self.arrayTemplates.deleteCell + '</td></tr>');
+                    $elt.closest("tr").before('<tr>' + self.arrayTemplates[key].replace(/IDX/g, index) + '<td' +
+                    ' class="center dockerCloudCtrlCell">' + self.arrayTemplates.deleteCell + '</td></tr>');
                     $j.data($tableBody, "index", index);
                     self._updateTableMandoryStarsVisibility($table);
                 });
@@ -956,7 +965,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     $swap.val("").blur();
                 });
 
-                /* Test container */
+
                 self.$imageTestContainerCreateBtn.click(function() {
 
                     self._testContainerProgress = null;
@@ -973,6 +982,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self._initTestDialog();
                     BS.DockerTestContainerDialog.showCentered();
                 });
+
             },
 
             _processTestResponse: function (responseMap) {
@@ -987,16 +997,17 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var STARTED = 2;
 
                 var containerState = NONE;
-                if (responseMap.progress === 'CREATE' && responseMap.status === 'SUCCESS') {
+                if (responseMap.phase === 'CREATE' && responseMap.status === 'SUCCESS') {
                     containerState = CREATED;
-                } else if (responseMap.progress === 'START') {
+                } else if (responseMap.phase === 'START') {
                     containerState = responseMap.status === 'SUCCESS' ? STARTED : CREATED;
-                } else if (responseMap.progress === 'WAIT_FOR_AGENT') {
+                } else if (responseMap.phase === 'WAIT_FOR_AGENT') {
                     containerState = STARTED;
                 }
 
                 if (containerState == STARTED) {
                     // Container has been started, display live logs if possible.
+                    /* TODO: WIP
                     if (self.hasWebSocketSupport && !self.logStreamingSocket) {
                         console.log('Opening live logs sockt now.');
                         var url = 'ws://localhost:8111/app/docker-cloud/streaming/logs?correlationId=' +
@@ -1008,6 +1019,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         logTerm.attach(self.logStreamingSocket);
                         logTerm.convertEol = true;
                     }
+                    */
                 }
 
                 if (responseMap.status === 'PENDING') {
@@ -1062,7 +1074,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 return {
                     msg: $xml.find('msg').text(),
                     status: $xml.find('status').text(),
-                    progress: $xml.find('progress').text(),
+                    phase: $xml.find('phase').text(),
                     taskUuid: $xml.find("taskUuid").text()
                 };
             },
@@ -1210,12 +1222,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             return {msg: "At least one instance must be permitted."};
                         }
                     }],
-                    dockerCloudImage_BindAgentProps: [ function($elt) {
-                        if($elt.is(":checked") && self.$useLocalInstance.is(":checked")) {
-                            return {msg: "Binding of agent properties files is only possible if the TeamCity server is running on the same host than the docker instance.", warning: true};
-                        }
-                    }],
-                    dockerCloudImage_AgentHome: [requiredValidator],
                     dockerCloudImage_Entrypoint_IDX: [function ($elt) {
                         var row = $elt.closest("tr");
                         if (row.index() === 0) {

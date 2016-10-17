@@ -106,6 +106,7 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         } finally {
             lock.unlock();
         }
+        notifyStatus(currentTaskFuture.getTask().getPhase(), Status.PENDING, "", null);
 
     }
 
@@ -124,7 +125,12 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
     @Override
     public void notifyContainerId(String containerId) {
         lock.lock();
-        this.containerId = containerId;
+        try {
+            this.containerId = containerId;
+        } finally {
+            lock.unlock();
+        }
+
     }
 
     @Override
