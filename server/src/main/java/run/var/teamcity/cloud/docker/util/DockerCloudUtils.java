@@ -55,6 +55,10 @@ public final class DockerCloudUtils {
      */
     public static final String USE_DEFAULT_UNIX_SOCKET_PARAM = NS_PREFIX + "use_default_unix_socket";
     /**
+     * Docker cloud parameter: use official TeamCity agent images.
+     */
+    public static final String USE_OFFICIAL_AGENT_IMAGE = NS_PREFIX + "use_official_agent_image";
+    /**
      * Docker cloud parameter: Docker instance URI.
      */
     public static final String INSTANCE_URI = NS_PREFIX + "instance_uri";

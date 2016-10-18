@@ -75,6 +75,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$rmOnExit = $j("#dockerCloudImage_RmOnExit");
                 self.$dialog = $j("#DockerCloudImageDialog");
                 self.$dialogTables = $j('table', self.$dialog);
+                self.$useOfficialDockerImage = $j('#dockerCloudImage_UseOfficialTCAgentImage');
 
                 /* Test container */
                 self.$imageTestContainerBtn = $j("#dockerTestImageButton");
@@ -104,7 +105,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _renderImageRow: function (image) {
                 return self.$imagesTable.append($j('<tr><td>' + image.Administration.Profile + '</td>' +
                     '<td>' + image.Container.Image + '</td>' +
-                    '<td class="center">' + image.Administration.MaxInstanceCount + '</td>' +
+                    '<td class="center">' + (image.Administration.MaxInstanceCount ? image.Administration.MaxInstanceCount : 'unlimited') + '</td>' +
                     '<td class="center">' + (image.Administration.RmOnExit ? 'Yes' : 'No') + '</td>' +
                     '<td class="dockerCloudCtrlCell">' + self.arrayTemplates.settingsCell + self.arrayTemplates.deleteCell + '</td>' +
                     '</tr>').data('profile', image.Administration.Profile));
@@ -179,6 +180,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         Profile: 'my_image',
                         RmOnExit: true,
                         BindAgentProps: true,
+                        UseOfficialTCAgentImage: false,
                         MaxInstanceCount: 2,
                         Version: 1
                     },
@@ -344,7 +346,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
                 $j('span[id$="_error"], span[id$="_warning"]', self.$dialog).empty();
 
-                var viewModel = self._convertSettingsToViewModel(self.imagesData[profileName] || {});
+                var viewModel = self._convertSettingsToViewModel(self.imagesData[profileName] || {
+                        /* Defaults for new images. */
+                        Administration: {
+                            UseOfficialTCAgentImage: true,
+                            MaxInstanceCount: 2
+                        }
+                    });
                 self._applyViewModel(viewModel);
                 self._updateAllTablesMandoryStarsVisibility();
                 self.selectTabWithId("dockerCloudImageTab_general");
@@ -452,7 +460,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     parentObject[key] = $elt.is(':checked');
                 } else if ($elt.is(':radio')) {
                     if ($elt.is(':checked')) {
-                        parentObject[key] = $elt.attr('name');
+                        parentObject[key] = $elt.attr('value');
                     }
                 }
             },
@@ -467,6 +475,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'RmOnExit');
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'BindAgentProps');
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'MaxInstanceCount');
+                self._convertViewModelFieldToSettingsField(viewModel, admin, 'UseOfficialTCAgentImage');
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'Profile');
 
                 var container = settings.Container = {};
@@ -636,6 +645,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 viewModel.RmOnExit = admin.RmOnExit;
                 viewModel.BindAgentProps = admin.BindAgentProps;
                 viewModel.MaxInstanceCount = admin.MaxInstanceCount;
+                viewModel.UseOfficialTCAgentImage = admin.UseOfficialTCAgentImage;
 
                 viewModel.Hostname = container.Hostname;
                 viewModel.Domainname = container.Domainname;
@@ -868,7 +878,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     return false;
                 });
 
-
+                self.$useOfficialDockerImage.change(function () {
+                    self.$image.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
+                    self.$image.blur();
+                }).change();
 
                 var networkMode = $j("#dockerCloudImage_NetworkMode");
                 var customNetwork = $j("#dockerCloudImage_NetworkCustom");
@@ -1328,14 +1341,14 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 var result;
                 var elt = $j(this);
-                var eltId = elt.attr("id");
+                var eltId = elt.attr("id") || elt.attr("name");
 
                 var vals = self.validators[eltId];
                 if (!vals) {
                     vals = self.validators[eltId.replace(/[0-9]+/, "IDX")];
                 }
 
-                if (vals && elt.is(':visible')) {
+                if (vals && elt.is(':visible') && !elt.is(':disabled')) {
                     $j.each(vals, function (i, validator) {
                         result = validator(elt);
                         if (result) {

@@ -102,6 +102,8 @@
                 <tr>
                     <th><label for="dockerCloudImage_Image">Docker image:&nbsp;<l:star/></label></th>
                     <td>
+                        <input type="checkbox" id="dockerCloudImage_UseOfficialTCAgentImage"/>
+                        <label for="dockerCloudImage_UseOfficialTCAgentImage">Use official TeamCity agent image</label>
                         <input type="text" id="dockerCloudImage_Image" class="mediumField"/>
                         <span class="error" id="dockerCloudImage_Image_error"></span>
     <span class="smallNote">

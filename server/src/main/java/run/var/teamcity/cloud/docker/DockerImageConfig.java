@@ -20,13 +20,15 @@ public class DockerImageConfig {
     private final String profileName;
     private final Node containerSpec;
     private final boolean rmOnExit;
+    private final boolean useOfficialTCAgentImage;
 
-    private DockerImageConfig(String profileName, Node containerSpec, boolean rmOnExit) {
+    private DockerImageConfig(String profileName, Node containerSpec, boolean rmOnExit, boolean useOfficialTCAgentImage) {
         assert profileName != null;
         assert containerSpec != null;
         this.profileName = profileName;
         this.containerSpec = containerSpec;
         this.rmOnExit = rmOnExit;
+        this.useOfficialTCAgentImage = useOfficialTCAgentImage;
     }
 
     /**
@@ -56,6 +58,15 @@ public class DockerImageConfig {
      */
     boolean isRmOnExit() {
         return rmOnExit;
+    }
+
+    /**
+     * Use official TeamCity agent image.
+     *
+     * @return {@code true} when the official TeamCity agent image should be used.
+     */
+    public boolean isUseOfficialTCAgentImage() {
+        return useOfficialTCAgentImage;
     }
 
     public static List<DockerImageConfig> processParams(@NotNull Map<String, String> properties) {
@@ -126,8 +137,9 @@ public class DockerImageConfig {
 
             String profileName = admin.getAsString("Profile");
             boolean deleteOnExit = admin.getAsBoolean("RmOnExit");
+            boolean useOfficialTCAgentImage = admin.getAsBoolean("UseOfficialTCAgentImage");
 
-            return new DockerImageConfig(profileName, node.getObject("Container"), deleteOnExit);
+            return new DockerImageConfig(profileName, node.getObject("Container"), deleteOnExit, useOfficialTCAgentImage);
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to parse image JSON definition:\n" + node, e);
         }
