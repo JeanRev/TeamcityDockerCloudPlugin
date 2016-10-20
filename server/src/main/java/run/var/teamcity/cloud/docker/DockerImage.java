@@ -31,7 +31,12 @@ public class DockerImage implements CloudImage {
     DockerImage(DockerCloudClient cloudClient, DockerImageConfig config) {
         this.cloudClient = cloudClient;
         this.config = config;
-        this.name = config.getProfileName() + " (" + config.getContainerSpec().getAsString("Image") + ")";
+        String image = config.getContainerSpec().getAsString("Image", null);
+        String name = config.getProfileName();
+        if (image != null) {
+            name += " (" + image + ")";
+        }
+        this.name = name;
     }
 
     public DockerCloudClient getCloudClient() {
@@ -141,6 +146,22 @@ public class DockerImage implements CloudImage {
         }
 
         return instance;
+    }
+
+    /**
+     * Checks if new instances can be created for this image.
+     *
+     * @return {@code true} if new instances can be created for this image, {@code false} otherwise.
+     */
+    public boolean canStartNewInstance() {
+        lock.lock();
+        try {
+            int maxInstanceCount = config.getMaxInstanceCount();
+            return maxInstanceCount == -1 || instances.size() < config.getMaxInstanceCount();
+        } finally {
+            lock.unlock();
+        }
+
     }
 
     @Override

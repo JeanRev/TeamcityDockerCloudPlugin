@@ -1,6 +1,5 @@
 package run.var.teamcity.cloud.docker.client;
 
-
 import com.intellij.openapi.diagnostic.Logger;
 import org.apache.http.HttpStatus;
 import org.apache.http.config.RegistryBuilder;
@@ -11,27 +10,21 @@ import org.apache.http.impl.conn.DefaultHttpClientConnectionOperator;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.protocol.HttpCoreContext;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
-//import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;
 import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.logging.LoggingFeature;
 import org.jetbrains.annotations.NotNull;
-import run.var.teamcity.cloud.docker.util.JULLogger;
+import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
+import run.var.teamcity.cloud.docker.util.NodeStream;
 
 import javax.ws.rs.HttpMethod;
-import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
 import java.io.Closeable;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
@@ -40,27 +33,26 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 /**
  * A Docker client. This client supports connecting to the Docker daemon using either Unix sockets or TCP connections.
  */
+
+// Implementation note:
 /* This class uses the same concept than docker-java (https://github.com/docker-java) to connect to the Docker
 daemon: a Jersey client using an HTTP client connector from Apache. This connector is specially configured to allow
 connecting to a Unix socket. One significant difference from docker-java is that we do not leverage full ORM
 framework, but we deal instead directly with JSON structures since we are only interested only
 in a handful of attributes. */
-public class DockerClient implements Closeable {
+public class DockerClient extends DockerAbstractClient {
 
     private final static Charset SUPPORTED_CHARSET = StandardCharsets.UTF_8;
 
     private final static Logger LOG = DockerCloudUtils.getLogger(DockerClient.class);
 
     private final DockerHttpConnectionFactory connectionFactory;
-    private final Client jerseyClient;
     private final WebTarget target;
-
-    private volatile boolean closed = false;
+    private final Client jerseyClient;
 
     public enum SupportedScheme {
         UNIX,
@@ -80,21 +72,22 @@ public class DockerClient implements Closeable {
     }
 
     private DockerClient(DockerHttpConnectionFactory connectionFactory, Client jerseyClient, URI target) {
-        this.connectionFactory = connectionFactory;
+        super(jerseyClient);
         this.jerseyClient = jerseyClient;
+        this.connectionFactory = connectionFactory;
         this.target = jerseyClient.target(target);
     }
 
     @NotNull
     public Node getVersion() {
-        return invoke(target.path("/version"), HttpMethod.GET, null, null);
+        return invoke(target.path("/version"), HttpMethod.GET, null, null, null);
     }
 
 
     @NotNull
     public Node createContainer(@NotNull Node containerSpec) {
         DockerCloudUtils.requireNonNull(containerSpec, "Container JSON specification cannot be null.");
-        return invoke(target.path("/containers/create"), HttpMethod.POST, containerSpec, null);
+        return invoke(target.path("/containers/create"), HttpMethod.POST, containerSpec, null, null);
     }
 
     public void startContainer(@NotNull final String containerId) {
@@ -110,8 +103,20 @@ public class DockerClient implements Closeable {
     }
 
     public Node inspectContainer(@NotNull String containerId) {
+        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         return invoke(target.path("/containers/{id}/json").resolveTemplate("id", containerId), HttpMethod.GET, null,
-                null);
+                null, null);
+    }
+
+    public NodeStream createImage(@NotNull String from, @Nullable String tag) {
+        DockerCloudUtils.requireNonNull(from, "Source image cannot be null.");
+
+        WebTarget target = this.target.path("/images/create").
+                queryParam("fromImage", from);
+        if (tag != null) {
+            target.queryParam("tag", tag);
+        }
+        return invokeNodeStream(target, HttpMethod.POST, null, null, null);
     }
 
     public StreamHandler attach(@NotNull String containerId) {
@@ -184,8 +189,10 @@ public class DockerClient implements Closeable {
     public Node listContainersWithLabel(@NotNull String key, @NotNull String value) {
         DockerCloudUtils.requireNonNull(key, "Label key cannot be null.");
         DockerCloudUtils.requireNonNull(value, "Label value cannot be null.");
-        return invoke(target.path("/containers/json").queryParam("all", true).queryParam("filters", "%7B\"label\": " +
-                "[\"" + key + "=" + value + "\"]%7D"), HttpMethod.GET, null, null);
+        return invoke(target.path("/containers/json").
+                queryParam("all", true).
+                queryParam("filters", "%7B\"label\": " +
+                "[\"" + key + "=" + value + "\"]%7D"), HttpMethod.GET, null, null, null);
     }
 
     private boolean hasTty(String containerId) {
@@ -202,18 +209,6 @@ public class DockerClient implements Closeable {
         return target;
     }
 
-    private <T> Response execRequest(Invocation.Builder invocationBuilder, String method, Entity<T> entity,
-                                     ErrorCodeMapper errorCodeMapper) {
-        checkNotClosed();
-
-        assert invocationBuilder != null && method != null;
-
-        Response response = invocationBuilder.method(method, entity);
-
-        validate(getRequestSpec(target, method), response, errorCodeMapper);
-
-        return response;
-    }
 
     private StreamHandler invokeStream(WebTarget target, String method, ErrorCodeMapper errorCodeMapper, boolean
             hasTty) {
@@ -251,119 +246,6 @@ public class DockerClient implements Closeable {
                 MultiplexedStreamHandler(closeHandle, inputStream, outputStream);
     }
 
-    private InputStream invokeRaw(WebTarget target, String method, ErrorCodeMapper errorCodeMapper) {
-
-        assert target != null && method != null;
-
-        checkNotClosed();
-
-        Response response = target.request(MediaType.APPLICATION_JSON).acceptEncoding(SUPPORTED_CHARSET.name()).
-                method(method);
-
-        validate(getRequestSpec(target, method), response, errorCodeMapper);
-
-        return new JaxWsResponseFilterInputStream(response);
-    }
-
-    private void invokeVoid(WebTarget target, String method, Node entity, ErrorCodeMapper errorCodeMapper) {
-
-        assert target != null && method != null;
-
-        Response response = execRequest(target.request(MediaType.APPLICATION_JSON).
-                acceptEncoding(SUPPORTED_CHARSET.name()), method, entity != null ? Entity.json(entity.toString()) :
-                null, errorCodeMapper);
-
-        response.close();
-    }
-
-    private Node invoke(WebTarget target, String method, Node entity, ErrorCodeMapper errorCodeMapper) {
-
-        assert target != null && method != null;
-
-        Response response = execRequest(target.request(MediaType.APPLICATION_JSON).acceptEncoding(SUPPORTED_CHARSET
-                        .name()), method, entity != null ? Entity.json(entity.toString()) : null, errorCodeMapper);
-
-        try {
-            return Node.parse((InputStream) response.getEntity());
-        } catch (ProcessingException | IOException e) {
-            throw new DockerClientProcessingException("Failed to parse response from server.", e);
-        } finally {
-            try {
-                response.close();
-            } catch (ProcessingException e) {
-                LOG.warn("Ignoring processing exception while closing the response.", e);
-            }
-        }
-    }
-
-    private String getRequestSpec(WebTarget target, String method) {
-        return method + " " + target.getUri().getPath();
-    }
-
-    private void validate(String requestSpec, Response response, ErrorCodeMapper errorCodeMapper) {
-        assert requestSpec != null && response != null;
-
-        final Response.StatusType statusInfo = response.getStatusInfo();
-
-        if (statusInfo.getFamily() == Response.Status.Family.SUCCESSFUL || statusInfo.getFamily() == Response.Status
-                .Family.INFORMATIONAL) {
-            return;
-        }
-
-        final int statusCode = statusInfo.getStatusCode();
-
-        StringBuilder sb = new StringBuilder(requestSpec + ": invocation failed with code ").append(statusCode);
-
-        String responseFromServer = null;
-
-        try {
-            // Gets the page content in case of failure as we expect it to contains some additional information.
-            // We assume here that the stream may be consumed entirely and in a timely fashion (i.e. it will not block
-            // indefinitely like some successful invocation of the 'logs' or 'attach' operations).
-            responseFromServer = getRawResponseBody(response);
-        } catch (IOException e) {
-            LOG.warn("Failed to read response body.", e);
-        }
-
-        if (responseFromServer != null) {
-            sb.append(" -- ").append(responseFromServer);
-        } else {
-            sb.append(".");
-        }
-
-        String msg = sb.toString();
-        InvocationFailedException e = null;
-
-        if (errorCodeMapper != null) {
-            e = errorCodeMapper.mapToException(statusCode, msg);
-        }
-        if (e == null) {
-            e = new InvocationFailedException(msg);
-        }
-
-        throw e;
-    }
-
-    private String getRawResponseBody(Response response) throws IOException {
-
-        String rawResponseBody = null;
-        if (response.hasEntity()) {
-            Object responseEntity = response.getEntity();
-            assert responseEntity instanceof InputStream : "Entity has already be consumed.";
-
-            try (InputStream is = (InputStream) responseEntity) {
-                rawResponseBody = DockerCloudUtils.readUTF8String(is);
-            }
-        }
-
-        return rawResponseBody;
-    }
-
-    @Override
-    public void close() {
-        closed = true;
-        jerseyClient.close();
-    }
 
     /**
      * Open a new client targeting the specified instance. The provided Docker URI must use one of the supported scheme
@@ -435,16 +317,6 @@ public class DockerClient implements Closeable {
          //      1024 * 512));
 
         return new DockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI);
-    }
-
-    private interface ErrorCodeMapper {
-        InvocationFailedException mapToException(int errorCode, String msg);
-    }
-
-    private void checkNotClosed() {
-        if (closed) {
-            throw new IllegalStateException("Client has been closed.");
-        }
     }
 
 }

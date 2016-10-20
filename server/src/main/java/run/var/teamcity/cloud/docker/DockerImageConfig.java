@@ -21,14 +21,17 @@ public class DockerImageConfig {
     private final Node containerSpec;
     private final boolean rmOnExit;
     private final boolean useOfficialTCAgentImage;
+    private final int maxInstanceCount;
 
-    private DockerImageConfig(String profileName, Node containerSpec, boolean rmOnExit, boolean useOfficialTCAgentImage) {
+    private DockerImageConfig(String profileName, Node containerSpec, boolean rmOnExit, boolean
+            useOfficialTCAgentImage, int maxInstanceCount) {
         assert profileName != null;
         assert containerSpec != null;
         this.profileName = profileName;
         this.containerSpec = containerSpec;
         this.rmOnExit = rmOnExit;
         this.useOfficialTCAgentImage = useOfficialTCAgentImage;
+        this.maxInstanceCount = maxInstanceCount;
     }
 
     /**
@@ -67,6 +70,15 @@ public class DockerImageConfig {
      */
     public boolean isUseOfficialTCAgentImage() {
         return useOfficialTCAgentImage;
+    }
+
+    /**
+     * Gets the maximal number of instance associated with this image.
+     *
+     * @return the maximal number of instance associated with this image
+     */
+    public int getMaxInstanceCount() {
+        return maxInstanceCount;
     }
 
     public static List<DockerImageConfig> processParams(@NotNull Map<String, String> properties) {
@@ -139,7 +151,8 @@ public class DockerImageConfig {
             boolean deleteOnExit = admin.getAsBoolean("RmOnExit");
             boolean useOfficialTCAgentImage = admin.getAsBoolean("UseOfficialTCAgentImage");
 
-            return new DockerImageConfig(profileName, node.getObject("Container"), deleteOnExit, useOfficialTCAgentImage);
+            return new DockerImageConfig(profileName, node.getObject("Container"), deleteOnExit,
+                    useOfficialTCAgentImage, node.getAsInt("MaxInstanceCount", -1));
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to parse image JSON definition:\n" + node, e);
         }

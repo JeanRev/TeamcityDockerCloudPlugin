@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker.util;
 
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -24,7 +25,8 @@ import java.util.Map;
  */
 abstract class AbstractNode<N extends AbstractNode> {
 
-    final static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    final static JsonFactory JSON_FACTORY = new JsonFactory();
+    final static ObjectMapper OBJECT_MAPPER = new ObjectMapper(JSON_FACTORY);
 
     final JsonNode node;
 
@@ -130,7 +132,6 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @throws NullPointerException if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node or the child node is not an object
      */
-    @Nullable
     public N getObject(@NotNull String fieldName, @Nullable N def) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
@@ -211,6 +212,29 @@ abstract class AbstractNode<N extends AbstractNode> {
                     node + " / " +  fieldName);
         }
         return value.asInt();
+    }
+
+    /**
+     * Gets the child integer node with the specified name.
+     *
+     * @param fieldName the child field name
+     * @param def the default value to be used if the child value node does not exists
+     *
+     * @return the child node or the provided default value
+     *
+     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws UnsupportedOperationException if this node is not an object, or if the child node is not an integer
+     * value node
+     */
+    public int getAsInt(@NotNull String fieldName, int def) {
+        DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
+        checkObject();
+        JsonNode value = node.get(fieldName);
+        if (value == null) {
+            return def;
+        }
+
+        return getAsInt(fieldName);
     }
 
     /**
@@ -307,7 +331,7 @@ abstract class AbstractNode<N extends AbstractNode> {
     }
 
     /**
-     * Gets the child boolean node with the specified name.
+     * Gets the child text node with the specified name.
      *
      * @param fieldName the child field name
      * @param def the default value to be used if the child value node does not exists

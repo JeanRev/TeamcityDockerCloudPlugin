@@ -23,7 +23,8 @@ import run.var.teamcity.cloud.docker.client.NotFoundException;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
-
+import run.var.teamcity.cloud.docker.util.NodeStream;
+import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -91,6 +92,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
      */
     private final Map<UUID, DockerImage> images = new HashMap<>();
 
+    private final OfficialAgentImageResolver officialAgentImageResolver;
+
     /**
      * The Docker client.
      */
@@ -104,6 +107,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
             throw new IllegalArgumentException("At least one image must be provided.");
         }
         this.cloudState = cloudState;
+
 
         final int threadPoolSize = Math.min(imageConfigs.size() * 2, Runtime.getRuntime().availableProcessors() + 1);
 
@@ -134,6 +138,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 taskScheduler.scheduleClientTask(new SyncWithDockerTask(DOCKER_SYNC_RATE_SEC, TimeUnit.SECONDS));
             }
         });
+
+        officialAgentImageResolver = OfficialAgentImageResolver.forServer(buildServer);
     }
 
     @Override
@@ -205,7 +211,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
     @Override
     public boolean canStartNewInstance(@NotNull CloudImage image) {
-        return true;
+        return ((DockerImage) image).canStartNewInstance();
     }
 
     @Nullable
@@ -267,7 +273,21 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 }
 
                 if (containerId == null) {
-                    Node createNode =  dockerClient.createContainer(authorContainerSpec(instance, tag.getServerAddress()));
+                    Node containerSpec = authorContainerSpec(instance, tag.getServerAddress());
+                    String image = containerSpec.getAsString("Image");
+                    try (NodeStream nodeStream = dockerClient.createImage(image, null)) {
+                        Node status;
+                        while((status = nodeStream.next()) != null) {
+                            String error = status.getAsString("error", null);
+                            if (error != null) {
+                                Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
+                                throw new CloudException("Failed to pul image: " + error + " -- " + details
+                                        .getAsString("message", null), null);
+                            }
+                        }
+                    }
+                    Node createNode =  dockerClient.createContainer(authorContainerSpec(instance, tag
+                            .getServerAddress()));
                     containerId = createNode.getAsString("Id");
                     LOG.info("New container " + containerId + " created.");
                 } else {
@@ -434,8 +454,9 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
      */
     private Node authorContainerSpec(DockerInstance instance, String serverUrl) {
         DockerImage image = instance.getImage();
+        DockerImageConfig config = image.getConfig();
 
-        EditableNode container = image.getConfig().getContainerSpec().editNode();
+        EditableNode container = config.getContainerSpec().editNode();
         container.getOrCreateArray("Env").
                 add("SERVER_URL=" + serverUrl).
                 add(DockerCloudUtils.ENV_IMAGE_ID + "=" + image.getId()).
@@ -444,6 +465,11 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         container.getOrCreateObject("Labels").
                 put(DockerCloudUtils.CLIENT_ID_LABEL, id.toString()).
                 put(DockerCloudUtils.INSTANCE_ID_LABEL, instance.getUuid().toString());
+
+        if (config.isUseOfficialTCAgentImage()) {
+            String officialImage = officialAgentImageResolver.resolve();
+            container.put("Image", officialImage);
+        }
 
         return container.saveNode();
     }
