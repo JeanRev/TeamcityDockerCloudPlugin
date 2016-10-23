@@ -134,40 +134,80 @@
 
             <table class="dockerCloudSettings runnerFormTable">
                 <tr>
-                    <th><label for="dockerCloudImage_User">User:</label></th>
-                    <td><input type="text" id="dockerCloudImage_User"/></td>
+                    <th><label for="dockerCloudImage_User">User:
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">A string value specifying the user inside the container.</span>
+                    </label></th>
+                    <td>
+                        <input type="text" id="dockerCloudImage_User"/>
+                    </td>
                 </tr>
                 <tr>
                     <th>
-                        <label for="dockerCloudImage_WorkingDir">Working directory:</label>
+                        <label for="dockerCloudImage_WorkingDir">Working <span style="white-space: nowrap">
+                            directory:
+                            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                            <span class="tooltiptext">A string specifying the working directory for commands to run
+                                in.</span>
+                            </span>
+                        </label>
                     </th>
                     <td>
                         <input type="text" id="dockerCloudImage_WorkingDir"/>
                     </td>
                 </tr>
                 <tr>
-                    <th><label for="dockerCloudImage_StopSignal">Stop signal:</label></th>
-                    <td><input type="text" id="dockerCloudImage_StopSignal" /></td>
+                    <th><label for="dockerCloudImage_StopSignal">Stop signal:
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">Signal to stop a container as a string or unsigned integer.
+                            <code>SIGTERM</code> by default.</span>
+                    </label></th>
+                    <td>
+                        <input type="text" id="dockerCloudImage_StopSignal" />
+                    </td>
                 </tr>
             </table>
             <h4>Command:</h4>
             <div class="dockerCloudSimpleTables">
                 <table class="settings">
                     <thead>
-                    <tr><th class="name" style="width: 82%;">Entrypoint executable / arguments</th><th class="dockerCloudCtrlCell"></th></tr>
+                    <tr><th class="name" style="width: 82%;">
+                        Entrypoint executable / arguments
+
+                        <i class="icon icon16 tc-icon_help_small tooltip">
+                        </i>
+
+                        <span class="tooltiptext">Overwrite the default <code>ENTRYPOINT</code> of the image using
+                            an array
+                            of string.</span>
+
+                    </th><th class="dockerCloudCtrlCell"></th></tr>
                     </thead>
                     <tbody id="dockerCloudImage_Entrypoint">
                     </tbody>
                 </table>
                 <table class="settings">
                     <thead>
-                    <tr><th class="name" style="width: 82%;"> Command executable / arguments</th><th class="dockerCloudCtrlCell"></th></tr>
+                    <tr><th class="name" style="width: 82%;">
+                        Command executable / arguments
+                        <i class="icon icon16 tc-icon_help_small tooltip">
+                            </i>
+                            <span class="tooltiptext">Overwrite the default <code>CMD</code> of the image using an
+                                array of string.
+                        </span>
+
+
+                    </th><th class="dockerCloudCtrlCell"></th></tr>
                     </thead>
                     <tbody id="dockerCloudImage_Cmd">
                     </tbody>
                 </table>
             </div>
-            <h4>Environment variables:</h4>
+            <h4>
+                Environment variables:
+                <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                <span class="tooltiptext">Set environment variables.</span>
+            </h4>
             <table class="settings">
                 <thead>
                 <tr><th class="name" style="width: 45%;">Name&nbsp;<l:star/></th><th class="name" style="width: 45%;">Value</th><th class="dockerCloudCtrlCell"></th></tr>
@@ -181,6 +221,8 @@
                 <tr>
                     <th>
                         Privileged:
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">Give extended privileges to this container. The default is false.</span>
                     </th>
                     <td>
                         <input type="checkbox" id="dockerCloudImage_Privileged"/>
@@ -189,7 +231,14 @@
                 </tr>
 
                 <tr>
-                    <th><label for="dockerCloudImage_CgroupParent">Cgroup parent:</label></th>
+                    <th>
+                        <label for="dockerCloudImage_CgroupParent">Cgroup parent:
+                            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                            <span class="tooltiptext">Path to cgroups under which the container’s cgroup is created. If
+                                the path is not absolute, the path is considered to be relative to the cgroups path of
+                                the init process. Cgroups are created if they do not already exist.</span>
+                        </label>
+                    </th>
                     <td>
                         <input type="text" id="dockerCloudImage_CgroupParent"/>
                     </td>
@@ -199,14 +248,22 @@
             <div class="dockerCloudSimpleTables">
                 <table class="settings">
                     <thead>
-                    <tr><th class="name" style="width: 82%;">Added capabilities</th><th class="dockerCloudCtrlCell"></th></tr>
+                    <tr><th class="name" style="width: 82%;">
+                        Added capabilities
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">A list of kernel capabilities to add to the container.</span>
+                    </th><th class="dockerCloudCtrlCell"></th></tr>
                     </thead>
                     <tbody id="dockerCloudImage_CapAdd">
                     </tbody>
                 </table>
                 <table class="settings">
                     <thead>
-                    <tr><th class="name" style="width: 82%;"> Dropped capabilities</th><th class="dockerCloudCtrlCell"></th></tr>
+                    <tr><th class="name" style="width: 82%;">
+                        Dropped capabilities
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">A list of kernel capabilities to drop from the container.</span>
+                    </th><th class="dockerCloudCtrlCell"></th></tr>
                     </thead>
                     <tbody id="dockerCloudImage_CapDrop">
                     </tbody>
@@ -217,19 +274,47 @@
     <div id="dockerCloudImageTab_network">
         <table class="dockerCloudSettings runnerFormTable">
             <tr>
-                <th><label for="dockerCloudImage_Hostname">Hostname:</label></th>
+                <th>
+                    <label for="dockerCloudImage_Hostname">
+                        Hostname:
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">A string value containing the hostname to use for the container. This
+                            must be a valid RFC 1123 hostname.</span>
+                    </label></th>
                 <td>
                     <input type="text" id="dockerCloudImage_Hostname"/>
                 </td>
             </tr>
             <tr>
-                <th><label for="dockerCloudImage_Domainname">Domain name:</label></th>
+                <th>
+                    <label for="dockerCloudImage_Domainname">Domain name:</label>
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">A string value containing the domain name to use for the container
+                        .</span>
+                </th>
                 <td>
                     <input type="text" id="dockerCloudImage_Domainname"/>
                 </td>
             </tr>
             <tr>
-                <th><label for="dockerCloudImage_NetworkMode">Network mode:</label></th>
+                <th><label for="dockerCloudImage_NetworkMode">Network mode:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">
+                    Set the Network mode for the container:
+                            <ul>
+                                <li>Bridge: create a network stack on the default Docker bridge.</li>
+                                <li>Container: reuse another container's network stack.</li>
+                                <li>Host: use the Docker host network stack. Note: the host mode gives the container
+                                    full access to local system services such as D-bus and is therefore considered
+                                    insecure.</li>
+                                <li>
+                                    Custom: connect to a user-defined network.
+                                </li>
+                            </ul>
+                        </span>
+
+
+                </label></th>
                 <td>
                     <table class="dockerCloudSubtable">
                         <tr>
@@ -240,7 +325,7 @@
                                     <option value="host">Host</option>
                                     <option value="container">Container:</option>
                                     <option value="custom">Custom:</option>
-                                    <option value="none">None</option>
+                                    <!--Well, not a valid use case for an agent. <option value="none">None</option>-->
                                 </select>
                             </td>
                             <td>

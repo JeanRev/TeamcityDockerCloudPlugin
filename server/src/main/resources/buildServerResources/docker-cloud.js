@@ -91,6 +91,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self._initValidators();
                 self._bindHandlers();
                 self._renderImagesTable();
+                self._setupTooltips();
             },
 
             /* MAIN SETTINGS */
@@ -101,6 +102,32 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self._renderImageRow(val);
                 });
                 self._insertAddButton(self.$imagesTable, 4);
+            },
+
+            _setupTooltips: function() {
+                // Our tooltip div holder. Dynamically added at the end of the body and absolutely positioned under
+                // the tooltip icon. Having the tooltip div outside of the image dialog prevent it from being cut-off
+                // when overflowing the dialog area (using a visible overflow is not an option because of the dialog
+                // scrollbar handling).
+                self.tooltipHolder = $j('<div id="tooltipHolder"></div>').appendTo($j('body')).hide();
+                $j('span.tooltiptext').hide();
+                $j('i.tooltip').mouseover(function() {
+                    var tooltipText = $j(this).siblings('span.tooltiptext');
+                    self.tooltipHolder.html(tooltipText.html());
+                    console.log('offset ist ' + $j(this).offset());
+                    console.log('top is ' + $j(this).offset()['top']);
+                    self.tooltipHolder.css('top', $j(this).offset()['top'] + 25);
+                    self.tooltipHolder.css('left', $j(this).offset()['left'] - (self.tooltipHolder.width() / 2) + 8);
+                    self.tooltipHolder.show();
+                    //$j(this).siblings('span.tooltiptext').show();
+                    //$j(this).children('span.tooltiptext').show();
+                    //$j(this).siblings('span').show();
+                }).mouseleave(function() {
+                    self.tooltipHolder.hide();
+                    //$j(this).siblings('span.tooltiptext').hide();
+                    //$j(this).children('span.tooltiptext').hide();
+                    //$j(this).siblings('span').hide();
+                })
             },
             _renderImageRow: function (image) {
                 return self.$imagesTable.append($j('<tr><td>' + image.Administration.Profile + '</td>' +
