@@ -172,7 +172,7 @@
                 <table class="settings">
                     <thead>
                     <tr><th class="name" style="width: 82%;">
-                        Entrypoint executable / arguments
+                        Entrypoint executable / args
 
                         <i class="icon icon16 tc-icon_help_small tooltip">
                         </i>
@@ -189,7 +189,7 @@
                 <table class="settings">
                     <thead>
                     <tr><th class="name" style="width: 82%;">
-                        Command executable / arguments
+                        Command executable / args
                         <i class="icon icon16 tc-icon_help_small tooltip">
                             </i>
                             <span class="tooltiptext">Overwrite the default <code>CMD</code> of the image using an
@@ -234,7 +234,7 @@
                     <th>
                         <label for="dockerCloudImage_CgroupParent">Cgroup parent:
                             <i class="icon icon16 tc-icon_help_small tooltip"></i>
-                            <span class="tooltiptext">Path to cgroups under which the container’s cgroup is created. If
+                            <span class="tooltiptext">Path to cgroups under which the container's cgroup is created. If
                                 the path is not absolute, the path is considered to be relative to the cgroups path of
                                 the init process. Cgroups are created if they do not already exist.</span>
                         </label>
@@ -342,7 +342,12 @@
                         </tr>
                     </table>
         </table>
-        <h4>Exposed ports:</h4>
+        <h4>Exposed/published ports:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">A list of containers ports to be exposed to the host, and optionally published
+                to one of the host interface.
+            </span>
+        </h4>
         <table class="settings">
             <thead>
             <tr><th class="name center" style="width: 32%">Host IP</th><th class="name center" style="width: 20%">Host port</th><th class="name center" style="width: 20%">Container Port&nbsp;<l:star/></th><th class="name center" style="width: 20%">Protocol</th><th class="dockerCloudCtrlCell"></th></tr>
@@ -354,20 +359,29 @@
         <div class="dockerCloudSimpleTables">
             <table class="settings">
                 <thead>
-                <tr><th class="name" style="width: 82%;">Server Address&nbsp;<l:star/></th><th class="dockerCloudCtrlCell"></th></tr>
+                <tr><th class="name" style="width: 82%;">Server Address&nbsp;<l:star/>
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">A list of DNS servers for the container to use.</span>
+                </th><th class="dockerCloudCtrlCell"></th></tr>
                 </thead>
                 <tbody id="dockerCloudImage_Dns">
                 </tbody>
             </table>
             <table class="settings">
                 <thead>
-                <tr><th class="name" style="width: 82%;">Search domains&nbsp;<l:star/></th><th class="dockerCloudCtrlCell"></th></tr>
+                <tr><th class="name" style="width: 82%;">Search domains&nbsp;<l:star/>
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">A list of DNS search domains.</span>
+                </th><th class="dockerCloudCtrlCell"></th></tr>
                 </thead>
                 <tbody id="dockerCloudImage_DnsSearch">
                 </tbody>
             </table>
         </div>
-        <h4>Extra hosts:</h4>
+        <h4>Extra hosts:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">A list of hostnames/IP mappings to add to the container’s <code>/etc/hosts</code>
+                file</span></h4>
         <table class="settings">
             <thead>
             <tr><th class="name" style="width: 45%;">Name&nbsp;<l:star/></th><th class="name" style="width: 45%;">IP
@@ -376,7 +390,10 @@
             <tbody id="dockerCloudImage_ExtraHosts">
             </tbody>
         </table>
-        <h4>Link container:</h4>
+        <h4>Link container:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">A list of links for the container.</span>
+        </h4>
         <table class="settings">
             <thead>
             <tr><th class="name" style="width: 45%;">Container&nbsp;<l:star/></th><th class="name" style="width: 45%;">Alias&nbsp;<l:star/></th><th class="dockerCloudCtrlCell"></th></tr>
@@ -389,7 +406,10 @@
     <div id="dockerCloudImageTab_resources">
         <table class="dockerCloudSettings runnerFormTable">
             <tr>
-                <th><label for="dockerCloudImage_Memory">Memory:</label></th>
+                <th><label for="dockerCloudImage_Memory">Memory:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">Memory limit.</span>
+                </label></th>
                 <td>
                     <input type="text" class="textField" id="dockerCloudImage_Memory"/>
                     <select id="dockerCloudImage_MemoryUnit">
@@ -402,7 +422,11 @@
                 </td>
             </tr>
             <tr>
-                <th>Swap:</th>
+                <th>Swap:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">Total memory limit (memory limit + swap). Must be greater than <b>
+                        Memory</b>.</span>
+                </th>
                 <td>
                     <p>
                         <input type="checkbox" id="dockerCloudImage_MemorySwapUnlimited"/>
@@ -421,35 +445,49 @@
                 </td>
             </tr>
             <tr>
-                <th><label for="dockerCloudImage_CpusetCpus">cpuset - CPUs:</label></th>
+                <th><label for="dockerCloudImage_CpusetCpus">cpuset - CPUs:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">String value containing the cgroups <code>CpusetCpus</code> to use.</span></label></th>
                 <td>
                     <input type="text" id="dockerCloudImage_CpusetCpus" class="textField"/>
                     <span class="error" id="dockerCloudImage_CpusetCpus_error"></span>
                 </td>
             </tr>
             <tr>
-                <th><label for="dockerCloudImage_CpusetMems">cpuset - MEMs:</label></th>
+                <th><label for="dockerCloudImage_CpusetMems">cpuset - MEMs:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">Memory nodes (MEMs) in which to allow execution. Only
+                        effective on NUMA systems. Format: CPU index, or range of index using <code>-</code> as
+                        separator. Example: <code>0-3, 0, 1</code></span></label></th>
                 <td>
                     <input type="text" class="textField" id="dockerCloudImage_CpusetMems"/>
+
                     <span class="error" id="dockerCloudImage_CpusetMems_error"></span>
                 </td>
             </tr>
             <tr>
-                <th><label for="dockerCloudImage_CpuShares">CPU Shares:</label></th>
+                <th><label for="dockerCloudImage_CpuShares">CPU Shares:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">CPU shares (relative weight).</span></label></th>
                 <td>
                     <input type="text" class="textField" id="dockerCloudImage_CpuShares"/>
                     <span class="error" id="dockerCloudImage_CpuShares_error"></span>
                 </td>
             </tr>
             <tr>
-                <th><label for="dockerCloudImage_CpuPeriod">CPU Period:</label></th>
+                <th><label for="dockerCloudImage_CpuPeriod">CPU Period:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">The length of a CPU period in microseconds.</span></label></th>
                 <td>
                     <input type="text" class="textField" id="dockerCloudImage_CpuPeriod"/>
                     <span class="error" id="dockerCloudImage_CpuPeriod_error"></span>
                 </td>
             </tr>
             <tr>
-                <th><label for="dockerCloudImage_BlkioWeight">Bulk IO weight:</label></th>
+                <th><label for="dockerCloudImage_BlkioWeight">Bulk IO weight:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">Block IO weight (relative weight) accepts a weight value between 10 and
+                        1000.</span></label></th>
                 <td>
                     <input type="text" id="dockerCloudImage_BlkioWeight" class="textField"/>
                     <span class="error" id="dockerCloudImage_BlkioWeight_error"></span>
@@ -457,7 +495,10 @@
             </tr>
         </table>
 
-        <h4>Ulimit:</h4>
+        <h4>Ulimit:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">A list of ulimits to set in the container.</span>
+        </h4>
         <table class="settings">
             <thead>
             <tr><th class="name" style="width: 30%">Name&nbsp;<l:star/></th><th class="name" style="width: 30%">Soft
@@ -473,20 +514,30 @@
     <div id="dockerCloudImageTab_advanced">
         <table class="dockerCloudSettings runnerFormTable">
             <tr>
-                <th>OOM killer</th>
+                <th>OOM killer:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">Disable OOM Killer for the container or not.</span></th>
                 <td>
                     <input type="checkbox" id="dockerCloudImage_OomKillDisable" data-bind="checked: oom_kill_disable"/>
-                    <label for="dockerCloudImage_OomKillDisable">Disable OOM killer</label>
+                    <label for="dockerCloudImage_OomKillDisable">Disable OOM killer.</label>
                 </td>
             </tr>
             <tr>
-                <th><label for="dockerCloudImage_LogType">Logging drivers:</label></th>
+                <th>
+                    <label for="dockerCloudImage_LogType">Logging drivers:</label>
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">Log configuration for the container.</span>
+                </th>
                 <td>
                     <input id="dockerCloudImage_LogType" type="text">
                 </td>
             </tr>
         </table>
-        <h4>Volumes:</h4>
+        <h4>Volumes:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">Defines volumes, and optionally, their bound location on the host file system
+                .</span>
+        </h4>
         <table class="settings">
             <thead>
             <tr><th class="name" style="width: 35%">Host directory</th><th class="name" style="width: 35%">Container directory&nbsp;<l:star/></th><th class="name center" style="width: 20%;">Read only</th><th class="dockerCloudCtrlCell"></th></tr>
@@ -494,7 +545,10 @@
             <tbody id="dockerCloudImage_Volumes">
             </tbody>
         </table>
-        <h4>Labels:</h4>
+        <h4>Labels:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">Adds a map of labels to a container.</span>
+        </h4>
         <table class="settings">
             <thead>
             <tr><th class="name" style="width: 45%;">Key&nbsp;<l:star/></th><th class="name" style="width: 45%;">Value</th><th class="dockerCloudCtrlCell"></th></tr>
@@ -502,7 +556,10 @@
             <tbody id="dockerCloudImage_Labels">
             </tbody>
         </table>
-        <h4>Logging options:</h4>
+        <h4>Logging options:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">Configuration map for the logging driver.</span>
+        </h4>
         <table class="settings">
             <thead>
             <tr><th class="name" style="width: 45%;">Option Key&nbsp;<l:star/></th><th class="name" style="width: 45%;">Option Value</th><th class="dockerCloudCtrlCell"></th></tr>
@@ -510,7 +567,10 @@
             <tbody id="dockerCloudImage_LogConfig">
             </tbody>
         </table>
-        <h4>Devices:</h4>
+        <h4>Devices:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext"> A list of devices to add to the container.</span>
+        </h4>
         <table class="settings">
             <thead>
             <tr><th class="name" style="width: 30%;">Host path&nbsp;<l:star/></th><th class="name"

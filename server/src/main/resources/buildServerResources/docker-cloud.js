@@ -106,9 +106,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
             _setupTooltips: function() {
                 // Our tooltip div holder. Dynamically added at the end of the body and absolutely positioned under
-                // the tooltip icon. Having the tooltip div outside of the image dialog prevent it from being cut-off
-                // when overflowing the dialog area (using a visible overflow is not an option because of the dialog
-                // scrollbar handling).
+                // the tooltip icon. Having the tooltip div outside of containers with non-visible overflow (like
+                // dialogs), prevent it from being cut-off.
                 self.tooltipHolder = $j('<div id="tooltipHolder"></div>').appendTo($j('body')).hide();
                 $j('span.tooltiptext').hide();
                 $j('i.tooltip').mouseover(function() {
@@ -1312,7 +1311,21 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     dockerCloudImage_CpusetMems: [cpuSetValidator],
                     dockerCloudImage_CpuShares: [positiveIntegerValidator],
                     dockerCloudImage_CpuPeriod: [positiveIntegerValidator],
-                    dockerCloudImage_BlkioWeight: [positiveIntegerValidator],
+                    dockerCloudImage_BlkioWeight: [function ($elt) {
+                        var value = $elt.val().trim();
+                        $elt.val(value);
+                        if (!value) {
+                            return;
+                        }
+                        var result = positiveIntegerValidator($elt);
+                        if (!result) {
+                            var number = parseInt(value);
+                            if (number < 10 || number > 1000) {
+                                result = {msg: "IO weight must be between 10 and 1000"}
+                            }
+                        }
+                        return result;
+                    }],
                     dockerCloudImage_MemorySwap: [
                         function ($elt) {
                             var value = $elt.val().trim();
@@ -1455,8 +1468,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 dockerCloudImage_Ulimits: ' <td><input type="text" id="dockerCloudImage_Ulimits_IDX_Name" /><span class="error" id="dockerCloudImage_Ulimits_IDX_Name_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_Ulimits_IDX_Soft" /><span class="error" id="dockerCloudImage_Ulimits_IDX_Soft_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_Ulimits_IDX_Hard" /><span class="error" id="dockerCloudImage_Ulimits_IDX_Hard_error"></span></td>',
-                dockerCloudImage_Ports: '<td class="center"><input type="text" id="dockerCloudImage_Ports_IDX_HostIp" /></td>\
-        <td class="center"><input type="text" id="dockerCloudImage_Ports_IDX_HostPort" size="5"/></td>\
+                dockerCloudImage_Ports: '<td class="center"><input type="text" id="dockerCloudImage_Ports_IDX_HostIp" />\
+                <span class="error" id="dockerCloudImage_Ports_IDX_HostIp_error"></td>\
+        <td class="center"><input type="text" id="dockerCloudImage_Ports_IDX_HostPort" size="5"/><span class="error"\
+         id="dockerCloudImage_Ports_IDX_HostPort_error"></td>\
         <td class="center"><input type="text" id="dockerCloudImage_Ports_IDX_ContainerPort" size="5"/><span class="error" id="dockerCloudImage_Ports_IDX_ContainerPort_error"></span></td>\
         <td class="center"><select id="dockerCloudImage_Ports_IDX_Protocol">\
             <option value="tcp" selected="selected">tcp</option>\
