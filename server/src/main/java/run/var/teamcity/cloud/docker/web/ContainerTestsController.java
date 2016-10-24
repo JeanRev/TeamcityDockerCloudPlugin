@@ -35,6 +35,7 @@ import run.var.teamcity.cloud.docker.client.NotFoundException;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
 import run.var.teamcity.cloud.docker.util.Node;
+import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
 import run.var.teamcity.cloud.docker.util.WrappedRunnableScheduledFuture;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
@@ -69,6 +70,7 @@ public class ContainerTestsController extends BaseFormXmlController {
     private final static int TEST_MAX_IDLE_TIME_MINUTES = 10;
 
     private final DockerStreamingController streamingController;
+    private final OfficialAgentImageResolver officialAgentImageResolver;
     private final AtmosphereFramework atmosphereFramework;
     private final ReentrantLock lock = new ReentrantLock();
     private final BuildAgentManager agentMgr;
@@ -105,6 +107,7 @@ public class ContainerTestsController extends BaseFormXmlController {
 
         this.agentMgr = agentMgr;
         this.streamingController = streamingController;
+        this.officialAgentImageResolver = OfficialAgentImageResolver.forServer(server);
     }
 
     private void disposeTask(ContainerSpecTest test, HttpServletResponse response) {
@@ -220,7 +223,8 @@ public class ContainerTestsController extends BaseFormXmlController {
             return test;
         }
 
-        CreateContainerTestTask testTask = new CreateContainerTestTask(test, imageConfig, webLinks.getRootUrl(), test.getUuid());
+        CreateContainerTestTask testTask = new CreateContainerTestTask(test, imageConfig, webLinks.getRootUrl(), test
+                .getUuid(), officialAgentImageResolver);
         test.setCurrentTask(schedule(testTask));
 
         return test;
@@ -308,7 +312,6 @@ public class ContainerTestsController extends BaseFormXmlController {
                 return;
             }
             if (!action.equals("query")) {
-                Status status = test.getCurrentTaskFuture().getTask().getStatus();
                 switch (action) {
                     case "start":
                         submitStartTask(test);

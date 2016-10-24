@@ -8,4 +8,8 @@ public class ContainerTestTaskException extends RuntimeException {
     public ContainerTestTaskException(String msg) {
         super(msg);
     }
+
+    public ContainerTestTaskException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }
