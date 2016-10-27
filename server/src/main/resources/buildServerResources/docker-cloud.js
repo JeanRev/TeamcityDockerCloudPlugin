@@ -118,14 +118,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.tooltipHolder.css('top', $j(this).offset()['top'] + 25);
                     self.tooltipHolder.css('left', $j(this).offset()['left'] - (self.tooltipHolder.width() / 2) + 8);
                     self.tooltipHolder.show();
-                    //$j(this).siblings('span.tooltiptext').show();
-                    //$j(this).children('span.tooltiptext').show();
-                    //$j(this).siblings('span').show();
                 }).mouseleave(function() {
                     self.tooltipHolder.hide();
-                    //$j(this).siblings('span.tooltiptext').hide();
-                    //$j(this).children('span.tooltiptext').hide();
-                    //$j(this).siblings('span').hide();
                 })
             },
             _renderImageRow: function (image) {
@@ -142,8 +136,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             _checkConnection: function () {
-
-
                 var checkConnectionDeferred = $j.Deferred()
                     .done(function (response) {
                         var $response = $j(response.responseXML);
@@ -1027,9 +1019,27 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _processTestResponse: function (responseMap) {
                 self._testDialogHideAllBtns();
 
+                console.log('Progress: ' + responseMap.progress + ' Status: ' + responseMap.status + ' Msg: ' + responseMap.msg + ' Uuid: ' + responseMap.taskUuid);
+
                 self.$testContainerLabel.text(responseMap.msg);
 
-                console.log('Progress: ' + responseMap.progress + ' Status: ' + responseMap.status + ' Msg: ' + responseMap.msg + ' Uuid: ' + responseMap.taskUuid);
+                var failure = responseMap.status == 'FAILURE';
+
+                self.$testContainerLabel.toggleClass('systemProblemsBar', failure);
+
+                if (failure && responseMap.failureCause) {
+                    //var errorDetails = $j('#dockerCloudTestContainerErrorDetails');
+                    var errorDetailsMsg = $j('#dockerCloudTestContainerErrorDetailsMsg').empty();
+                    var errorDetailsStackTrace = $j('#dockerCloudTestContainerErrorDetailsStackTrace').empty();
+
+                    errorDetailsMsg.text(responseMap.msg);
+                    errorDetailsStackTrace.text(responseMap.failureCause);
+
+                    var viewDetailsLink = $j('<a href="#">view details</a>)').click(function() {
+                        BS.DockerDiagnosticDialog.showCentered();
+                    });
+                    self.$testContainerLabel.append(' (').append(viewDetailsLink).append(')');
+                }
 
                 var NONE = 0;
                 var CREATED = 1;
@@ -1114,7 +1124,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     msg: $xml.find('msg').text(),
                     status: $xml.find('status').text(),
                     phase: $xml.find('phase').text(),
-                    taskUuid: $xml.find("taskUuid").text()
+                    taskUuid: $xml.find("taskUuid").text(),
+                    failureCause: $xml.find("failureCause").text()
                 };
             },
 
@@ -1136,6 +1147,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         deferred.resolve(responseMap);
                     },
                     onFailure: function (response) {
+                        self.lastFailure = response;
                         deferred.reject(response.getStatusText());
                     }
                 });
@@ -1144,7 +1156,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 deferred.fail(function(errorMsg) {
                     // Invocation failure, show the message, but left the UI untouched, the user may choose to retry
                     // the failed operation.
-                    self.$testContainerOutcome.text(errorMsg);
+                    self.$testContainerLabel.text(errorMsg);
+                    self.$testContainerLabel.addClass('systemProblemsBar');
                 });
 
                 deferred.done(self._processTestResponse);
@@ -1375,6 +1388,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerLabel.text();
                 self.$testContainerCloseBtn.show();
                 self.$testContainerLoader.hide();
+                self.$testContainerLabel.empty();
             },
 
             validate: function () {
@@ -1497,3 +1511,10 @@ BS.DockerTestContainerDialog = OO.extend(BS.AbstractModalDialog, {
         return $('DockerTestContainerDialog');
     }
 });
+
+BS.DockerDiagnosticDialog = OO.extend(BS.AbstractModalDialog, {
+    getContainer: function () {
+        return $('DockerDiagnosticDialog');
+    }
+});
+

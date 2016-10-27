@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -235,6 +236,57 @@ abstract class AbstractNode<N extends AbstractNode> {
         }
 
         return getAsInt(fieldName);
+    }
+
+    /**
+     * Gets the child integer value with the specified name.
+     *
+     * @param fieldName the child field name
+     *
+     * @return the integer value
+     *
+     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
+     * or is not an integer value node
+     */
+    public BigInteger getAsBigInt(@NotNull String fieldName) {
+        DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
+        checkObject();
+
+        BigInteger bigInt = null;
+        JsonNode value = node.get(fieldName);
+        if (value != null && value.isIntegralNumber()) {
+            String number = value.asText();
+            bigInt = new BigInteger(number);
+        }
+        if (bigInt == null) {
+            throw new UnsupportedOperationException("Child field not found or is not an integer value node: " +
+                    node + " / " +  fieldName);
+        }
+        return bigInt;
+    }
+
+    /**
+     * Gets the child integer node with the specified name.
+     *
+     * @param fieldName the child field name
+     * @param def the default value to be used if the child value node does not exists
+     *
+     * @return the child node or the provided default value
+     *
+     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws UnsupportedOperationException if this node is not an object, or if the child node is not an integer
+     * value node
+     */
+    public BigInteger getAsBigInt(@NotNull String fieldName, BigInteger def) {
+        DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
+        checkObject();
+        JsonNode value = node.get(fieldName);
+        if (value == null) {
+            return def;
+        }
+
+        return getAsBigInt(fieldName);
     }
 
     /**

@@ -11,9 +11,11 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.protocol.HttpCoreContext;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.logging.LoggingFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.JULLogger;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
@@ -33,6 +35,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 /**
  * A Docker client. This client supports connecting to the Docker daemon using either Unix sockets or TCP connections.
@@ -313,8 +316,8 @@ public class DockerClient extends DockerAbstractClient {
         connManager.setMaxTotal(connectionPoolSize);
 
         config.property(ApacheClientProperties.CONNECTION_MANAGER, connManager);
-        //config.register(new LoggingFeature(new JULLogger(LOG), Level.FINE, LoggingFeature.Verbosity.PAYLOAD_ANY,
-         //      1024 * 512));
+        config.register(new LoggingFeature(new JULLogger(LOG), Level.FINE, LoggingFeature.Verbosity.PAYLOAD_ANY,
+               1024 * 512));
 
         return new DockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI);
     }

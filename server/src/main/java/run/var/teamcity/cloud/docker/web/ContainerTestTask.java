@@ -1,5 +1,7 @@
 package run.var.teamcity.cloud.docker.web;
 
+import com.intellij.openapi.diagnostic.Logger;
+import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 
 import java.util.concurrent.locks.ReentrantLock;
@@ -7,6 +9,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 abstract class ContainerTestTask implements Runnable {
+
+    private final static Logger LOG = DockerCloudUtils.getLogger(ContainerTestTask.class);
 
     final ReentrantLock lock = new ReentrantLock();
 
@@ -58,18 +62,27 @@ abstract class ContainerTestTask implements Runnable {
 
     @Override
     public final void run() {
+
+        Status newStatus;
+        Throwable throwable = null;
+
         try {
-            lock.lock();
-            if (status != Status.PENDING) {
-                throw new IllegalStateException("Cannot run task in status " + status + ".");
+            try {
+                lock.lock();
+                if (status != Status.PENDING) {
+                    throw new IllegalStateException("Cannot run task in status " + status + ".");
+                }
+                newStatus = work();
+            }  catch (Exception e) {
+                LOG.error("Processing of task " + this + " failed.", e);
+                newStatus = Status.FAILURE;
+                throwable = e;
             }
-            Status newStatus = work();
+
             if (status != newStatus) {
-                testTaskHandler.notifyStatus(phase, newStatus, null, null);
+                testTaskHandler.notifyStatus(phase, newStatus, null, throwable);
             }
             status = newStatus;
-        } catch (Exception e) {
-            status = Status.FAILURE;
         } finally {
             lock.unlock();
         }

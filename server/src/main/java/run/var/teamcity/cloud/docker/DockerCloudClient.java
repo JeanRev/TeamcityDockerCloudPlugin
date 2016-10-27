@@ -45,7 +45,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     /**
      * Client UUID.
      */
-    private final UUID id = UUID.randomUUID();
+    private final UUID uuid = UUID.randomUUID();
 
     /**
      * Rate at which Docker syncs are performed.
@@ -140,6 +140,16 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         });
 
         officialAgentImageResolver = OfficialAgentImageResolver.forServer(buildServer);
+    }
+
+    /**
+     * Gets this client UUID. This UUID is persistent across server shutdown and reconfigurations.
+     *
+     * @return the client UUDI
+     */
+    @NotNull
+    public UUID getUuid() {
+        return uuid;
     }
 
     @Override
@@ -237,7 +247,6 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         try {
             lock.lock();
 
-
             for (DockerInstance existingInstance : dockerImage.getInstances()) {
                 if (existingInstance.getStatus() == InstanceStatus.STOPPED) {
                     instance = existingInstance;
@@ -261,6 +270,9 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
             protected void callInternal() throws Exception {
 
                 DockerInstance instance = getInstance();
+
+                LOG.info("Starting container " + instance.getUuid());
+
                 String containerId;
 
                 try {
@@ -329,13 +341,17 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                     lock.unlock();
                 }
                 String containerId = dockerInstance.getContainerId();
-                assert containerId != null;
-                dockerClient.restartContainer(containerId);
-                try {
-                    lock.lock();
-                    dockerInstance.setStatus(InstanceStatus.RUNNING);
-                } finally {
-                    lock.unlock();
+
+                if (containerId != null) {
+                    dockerClient.restartContainer(containerId);
+                    try {
+                        lock.lock();
+                        dockerInstance.setStatus(InstanceStatus.RUNNING);
+                    } finally {
+                        lock.unlock();
+                    }
+                } else {
+                    LOG.warn("No container associated with instance " + instance + ". Ignoring restart request.");
                 }
             }
         });
@@ -371,11 +387,12 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                     lock.unlock();
                 }
                 String containerId = dockerInstance.getContainerId();
-                assert containerId != null;
 
-                boolean rmContainer = clientDisposed || dockerInstance.getImage().getConfig().isRmOnExit();
-
-                boolean containerAvailable = terminateContainer(containerId, rmContainer);
+                boolean containerAvailable = false;
+                if (containerId != null) {
+                    boolean rmContainer = clientDisposed || dockerInstance.getImage().getConfig().isRmOnExit();
+                    containerAvailable = terminateContainer(containerId, rmContainer);
+                }
 
                 try  {
                     lock.lock();
@@ -463,7 +480,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 add(DockerCloudUtils.ENV_INSTANCE_ID + "=" + instance.getUuid());
 
         container.getOrCreateObject("Labels").
-                put(DockerCloudUtils.CLIENT_ID_LABEL, id.toString()).
+                put(DockerCloudUtils.CLIENT_ID_LABEL, uuid.toString()).
                 put(DockerCloudUtils.INSTANCE_ID_LABEL, instance.getUuid().toString());
 
         if (config.isUseOfficialTCAgentImage()) {
@@ -528,8 +545,10 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 return;
             }
 
+            LOG.info("Synching with Docker instance now.");
+
             // Step 1, query the whole list of containers associated with this cloud client.
-            Node containers = dockerClient.listContainersWithLabel(DockerCloudUtils.CLIENT_ID_LABEL, id.toString());
+            Node containers = dockerClient.listContainersWithLabel(DockerCloudUtils.CLIENT_ID_LABEL, uuid.toString());
 
             List<String> orphanedContainers = new ArrayList<>();
 
@@ -551,6 +570,9 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                     LOG.debug("No instances registered, skip syncing.");
                     return;
                 }
+
+                List<Node> containersValues = containers.getArrayValues();
+                LOG.debug("Found " + containersValues.size() + " containers to be synched: " + containers);
 
                 // Step 3, process each found container and conciliate it with our data model.
                 for (Node container : containers.getArrayValues()) {

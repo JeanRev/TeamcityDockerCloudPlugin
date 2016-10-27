@@ -11,9 +11,12 @@ import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.UUID;
 
 public class CreateContainerTestTask extends ContainerTestTask {
+
+    private final static BigInteger UNKNOWN_PROGRESS = BigInteger.valueOf(-1);
 
     private final DockerImageConfig imageConfig;
     private final String serverUrl;
@@ -48,12 +51,12 @@ public class CreateContainerTestTask extends ContainerTestTask {
             image = container.getAsString("Image");
         }
 
-        image = "busybox/latest";
+        //image = "jetbrains/teamcity-agent:10.0";
 
         try (NodeStream nodeStream = client.createImage(image, null)) {
             Node status;
             String statusMsg = null;
-            int progress = -1;
+            BigInteger progress = UNKNOWN_PROGRESS;
             msg("Pulling image...");
             while ((status = nodeStream.next()) != null) {
                 String error = status.getAsString("error", null);
@@ -62,22 +65,30 @@ public class CreateContainerTestTask extends ContainerTestTask {
                     throw new ContainerTestTaskException("Failed to pul image: " + error + " -- " + details
                             .getAsString("message", null), null);
                 }
+                System.out.println("Received status: " + status);
                 String newStatusMsg = status.getAsString("status", null);
                 if (newStatusMsg != null) {
                     Node progressDetails = status.getObject("progressDetail", Node.EMPTY_OBJECT);
-                    int current = progressDetails.getAsInt("current", -1);
-                    int total = progressDetails.getAsInt("total", -1);
-                    int newProgress = -1;
-                    if (current != -1 && total != -1) {
-                        newProgress = current == 0 ? 0 : (100 * total) / (100 * current);
-                    }
+                    String id = status.getAsString("id", null);
+                    if (id != null) {
+                        BigInteger current = progressDetails.getAsBigInt("current", UNKNOWN_PROGRESS);
+                        BigInteger total = progressDetails.getAsBigInt("total", UNKNOWN_PROGRESS);
 
-                    if (!newStatusMsg.equals(statusMsg) || (newProgress != -1 && newProgress != progress)) {
-                        String progressPercent = newProgress != -1 ? " " + newProgress + "%" : "";
-                        msg(newStatusMsg + progressPercent);
+                        BigInteger newProgress = UNKNOWN_PROGRESS;
+
+                        if (validProgress(current) && validProgress(total) && total.compareTo(BigInteger.ZERO) != 0) {
+                            newProgress = current.compareTo(BigInteger.ZERO) == 0 ? BigInteger.ZERO :
+                                    current.multiply(BigInteger.valueOf(100)).divide(total);
+                        }
+
+                        if (!newStatusMsg.equals(statusMsg) || (validProgress(newProgress) && newProgress
+                                .compareTo(progress) != 0)) {
+                            String progressPercent = validProgress(newProgress) ? " " + newProgress + "%" : "";
+                            msg("Pull in progress - " + id + ": " + newStatusMsg + progressPercent);
+                        }
+                        statusMsg = newStatusMsg;
+                        progress = newProgress;
                     }
-                    statusMsg = newStatusMsg;
-                    progress = newProgress;
                 }
 
             }
@@ -92,5 +103,9 @@ public class CreateContainerTestTask extends ContainerTestTask {
         msg("Container created");
 
         return Status.SUCCESS;
+    }
+
+    private boolean validProgress(BigInteger progress) {
+        return progress.compareTo(BigInteger.ZERO) >= 0;
     }
 }

@@ -52,4 +52,9 @@ abstract class DockerInstanceTask extends DockerTask {
     InstanceStatus getScheduledStatus() {
         return scheduledStatus;
     }
+
+    @Override
+    public String toString() {
+        return "DockerInstanceTask[operationName: " + getOperationName() + ", instance: " + instance.getUuid() + "]";
+    }
 }

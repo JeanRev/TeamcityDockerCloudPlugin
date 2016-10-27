@@ -615,8 +615,9 @@
             <div id="dockerTestContainerOutput"
                       readonly="readonly"></div>
         </div>
+        <span id="dockerCloudTestContainerLabel" class="systemProblemsBar"></span>
         <div class="hidden" id="dockerCloudTestContainerLoader"><i class="icon-refresh icon-spin"></i>
-            <span id="dockerCloudTestContainerLabel"></span> </div>
+            <</div>
 
         <div class="hidden" id="dockerCloudTestContainerOutcome"></div>
 
@@ -627,6 +628,14 @@
             <input type="button" class="btn" id="dockerCloudTestContainerDisposeBtn" value="Dispose container"/>
             <input type="button" class="btn" id="dockerCloudTestContainerCloseBtn" value="Close"/>
         </div>
+    </div>
+</bs:dialog>
+
+<bs:dialog dialogId="DockerDiagnosticDialog" title="Diagnostic"
+           closeCommand="BS.DockerDiagnosticDialog.close()">
+
+    <span id="dockerCloudTestContainerErrorDetailsMsg" class="mono"></span>
+    <div id="dockerCloudTestContainerErrorDetailsStackTrace" class="problemDetails mono custom-scroll">
     </div>
 </bs:dialog>
 <script type="text/javascript">

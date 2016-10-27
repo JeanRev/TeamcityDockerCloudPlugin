@@ -9,6 +9,8 @@ import java.util.concurrent.TimeUnit;
  */
 abstract class DockerClientTask extends DockerTask {
 
+    private final DockerCloudClient client;
+
     /**
      * Creates a one-shot task.
      *
@@ -19,6 +21,7 @@ abstract class DockerClientTask extends DockerTask {
      */
     DockerClientTask(@NotNull String operationName, @NotNull DockerCloudClient client) {
         super(operationName, client);
+        this.client = client;
     }
 
     /**
@@ -37,5 +40,11 @@ abstract class DockerClientTask extends DockerTask {
                      @NotNull TimeUnit
             timeUnit) {
         super(operationName, client, initialDelay, delay, timeUnit);
+        this.client = client;
+    }
+
+    @Override
+    public String toString() {
+        return "DockerInstanceTask[operationName: " + getOperationName() + ", instance: " + client.getUuid() + "]";
     }
 }

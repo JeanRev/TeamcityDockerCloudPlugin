@@ -287,3 +287,27 @@ aligned on the RHS of the screen. */
 #dockerTestContainerOutput .terminal:focus .terminal-cursor {
     background-color: #fafafa;
 }
+
+/* Diagnostic dialog */
+
+#DockerDiagnosticDialog {
+    width: 800px;
+}
+
+#dockerCloudTestContainerErrorDetailsMsg {
+    margin-bottom: 10px;
+}
+
+#dockerCloudTestContainerErrorDetailsStackTrace {
+    white-space: pre;
+    width: 100%;
+    overflow: auto;
+    background: #eeeeee;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    max-height: 400px;
+    font-size: 0.8em;
+    padding: 5px;
+    box-sizing: border-box;
+    margin-top: 10px;
+}

@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker;
 
 
+import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.InstanceStatus;
 import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
@@ -45,6 +46,8 @@ import java.util.concurrent.locks.ReentrantLock;
  * <p>Instances of this class are thread safe.</p>
  */
 class DockerTaskScheduler {
+
+    private final static Logger LOG = DockerCloudUtils.getLogger(DockerTaskScheduler.class);
 
     // This lock ensure a thread-safe usage of all the variables below.
     private final ReentrantLock lock = new ReentrantLock();
@@ -110,6 +113,8 @@ class DockerTaskScheduler {
                     lock.lock();
                     DockerTask dockerTask = (DockerTask) task;
 
+                    LOG.info("Task execution completed.");
+
                     if (dockerTask instanceof DockerClientTask) {
                         assert clientTaskSubmitted;
                         clientTaskSubmitted = false;
@@ -121,12 +126,19 @@ class DockerTaskScheduler {
                         assert unmarked: "Task " + instanceTask + " was not marked as being processed.";
                     }
 
-                    if (throwable != null) {
+                    if (throwable == null) {
+                        if (dockerTask.isRepeatable()) {
+                            LOG.info("Repeatable task " + dockerTask + " completed without error and will be " +
+                                    "rescheduled.");
+                            TimeUnit timeUnit = dockerTask.getTimeUnit();
+                            assert timeUnit != null;
+                            executor.schedule(new ScheduleRepetableTask(dockerTask), dockerTask.getDelay(), dockerTask.getTimeUnit());
+                        } else {
+                            LOG.info("Task " + dockerTask + " completed without error.");
+                        }
+                    } else {
+                        LOG.error("Task " + dockerTask + " execution failed.", throwable);
                         dockerTask.getErrorProvider().notifyFailure(dockerTask.getOperationName(), throwable);
-                    } else if (dockerTask.isRepeatable()) {
-                        TimeUnit timeUnit = dockerTask.getTimeUnit();
-                        assert timeUnit != null;
-                        executor.schedule(new ScheduleRepetableTask(dockerTask), dockerTask.getDelay(), dockerTask.getTimeUnit());
                     }
 
                     scheduleNextTasks();
@@ -146,6 +158,7 @@ class DockerTaskScheduler {
      */
     void scheduleClientTask(@NotNull DockerClientTask clientTask) {
         DockerCloudUtils.requireNonNull(clientTask, "Client task cannot be null.");
+        LOG.info("Scheduling client: " + clientTask);
         submitTaskWithInitialDelay(clientTask);
     }
 
@@ -158,6 +171,7 @@ class DockerTaskScheduler {
      */
     void scheduleInstanceTask(@NotNull DockerInstanceTask instanceTask) {
         DockerCloudUtils.requireNonNull(instanceTask, "Instance task cannot be null.");
+        LOG.info("Scheduling instance task: " + clientTasks);
         submitTaskWithInitialDelay(instanceTask);
     }
 
@@ -200,17 +214,20 @@ class DockerTaskScheduler {
     private void scheduleNextTasks() {
         assert lock.isHeldByCurrentThread();
 
+        LOG.info("Scheduling status: submitted instance tasks: " +  submittedInstancesUUID.size() + ", client task " +
+                "submitted: " + clientTaskSubmitted + ", instances tasks scheduled: " + instancesTask.size() + ", " +
+        " client tasks scheduled: " + clientTasks.size());
+
         if (!clientTaskSubmitted) {
             if (!clientTasks.isEmpty()) {
                 // Some client tasks are waiting, we will submit them as soon as possible, but not before all instances
                 // tasks are processed.
                 if (submittedInstancesUUID.isEmpty()) {
                     DockerClientTask clientTask = clientTasks.pollFirst();
-                    if (clientTask != null) {
-                        executor.submit(clientTask);
-                        // Mark the client task as being submitted.
-                        clientTaskSubmitted = true;
-                    }
+                    LOG.info("Submitting client task " + clientTask + " for execution.");
+                    executor.submit(clientTask);
+                    // Mark the client task as being submitted.
+                    clientTaskSubmitted = true;
                 }
             } else {
                 // No client tasks are waiting or is being processed, we may execute instance tasks.
@@ -221,6 +238,7 @@ class DockerTaskScheduler {
                     UUID instanceUuid = instance.getUuid();
                     // Only submit one task for a given instance at a time.
                     if (!submittedInstancesUUID.contains(instanceUuid)) {
+                        LOG.info("Submitting instance task " + instanceTask + " for execution.");
                         InstanceStatus scheduledStatus = instanceTask.getScheduledStatus();
                         if (scheduledStatus != null) {
                             instance.setStatus(scheduledStatus);
@@ -228,11 +246,16 @@ class DockerTaskScheduler {
 
                         // Mark the instance tasks as being submitted.
                         submittedInstancesUUID.add(instanceUuid);
-                        itr.remove();
+                        itr.remove();;
                         executor.submit(instanceTask);
+                    } else {
+                        LOG.info("Tasks for instance " + instance.getUuid() + " already submitted, delaying scheduled"
+                                + " task");
                     }
                 }
             }
+        } else {
+            LOG.info("Client task submitted for execution, skipping submitting other tasks.");
         }
 
         shutdownCheck();

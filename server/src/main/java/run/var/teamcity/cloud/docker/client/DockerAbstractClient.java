@@ -59,7 +59,7 @@ public abstract class DockerAbstractClient implements Closeable {
 
         try {
             return Node.parse((InputStream) response.getEntity());
-        } catch (ProcessingException | IOException e) {
+        } catch (IOException e) {
             throw new DockerClientProcessingException("Failed to parse response from server.", e);
         } finally {
             try {
@@ -114,7 +114,7 @@ public abstract class DockerAbstractClient implements Closeable {
         response.close();
     }
 
-    protected  <T> Response execRequest(WebTarget target, Invocation.Builder invocationBuilder, String method,
+    protected <T> Response execRequest(WebTarget target, Invocation.Builder invocationBuilder, String method,
                                         Entity<T> entity, String authToken,
                                      ErrorCodeMapper errorCodeMapper) {
         if (authToken != null) {
@@ -125,7 +125,12 @@ public abstract class DockerAbstractClient implements Closeable {
 
         assert invocationBuilder != null && method != null;
 
-        Response response = invocationBuilder.method(method, entity);
+        Response response;
+        try {
+            response = invocationBuilder.method(method, entity);
+        } catch (ProcessingException e) {
+            throw new DockerClientProcessingException("Method invocation failed.", e);
+        }
 
         validate(getRequestSpec(target, method), response, errorCodeMapper);
 

@@ -45,12 +45,14 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.Future;
 import java.util.concurrent.RunnableScheduledFuture;
 import java.util.concurrent.ScheduledExecutorService;
@@ -134,6 +136,8 @@ public class ContainerTestsController extends BaseFormXmlController {
 
     private void dispose(UUID uuid) {
         assert !lock.isHeldByCurrentThread();
+
+        LOG.info("Disposing test task: " + uuid);
 
         DockerClient client;
         AtmosphereResource atmosphereResource = null;
@@ -340,7 +344,11 @@ public class ContainerTestsController extends BaseFormXmlController {
 
     private void sendErrorQuietly(HttpServletResponse response, int sc, String msg) {
         try {
-            response.sendError(sc, msg);
+            response.setStatus(sc);
+            response.setHeader("Content-Type", "text/plain");
+            PrintWriter writer = response.getWriter();
+            writer.print(msg);
+            writer.close();
         } catch (IOException e) {
             LOG.warn("Failed to transmit error to client.", e);
         }
@@ -427,7 +435,7 @@ public class ContainerTestsController extends BaseFormXmlController {
                         if (containerTestTask.getStatus() == Status.PENDING) {
                             schedule(task, REFRESH_TASK_RATE_SEC, TimeUnit.SECONDS);
                         }
-                    } else if (t instanceof InterruptedException) {
+                    } else if (t instanceof InterruptedException || t instanceof CancellationException) {
                         // Cancelled task, ignore.
                     } else {
                         // We should never end here into normal circumstances: the test tasks base class should handle
