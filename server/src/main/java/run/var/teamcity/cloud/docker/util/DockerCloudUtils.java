@@ -63,6 +63,10 @@ public final class DockerCloudUtils {
      */
     public static final String INSTANCE_URI = NS_PREFIX + "instance_uri";
     /**
+     * Docker cloud parameter: use transport layer security.
+     */
+    public static final String USE_TLS = NS_PREFIX + "use_tls";
+    /**
      * The Docker socket default location on Unix systems.
      */
     public static final URI DOCKER_DEFAULT_SOCKET_URI;

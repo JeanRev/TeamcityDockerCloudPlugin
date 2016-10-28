@@ -50,7 +50,7 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
                                                     @NotNull BuildAgentManager agentMgr) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null");
         DockerCloudUtils.requireNonNull(agentMgr, "Agent manager cannot be null");
-        DockerClient client = DockerClient.open(clientConfig.getInstanceURI(), 1);
+        DockerClient client = DockerClient.open(clientConfig.getInstanceURI(), clientConfig.isUseTLS(), 1);
         return new ContainerSpecTest(broadcaster, clientConfig, client, agentMgr);
     }
 

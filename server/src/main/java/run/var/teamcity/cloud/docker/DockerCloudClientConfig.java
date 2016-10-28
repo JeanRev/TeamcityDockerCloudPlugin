@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * Configuration of a {@link DockerCloudClient}.
@@ -23,11 +22,11 @@ import java.util.regex.Pattern;
 public class DockerCloudClientConfig {
 
     private final URI instanceURI;
+    private final boolean useTLS;
 
-    private static final Pattern WHITESPACE = Pattern.compile("\\s");
-
-    private DockerCloudClientConfig(URI instanceURI) {
+    private DockerCloudClientConfig(URI instanceURI, boolean useTLS) {
         this.instanceURI = instanceURI;
+        this.useTLS = useTLS;
     }
 
     /**
@@ -38,6 +37,15 @@ public class DockerCloudClientConfig {
     @NotNull
     public URI getInstanceURI() {
         return instanceURI;
+    }
+
+    /**
+     * Gets the TLS support flag value.
+     *
+     * @return {@code true} if Transport Layer Security is enabled
+     */
+    public boolean isUseTLS() {
+        return useTLS;
     }
 
     /**
@@ -54,6 +62,8 @@ public class DockerCloudClientConfig {
         DockerCloudUtils.requireNonNull(properties, "Properties map cannot be null.");
 
         List<InvalidProperty> invalidProperties = new ArrayList<>();
+
+        boolean useTLS = Boolean.valueOf(properties.get(DockerCloudUtils.USE_TLS));
 
         String useDefaultInstanceStr = notEmpty("Select an instance type", DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, properties,
                 invalidProperties);
@@ -101,7 +111,7 @@ public class DockerCloudClientConfig {
             throw new DockerCloudClientConfigException(invalidProperties);
         }
 
-        return new DockerCloudClientConfig(instanceURL);
+        return new DockerCloudClientConfig(instanceURL, useTLS);
     }
 
     /**

@@ -45,17 +45,20 @@ public class CreateContainerTestTask extends ContainerTestTask {
         container.getOrCreateObject("Labels").put(DockerCloudUtils.TEST_INSTANCE_ID_LABEL, instanceUuid.toString());
         String image;
         if (imageConfig.isUseOfficialTCAgentImage()) {
-           image = officialAgentImageResolver.resolve();
+            image = officialAgentImageResolver.resolve();
             container.put("Image", image);
         } else {
             image = container.getAsString("Image");
         }
 
-        //image = "jetbrains/teamcity-agent:10.0";
-
         try (NodeStream nodeStream = client.createImage(image, null)) {
             Node status;
             String statusMsg = null;
+
+            // We currently only one line of status. So, we track the progress of one layer after another.s
+            String trackedLayer = null;
+            // Progress tracking is dependent of the size of the corresponding layer, which can be pretty huge. Using
+            // BigIngegers to be safe.
             BigInteger progress = UNKNOWN_PROGRESS;
             msg("Pulling image...");
             while ((status = nodeStream.next()) != null) {
@@ -69,26 +72,38 @@ public class CreateContainerTestTask extends ContainerTestTask {
                 String newStatusMsg = status.getAsString("status", null);
                 if (newStatusMsg != null) {
                     Node progressDetails = status.getObject("progressDetail", Node.EMPTY_OBJECT);
+                    boolean inProgress = status.getAsString("progress", null) != null;
                     String id = status.getAsString("id", null);
-                    if (id != null) {
-                        BigInteger current = progressDetails.getAsBigInt("current", UNKNOWN_PROGRESS);
-                        BigInteger total = progressDetails.getAsBigInt("total", UNKNOWN_PROGRESS);
-
-                        BigInteger newProgress = UNKNOWN_PROGRESS;
-
-                        if (validProgress(current) && validProgress(total) && total.compareTo(BigInteger.ZERO) != 0) {
-                            newProgress = current.compareTo(BigInteger.ZERO) == 0 ? BigInteger.ZERO :
-                                    current.multiply(BigInteger.valueOf(100)).divide(total);
-                        }
-
-                        if (!newStatusMsg.equals(statusMsg) || (validProgress(newProgress) && newProgress
-                                .compareTo(progress) != 0)) {
-                            String progressPercent = validProgress(newProgress) ? " " + newProgress + "%" : "";
-                            msg("Pull in progress - " + id + ": " + newStatusMsg + progressPercent);
-                        }
-                        statusMsg = newStatusMsg;
-                        progress = newProgress;
+                    if (id == null) {
+                        continue;
                     }
+                    if (trackedLayer == null) {
+                        trackedLayer = id;
+                    } else  if (!trackedLayer.equals(id)) {
+                        continue;
+                    }
+                    if (!inProgress) {
+                        trackedLayer = null;
+                        continue;
+                    }
+
+                    BigInteger current = progressDetails.getAsBigInt("current", UNKNOWN_PROGRESS);
+                    BigInteger total = progressDetails.getAsBigInt("total", UNKNOWN_PROGRESS);
+
+                    BigInteger newProgress = UNKNOWN_PROGRESS;
+
+                    if (validProgress(current) && validProgress(total) && total.compareTo(BigInteger.ZERO) != 0) {
+                        newProgress = current.compareTo(BigInteger.ZERO) == 0 ? BigInteger.ZERO :
+                                current.multiply(BigInteger.valueOf(100)).divide(total);
+                    }
+
+                    if (!newStatusMsg.equals(statusMsg) || (validProgress(newProgress) && newProgress
+                            .compareTo(progress) != 0)) {
+                        String progressPercent = validProgress(newProgress) ? " " + newProgress + "%" : "";
+                        msg("Pull in progress - " + id + ": " + newStatusMsg + progressPercent);
+                    }
+                    statusMsg = newStatusMsg;
+                    progress = newProgress;
                 }
 
             }
@@ -100,7 +115,9 @@ public class CreateContainerTestTask extends ContainerTestTask {
 
         testTaskHandler.notifyContainerId(containerId);
 
-        msg("Container created");
+        msg("Removing container");
+
+        client.removeContainer(containerId, true, true);
 
         return Status.SUCCESS;
     }

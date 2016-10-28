@@ -387,7 +387,8 @@ public class ContainerTestsController extends BaseFormXmlController {
 
                 for (ContainerSpecTest test : tasks.values()) {
                     if (test.getCurrentTaskFuture() != null) {
-                        if (test.getLastInteraction() > TimeUnit.MINUTES.toMillis(TEST_MAX_IDLE_TIME_MINUTES)) {
+                        if ((System.nanoTime() - test.getLastInteraction()) > TimeUnit.MINUTES.toNanos
+                                (TEST_MAX_IDLE_TIME_MINUTES)) {
                             toDispose.add(test.getUuid());
                         }
                     }

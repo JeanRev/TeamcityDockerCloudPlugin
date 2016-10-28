@@ -51,6 +51,10 @@
                                                                                                                                              className="longField"/>
                 <a href="#" class="btn" id="dockerCloudCheckConnectionBtn">Check connection</a>
             </p>
+            <p>
+                <props:checkboxProperty name="<%=DockerCloudUtils.USE_TLS%>"/>
+                <label for="<%=DockerCloudUtils.USE_TLS%>">Use Transport Layer Security (TLS)</label>
+            </p>
             <span class="error" id="error_<%=DockerCloudUtils.INSTANCE_URI%>"></span>
             <span id="dockerCloudCheckConnectionBtnError" class="error"></span>
             <div class="hidden" id="dockerCloudCheckConnectionLoader"><i class="icon-refresh icon-spin"></i>&nbsp;Connecting to Docker instance...</div>
@@ -583,7 +587,7 @@
     </div>
 
     </div>
-    <div class="popupSaveButtonsBlock">
+    <div class="popupSaveButtonsBlock dockerCloudBtnBlock">
         <input type="button" class="btn" id="dockerTestImageButton" value="Test container"/>
         <input type="button" class="btn btn_primary" id="dockerAddImageButton" value="Add"/>
         <input type="button" class="btn" id="dockerCancelAddImageButton" value="Cancel"/>
@@ -594,39 +598,27 @@
            closeCommand="BS.DockerTestContainerDialog.close()">
     <div>
         <p>
-            This test will  a container using the provided settings and detect the TeamCity agent as soon as it
-            connects. The container will be automatically discarded on completion.
-            <input type="button" class="btn" id="dockerCreateImageTest" value="Create container"/>
+            This test will create a container using the provided settings. The container will be discarded on completion.
+
+            <!--
             <input type="button" class="btn" id="dockerStartImageTest" value="Start container"/>
+            -->
         </p>
-        <table id="dockerTestContainerOutputStatus">
-            <tr>
-                <td>Create container</td><td><img src="/plugins/docker-cloud/img/checked.png"></td>
-            </tr>
-            <tr>
-                <td>Start container</td><td><img src="/plugins/docker-cloud/img/checked.png"></td>
-            </tr>
-            <tr>
-                <td>Agent detected</td><td><img src="/plugins/docker-cloud/img/checked.png"></td>
-            </tr>
-        </table>
-        <div>
-            <p><label for="dockerTestContainerOutput">Test output</label></p>
-            <div id="dockerTestContainerOutput"
-                      readonly="readonly"></div>
-        </div>
+        <span class="hidden" id="dockerCloudTestContainerLoader"><i class="icon-refresh icon-spin"></i>
+        </span>
+        <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerSuccess" src="/plugins/docker-cloud/img/checked.png">
+        <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerError" src="/plugins/docker-cloud/img/error.png">
         <span id="dockerCloudTestContainerLabel" class="systemProblemsBar"></span>
-        <div class="hidden" id="dockerCloudTestContainerLoader"><i class="icon-refresh icon-spin"></i>
-            <</div>
 
-        <div class="hidden" id="dockerCloudTestContainerOutcome"></div>
-
-        <div>
-            <input type="button" class="btn" id="dockerCloudTestContainerCancelBtn" value="Cancel"/>
+        <div class="dockerCloudBtnBlock">
+            <!--
             <input type="button" class="btn" id="dockerCloudTestContainerShellBtn" value="Start a shell"/>
             <input type="button" class="btn" id="dockerCloudTestContainerCopyLogsBtn" value="Copy logs"/>
             <input type="button" class="btn" id="dockerCloudTestContainerDisposeBtn" value="Dispose container"/>
+            -->
+            <input type="button" class="btn" id="dockerCreateImageTest" value="Create container"/>
             <input type="button" class="btn" id="dockerCloudTestContainerCloseBtn" value="Close"/>
+            <input type="button" class="btn" id="dockerCloudTestContainerCancelBtn" value="Cancel"/>
         </div>
     </div>
 </bs:dialog>

@@ -64,7 +64,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerCopyLogsBtn = $j('#dockerCloudTestContainerCopyLogsBtn');
                 self.$testContainerDisposeBtn = $j('#dockerCloudTestContainerDisposeBtn');
                 self.$testContainerCloseBtn = $j('#dockerCloudTestContainerCloseBtn');
+                self.$testContainerSuccessIcon = $j('#dockerCloudTestContainerSuccess');
+                self.$testContainerErrorIcon = $j('#dockerCloudTestContainerError');
                 self.$checkConnectionSuccess = $j('#dockerCloudCheckConnectionSuccess');
+
                 self.$imageDataOkBtn = $j("#dockerAddImageButton");
                 self.$imageDataDialogTitle = $j("#DockerImageDialogTitle");
                 self.$warnAutoBind = $j("#dockerCloudWarnAutoBind");
@@ -131,6 +134,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     '</tr>').data('profile', image.Administration.Profile));
             },
             _addressState: function () {
+                console.log('updating address');
                 var useLocalInstance = self.$useLocalInstance.is(':checked');
                 self.$dockerAddress.prop('disabled', useLocalInstance).val(useLocalInstance ? self.defaultLocalAddress : "");
             },
@@ -861,6 +865,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _bindHandlers: function () {
                 console.log("Binding handlers now");
 
+                self.$useLocalInstance.change(self._addressState);
+                self.$useCustomInstance.change(self._addressState)
                 self._addressState();
 
                 self.$checkConnectionBtn.on('click', self._checkConnectionClickHandler);
@@ -1010,8 +1016,20 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
 
                 self.$imageTestContainerBtn.click(function() {
+
+                    self._triggerAllFields(true);
+
+                    if(!self.updateOkBtnState()) {
+                        return false;
+                    }
+
+
                     self._initTestDialog();
                     BS.DockerTestContainerDialog.showCentered();
+                });
+
+                self.$testContainerCloseBtn.click(function() {
+                    BS.DockerTestContainerDialog.close();
                 });
 
             },
@@ -1021,26 +1039,60 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 console.log('Progress: ' + responseMap.progress + ' Status: ' + responseMap.status + ' Msg: ' + responseMap.msg + ' Uuid: ' + responseMap.taskUuid);
 
-                self.$testContainerLabel.text(responseMap.msg);
+                if (responseMap.status == 'PENDING') {
+                    self.$testContainerLabel.text(responseMap.msg);
+                    self.$testContainerLoader.show();
+                    self.$testContainerCancelBtn.show();
 
-                var failure = responseMap.status == 'FAILURE';
+                    if (self.hasWebSocketSupport) {
+                        if (!self.testStatusSocket) {
+                            console.log('Opening test status listener socket now.');
+                            self.testStatusSocket = new WebSocket("ws://localhost:8111/app/docker-cloud/test-container/getStatus?taskUuid=" + responseMap.taskUuid);
+                            self.testStatusSocket.onmessage = function (event) {
+                                console.log('Processing status from server.');
+                                self._processTestResponse(self._parseResponse(event.data));
+                            }
+                        }
+                    } else {
+                        console.log('Scheduling status retrieval.');
+                        setTimeout(self._invokeTestAction.bind(this, 'query', responseMap.taskUuid), 5000);
+                    }
+                } else {
+                    self.$testContainerLoader.hide();
+                    self.$testContainerCancelBtn.hide();
 
-                self.$testContainerLabel.toggleClass('systemProblemsBar', failure);
+                    if (self.testStatusSocket) {
+                        self.testStatusSocket.close();
+                        delete self.testStatusSocket;
+                    }
 
-                if (failure && responseMap.failureCause) {
-                    //var errorDetails = $j('#dockerCloudTestContainerErrorDetails');
-                    var errorDetailsMsg = $j('#dockerCloudTestContainerErrorDetailsMsg').empty();
-                    var errorDetailsStackTrace = $j('#dockerCloudTestContainerErrorDetailsStackTrace').empty();
+                    if (responseMap.status == 'FAILURE') {
+                        self.$testContainerLabel.addClass('systemProblemsBar');
+                        self.$testContainerSuccessIcon.show();
 
-                    errorDetailsMsg.text(responseMap.msg);
-                    errorDetailsStackTrace.text(responseMap.failureCause);
+                        if (responseMap.failureCause) {
+                            //var errorDetails = $j('#dockerCloudTestContainerErrorDetails');
+                            var errorDetailsMsg = $j('#dockerCloudTestContainerErrorDetailsMsg').empty();
+                            var errorDetailsStackTrace = $j('#dockerCloudTestContainerErrorDetailsStackTrace').empty();
 
-                    var viewDetailsLink = $j('<a href="#">view details</a>)').click(function() {
-                        BS.DockerDiagnosticDialog.showCentered();
-                    });
-                    self.$testContainerLabel.append(' (').append(viewDetailsLink).append(')');
+                            errorDetailsMsg.text(responseMap.msg);
+                            errorDetailsStackTrace.text(responseMap.failureCause);
+
+                            var viewDetailsLink = $j('<a href="#">view details</a>)').click(function () {
+                                BS.DockerDiagnosticDialog.showCentered();
+                            });
+                            self.$testContainerLabel.append(' (').append(viewDetailsLink).append(')');
+                        }
+                    } else if (responseMap.status == 'SUCCESS') {
+                        self.$testContainerSuccessIcon.show();
+                        self.$testContainerLabel.text("Test completed successfully.");
+                        self.$testContainerCloseBtn.show();
+                    } else {
+                        console.error('Unrecognized status: ' + responseMap.status)
+                    }
                 }
 
+                /*
                 var NONE = 0;
                 var CREATED = 1;
                 var STARTED = 2;
@@ -1056,7 +1108,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 if (containerState == STARTED) {
                     // Container has been started, display live logs if possible.
-                    /* TODO: WIP
+
                     if (self.hasWebSocketSupport && !self.logStreamingSocket) {
                         console.log('Opening live logs sockt now.');
                         var url = 'ws://localhost:8111/app/docker-cloud/streaming/logs?correlationId=' +
@@ -1068,7 +1120,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         logTerm.attach(self.logStreamingSocket);
                         logTerm.convertEol = true;
                     }
-                    */
+
                 }
 
                 if (responseMap.status === 'PENDING') {
@@ -1114,12 +1166,11 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         self.testStatusSocket.close();
                         delete self.testStatusSocket;
                     }
-                }
+                }*/
             },
 
             _parseResponse: function(xml) {
                 var $xml = $j(xml);
-                console.log('Data to parse: ' + $xml.text());
                 return {
                     msg: $xml.find('msg').text(),
                     status: $xml.find('status').text(),
@@ -1146,9 +1197,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         var responseMap = self._parseResponse(response.responseXML);
                         deferred.resolve(responseMap);
                     },
-                    onFailure: function (response) {
-                        self.lastFailure = response;
-                        deferred.reject(response.getStatusText());
+                    onFailure: function (response) {;
+                        deferred.reject(response.getResponseText());
                     }
                 });
 
@@ -1198,6 +1248,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 });
                 self.$imageDataOkBtn.prop("disabled", hasError);
+                self.$imageTestContainerBtn.prop("disabled", hasError);
                 return !hasError;
             },
 
@@ -1385,10 +1436,11 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self._testDialogHideAllBtns();
                 self.$imageTestContainerCreateBtn.show()
                 self.$testContainerOutcome.text();
-                self.$testContainerLabel.text();
                 self.$testContainerCloseBtn.show();
                 self.$testContainerLoader.hide();
+                self.$testContainerSuccessIcon.hide();
                 self.$testContainerLabel.empty();
+                self.$testContainerLabel.removeClass('systemProblemsBar');
             },
 
             validate: function () {

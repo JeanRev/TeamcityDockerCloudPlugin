@@ -7,11 +7,13 @@ import run.var.teamcity.cloud.docker.client.StreamHandler;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -85,8 +87,22 @@ public class Test {
         //Job job = new Job();
 
 
+        System.out.println(System.getProperty("java.home"));
+        System.out.println(System.getProperties().getProperty("javax.net.ssl.keyStore"));
 
-        DockerClient client = DockerClient.open(new URI("unix:/var/run/docker.sock"), 2);
+
+        System.getProperties().put("javax.net.ssl.keyStore", "/home/jr/src/teamcity-docker-cld-plugin/client.jks");
+        System.getProperties().put("javax.net.ssl.keyStorePassword", "changeit");
+        //new URL("https://127.0.0.1:2376/version").openConnection().getInputStream().read(new byte[4096]);
+
+        DockerClient client = DockerClient.open(new URI("tcp://127.0.0.1:2376"), true, 2);
+        client.getVersion();
+
+        client.close();
+        if (true) {
+            return;
+        }
+
 
         Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "jetbrains/teamcity-agent:10.0.1").saveNode();
 

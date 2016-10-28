@@ -112,7 +112,9 @@ public class DockerStreamingController extends AbstractController {
 
         @Override
         public void run() {
-            try (DockerClient client = DockerClient.open(containerCoordinates.getClientConfig().getInstanceURI(), 1)) {
+            // TODO: TLS support
+            try (DockerClient client = DockerClient.open(containerCoordinates.getClientConfig().getInstanceURI(),
+                    false, 1)) {
                 try (StreamHandler streamHandler = openStreamHandler(client)) {
                     this.streamHandler = streamHandler;
 

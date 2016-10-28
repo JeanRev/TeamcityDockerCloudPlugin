@@ -39,8 +39,6 @@
 }
 
 /* Help tooltips. */
-
-
 i.tooltip{position:relative; z-index:24;text-decoration:none}
 i.tooltip:hover{z-index:25;}
 /*i.tooltip span{display: none}*/
@@ -233,6 +231,12 @@ aligned on the RHS of the screen. */
     margin-right: 5px;
 }
 
+.dockerCloudSettings .dockerCloudTestBtn > span {
+    background: url("/plugins/docker-cloud/img/test.png") no-repeat left;
+    padding-left: 1.2em;
+    white-space: nowrap;
+}
+
 .dockerCloudSettings .dockerCloudAddBtn > span {
     background: url("/plugins/docker-cloud/img/add.png") no-repeat left;
     padding-left: 1.2em;
@@ -268,7 +272,7 @@ aligned on the RHS of the screen. */
 /* Test container */
 #DockerTestContainerDialog {
     /*width: 570px;*/
-    width: 800px;
+    width: 500px;
 }
 
 #dockerTestContainerOutput {
@@ -276,6 +280,10 @@ aligned on the RHS of the screen. */
     height: 100px;
     resize: none;
     padding: 2px;
+}
+
+.dockerCloudStatusIcon {
+    margin-bottom: -3px;
 }
 
 #dockerTestContainerOutput .terminal {
@@ -310,4 +318,9 @@ aligned on the RHS of the screen. */
     padding: 5px;
     box-sizing: border-box;
     margin-top: 10px;
+}
+
+/* Others general dialog styling. */
+.dockerCloudBtnBlock {
+    text-align: right;
 }

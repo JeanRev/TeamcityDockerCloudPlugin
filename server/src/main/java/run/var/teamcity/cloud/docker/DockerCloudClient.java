@@ -116,7 +116,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         taskScheduler.scheduleClientTask(new DockerClientTask("Cloud initialisation", this) {
             @Override
             public void callInternal() throws Exception {
-                dockerClient = DockerClient.open(clientConfig.getInstanceURI(), threadPoolSize);
+                dockerClient = DockerClient.open(clientConfig.getInstanceURI(), clientConfig.isUseTLS(),
+                        threadPoolSize);
 
                 try {
                     lock.lock();

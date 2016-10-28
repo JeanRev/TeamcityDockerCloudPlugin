@@ -17,6 +17,7 @@ import run.var.teamcity.cloud.docker.util.Node;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.net.URI;
+import java.util.Map;
 
 
 public class DockerCloudCheckConnectivityController extends BaseFormXmlController {
@@ -42,12 +43,14 @@ public class DockerCloudCheckConnectivityController extends BaseFormXmlControlle
         BasePropertiesBean propsBean = new BasePropertiesBean(null);
         PluginPropertiesUtil.bindPropertiesFromRequest(request, propsBean, true);
 
-        String uri = propsBean.getProperties().get(DockerCloudUtils.INSTANCE_URI);
+        Map<String, String> properties = propsBean.getProperties();
+        String uri = properties.get(DockerCloudUtils.INSTANCE_URI);
+        boolean useTLS = Boolean.parseBoolean(properties.get(DockerCloudUtils.USE_TLS));
 
         String errorMsg = null;
         try {
 
-            DockerClient client = DockerClient.open(new URI(uri), 1);
+            DockerClient client = DockerClient.open(new URI(uri), useTLS, 1);
 
             Node version = client.getVersion();
             Element versionElt = new Element("version");

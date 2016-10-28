@@ -67,7 +67,8 @@ public class DockerClient extends DockerAbstractClient {
     }
 
     private enum TranslatedScheme {
-        HTTP;
+        HTTP,
+        HTTPS;
 
         String part() {
             return name().toLowerCase();
@@ -265,7 +266,7 @@ public class DockerClient extends DockerAbstractClient {
      * @throws IllegalArgumentException if the {@code dockerURI} is not recognized
      */
     @NotNull
-    public static DockerClient open(@NotNull URI dockerURI, int connectionPoolSize) {
+    public static DockerClient open(@NotNull URI dockerURI, boolean useTLS, int connectionPoolSize) {
         DockerCloudUtils.requireNonNull(dockerURI, "Docker URI cannot be null.");
         if (!dockerURI.isAbsolute()) {
             throw new IllegalArgumentException("Absolute URI expected: " + dockerURI);
@@ -280,19 +281,22 @@ public class DockerClient extends DockerAbstractClient {
         // Note: we use a custom connection operator here to handle Unix sockets because 1) it allows use to circumvent
         // some problem encountered with the default connection operator 2) it dispense us from implementing a custom
         // ConnectionSocketFactory which is oriented toward internet sockets.
-        HttpClientConnectionOperator connectionOperator;
+        HttpClientConnectionOperator connectionOperator = null;
         final URI effectiveURI;
+
 
         switch (scheme) {
             case TCP:
                 try {
-                    effectiveURI = new URI(TranslatedScheme.HTTP.part(), dockerURI.getUserInfo(), dockerURI.getHost(), dockerURI.getPort(), null, null, null);
+                    TranslatedScheme translatedScheme = useTLS ? TranslatedScheme.HTTPS : TranslatedScheme.HTTP;
+                    effectiveURI = new URI(translatedScheme.part(), dockerURI.getUserInfo(), dockerURI.getHost(), dockerURI.getPort
+                            (), null, null, null);
                 } catch (URISyntaxException e) {
                     throw new AssertionError("Failed to build effective URI for TCP socket.", e);
                 }
                 RegistryBuilder<ConnectionSocketFactory> registryBuilder = RegistryBuilder.create();
-                registryBuilder.register(effectiveURI.getScheme(), new PlainConnectionSocketFactory());
-                connectionOperator = new DefaultHttpClientConnectionOperator(registryBuilder.build(), null, null);
+                //registryBuilder.register(effectiveURI.getScheme(), new PlainConnectionSocketFactory());
+                //connectionOperator = new DefaultHttpClientConnectionOperator(registryBuilder.build(), null, null);
                 break;
             case UNIX:
                 try {
@@ -308,8 +312,15 @@ public class DockerClient extends DockerAbstractClient {
 
         DockerHttpConnectionFactory connectionFactory = new DockerHttpConnectionFactory();
 
-        PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager(connectionOperator,
+
+        PoolingHttpClientConnectionManager connManager;
+        if (connectionOperator != null) {
+            connManager = new PoolingHttpClientConnectionManager(connectionOperator,
                     connectionFactory, -1, TimeUnit.SECONDS);
+        } else {
+           connManager = new PoolingHttpClientConnectionManager(connectionFactory);
+        }
+
 
         // We are only interested into a single route.
         connManager.setDefaultMaxPerRoute(connectionPoolSize);

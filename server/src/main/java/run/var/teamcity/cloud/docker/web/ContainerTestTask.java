@@ -80,7 +80,8 @@ abstract class ContainerTestTask implements Runnable {
             }
 
             if (status != newStatus) {
-                testTaskHandler.notifyStatus(phase, newStatus, null, throwable);
+                testTaskHandler.notifyStatus(phase, newStatus, throwable != null ? throwable.getMessage() : null,
+                        throwable);
             }
             status = newStatus;
         } finally {
