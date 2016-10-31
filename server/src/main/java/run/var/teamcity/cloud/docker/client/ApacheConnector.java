@@ -351,6 +351,9 @@ class ApacheConnector implements Connector {
                         .SC_SWITCHING_PROTOCOLS;
             }
         });
+
+        // TODO: works?
+        clientBuilder.useSystemProperties();
         this.client = clientBuilder.build();
     }
 

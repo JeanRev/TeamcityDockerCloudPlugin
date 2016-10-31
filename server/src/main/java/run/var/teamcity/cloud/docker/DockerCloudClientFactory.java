@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Docker {@link CloudClientFactory}.
@@ -72,6 +73,7 @@ public class DockerCloudClientFactory implements CloudClientFactory {
     public Map<String, String> getInitialParameterValues() {
         HashMap<String, String> params = new HashMap<>();
         params.put(DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, Boolean.TRUE.toString());
+        params.put(DockerCloudUtils.CLIENT_UUID, UUID.randomUUID().toString());
         return params;
     }
 

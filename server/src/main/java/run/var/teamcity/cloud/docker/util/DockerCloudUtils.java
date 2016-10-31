@@ -47,6 +47,10 @@ public final class DockerCloudUtils {
      */
     public static final String TEST_INSTANCE_ID_LABEL = NS_PREFIX + "test_instance_id";
     /**
+     * Docker cloud parameter: UUID of the cloud client. Persisted in the plugin configuration.
+     */
+    public static final String CLIENT_UUID = NS_PREFIX + "client_uuid";
+    /**
      * Docker cloud parameter: images configuration.
      */
     public static final String IMAGES_PARAM = NS_PREFIX + "img_param";
@@ -54,10 +58,6 @@ public final class DockerCloudUtils {
      * Docker cloud parameter: use default Docker socket on the local machine.
      */
     public static final String USE_DEFAULT_UNIX_SOCKET_PARAM = NS_PREFIX + "use_default_unix_socket";
-    /**
-     * Docker cloud parameter: use official TeamCity agent images.
-     */
-    public static final String USE_OFFICIAL_AGENT_IMAGE = NS_PREFIX + "use_official_agent_image";
     /**
      * Docker cloud parameter: Docker instance URI.
      */
@@ -203,7 +203,7 @@ public final class DockerCloudUtils {
      *
      * @return the variable value (may be {@code null})
      *
-     * @throws NullPointerException if any arguemtn is {@codde null}
+     * @throws NullPointerException if any arguemtn is {@code null}
      */
     @Nullable
     public static String getEnvParameter(@NotNull AgentDescription agentDescription, @NotNull String name) {

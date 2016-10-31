@@ -2,13 +2,18 @@ package run.var.teamcity.cloud.docker.client;
 
 import com.intellij.openapi.diagnostic.Logger;
 import org.apache.http.HttpStatus;
+import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.HttpClientConnectionOperator;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
+import org.apache.http.conn.ssl.DefaultHostnameVerifier;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.util.PublicSuffixMatcherLoader;
 import org.apache.http.impl.conn.DefaultHttpClientConnectionOperator;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.protocol.HttpCoreContext;
+import org.apache.http.util.TextUtils;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.logging.LoggingFeature;
@@ -19,6 +24,8 @@ import run.var.teamcity.cloud.docker.util.JULLogger;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocketFactory;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -264,6 +271,7 @@ public class DockerClient extends DockerAbstractClient {
      *
      * @throws NullPointerException if {@code dockerURI} is {@code null}
      * @throws IllegalArgumentException if the {@code dockerURI} is not recognized
+     * @throws IllegalArgumentException if TLS is requested with the {@code unix} connection scheme
      */
     @NotNull
     public static DockerClient open(@NotNull URI dockerURI, boolean useTLS, int connectionPoolSize) {
@@ -294,11 +302,11 @@ public class DockerClient extends DockerAbstractClient {
                 } catch (URISyntaxException e) {
                     throw new AssertionError("Failed to build effective URI for TCP socket.", e);
                 }
-                RegistryBuilder<ConnectionSocketFactory> registryBuilder = RegistryBuilder.create();
-                //registryBuilder.register(effectiveURI.getScheme(), new PlainConnectionSocketFactory());
-                //connectionOperator = new DefaultHttpClientConnectionOperator(registryBuilder.build(), null, null);
                 break;
             case UNIX:
+                if (useTLS) {
+                    throw new IllegalArgumentException("TLS not available with Unix sockets.");
+                }
                 try {
                     effectiveURI = new URI(SupportedScheme.UNIX.part(), null, "localhost", 80, null, null, null);
                 } catch (URISyntaxException e) {
@@ -318,7 +326,7 @@ public class DockerClient extends DockerAbstractClient {
             connManager = new PoolingHttpClientConnectionManager(connectionOperator,
                     connectionFactory, -1, TimeUnit.SECONDS);
         } else {
-           connManager = new PoolingHttpClientConnectionManager(connectionFactory);
+           connManager = new PoolingHttpClientConnectionManager(getDefaultRegistry(), connectionFactory, null);
         }
 
 
@@ -331,6 +339,39 @@ public class DockerClient extends DockerAbstractClient {
                1024 * 512));
 
         return new DockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI);
+    }
+
+    private static Registry<ConnectionSocketFactory> getDefaultRegistry() {
+
+        // Gets a custom registry leveraging standard JSE system properties to create the client SSL context.
+        // This allows for example to configure externally the trusted CA as well as the client certificate and key to
+        // be used to connect to the docker daemon.
+        // The code below has been extracted from the org.apache.http.impl.client.HttpClientBuilder class.
+        // More information on how to configure the SSL context through system properties can be found here:
+        // http://docs.oracle.com/javase/7/docs/technotes/guides/security/jsse/JSSERefGuide.html#InstallationAndCustomization
+
+        final String[] supportedProtocols = split(
+                System.getProperty("https.protocols"));
+        final String[] supportedCipherSuites = split(
+                System.getProperty("https.cipherSuites"));
+        HostnameVerifier hostnameVerifierCopy = new DefaultHostnameVerifier
+                (PublicSuffixMatcherLoader.getDefault());
+
+        SSLConnectionSocketFactory sslCF = new SSLConnectionSocketFactory(
+                (SSLSocketFactory) SSLSocketFactory.getDefault(),
+                supportedProtocols, supportedCipherSuites, hostnameVerifierCopy);
+
+        return RegistryBuilder.<ConnectionSocketFactory>create()
+                .register("http", PlainConnectionSocketFactory.getSocketFactory())
+                .register("https", sslCF)
+                .build();
+    }
+
+    private static String[] split(final String s) {
+        if (TextUtils.isBlank(s)) {
+            return null;
+        }
+        return s.split(" *, *");
     }
 
 }

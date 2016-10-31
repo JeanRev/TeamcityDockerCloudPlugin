@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Configuration of a {@link DockerCloudClient}.
@@ -21,12 +22,23 @@ import java.util.Map;
  */
 public class DockerCloudClientConfig {
 
+    private final UUID uuid;
     private final URI instanceURI;
     private final boolean useTLS;
 
-    private DockerCloudClientConfig(URI instanceURI, boolean useTLS) {
+    private DockerCloudClientConfig(UUID uuid, URI instanceURI, boolean useTLS) {
+        this.uuid = uuid;
         this.instanceURI = instanceURI;
         this.useTLS = useTLS;
+    }
+
+    /**
+     * Gets the cloud client UUID.
+     *
+     * @return the cloud client UUID.
+     */
+    public UUID getUuid() {
+        return uuid;
     }
 
     /**
@@ -62,6 +74,17 @@ public class DockerCloudClientConfig {
         DockerCloudUtils.requireNonNull(properties, "Properties map cannot be null.");
 
         List<InvalidProperty> invalidProperties = new ArrayList<>();
+
+        String clientUuidStr = notEmpty("Cloud UUID ist not set", DockerCloudUtils.CLIENT_UUID, properties,
+                invalidProperties);
+        UUID clientUuid = null;
+        if (clientUuidStr != null) {
+            try {
+                clientUuid = UUID.fromString(clientUuidStr);
+            } catch (IllegalArgumentException e) {
+                invalidProperties.add(new InvalidProperty(DockerCloudUtils.CLIENT_UUID, "Invalid client UUID."));
+            }
+        }
 
         boolean useTLS = Boolean.valueOf(properties.get(DockerCloudUtils.USE_TLS));
 
@@ -111,7 +134,9 @@ public class DockerCloudClientConfig {
             throw new DockerCloudClientConfigException(invalidProperties);
         }
 
-        return new DockerCloudClientConfig(instanceURL, useTLS);
+        assert clientUuid != null && instanceURL != null;
+
+        return new DockerCloudClientConfig(clientUuid, instanceURL, useTLS);
     }
 
     /**

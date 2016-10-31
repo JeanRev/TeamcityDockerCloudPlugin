@@ -45,7 +45,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     /**
      * Client UUID.
      */
-    private final UUID uuid = UUID.randomUUID();
+    private final UUID uuid;
 
     /**
      * Rate at which Docker syncs are performed.
@@ -82,10 +82,25 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
      */
     private long lastDockerSyncTimeMillis = -1;
 
+    private enum State {
+        /**
+         * Client instance created.
+         */
+        CREATED,
+        /**
+         * Client instance ready to serve.
+         */
+        READY,
+        /**
+         * Client instance is disposed.
+         */
+        DISPOSED
+    }
+
     /**
-     * Initialization flag. Will be {@code true} as soon as the client is ready for use.
+     * Client state.
      */
-    private boolean initialized;
+    private State state = State.CREATED;
 
     /**
      * Map of cloud images indexed with their UUID.
@@ -106,6 +121,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         if (imageConfigs.isEmpty()) {
             throw new IllegalArgumentException("At least one image must be provided.");
         }
+        this.uuid = clientConfig.getUuid();
         this.cloudState = cloudState;
 
 
@@ -121,7 +137,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
                 try {
                     lock.lock();
-                    assert !initialized: "Client already initialized.";
+                    assert state == State.CREATED;
 
                     for (DockerImageConfig imageConfig : imageConfigs) {
                         DockerImage image = new DockerImage(DockerCloudClient.this, imageConfig);
@@ -130,7 +146,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
                     buildServer.addListener(DockerCloudClient.this);
 
-                    initialized = true;
+                    state = State.READY;
                 } finally {
                     lock.unlock();
                 }
@@ -162,7 +178,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     public boolean isInitialized() {
         try {
             lock.lock();
-            return initialized;
+            return state != State.CREATED;
         } finally {
             lock.unlock();
         }
@@ -207,7 +223,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     public Collection<DockerImage> getImages() throws CloudException {
         try {
             lock.lock();
-            //checkInitialized();
+            //checkReady();
             return images.values();
         } finally {
             lock.unlock();
@@ -222,7 +238,12 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
     @Override
     public boolean canStartNewInstance(@NotNull CloudImage image) {
-        return ((DockerImage) image).canStartNewInstance();
+        lock.lock();
+        try {
+            return state == State.READY && ((DockerImage) image).canStartNewInstance();
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Nullable
@@ -278,7 +299,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
                 try {
                     lock.lock();
-                    checkInitialized();
+                    checkReady();
                     instance.setStatus(InstanceStatus.STARTING);
                     containerId = instance.getContainerId();
                 } finally {
@@ -336,7 +357,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
             protected void callInternal() throws Exception {
                 try {
                     lock.lock();
-                    checkInitialized();
+                    checkReady();
                     dockerInstance.setStatus(InstanceStatus.RESTARTING);
                 } finally {
                     lock.unlock();
@@ -360,23 +381,36 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
     @Override
     public void terminateInstance(@NotNull final CloudInstance instance) {
+        LOG.info("Request for terminating instance: " + instance);
         terminateInstance(instance, false);
     }
 
     @Override
     public void dispose() {
+
+        lock.lock();
+        try {
+            if (state == State.DISPOSED) {
+                LOG.debug("Client already disposed, ignoring request.");
+                return;
+            }
+            state = State.DISPOSED;
+        } finally {
+            lock.unlock();
+        }
+        LOG.info("Starting disposal of client.");
         for(DockerImage image : getImages()) {
             for (DockerInstance instance : image.getInstances()) {
                 // Terminate the instance but do not bother notify server. If the cloud client is disposed as part of
                 // the shutdown process, it would raise an exception anyway.
-                terminateInstance(instance, false);
+                terminateInstance(instance, true);
             }
         }
         taskScheduler.shutdown();
     }
 
     private void terminateInstance(@NotNull final CloudInstance instance, final boolean clientDisposed) {
-        LOG.info("Terminate container: " + instance);
+        LOG.info("Scheduling cloud instance termination: " + instance + " (client disposed: " + clientDisposed + ").");
         final DockerInstance dockerInstance = ((DockerInstance) instance);
         taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Terminate container", dockerInstance, InstanceStatus.SCHEDULED_TO_STOP) {
             @Override
@@ -556,7 +590,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
             try {
                 lock.lock();
 
-                assert initialized: "Cloud client is not initialized yet.";
+                assert state != State.CREATED : "Cloud client is not initialized yet.";
 
                 // Step 1, gather all instances.
                 Map<UUID, DockerInstance> instances = new HashMap<>();
@@ -649,9 +683,9 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     }
 
 
-    private void checkInitialized() {
+    private void checkReady() {
         assert lock.isHeldByCurrentThread();
-        if (!initialized) {
+        if (state != State.READY) {
             throw new CloudException("Client is not initialized yet.");
         }
     }

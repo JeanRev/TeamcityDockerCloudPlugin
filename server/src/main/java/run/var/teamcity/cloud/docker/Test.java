@@ -91,12 +91,16 @@ public class Test {
         System.out.println(System.getProperties().getProperty("javax.net.ssl.keyStore"));
 
 
-        System.getProperties().put("javax.net.ssl.keyStore", "/home/jr/src/teamcity-docker-cld-plugin/client.jks");
-        System.getProperties().put("javax.net.ssl.keyStorePassword", "changeit");
-        //new URL("https://127.0.0.1:2376/version").openConnection().getInputStream().read(new byte[4096]);
+        //System.getProperties().put("javax.net.ssl.keyStore", "/home/jr/src/teamcity-docker-cld-plugin/client.jks");
+        //System.getProperties().put("javax.net.ssl.keyStorePassword", "changeit");
+        byte[] buf = new byte[4096];
+        int c = new URL("https://127.0.0.1:2376/version").openConnection().getInputStream().read(buf);
+        System.out.println("Read from stream: " + new String(buf, 0, c));
+
+
 
         DockerClient client = DockerClient.open(new URI("tcp://127.0.0.1:2376"), true, 2);
-        client.getVersion();
+        System.out.println("From client: " + client.getVersion());
 
         client.close();
         if (true) {
