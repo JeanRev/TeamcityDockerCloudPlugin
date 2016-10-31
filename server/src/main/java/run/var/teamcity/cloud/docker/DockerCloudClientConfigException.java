@@ -23,6 +23,7 @@ class DockerCloudClientConfigException extends RuntimeException {
      * @throws NullPointerException if {@code invalidProperties} is {@code null}
      */
     DockerCloudClientConfigException(@NotNull List<InvalidProperty> invalidProperties) {
+        super(invalidProperties != null ? invalidProperties.toString() : null);
         DockerCloudUtils.requireNonNull(invalidProperties, "List of invalid properties must be non-null.");
         this.invalidProperties = Collections.unmodifiableList(new ArrayList<>(invalidProperties));
     }

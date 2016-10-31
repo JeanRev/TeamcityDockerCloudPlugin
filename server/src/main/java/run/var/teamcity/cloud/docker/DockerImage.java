@@ -1,7 +1,9 @@
 package run.var.teamcity.cloud.docker;
 
+import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.CloudErrorInfo;
 import jetbrains.buildServer.clouds.CloudImage;
+import jetbrains.buildServer.clouds.InstanceStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
@@ -17,6 +19,8 @@ import java.util.concurrent.locks.ReentrantLock;
  * A Docker {@link CloudImage}.
  */
 public class DockerImage implements CloudImage {
+
+    private final static Logger LOG = DockerCloudUtils.getLogger(DockerImage.class);
 
     private final DockerCloudClient cloudClient;
     private final UUID uuid = UUID.randomUUID();
@@ -156,12 +160,26 @@ public class DockerImage implements CloudImage {
     public boolean canStartNewInstance() {
         lock.lock();
         try {
+
             int maxInstanceCount = config.getMaxInstanceCount();
-            return maxInstanceCount == -1 || instances.size() < config.getMaxInstanceCount();
+            if (maxInstanceCount != -1 && instances.size() >= config.getMaxInstanceCount()) {
+                LOG.debug(this + ": max instance count reached.");
+                return false;
+            }
+
+            for (DockerInstance instance : instances.values()) {
+                if (instance.getStatus() == InstanceStatus.ERROR) {
+                    // At least one instance is in an error state. Wait until the error state is cleared or the
+                    // instance disposed.
+                    LOG.debug(this + ": at least one instance in error state, cannot start new instance.");
+                    return false;
+                }
+            }
+
+            return true;
         } finally {
             lock.unlock();
         }
-
     }
 
     @Override

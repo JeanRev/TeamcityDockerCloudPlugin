@@ -83,11 +83,8 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      */
     void setContainerId(@NotNull String containerId) {
         DockerCloudUtils.requireNonNull("Container ID cannot be null.", containerId);
+        lock.lock();
         try {
-            lock.lock();
-            if (this.containerId != null) {
-                throw new IllegalStateException("Container ID can be set only once.");
-            }
             this.containerId = containerId;
         } finally {
             lock.unlock();

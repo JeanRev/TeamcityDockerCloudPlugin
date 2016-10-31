@@ -66,6 +66,7 @@
 <h2 class="noBorder section-header">Agent Images</h2>
 
     <props:hiddenProperty name="run.var.teamcity.docker.cloud.tested_image"/>
+    <props:hiddenProperty name="<%=DockerCloudUtils.CLIENT_UUID%>"/>
 
     <%--<props:hiddenProperty name="run.var.teamcity.docker.cloud.img_param"/>--%>
     <jsp:useBean id="propertiesBean" scope="request" type="jetbrains.buildServer.controllers.BasePropertiesBean"/>

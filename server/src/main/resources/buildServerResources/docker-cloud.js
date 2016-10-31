@@ -496,7 +496,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'RmOnExit');
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'BindAgentProps');
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'MaxInstanceCount');
+                if (self._filterFromSettings(viewModel.MaxInstanceCount)) {
+                    admin.MaxInstanceCount = parseInt(viewModel.MaxInstanceCount);
+                }
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'UseOfficialTCAgentImage');
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'Profile');
 
@@ -1198,7 +1200,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         deferred.resolve(responseMap);
                     },
                     onFailure: function (response) {;
-                        deferred.reject(response.getResponseText());
+                        deferred.reject(response.responseText);
                     }
                 });
 

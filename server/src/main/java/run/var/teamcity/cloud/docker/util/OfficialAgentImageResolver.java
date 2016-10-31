@@ -1,15 +1,11 @@
 package run.var.teamcity.cloud.docker.util;
 
 import com.intellij.openapi.diagnostic.Logger;
-import jetbrains.buildServer.serverSide.SBuildAgent;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import org.jetbrains.annotations.NotNull;
-import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientException;
 import run.var.teamcity.cloud.docker.registry.DockerRegistryClient;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
@@ -38,7 +34,6 @@ public class OfficialAgentImageResolver {
     private final static Logger LOG = DockerCloudUtils.getLogger(OfficialAgentImageResolver.class);
     private final static String REPO = "jetbrains/teamcity-agent";
     static { assert !REPO.contains(":"): "Repository name must NOT contains a tag name"; }
-    private final static String DEFAULT_TAG = "latest";
     private final static Pattern EXPECTED_VERSION_PTN = Pattern.compile("(?:\\d+\\.)*\\d+");
 
     private final ReentrantLock lock = new ReentrantLock();
@@ -71,7 +66,7 @@ public class OfficialAgentImageResolver {
 
             if (tags == null) {
                 LOG.info("No remote version tags available, using default.");
-                return DEFAULT_TAG;
+                return REPO;
             } else {
                 LOG.info("Found remote version tags: " + tags);
             }
@@ -96,7 +91,7 @@ public class OfficialAgentImageResolver {
 
             if (foundTag == null) {
                 LOG.info("No match found in remote tags. Using default.");
-                return DEFAULT_TAG;
+                return REPO;
             }
 
             return this.imageTag = REPO + ":" + foundTag;

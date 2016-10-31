@@ -352,8 +352,6 @@ class ApacheConnector implements Connector {
             }
         });
 
-        // TODO: works?
-        clientBuilder.useSystemProperties();
         this.client = clientBuilder.build();
     }
 

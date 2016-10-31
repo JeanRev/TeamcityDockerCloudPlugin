@@ -29,9 +29,11 @@ import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Exchanger;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -240,6 +242,11 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     public boolean canStartNewInstance(@NotNull CloudImage image) {
         lock.lock();
         try {
+            if (errorInfo != null) {
+                LOG.debug("Cloud client in error state, cannot start new instance.");
+                // The cloud client is currently in an error status. Wait for it to be cleared.
+                return false;
+            }
             return state == State.READY && ((DockerImage) image).canStartNewInstance();
         } finally {
             lock.unlock();
@@ -308,6 +315,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
                 if (containerId == null) {
                     Node containerSpec = authorContainerSpec(instance, tag.getServerAddress());
+
                     String image = containerSpec.getAsString("Image");
                     try (NodeStream nodeStream = dockerClient.createImage(image, null)) {
                         Node status;
@@ -315,10 +323,12 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                             String error = status.getAsString("error", null);
                             if (error != null) {
                                 Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
-                                throw new CloudException("Failed to pul image: " + error + " -- " + details
+                                throw new CloudException("Failed to pull image: " + error + " -- " + details
                                         .getAsString("message", null), null);
                             }
                         }
+                    } catch (Exception e) {
+                        LOG.warn("Failed to pull image, proceeding anyway.", e);
                     }
                     Node createNode =  dockerClient.createContainer(authorContainerSpec(instance, tag
                             .getServerAddress()));
@@ -457,6 +467,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
             return false;
         }
         if (rmContainer) {
+            LOG.info("Destroying container: " + containerId);
             dockerClient.removeContainer(containerId, true, true);
             return false;
         }
@@ -609,6 +620,21 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 List<Node> containersValues = containers.getArrayValues();
                 LOG.debug("Found " + containersValues.size() + " containers to be synched: " + containers);
 
+                // Step 2: remove all instance in an error status.
+                Iterator<DockerInstance> itr = instances.values().iterator();
+                while (itr.hasNext()) {
+                    DockerInstance instance = itr.next();
+                    InstanceStatus status = instance.getStatus();
+                    if (status == InstanceStatus.ERROR || status == InstanceStatus.ERROR_CANNOT_STOP) {
+                        String containerId = instance.getContainerId();
+                        instance.getImage().clearInstanceId(instance.getUuid());
+                        if (containerId != null) {
+                            orphanedContainers.add(containerId);
+                        }
+                        itr.remove();
+                    }
+                }
+
                 // Step 3, process each found container and conciliate it with our data model.
                 for (Node container : containers.getArrayValues()) {
                     String instanceIdStr = container.getObject("Labels").getAsString(DockerCloudUtils.INSTANCE_ID_LABEL);
@@ -664,6 +690,13 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                         instance.notifyFailure("Container was destroyed.", null);
                         instance.setContainerInfo(null);
                     }
+                }
+
+                // Sync is successful.
+
+                if (errorInfo != null) {
+                    LOG.info("Sync successful, clearing error: " + errorInfo);
+                    errorInfo = null;
                 }
 
                 lastDockerSyncTimeMillis = System.currentTimeMillis();

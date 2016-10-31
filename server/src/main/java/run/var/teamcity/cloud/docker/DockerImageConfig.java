@@ -152,7 +152,7 @@ public class DockerImageConfig {
             boolean useOfficialTCAgentImage = admin.getAsBoolean("UseOfficialTCAgentImage");
 
             return new DockerImageConfig(profileName, node.getObject("Container"), deleteOnExit,
-                    useOfficialTCAgentImage, node.getAsInt("MaxInstanceCount", -1));
+                    useOfficialTCAgentImage, admin.getAsInt("MaxInstanceCount", -1));
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to parse image JSON definition:\n" + node, e);
         }
