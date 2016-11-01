@@ -12,9 +12,13 @@ import jetbrains.buildServer.clouds.CloudInstanceUserData;
 import jetbrains.buildServer.clouds.CloudState;
 import jetbrains.buildServer.clouds.InstanceStatus;
 import jetbrains.buildServer.clouds.QuotaException;
+import jetbrains.buildServer.serverSide.AgentCannotBeRemovedException;
 import jetbrains.buildServer.serverSide.AgentDescription;
+import jetbrains.buildServer.serverSide.BuildAgentManager;
 import jetbrains.buildServer.serverSide.BuildServerAdapter;
+import jetbrains.buildServer.serverSide.SBuildAgent;
 import jetbrains.buildServer.serverSide.SBuildServer;
+import jetbrains.buildServer.serverSide.impl.auth.SecuredBuildAgentManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
@@ -111,6 +115,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
     private final OfficialAgentImageResolver officialAgentImageResolver;
 
+    private final BuildAgentManager agentMgr;
+
     /**
      * The Docker client.
      */
@@ -125,7 +131,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         }
         this.uuid = clientConfig.getUuid();
         this.cloudState = cloudState;
-
+        this.agentMgr = buildServer.getBuildAgentManager();
 
         final int threadPoolSize = Math.min(imageConfigs.size() * 2, Runtime.getRuntime().availableProcessors() + 1);
 
@@ -353,6 +359,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 }
 
                 cloudState.registerRunningInstance(instance.getImageId(), instance.getInstanceId());
+
+
             }
         });
         return instance;
@@ -522,6 +530,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         EditableNode container = config.getContainerSpec().editNode();
         container.getOrCreateArray("Env").
                 add("SERVER_URL=" + serverUrl).
+                add(DockerCloudUtils.ENV_CLIENT_ID + "=" + uuid).
                 add(DockerCloudUtils.ENV_IMAGE_ID + "=" + image.getId()).
                 add(DockerCloudUtils.ENV_INSTANCE_ID + "=" + instance.getUuid());
 
@@ -612,15 +621,32 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                     }
                 }
 
-                if (instances.isEmpty()) {
-                    LOG.debug("No instances registered, skip syncing.");
-                    return;
+                // Step 2: pro-actively discard unregistered agent that are no longer referenced, they are lost to us.
+                for (SBuildAgent agent : agentMgr.getUnregisteredAgents()) {
+                    if (uuid.equals(DockerCloudUtils.getClientId(agent))) {
+                        UUID instanceId = DockerCloudUtils.getInstanceId(agent);
+                        boolean discardAgent = false;
+                        if (instanceId == null) {
+                            LOG.warn("No instance UUID associated with cloud agent " + agent + ".");
+                            discardAgent = true;
+                        } else if (!instances.containsKey(instanceId)) {
+                            LOG.info("Discarding orphan agent: " + agent);
+                            discardAgent = true;
+                        }
+                        if (discardAgent) {
+                            try {
+                                agentMgr.removeAgent(agent, null);
+                            } catch (AgentCannotBeRemovedException e) {
+                                LOG.warn("Failed to remove unregistered agent.", e);
+                            }
+                        }
+                    }
                 }
 
                 List<Node> containersValues = containers.getArrayValues();
                 LOG.debug("Found " + containersValues.size() + " containers to be synched: " + containers);
 
-                // Step 2: remove all instance in an error status.
+                // Step 3: remove all instance in an error status.
                 Iterator<DockerInstance> itr = instances.values().iterator();
                 while (itr.hasNext()) {
                     DockerInstance instance = itr.next();

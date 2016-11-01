@@ -86,6 +86,10 @@ public final class DockerCloudUtils {
     /**
      * Environment variable name to store the cloud image UUID.
      */
+    public static final String ENV_CLIENT_ID = ENV_PREFIX + "CLIENT_UUID";
+    /**
+     * Environment variable name to store the cloud image UUID.
+     */
     public static final String ENV_IMAGE_ID = ENV_PREFIX + "IMAGE_UUID";
     /**
      * Environment variable name to store the cloud instance UUID.
@@ -113,6 +117,21 @@ public final class DockerCloudUtils {
         if (obj == null) {
             throw new NullPointerException(msg);
         }
+    }
+
+    /**
+     * Retrieves the cloud client UUID from an agent description.
+     *
+     * @param agentDescription the agent description
+     *
+     * @return the found client UUID or {@code null}
+     *
+     * @throws NullPointerException if {@code agentDescription} is {@code null}
+     */
+    @Nullable
+    public static UUID getClientId(@NotNull AgentDescription agentDescription) {
+        requireNonNull(agentDescription, "Agent description cannot be null.");
+        return tryParseAsUUID(getEnvParameter(agentDescription, ENV_CLIENT_ID));
     }
 
     /**
