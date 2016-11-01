@@ -126,8 +126,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 })
             },
             _renderImageRow: function (image) {
+                var imageLabel = image.Administration.UseOfficialTCAgentImage ? "Official TeamCity agent image" :
+                    image.Container.Image;
                 return self.$imagesTable.append($j('<tr><td>' + image.Administration.Profile + '</td>' +
-                    '<td>' + image.Container.Image + '</td>' +
+                    '<td>' + imageLabel + '</td>' +
                     '<td class="center">' + (image.Administration.MaxInstanceCount ? image.Administration.MaxInstanceCount : 'unlimited') + '</td>' +
                     '<td class="center">' + (image.Administration.RmOnExit ? 'Yes' : 'No') + '</td>' +
                     '<td class="dockerCloudCtrlCell">' + self.arrayTemplates.settingsCell + self.arrayTemplates.deleteCell + '</td>' +
