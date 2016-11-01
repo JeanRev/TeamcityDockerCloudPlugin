@@ -127,18 +127,18 @@ class DockerTaskScheduler {
                     }
 
                     if (throwable == null) {
-                        if (dockerTask.isRepeatable()) {
-                            LOG.info("Repeatable task " + dockerTask + " completed without error and will be " +
-                                    "rescheduled.");
-                            TimeUnit timeUnit = dockerTask.getTimeUnit();
-                            assert timeUnit != null;
-                            executor.schedule(new ScheduleRepetableTask(dockerTask), dockerTask.getDelay(), dockerTask.getTimeUnit());
-                        } else {
-                            LOG.info("Task " + dockerTask + " completed without error.");
-                        }
+                        LOG.info("Task " + dockerTask + " completed without error.");
                     } else {
                         LOG.error("Task " + dockerTask + " execution failed.", throwable);
                         dockerTask.getErrorProvider().notifyFailure(dockerTask.getOperationName(), throwable);
+
+                    }
+
+                    if (dockerTask.isRepeatable()) {
+                        // Repeatable tasks are always rescheduled, even if their last execution failed. This permits
+                        // the client to recover from an error status.
+                        LOG.info("Rescheduling task: " + dockerTask);
+                        executor.schedule(new ScheduleRepetableTask(dockerTask), dockerTask.getDelay(), dockerTask.getTimeUnit());
                     }
 
                     scheduleNextTasks();

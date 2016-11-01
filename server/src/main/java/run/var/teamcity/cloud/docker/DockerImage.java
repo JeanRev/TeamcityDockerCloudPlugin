@@ -162,21 +162,20 @@ public class DockerImage implements CloudImage {
         try {
 
             int maxInstanceCount = config.getMaxInstanceCount();
-            if (maxInstanceCount != -1 && instances.size() >= config.getMaxInstanceCount()) {
-                LOG.debug(this + ": max instance count reached.");
-                return false;
-            }
-
+            int usedInstance = 0;
             for (DockerInstance instance : instances.values()) {
-                if (instance.getStatus() == InstanceStatus.ERROR) {
+                InstanceStatus status = instance.getStatus();
+                if (status == InstanceStatus.ERROR) {
                     // At least one instance is in an error state. Wait until the error state is cleared or the
                     // instance disposed.
                     LOG.debug(this + ": at least one instance in error state, cannot start new instance.");
                     return false;
+                } else if (status != InstanceStatus.STOPPED) {
+                    usedInstance++;
                 }
             }
 
-            return true;
+            return maxInstanceCount == -1 || usedInstance < maxInstanceCount;
         } finally {
             lock.unlock();
         }
