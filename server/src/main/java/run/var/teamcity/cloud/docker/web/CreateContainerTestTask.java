@@ -111,6 +111,7 @@ public class CreateContainerTestTask extends ContainerTestTask {
             throw new ContainerTestTaskException("Failed to pull image: " + image, e);
         }
 
+        msg("Creating container");
         String containerId = client.createContainer(container.saveNode()).getAsString("Id");
 
         testTaskHandler.notifyContainerId(containerId);

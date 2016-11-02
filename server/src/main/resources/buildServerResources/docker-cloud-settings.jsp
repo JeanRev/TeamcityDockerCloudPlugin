@@ -107,10 +107,14 @@
                 <tr>
                     <th><label for="dockerCloudImage_Image">Docker image:&nbsp;<l:star/></label></th>
                     <td>
-                        <input type="checkbox" id="dockerCloudImage_UseOfficialTCAgentImage"/>
-                        <label for="dockerCloudImage_UseOfficialTCAgentImage">Use official TeamCity agent image</label>
-                        <input type="text" id="dockerCloudImage_Image" class="mediumField"/>
-                        <span class="error" id="dockerCloudImage_Image_error"></span>
+                        <p>
+                            <input type="checkbox" id="dockerCloudImage_UseOfficialTCAgentImage"/>
+                            <label for="dockerCloudImage_UseOfficialTCAgentImage">Use official TeamCity agent image</label>
+                        </p>
+                        <p>
+                            <input type="text" id="dockerCloudImage_Image" class="mediumField"/>
+                            <span class="error" id="dockerCloudImage_Image_error"></span>
+                        </p>
     <span class="smallNote">
       Docker image name to be started.
     </span>
@@ -482,7 +486,8 @@
             <tr>
                 <th><label for="dockerCloudImage_CpuPeriod">CPU Period:
                     <i class="icon icon16 tc-icon_help_small tooltip"></i>
-                    <span class="tooltiptext">The length of a CPU period in microseconds.</span></label></th>
+                    <span class="tooltiptext">The length of a CPU period in microseconds. Accepts a value between
+                        1000μs (1ms) and 1000000μs (1s)</span></label></th>
                 <td>
                     <input type="text" class="textField" id="dockerCloudImage_CpuPeriod"/>
                     <span class="error" id="dockerCloudImage_CpuPeriod_error"></span>
@@ -538,6 +543,17 @@
                 </td>
             </tr>
         </table>
+        <h4>Logging options:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">Configuration map for the logging driver.</span>
+        </h4>
+        <table class="settings">
+            <thead>
+            <tr><th class="name" style="width: 45%;">Option Key&nbsp;<l:star/></th><th class="name" style="width: 45%;">Option Value</th><th class="dockerCloudCtrlCell"></th></tr>
+            </thead>
+            <tbody id="dockerCloudImage_LogConfig">
+            </tbody>
+        </table>
         <h4>Volumes:
             <i class="icon icon16 tc-icon_help_small tooltip"></i>
             <span class="tooltiptext">Defines volumes, and optionally, their bound location on the host file system
@@ -559,17 +575,6 @@
             <tr><th class="name" style="width: 45%;">Key&nbsp;<l:star/></th><th class="name" style="width: 45%;">Value</th><th class="dockerCloudCtrlCell"></th></tr>
             </thead>
             <tbody id="dockerCloudImage_Labels">
-            </tbody>
-        </table>
-        <h4>Logging options:
-            <i class="icon icon16 tc-icon_help_small tooltip"></i>
-            <span class="tooltiptext">Configuration map for the logging driver.</span>
-        </h4>
-        <table class="settings">
-            <thead>
-            <tr><th class="name" style="width: 45%;">Option Key&nbsp;<l:star/></th><th class="name" style="width: 45%;">Option Value</th><th class="dockerCloudCtrlCell"></th></tr>
-            </thead>
-            <tbody id="dockerCloudImage_LogConfig">
             </tbody>
         </table>
         <h4>Devices:

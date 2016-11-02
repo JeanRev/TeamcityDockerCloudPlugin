@@ -544,7 +544,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     container.ExposedPorts = {};
                     self._safeEach(viewModel.Ports, function (port) {
                         if (!port.HostIp && !port.HostPort) {
-                            container.ExposedPorts[port.Protocol + '/' + port.HostPort] = {};
+                            container.ExposedPorts[port.HostPort + '/' + port.Protocol] = {};
                         }
                     });
                 }
@@ -553,7 +553,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 var hostConfig = container.HostConfig = {};
 
-                if (self._filterFromSettings(viewModel.Binds)) {
+                if (self._filterFromSettings(viewModel.Volumes)) {
                     hostConfig.Binds = [];
                     self._safeEach(viewModel.Volumes, function (volume) {
                         if (volume.PathOnHost) {
@@ -593,7 +593,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     hostConfig.PortBindings = {};
                     self._safeEach(viewModel.Ports, function (port) {
                         if (port.HostIp || port.HostPort) {
-                            var key = port.Protocol + '/' + port.ContainerPort;
+                            var key = port.ContainerPort + '/' + port.Protocol;
                             var binding = hostConfig.PortBindings[key];
                             if (!binding) {
                                 binding = hostConfig.PortBindings[key] = [];
@@ -692,7 +692,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 viewModel.Image = container.Image;
 
                 viewModel.Volumes = [];
-                self._safeEach(container.Volumes, function(volume) {
+                self._safeKeyValueEach(container.Volumes, function(volume) {
                     viewModel.Volumes.push({ PathInContainer: volume, ReadOnly: false });
                 });
 
@@ -705,8 +705,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 viewModel.Ports = [];
                 self._safeEach(container.ExposedPorts, function(exposedPort) {
-                    var tokens = exposedPort.split("/");
-                    viewModel.Ports.push({ Protocol: tokens[0], ContainerPort: tokens[1] })
+                    var tokens = exposedPort.split('/');
+                    viewModel.Ports.push({ ContainerPort: tokens[0], Protocol: tokens[1] })
                 });
 
                 viewModel.StopSignal = container.StopSignal;
@@ -714,7 +714,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var hostConfig = container.HostConfig || {};
 
                 self._safeEach(hostConfig.Binds, function(bind) {
-                    var tokens = bind.split(":");
+                    var tokens = bind.split(':');
                     viewModel.Volumes.push({ PathOnHost: tokens[0], PathInContainer: tokens[1],  ReadOnly: tokens[2] === 'ro' });
                 });
 
@@ -738,8 +738,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self._safeKeyValueEach(hostConfig.PortBindings, function(port, bindings) {
                     var tokens = port.split("/");
-                    var protocol = tokens[0];
-                    var containerPort = tokens[1];
+                    var containerPort = tokens[0];
+                    var protocol = tokens[1];
                     self._safeEach(bindings, function(binding) {
                         viewModel.Ports.push({ HostIp: binding.HostIp, HostPort: binding.HostPort, ContainerPort: containerPort, Protocol: protocol })
                     });
@@ -780,7 +780,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     viewModel.Ulimits.push(ulimit);
                 });
 
-                var logConfig = container.LogConfig;
+                var logConfig = hostConfig.LogConfig;
                 if (logConfig) {
                     viewModel.LogType = logConfig.Type;
                     viewModel.LogConfig = [];
@@ -919,8 +919,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 networkMode.change(function () {
                     var mode = networkMode.val();
-                    containerNetwork.toggle(mode === "container");
-                    customNetwork.toggle(mode === "custom");
+
+                    var container = mode === "container";
+                    containerNetwork.toggle(container);
+                    containerNetwork.prop('disabled', !container);
+                    var custom = mode === "custom";
+                    customNetwork.toggle(custom);
+                    customNetwork.prop('disabled', !custom)
                     containerNetwork.blur();
                     customNetwork.blur();
                 }).change();
@@ -1007,7 +1012,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     var unlimited = self.$swapUnlimited.is(":checked");
                     $swap.prop("disabled", unlimited);
                     self.$swapUnit.prop("disabled", unlimited);
-                    $swap.val("").blur();
+                    if (unlimited) {
+                        $swap.val("")
+                    }
+                    $swap.blur();
                 });
 
 
@@ -1077,6 +1085,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     if (responseMap.status == 'FAILURE') {
                         self.$testContainerLabel.addClass('systemProblemsBar');
                         self.$testContainerErrorIcon.show();
+                        self.$testContainerCloseBtn.show();
 
                         if (responseMap.failureCause) {
                             //var errorDetails = $j('#dockerCloudTestContainerErrorDetails');
@@ -1382,7 +1391,21 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     dockerCloudImage_CpusetCpus: [cpuSetValidator],
                     dockerCloudImage_CpusetMems: [cpuSetValidator],
                     dockerCloudImage_CpuShares: [positiveIntegerValidator],
-                    dockerCloudImage_CpuPeriod: [positiveIntegerValidator],
+                    dockerCloudImage_CpuPeriod: [function($elt) {
+                        var value = $elt.val().trim();
+                        $elt.val(value);
+                        if (!value) {
+                            return;
+                        }
+                        var result = positiveIntegerValidator($elt);
+                        if (!result) {
+                            var number = parseInt(value);
+                            if (number < 1000 || number > 1000000) {
+                                result = {msg: "CPU period must be between 1000μs (1ms) and 1000000μs (1s)"}
+                            }
+                        }
+                        return result;
+                    }],
                     dockerCloudImage_BlkioWeight: [function ($elt) {
                         var value = $elt.val().trim();
                         $elt.val(value);
@@ -1458,14 +1481,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var elt = $j(this);
                 var eltId = elt.attr("id") || elt.attr("name");
 
-                console.log('Validating: ' + eltId);
-
                 var vals = self.validators[eltId];
                 if (!vals) {
                     vals = self.validators[eltId.replace(/[0-9]+/, "IDX")];
                 }
 
-                if (vals && elt.is(':visible') && !elt.is(':disabled')) {
+                // Only validate fields that are not disabled.
+                // Note: fields that are not visible must always be validated in order to perform cross-tabs
+                // validation.
+                if (vals && !elt.is(':disabled')) {
                     $j.each(vals, function (i, validator) {
                         result = validator(elt);
                         if (result) {
@@ -1475,8 +1499,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
                 var tab = self._getElementTab(elt);
                 var errorMsg = $j("#" + eltId + "_error").empty();
-                // TODO: remove-me
-                console.log("#" + eltId + "_error");
                 var warningMsg = $j("#" + eltId + "_warning").empty();
                 if (result) {
                     var msg = result.warning ? warningMsg : errorMsg;
