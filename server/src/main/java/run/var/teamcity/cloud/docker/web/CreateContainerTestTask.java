@@ -117,7 +117,7 @@ public class CreateContainerTestTask extends ContainerTestTask {
 
         msg("Removing container");
 
-        client.removeContainer(containerId, true, true);
+        //client.removeContainer(containerId, true, true);
 
         return Status.SUCCESS;
     }

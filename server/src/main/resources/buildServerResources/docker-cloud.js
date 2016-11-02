@@ -591,7 +591,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     hostConfig.PortBindings = {};
                     self._safeEach(viewModel.Ports, function (port) {
                         if (port.HostIp || port.HostPort) {
-                            var key = port.protocol + '/' + port.HostPort;
+                            var key = port.Protocol + '/' + port.HostPort;
                             var binding = hostConfig.PortBindings[key];
                             if (!binding) {
                                 binding = hostConfig.PortBindings[key] = [];
@@ -987,7 +987,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     // Fetch closest table.
                     var $tableBody = $elt.closest("tbody");
                     var key = $tableBody.attr("id");
-                    var index = $j.data($tableBody, "index") || 0;
+                    var index = $j.data($tableBody.get(0), "index") || 0;
+                    console.log('Index on table body:' + index);
                     index++;
                     var $table = $elt.closest("table");
                     console.log('Adding entry ' + index + ' to table ' + key);
@@ -995,8 +996,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         ' class="center dockerCloudCtrlCell">' + self.arrayTemplates.deleteCell + '</td></tr>');
                     $elt.closest("tr").before('<tr>' + self.arrayTemplates[key].replace(/IDX/g, index) + '<td' +
                     ' class="center dockerCloudCtrlCell">' + self.arrayTemplates.deleteCell + '</td></tr>');
-                    $j.data($tableBody, "index", index);
+                    $j.data($tableBody.get(0), "index", index);
                     self._updateTableMandoryStarsVisibility($table);
+                    console.log('Saving new index on table body: ' + index);
                 });
 
                 self.$swapUnlimited.change(function() {
@@ -1072,7 +1074,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                     if (responseMap.status == 'FAILURE') {
                         self.$testContainerLabel.addClass('systemProblemsBar');
-                        self.$testContainerSuccessIcon.show();
+                        self.$testContainerErrorIcon.show();
 
                         if (responseMap.failureCause) {
                             //var errorDetails = $j('#dockerCloudTestContainerErrorDetails');
@@ -1443,6 +1445,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerCloseBtn.show();
                 self.$testContainerLoader.hide();
                 self.$testContainerSuccessIcon.hide();
+                self.$testContainerErrorIcon.hide();
                 self.$testContainerLabel.empty();
                 self.$testContainerLabel.removeClass('systemProblemsBar');
             },
@@ -1452,6 +1455,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var result;
                 var elt = $j(this);
                 var eltId = elt.attr("id") || elt.attr("name");
+
+                console.log('Validating: ' + eltId);
 
                 var vals = self.validators[eltId];
                 if (!vals) {
@@ -1468,6 +1473,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
                 var tab = self._getElementTab(elt);
                 var errorMsg = $j("#" + eltId + "_error").empty();
+                // TODO: remove-me
+                console.log("#" + eltId + "_error");
                 var warningMsg = $j("#" + eltId + "_warning").empty();
                 if (result) {
                     var msg = result.warning ? warningMsg : errorMsg;
