@@ -446,7 +446,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _restoreViewModelGroup: function(parentObject, key, $elt){
                 var tagName = $elt.prop('tagName');
                 if (tagName === "TBODY") {
-                    $j('tr', $elt).each(function(i, row) {
+                    $j('tr', $elt).each(function (i, row) {
 
                         var $row = $j(row);
                         var $rowItems = $j('input, select', $row);
@@ -462,13 +462,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         }
 
                         if ($rowItems.length == 1) {
-                            $rowItems.each(function(i, rowItem) {
+                            $rowItems.each(function (i, rowItem) {
                                 parentObject[key].push($j(rowItem).val());
                             });
                         } else {
                             var childObject = {};
-                            $rowItems.each(function(i, rowItem) {
-                                var $rowItem  = $j(rowItem);
+                            $rowItems.each(function (i, rowItem) {
+                                var $rowItem = $j(rowItem);
                                 var regex = new RegExp('^dockerCloudImage_' + key + '_[0-9]+_(.*)$');
                                 var match = regex.exec($rowItem.attr('id'));
                                 if (match) {
@@ -478,6 +478,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             rowObject.push(childObject);
                         }
                     });
+                } else if (tagName == 'SELECT') {
+                    parentObject[key] = $elt.val();
                 } else if ($elt.is(':text')) {
                     parentObject[key] = $elt.val();
                 } else if ($elt.is(':checkbox')) {
@@ -591,7 +593,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     hostConfig.PortBindings = {};
                     self._safeEach(viewModel.Ports, function (port) {
                         if (port.HostIp || port.HostPort) {
-                            var key = port.Protocol + '/' + port.HostPort;
+                            var key = port.Protocol + '/' + port.ContainerPort;
                             var binding = hostConfig.PortBindings[key];
                             if (!binding) {
                                 binding = hostConfig.PortBindings[key] = [];
@@ -704,7 +706,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 viewModel.Ports = [];
                 self._safeEach(container.ExposedPorts, function(exposedPort) {
                     var tokens = exposedPort.split("/");
-                    viewModel.Ports.push({ ContainerPort: tokens[0], Protocol: tokens[1] })
+                    viewModel.Ports.push({ Protocol: tokens[0], ContainerPort: tokens[1] })
                 });
 
                 viewModel.StopSignal = container.StopSignal;
@@ -736,8 +738,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self._safeKeyValueEach(hostConfig.PortBindings, function(port, bindings) {
                     var tokens = port.split("/");
-                    var containerPort = tokens[0];
-                    var protocol = tokens[1];
+                    var protocol = tokens[0];
+                    var containerPort = tokens[1];
                     self._safeEach(bindings, function(binding) {
                         viewModel.Ports.push({ HostIp: binding.HostIp, HostPort: binding.HostPort, ContainerPort: containerPort, Protocol: protocol })
                     });
