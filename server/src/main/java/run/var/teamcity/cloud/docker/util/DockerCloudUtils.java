@@ -18,6 +18,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Constants and utility class for the Docker cloud plugin.
@@ -99,8 +100,6 @@ public final class DockerCloudUtils {
      * Environment variable name to store the cloud instance UUID.
      */
     public static final String ENV_TEST_INSTANCE_ID = ENV_PREFIX + "TEST_INSTANCE_UUID";
-
-    public static final int KIB = 1024;
 
     /**
      * Test for argument nullity.
@@ -264,6 +263,24 @@ public final class DockerCloudUtils {
         fos.write(baos.toByteArray());
         fos.close();
         return new String(baos.toByteArray(), StandardCharsets.UTF_8);
+    }
+
+    // Pattern for a Docker image name with version tag. Note that searching for a semi-colon is not enough, this
+    // character may also be used to specify the port number for private repositories.
+    private final static Pattern IMAGE_WITH_TAG_PTN = Pattern.compile(".*:[^/]+");
+
+    /**
+     * Tests if the given Docker image name has a version tag.
+     *
+     * @param image the image name to test
+     *
+     * @return {@code true} if a version tag is detected in the given docker image name
+     *
+     * @throws NullPointerException if {@code image} is {@code null}
+     */
+    public static boolean hasImageTag(@NotNull String image) {
+        DockerCloudUtils.requireNonNull(image, "Image name cannot be null.");
+        return IMAGE_WITH_TAG_PTN.matcher(image).matches();
     }
 
     public static long toUnsignedLong(int value) {

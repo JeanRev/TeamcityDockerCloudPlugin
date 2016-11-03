@@ -320,9 +320,23 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 }
 
                 if (containerId == null) {
-                    Node containerSpec = authorContainerSpec(instance, tag.getServerAddress());
+                    String image;
+                    DockerImageConfig imageConfig = dockerImage.getConfig();
+                    if (imageConfig.isUseOfficialTCAgentImage()) {
+                        image = officialAgentImageResolver.resolve();
+                    } else {
+                        image = imageConfig.getContainerSpec().getAsString("Image");
+                    }
 
-                    String image = containerSpec.getAsString("Image");
+                    image = "jetbrains/teamcity-agent:10.0.1";
+
+                    if (!DockerCloudUtils.hasImageTag(image)) {
+                        // Note: if no tag is specified, the Docker remote API will pull *all* of them.
+                        image += ":latest";
+                    }
+
+                    Node containerSpec = authorContainerSpec(instance, image, tag.getServerAddress());
+
                     try (NodeStream nodeStream = dockerClient.createImage(image, null)) {
                         Node status;
                         while((status = nodeStream.next()) != null) {
@@ -336,8 +350,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                     } catch (Exception e) {
                         LOG.warn("Failed to pull image, proceeding anyway.", e);
                     }
-                    Node createNode =  dockerClient.createContainer(authorContainerSpec(instance, tag
-                            .getServerAddress()));
+                    Node createNode =  dockerClient.createContainer(containerSpec);
                     containerId = createNode.getAsString("Id");
                     LOG.info("New container " + containerId + " created.");
                 } else {
@@ -519,11 +532,12 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
      * variables can then be queried through the TC agent API).
      *
      * @param instance the docker instance for which the container will be created
+     * @param resolvedImage the exact image name that was resolved
      * @param serverUrl the TC server URL
      *
      * @return the authored JSON node
      */
-    private Node authorContainerSpec(DockerInstance instance, String serverUrl) {
+    private Node authorContainerSpec(DockerInstance instance, String resolvedImage, String serverUrl) {
         DockerImage image = instance.getImage();
         DockerImageConfig config = image.getConfig();
 
@@ -538,10 +552,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 put(DockerCloudUtils.CLIENT_ID_LABEL, uuid.toString()).
                 put(DockerCloudUtils.INSTANCE_ID_LABEL, instance.getUuid().toString());
 
-        if (config.isUseOfficialTCAgentImage()) {
-            String officialImage = officialAgentImageResolver.resolve();
-            container.put("Image", officialImage);
-        }
+        container.put("Image", resolvedImage);
 
         return container.saveNode();
     }

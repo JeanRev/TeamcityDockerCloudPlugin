@@ -521,7 +521,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 if (self._filterFromSettings(viewModel.Labels)) {
                     container.Labels = {};
                     self._safeEach(viewModel.Labels, function (label) {
-                        label[label.key] = label.value;
+                        container.Labels[label.Key] = label.Value;
                     });
                 }
 
@@ -576,6 +576,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     hostConfig.MemorySwap = viewModel.MemorySwapUnlimited ? -1 : (parseInt(viewModel.MemorySwap) * self._units_multiplier[viewModel.MemorySwapUnit]);
                 }
 
+                if (self._filterFromSettings(viewModel.CpuQuota)) {
+                    hostConfig.CpuQuota = parseInt(viewModel.CpuQuota);
+                }
                 if (self._filterFromSettings(viewModel.CpuShares)) {
                     hostConfig.CpuShares = parseInt(viewModel.CpuShares);
                 }
@@ -729,6 +732,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 viewModel.MemorySwapUnit = editor.MemorySwapUnit || 'bytes';
                 viewModel.MemorySwap = hostConfig.MemorySwap && Math.floor(hostConfig.MemorySwap / self._units_multiplier[viewModel.MemorySwapUnit]);
                 viewModel.MemorySwapUnlimited = hostConfig.MemorySwap == -1;
+                viewModel.CpuQuota = hostConfig.CpuQuota;
                 viewModel.CpuShares = hostConfig.CpuShares;
                 viewModel.CpuPeriod = hostConfig.CpuPeriod;
                 viewModel.CpusetCpus = hostConfig.CpusetCpus;
@@ -1063,7 +1067,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     if (self.hasWebSocketSupport) {
                         if (!self.testStatusSocket) {
                             console.log('Opening test status listener socket now.');
-                            self.testStatusSocket = new WebSocket("ws://localhost:8111/app/docker-cloud/test-container/getStatus?taskUuid=" + responseMap.taskUuid);
+                            // TODO: FIX URL
+                            self.testStatusSocket = new WebSocket("ws://129.0.0.1:8111/app/docker-cloud/test-container/getStatus?taskUuid=" + responseMap.taskUuid);
                             self.testStatusSocket.onmessage = function (event) {
                                 console.log('Processing status from server.');
                                 self._processTestResponse(self._parseResponse(event.data));
@@ -1384,6 +1389,21 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             var multiplier = self._units_multiplier[self.$memoryUnit.val()];
                             if ((number * multiplier) < 524288) {
                                 result = {msg: "Memory must be at least 4Mb."}
+                            }
+                        }
+                        return result;
+                    }],
+                    dockerCloudImage_CpuQuota: [function($elt) {
+                        var value = $elt.val().trim();
+                        $elt.val(value);
+                        if (!value) {
+                            return;
+                        }
+                        var result = positiveIntegerValidator($elt);
+                        if (!result) {
+                            var number = parseInt(value);
+                            if (number < 1000) {
+                                result = {msg: "CPU Quota must be at least of 1000μs (1ms)."}
                             }
                         }
                         return result;

@@ -389,7 +389,7 @@
         </div>
         <h4>Extra hosts:
             <i class="icon icon16 tc-icon_help_small tooltip"></i>
-            <span class="tooltiptext">A list of hostnames/IP mappings to add to the container’s <code>/etc/hosts</code>
+            <span class="tooltiptext">A list of hostnames/IP mappings to add to the container's <code>/etc/hosts</code>
                 file</span></h4>
         <table class="settings">
             <thead>
@@ -454,6 +454,25 @@
                 </td>
             </tr>
             <tr>
+                <th><label for="dockerCloudImage_CpuQuota">CPU Quota:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">Microseconds of CPU time that the container can get in a CPU period.</span></label></th>
+                <td>
+                    <input type="text" id="dockerCloudImage_CpuQuota" class="textField"/>
+                    <span class="error" id="dockerCloudImage_CpuQuota_error"></span>
+                </td>
+            </tr>
+            <tr>
+                <th><label for="dockerCloudImage_CpuPeriod">CPU Period:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">The length of a CPU period in microseconds. Accepts a value between
+                        1000μs (1ms) and 1000000μs (1s)</span></label></th>
+                <td>
+                    <input type="text" class="textField" id="dockerCloudImage_CpuPeriod"/>
+                    <span class="error" id="dockerCloudImage_CpuPeriod_error"></span>
+                </td>
+            </tr>
+            <tr>
                 <th><label for="dockerCloudImage_CpusetCpus">cpuset - CPUs:
                     <i class="icon icon16 tc-icon_help_small tooltip"></i>
                     <span class="tooltiptext">String value containing the cgroups <code>CpusetCpus</code> to use.</span></label></th>
@@ -481,16 +500,6 @@
                 <td>
                     <input type="text" class="textField" id="dockerCloudImage_CpuShares"/>
                     <span class="error" id="dockerCloudImage_CpuShares_error"></span>
-                </td>
-            </tr>
-            <tr>
-                <th><label for="dockerCloudImage_CpuPeriod">CPU Period:
-                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
-                    <span class="tooltiptext">The length of a CPU period in microseconds. Accepts a value between
-                        1000μs (1ms) and 1000000μs (1s)</span></label></th>
-                <td>
-                    <input type="text" class="textField" id="dockerCloudImage_CpuPeriod"/>
-                    <span class="error" id="dockerCloudImage_CpuPeriod_error"></span>
                 </td>
             </tr>
             <tr>

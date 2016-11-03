@@ -37,19 +37,27 @@ public class CreateContainerTestTask extends ContainerTestTask {
 
         DockerClient client = testTaskHandler.getDockerClient();
 
-        msg("Creating container");
-
         EditableNode container = imageConfig.getContainerSpec().editNode();
         container.getOrCreateArray("Env").add(DockerCloudUtils.ENV_TEST_INSTANCE_ID + "=" + instanceUuid).add
                 ("SERVER_URL=" + serverUrl);
         container.getOrCreateObject("Labels").put(DockerCloudUtils.TEST_INSTANCE_ID_LABEL, instanceUuid.toString());
         String image;
         if (imageConfig.isUseOfficialTCAgentImage()) {
+            msg("Resolving image version");
             image = officialAgentImageResolver.resolve();
             container.put("Image", image);
         } else {
             image = container.getAsString("Image");
         }
+
+        image = "jetbrains/teamcity-agent:10.0.1";
+
+        if (!DockerCloudUtils.hasImageTag(image)) {
+            // Note: if no tag is specified, the Docker remote API will pull *all* of them.
+            image += ":latest";
+        }
+
+        msg("Pulling image");
 
         try (NodeStream nodeStream = client.createImage(image, null)) {
             Node status;
@@ -60,14 +68,14 @@ public class CreateContainerTestTask extends ContainerTestTask {
             // Progress tracking is dependent of the size of the corresponding layer, which can be pretty huge. Using
             // BigIngegers to be safe.
             BigInteger progress = UNKNOWN_PROGRESS;
-            msg("Pulling image...");
             while ((status = nodeStream.next()) != null) {
                 String error = status.getAsString("error", null);
                 if (error != null) {
                     Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
-                    throw new ContainerTestTaskException("Failed to pul image: " + error + " -- " + details
+                    throw new ContainerTestTaskException("Failed to pull image: " + error + " -- " + details
                             .getAsString("message", null), null);
                 }
+                // TODO: remove-me
                 System.out.println("Received status: " + status);
                 String newStatusMsg = status.getAsString("status", null);
                 if (newStatusMsg != null) {
