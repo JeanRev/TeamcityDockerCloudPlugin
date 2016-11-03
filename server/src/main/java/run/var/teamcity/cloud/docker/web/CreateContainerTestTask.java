@@ -50,6 +50,7 @@ public class CreateContainerTestTask extends ContainerTestTask {
             image = container.getAsString("Image");
         }
 
+        // TODO: remove-me
         image = "jetbrains/teamcity-agent:10.0.1";
 
         if (!DockerCloudUtils.hasImageTag(image)) {
