@@ -184,8 +184,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
     @Override
     public boolean isInitialized() {
+        lock.lock();
         try {
-            lock.lock();
             return state != State.CREATED;
         } finally {
             lock.unlock();
@@ -196,8 +196,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     @Override
     public DockerImage findImageById(@NotNull String id) throws CloudException {
         UUID uuid = DockerCloudUtils.tryParseAsUUID(id);
+        lock.lock();
         try {
-            lock.lock();
             return uuid != null ? images.get(uuid) : null;
         } finally {
             lock.unlock();
@@ -207,13 +207,12 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     @Nullable
     @Override
     public DockerInstance findInstanceByAgent(@NotNull AgentDescription agent) {
-
         UUID instanceId = DockerCloudUtils.getInstanceId(agent);
 
         if (instanceId != null) {
             UUID imageId = DockerCloudUtils.getImageId(agent);
+            lock.lock();
             try {
-                lock.lock();
                 DockerImage image = imageId != null ? images.get(imageId) : null;
                 if (image != null) {
                     return image.findInstanceById(instanceId);
@@ -229,9 +228,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     @NotNull
     @Override
     public Collection<DockerImage> getImages() throws CloudException {
+        lock.lock();
         try {
-            lock.lock();
-            //checkReady();
             return images.values();
         } finally {
             lock.unlock();
@@ -279,8 +277,13 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         final DockerImage dockerImage = (DockerImage) image;
 
         DockerInstance instance = null;
+        lock.lock();
         try {
-            lock.lock();
+            if (!canStartNewInstance(image)) {
+                // The Cloud API explicitly gives the possibility to reject a start request if we are not willing to
+                // do so, with a corresponding exception.
+                throw new QuotaException("Cannot start new instance.");
+            }
 
             for (DockerInstance existingInstance : dockerImage.getInstances()) {
                 if (existingInstance.getStatus() == InstanceStatus.STOPPED) {
@@ -291,6 +294,9 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
             if (instance == null) {
                 instance = dockerImage.createInstance();
+                LOG.info("Created cloud instance " + instance.getUuid() + ".");
+            } else {
+                LOG.info("Reusing cloud instance " + instance.getUuid() + ".");
             }
         } finally {
             lock.unlock();
@@ -298,6 +304,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
         assert instance != null;
 
+        // We always want the server to remove build agents once they are unregistered. Note that it is still possible
+        // under some circumstances to have orphaned build agents displayed in the TC UI for some time.
         tag.setAgentRemovePolicy(CloudConstants.AgentRemovePolicyValue.RemoveAgent);
 
         taskScheduler.scheduleInstanceTask(new DockerInstanceTask("starting container", instance, InstanceStatus.SCHEDULED_TO_START) {
@@ -328,8 +336,6 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                         image = imageConfig.getContainerSpec().getAsString("Image");
                     }
 
-                    image = "jetbrains/teamcity-agent:10.0.1";
-
                     if (!DockerCloudUtils.hasImageTag(image)) {
                         // Note: if no tag is specified, the Docker remote API will pull *all* of them.
                         image += ":latest";
@@ -348,7 +354,10 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                             }
                         }
                     } catch (Exception e) {
-                        LOG.warn("Failed to pull image, proceeding anyway.", e);
+                        // Failure to pull is considered non-critical: if an image of this name exists in the Docker
+                        // daemon local repository but is potentially outdated we will use it anyway.
+                        LOG.warn("Failed to pull image " + image + " for instance " + instance.getUuid() +
+                                ", proceeding anyway.", e);
                     }
                     Node createNode =  dockerClient.createContainer(containerSpec);
                     containerId = createNode.getAsString("Id");
@@ -357,14 +366,13 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                     LOG.info("Reusing existing container: " + containerId);
                 }
 
-
                 dockerClient.startContainer(containerId);
                 LOG.info("Container " + containerId + " started.");
 
                 scheduleDockerSync();
 
+                lock.lock();
                 try {
-                    lock.lock();
                     instance.setContainerId(containerId);
                     instance.setStatus(InstanceStatus.RUNNING);
                 } finally {
@@ -381,14 +389,18 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
     @Override
     public void restartInstance(@NotNull final CloudInstance instance) {
+        // This operation seems seems to be never called from the TC server. It also unclear if it should be doing
+        // anything more than a combined stop and start. We try to honor it by simply restarting the docker container.
         LOG.info("Restarting container:" + instance);
         final DockerInstance dockerInstance = (DockerInstance) instance;
         taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Restarting container", dockerInstance, null) {
             @Override
             protected void callInternal() throws Exception {
+                lock.lock();
                 try {
-                    lock.lock();
                     checkReady();
+                    // We currently don't do extensive status check before restarting. Docker itself will not complain
+                    // if we try to restart a stopped instance.
                     dockerInstance.setStatus(InstanceStatus.RESTARTING);
                 } finally {
                     lock.unlock();
@@ -397,8 +409,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
                 if (containerId != null) {
                     dockerClient.restartContainer(containerId);
+                    lock.lock();
                     try {
-                        lock.lock();
                         dockerInstance.setStatus(InstanceStatus.RUNNING);
                     } finally {
                         lock.unlock();
@@ -497,8 +509,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     }
 
     private void scheduleDockerSync() {
+        lock.lock();
         try {
-            lock.lock();
             if (dockerSyncScheduled) {
                 return;
             }
@@ -517,8 +529,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
      * @return the timestamp of the last Docker sync or -1
      */
     public long getLastDockerSyncTimeMillis() {
+        lock.lock();
         try {
-            lock.lock();
             return lastDockerSyncTimeMillis;
         } finally {
             lock.unlock();
@@ -559,8 +571,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
     @Override
     public void notifyFailure(@NotNull String msg, @Nullable Throwable throwable) {
+        lock.lock();
         try {
-            lock.lock();
             if (throwable != null) {
                 errorInfo = new CloudErrorInfo(msg, msg, throwable);
             } else {
@@ -618,9 +630,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
             List<String> orphanedContainers = new ArrayList<>();
 
+            lock.lock();
             try {
-                lock.lock();
-
                 assert state != State.CREATED : "Cloud client is not initialized yet.";
 
                 // Step 1, gather all instances.
