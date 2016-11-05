@@ -134,6 +134,12 @@ import org.apache.http.util.VersionInfo;
 import jersey.repackaged.com.google.common.util.concurrent.MoreExecutors;
 import org.jetbrains.annotations.Nullable;
 
+/*
+ * This class is a modified version of the Jersey connector for the Apache Http Client library
+ * (org.glassfish.jersey.apache.connector.ApacheConnector). All changes have been marked with comments starting with
+ * the "DK_CLD" prefix.
+ */
+
 /**
  * A {@link Connector} that utilizes the Apache HTTP Client to send and receive
  * HTTP request and responses.

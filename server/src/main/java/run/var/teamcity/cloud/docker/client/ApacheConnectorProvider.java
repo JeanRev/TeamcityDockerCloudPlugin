@@ -112,6 +112,12 @@ import org.jetbrains.annotations.Nullable;
  * @author Maksim Mukosey (mmukosey at gmail.com)
  * @since 2.5
  */
+
+/*
+ * This class is a modified version of the Jersey connector for the Apache Http Client library
+ * (org.glassfish.jersey.apache.connector.ApacheConnectorProvider). All changes have been marked with comments starting
+ * with the "DK_CLD" prefix.
+ */
 public class ApacheConnectorProvider implements ConnectorProvider {
 
     // DK_CLD: See getHttpContext()
