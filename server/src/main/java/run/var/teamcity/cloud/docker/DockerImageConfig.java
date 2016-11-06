@@ -81,7 +81,21 @@ public class DockerImageConfig {
         return maxInstanceCount;
     }
 
+    /**
+     * Load a list of cloud images from a configuration properties map. The ordering of the images will be the same
+     * than the one specified in the underlying JSON definition.
+     *
+     * @param properties the map of properties
+     *
+     * @return the loaded list of images
+     *
+     * @throws NullPointerException if the properties map is {@code null}
+     * @throws DockerCloudClientConfigException if the image configuration is not valid
+     */
+    @NotNull
     public static List<DockerImageConfig> processParams(@NotNull Map<String, String> properties) {
+        DockerCloudUtils.requireNonNull(properties, "Properties map cannot be null.");
+
         List<InvalidProperty> invalidProperties = new ArrayList<>();
 
         String imagesJSon = properties.get(DockerCloudUtils.IMAGES_PARAM);

@@ -29,7 +29,6 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
 
     private String name  = "<Unknown>";
     private String containerId;
-    private String networkIdentity;
     private Node containerInfo;
     private InstanceStatus status = InstanceStatus.UNKNOWN;
     private CloudErrorInfo errorInfo;
@@ -95,8 +94,8 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     @NotNull
     @Override
     public String getName() {
+        lock.lock();
         try {
-           lock.lock();
             return name;
         } finally {
             lock.unlock();
@@ -112,8 +111,8 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      */
     void setName(@NotNull String name) {
         DockerCloudUtils.requireNonNull(name, "Name cannot be null.");
+        lock.lock();
         try {
-            lock.lock();
             this.name = name;
         } finally {
             lock.unlock();
@@ -141,12 +140,11 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     @Nullable
     @Override
     public String getNetworkIdentity() {
-        try {
-            lock.lock();
-            return networkIdentity;
-        } finally {
-            lock.unlock();
-        }
+        // Not too sure what we should do here. Obviously, the TC server knows the agent IP address, and it would not
+        // makes much sense to retrieve it ourselves from the container configuration. It would be also difficult to
+        // return an usable hostname. This is no detail, because the network identity seems to be displayed prominently
+        // as Agent label in the TC UI.
+        return null;
     }
 
     @NotNull
@@ -164,8 +162,8 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      */
     void setStatus(@NotNull InstanceStatus status) {
         DockerCloudUtils.requireNonNull(status, "Instance status cannot be null.");
+        lock.lock();
         try {
-            lock.lock();
             this.status = status;
         } finally {
             lock.unlock();
@@ -188,8 +186,8 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      */
     @Nullable
     public Node getContainerInfo() {
+        lock.lock();
         try {
-            lock.lock();
             return containerInfo;
         } finally {
             lock.unlock();
@@ -202,8 +200,8 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      * @param containerInfo the JSON node or {@code null} if not available
      */
     void setContainerInfo(@Nullable Node containerInfo) {
+        lock.lock();
         try {
-            lock.lock();
             this.containerInfo = containerInfo;
         } finally {
             lock.unlock();
@@ -236,11 +234,6 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder(name);
-        String networkIdentity = this.networkIdentity;
-        if (networkIdentity != null) {
-            sb.append(" (").append(networkIdentity).append(")");
-        }
-        return sb.toString();
+        return name;
     }
 }

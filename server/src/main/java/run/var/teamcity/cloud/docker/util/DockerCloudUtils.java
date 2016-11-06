@@ -25,8 +25,6 @@ import java.util.regex.Pattern;
  */
 public final class DockerCloudUtils {
 
-    public final static Charset UTF_8 = Charset.forName("UTF-8");
-
     /**
      * Our canonical namespace.
      */
@@ -230,11 +228,37 @@ public final class DockerCloudUtils {
         return agentDescription.getAvailableParameters().get("env." + name);
     }
 
+    /**
+     * Simple to read an UTF-8 string from an input stream. Encoding error will be ignored. The provided stream will
+     * NOT be closed on completion.
+     *
+     * @param inputStream the input stream to read from
+     *
+     * @return the string
+     *
+     * @throws NullPointerException if {@code inputStream} is {@code null}
+     * @throws IOException if an error occurred while reading the stream
+     */
     @NotNull
     public static String readUTF8String(@NotNull InputStream inputStream) throws IOException {
         return readUTF8String(inputStream, -1);
     }
 
+    /**
+     * Simple to read an UTF-8 string from an input stream up to a max length. Encoding error (which may
+     * commonly occurs while truncating the string) will be ignored. The provided stream will NOT be closed on
+     * completion.
+     *
+     * @param inputStream the input stream to read from
+     * @param maxByteLength the maximum count of bytes to be read or {@code -1} to read the whole stream.
+     *
+     * @return the string
+     *
+     * @throws NullPointerException if {@code inputStream} is {@code null}
+     * @throws IllegalArgumentException if {@code maxByteLength} is smaller than {@code 1} but not equals to
+     * {@code -1}.
+     * @throws IOException if an error occurred while reading the stream
+     */
     @NotNull
     public static String readUTF8String(@NotNull InputStream inputStream, int maxByteLength) throws IOException {
         DockerCloudUtils.requireNonNull(inputStream, "Input stream cannot be null.");
@@ -259,9 +283,6 @@ public final class DockerCloudUtils {
             baos.write(buffer, 0, c);
 
         }
-        FileOutputStream fos = new FileOutputStream("/tmp/test.dat");
-        fos.write(baos.toByteArray());
-        fos.close();
         return new String(baos.toByteArray(), StandardCharsets.UTF_8);
     }
 
@@ -283,11 +304,29 @@ public final class DockerCloudUtils {
         return IMAGE_WITH_TAG_PTN.matcher(image).matches();
     }
 
+    /**
+     * Simple method to widen an signed {@code int} to a unsigned long.
+     * <p>
+     *     Java-8: uses Integer.toUnsignedLong() instead.
+     * </p>
+     *
+     * @param value the signed {@code int}
+     *
+     * @return the unsigned {@code long}
+     */
     public static long toUnsignedLong(int value) {
         return ((long) value) & 0xffffffffL;
     }
 
-    public static String getStackTrace(Throwable throwable) {
+    /**
+     * Gets the stacktrace from an exception as a string value.
+     *
+     * @param throwable the exception (may be {@code null})
+     *
+     * @return the stacktrace as a string or {@code null} if {@code throwable} is {@code null}
+     */
+    @Nullable
+    public static String getStackTrace(@Nullable Throwable throwable) {
         if (throwable == null) {
             return null;
         }

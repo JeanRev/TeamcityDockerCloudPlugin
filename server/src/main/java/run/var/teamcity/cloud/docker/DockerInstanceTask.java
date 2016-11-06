@@ -3,7 +3,6 @@ package run.var.teamcity.cloud.docker;
 import jetbrains.buildServer.clouds.InstanceStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 /**
  * A {@link DockerTask} associated with a {@link DockerInstance}.
@@ -23,12 +22,11 @@ abstract class DockerInstanceTask extends DockerTask {
      * @param scheduledStatus the instance status to be set when the task is scheduled for execution or {@code null} if
      * none
      *
-     * @throws NullPointerException if any argument is {@code null}
+     * @throws NullPointerException if {@code operationName} or {@code instance} is {@code null}
      */
     DockerInstanceTask(@NotNull String operationName, @NotNull DockerInstance instance, @Nullable InstanceStatus
             scheduledStatus) {
         super(operationName, instance);
-        DockerCloudUtils.requireNonNull(scheduledStatus, "Scheduling status cannot be null.");
         this.instance = instance;
         this.scheduledStatus = scheduledStatus;
     }

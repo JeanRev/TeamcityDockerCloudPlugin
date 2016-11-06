@@ -72,8 +72,10 @@ public class DockerCloudClientFactory implements CloudClientFactory {
     @Override
     public Map<String, String> getInitialParameterValues() {
         HashMap<String, String> params = new HashMap<>();
-        params.put(DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, Boolean.TRUE.toString());
+        // The cloud client UUID is generated here for new cloud profiles. It will be then persisted in the profile
+        // plugin configuration.
         params.put(DockerCloudUtils.CLIENT_UUID, UUID.randomUUID().toString());
+        params.put(DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, Boolean.TRUE.toString());
         return params;
     }
 

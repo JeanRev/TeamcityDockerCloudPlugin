@@ -18,7 +18,6 @@ import jetbrains.buildServer.serverSide.BuildAgentManager;
 import jetbrains.buildServer.serverSide.BuildServerAdapter;
 import jetbrains.buildServer.serverSide.SBuildAgent;
 import jetbrains.buildServer.serverSide.SBuildServer;
-import jetbrains.buildServer.serverSide.impl.auth.SecuredBuildAgentManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
@@ -37,7 +36,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Exchanger;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -757,6 +755,9 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 lock.unlock();
             }
 
+            if (!orphanedContainers.isEmpty()) {
+                LOG.info("The following orphaned containers will be removed: " + orphanedContainers);
+            }
             for (String orphanedContainer : orphanedContainers) {
                 terminateContainer(orphanedContainer, true);
             }
