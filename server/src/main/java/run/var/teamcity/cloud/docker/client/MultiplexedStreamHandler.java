@@ -12,6 +12,9 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+/**
+ * {@link StreamHandler} supporting multiplexed {@link StdioInputStream}s.
+ */
 public class MultiplexedStreamHandler extends StreamHandler {
 
     private static final Logger LOG = DockerCloudUtils.getLogger(MultiplexedStreamHandler.class);
@@ -38,6 +41,7 @@ public class MultiplexedStreamHandler extends StreamHandler {
             previousStreamFragment.exhaustAndClose();
         }
 
+        // Demultiplexes the streams using the instructions from the Docker remote API.
         int n;
         int headerOffset = 0;
         while((n = inputStream.read(headerBuffer, headerOffset, headerBuffer.length - headerOffset)) != -1) {

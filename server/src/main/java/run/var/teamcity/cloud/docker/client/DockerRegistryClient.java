@@ -1,6 +1,5 @@
-package run.var.teamcity.cloud.docker.registry;
+package run.var.teamcity.cloud.docker.client;
 
-import run.var.teamcity.cloud.docker.client.DockerAbstractClient;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.ws.rs.HttpMethod;
@@ -34,7 +33,6 @@ public class DockerRegistryClient extends DockerAbstractClient {
 
     private final Client jerseyClient;
 
-
     public DockerRegistryClient(URI registryURI, URI authServiceURI, String service) {
         super(ClientBuilder.newClient());
         jerseyClient = ClientBuilder.newClient();
@@ -62,15 +60,8 @@ public class DockerRegistryClient extends DockerAbstractClient {
         return new DockerRegistryClient(DOCKER_HUB_URI, DOCKER_IO_AUTH_SERVICE_URI, DOCKER_IO_AUTH_SERVICE);
     }
 
-
     @Override
     public void close() {
         jerseyClient.close();
-    }
-
-    public static void main(String[] args) {
-        DockerRegistryClient registryClient = DockerRegistryClient.openDockerHubClient();
-        String token = registryClient.anonymousLogin("repository:jetbrains/teamcity-agent:pull").getAsString("token");
-        System.out.println(registryClient.listTags(token, "jetbrains/teamcity-agent"));
     }
 }

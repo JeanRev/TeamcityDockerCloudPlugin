@@ -4,7 +4,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.client.DockerClientException;
-import run.var.teamcity.cloud.docker.registry.DockerRegistryClient;
+import run.var.teamcity.cloud.docker.client.DockerRegistryClient;
 
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;

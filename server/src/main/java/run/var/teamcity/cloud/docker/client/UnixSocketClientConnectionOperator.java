@@ -22,7 +22,9 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 
 /**
- * {@link HttpClientConnectionOperator} to connect to Unix sockets.
+ * {@link HttpClientConnectionOperator} to connect to Unix sockets. We are using here our own connection operator
+ * because the default one does not work wells with the third-party lib we are using to access unix sockets. More,
+ * specifically, our unix socket instances do not allow to reconfigure some socket properties once opened.
  */
 class UnixSocketClientConnectionOperator  implements HttpClientConnectionOperator {
 

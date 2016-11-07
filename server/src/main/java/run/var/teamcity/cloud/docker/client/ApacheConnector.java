@@ -116,7 +116,6 @@ import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLContexts;
 import org.apache.http.entity.AbstractHttpEntity;
 import org.apache.http.entity.BufferedHttpEntity;
-import org.apache.http.entity.ContentLengthStrategy;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.BasicAuthCache;
 import org.apache.http.impl.client.BasicCookieStore;
@@ -126,7 +125,6 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.DefaultManagedHttpClientConnection;
 import org.apache.http.impl.conn.ManagedHttpClientConnectionFactory;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.apache.http.impl.io.ChunkedOutputStream;
 import org.apache.http.io.SessionOutputBuffer;
 import org.apache.http.util.TextUtils;
 import org.apache.http.util.VersionInfo;
@@ -318,7 +316,7 @@ class ApacheConnector implements Connector {
         clientBuilder.setDefaultRequestConfig(requestConfig);
 
         /* DK_CLD: Add our connection reuse strategy. */
-        clientBuilder.setConnectionReuseStrategy(new ConnectionReuseStrategy());
+        clientBuilder.setConnectionReuseStrategy(new UpgradeAwareConnectionReuseStrategy());
         clientBuilder.setRequestExecutor(new HttpRequestExecutor() {
             protected HttpResponse doReceiveResponse(
                     final HttpRequest request,

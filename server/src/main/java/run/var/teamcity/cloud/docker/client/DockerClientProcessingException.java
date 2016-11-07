@@ -4,7 +4,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Processing exception when interacting with the Docker client. Indicates that no communication can be established
- * because with the Docker instance (eg. no network connectivity, cannot unmarshall messages, etc).
+ * with the Docker instance (eg. no network connectivity, cannot unmarshall messages, etc).
  */
 public class DockerClientProcessingException extends DockerClientException {
 

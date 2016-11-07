@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * A {@link StreamHandler} returning a single composite stream type.
+ * A {@link StreamHandler} returning a single composite stream.
  */
 class CompositeStreamHandler extends StreamHandler {
 

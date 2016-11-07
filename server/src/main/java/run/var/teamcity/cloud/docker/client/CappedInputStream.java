@@ -96,6 +96,8 @@ class CappedInputStream extends FilterInputStream {
     }
 
     /**
+     * Exhausts and close this input stream. All bytes will be read up to the specified capacity, or until the stream
+     * is exhausted.
      *
      * @throws IOException if an error occurred while exhausting or closing the stream
      */

@@ -25,13 +25,14 @@ import java.nio.charset.StandardCharsets;
  * <p>
  *     This class provides helper method to work with the most common data-structure returned from Docker services like
  *     the Docker client remote API or the Docker registry API. It also provides a common ground for exception handling
- *     with operation specific {@link ErrorCodeMapper}.
+ *     with an operation specific {@link ErrorCodeMapper}.
  * </p>
- * <p>
- *     This class does NOT rely on automatic entity mapping from the JSON framework to process entities. Instead, it
- *     works with the entity stream directly and
- * </p>
- *
+ */
+/*
+ * Implementation note: in order to maximize flexibility, this class does not rely on Jersey automatic binding to
+ * marshall/unmarshall JSON data-structures. One issue with automatic bindings is that you have to rely on the Jersey
+ * HTTP error code handling, which will treat informational codes (such as 101, switching protocol, used in our case
+ * for upgrade to TCP streaming) as errors. The whole parsing/error handling is therefore done here explicitly.
  */
 public abstract class DockerAbstractClient implements Closeable {
 
@@ -43,10 +44,29 @@ public abstract class DockerAbstractClient implements Closeable {
 
     private volatile boolean closed = false;
 
-    protected DockerAbstractClient(Client jerseyClient) {
+    /**
+     * Creates a new client instance wrapping the given Jersey client.
+     *
+     * @param jerseyClient the Jersey client
+     */
+    protected DockerAbstractClient(@NotNull Client jerseyClient) {
         this.jerseyClient = jerseyClient;
     }
 
+    /**
+     * Invokes an operation on the service returning JSON structure.
+     *
+     * @param target the targeted resource
+     * @param method the operation method
+     * @param entity the entity to be submitted, may be {@code null}
+     * @param authToken the authorization token for the operation, may be {@code null}
+     * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
+     *
+     * @return the parsed response
+     *
+     * @throws DockerClientException if invoking the operation failed
+     */
+    @NotNull
     protected Node invoke(WebTarget target, String method, Node entity, String authToken, ErrorCodeMapper
             errorCodeMapper) {
 
@@ -70,6 +90,20 @@ public abstract class DockerAbstractClient implements Closeable {
         }
     }
 
+    /**
+     * Invokes an operation on the service returning a stream of JSON structures.
+     *
+     * @param target the targeted resource
+     * @param method the operation method
+     * @param entity the entity to be submitted, may be {@code null}
+     * @param authToken the authorization token for the operation, may be {@code null}
+     * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
+     *
+     * @return the stream of JSON elements
+     *
+     * @throws DockerClientException if invoking the operation failed
+     */
+    @NotNull
     protected NodeStream invokeNodeStream(WebTarget target, String method, Node entity, String authToken,
                                           ErrorCodeMapper errorCodeMapper) {
 
@@ -88,6 +122,17 @@ public abstract class DockerAbstractClient implements Closeable {
         }
     }
 
+    /**
+     * Invokes an operation on the service returning raw data.
+     * @param target the targeted resource
+     * @param method the operation method
+     * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
+     *
+     * @return the stream to the raw data
+     *
+     * @throws DockerClientException if invoking the operation failed
+     */
+    @NotNull
     protected InputStream invokeRaw(WebTarget target, String method, ErrorCodeMapper errorCodeMapper) {
 
         assert target != null && method != null;
@@ -102,6 +147,15 @@ public abstract class DockerAbstractClient implements Closeable {
         return new JaxWsResponseFilterInputStream(response);
     }
 
+    /**
+     * Invokes an operation on the service with no return type.
+     *
+     * @param target the targeted resource
+     * @param method the operation method
+     * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
+     *
+     * @throws DockerClientException if invoking the operation failed
+     */
     protected void invokeVoid(WebTarget target, String method, Node entity, ErrorCodeMapper errorCodeMapper) {
 
         assert target != null && method != null;
@@ -114,6 +168,21 @@ public abstract class DockerAbstractClient implements Closeable {
         response.close();
     }
 
+    /**
+     * Low-level method to perform a request and validate a response from the Jersey client.
+     *
+     * @param target the targeted resource
+     * @param invocationBuilder the invocation builder to be used
+     * @param method the operation method
+     * @param entity the entity to be submitted, may be {@code null}
+     * @param authToken the authorization token for the operation, may be {@code null}
+     * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
+     * @param <T> the submitted entity type
+     *
+     * @return the Jersey response
+     *
+     * @throws DockerClientException if invoking the operation failed
+     */
     protected <T> Response execRequest(WebTarget target, Invocation.Builder invocationBuilder, String method,
                                         Entity<T> entity, String authToken,
                                      ErrorCodeMapper errorCodeMapper) {
@@ -137,10 +206,25 @@ public abstract class DockerAbstractClient implements Closeable {
         return response;
     }
 
+    /**
+     * Build a request specification from a target resource and an HTTP method. For debug purpose.
+     * @param target the targeted resource
+     * @param method the HTTP method to be used
+     *
+     * @return the request specification
+     */
+    @NotNull
     protected String getRequestSpec(WebTarget target, String method) {
         return method + " " + target.getUri().getPath();
     }
 
+    /**
+     * Validates a response from the server.
+     *
+     * @param requestSpec the request specification
+     * @param response the reponse from the server
+     * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
+     */
     protected void validate(@NotNull String requestSpec, @NotNull Response response, @Nullable ErrorCodeMapper
             errorCodeMapper) {
         assert requestSpec != null && response != null;
