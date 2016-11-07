@@ -3,9 +3,6 @@ package run.var.teamcity.cloud.docker.client;
 import java.util.EnumSet;
 import java.util.Set;
 
-/**
- * Created by jr on 04.09.16.
- */
 public enum StdioType {
     STDIN,
     STDOUT,

@@ -63,7 +63,7 @@ public class MultiplexedStreamHandler extends StreamHandler {
 
                 previousStreamFragment = streamFragment;
 
-                return new StdioInputStream(type, streamFragment);
+                return new StdioInputStream(streamFragment, type);
             }
         }
         if (headerOffset != 0) {

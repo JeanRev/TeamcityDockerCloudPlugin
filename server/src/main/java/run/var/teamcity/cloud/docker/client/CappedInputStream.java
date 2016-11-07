@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker.client;
 
 import org.jetbrains.annotations.NotNull;
+import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -8,7 +9,11 @@ import java.io.InputStream;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Created by jr on 30.08.16.
+ * An input stream filter with a fixed capacity. Invoking {@code close()} on this filter will not close the
+ * underlying input stream.
+ * <p>
+ *     This stream filter is thread-safe to use, as long as the underlying stream is thread-safe as well.
+ * </p>
  */
 class CappedInputStream extends FilterInputStream {
 
@@ -18,8 +23,18 @@ class CappedInputStream extends FilterInputStream {
     private long readSoFar = 0;
     private boolean closed = false;
 
-    CappedInputStream(InputStream in, long capacity) {
+    /**
+     * Creates a new stream filter.
+     *
+     * @param in the stream to wrap
+     * @param capacity the stream capacity
+     *
+     * @throws NullPointerException if {@code in} is {@code null}
+     * @throws IllegalArgumentException if {@code capacity} is smaller than 0
+     */
+    CappedInputStream(@NotNull InputStream in, long capacity) {
         super(in);
+        DockerCloudUtils.requireNonNull(in, "Input stream cannot be null.");
         if (capacity < 0) {
             throw new IllegalArgumentException("Capacity cannot be negative: " + capacity);
         }
@@ -28,8 +43,8 @@ class CappedInputStream extends FilterInputStream {
 
     @Override
     public int read() throws IOException {
+        lock.lock();
         try {
-            lock.lock();
             checkNotClosed();
             if (readSoFar < capacity) {
                 int b = super.read();
@@ -44,9 +59,8 @@ class CappedInputStream extends FilterInputStream {
 
     @Override
     public int available() throws IOException {
-
+        lock.lock();
         try {
-            lock.lock();
             long available = capacity - readSoFar;
 
             assert available >= 0;
@@ -60,8 +74,8 @@ class CappedInputStream extends FilterInputStream {
 
     @Override
     public int read(@NotNull byte[] b, int off, int len) throws IOException {
+        lock.lock();
         try {
-            lock.lock();
             checkNotClosed();
             int available = available();
             if (available > 0) {
@@ -81,9 +95,13 @@ class CappedInputStream extends FilterInputStream {
         closed = true;
     }
 
+    /**
+     *
+     * @throws IOException if an error occurred while exhausting or closing the stream
+     */
     void exhaustAndClose() throws IOException {
+        lock.lock();
         try {
-            lock.lock();
             long toSkip = capacity - readSoFar;
             assert toSkip >= 0;
 
