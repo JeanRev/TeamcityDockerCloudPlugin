@@ -5,6 +5,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.InstanceStatus;
 import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
 import run.var.teamcity.cloud.docker.util.WrappedRunnableScheduledFuture;
 
 import java.util.HashSet;
@@ -74,14 +75,7 @@ class DockerTaskScheduler {
         if (threadPoolSize < 1) {
             throw new IllegalArgumentException("Thread pool size must be strictly greater than 1.");
         }
-         executor = new ScheduledThreadPoolExecutor(threadPoolSize, new ThreadFactory() {
-            @Override
-            public Thread newThread(@NotNull Runnable r) {
-                Thread t = Executors.defaultThreadFactory().newThread(r);
-                t.setDaemon(true);
-                return t;
-            }
-        }) {
+         executor = new ScheduledThreadPoolExecutor(threadPoolSize, new NamedThreadFactory("DockerTaskScheduler", true)) {
             @Override
             protected <V> RunnableScheduledFuture<V> decorateTask(Callable<V> callable, RunnableScheduledFuture<V> task) {
                 return new WrappedRunnableScheduledFuture<>(callable, task);

@@ -1,21 +1,33 @@
 package run.var.teamcity.cloud.docker.web;
 
 import com.intellij.openapi.diagnostic.Logger;
+import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.NotFoundException;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
-public class DisposeContainerTestTask extends ContainerTestTask {
+/**
+ * {@link ContainerTestTask} to dispose a test container.
+ */
+class DisposeContainerTestTask extends ContainerTestTask {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(DisposeContainerTestTask.class);
 
-
     private final String containerId;
 
-    DisposeContainerTestTask(ContainerTestTaskHandler testTaskHandler, String containerId) {
+    /**
+     * Creates a new task instance.
+     *
+     * @param testTaskHandler the test task handler
+     * @param containerId the ID of the container to be diposed
+     *
+     * @throws NullPointerException if any argument is {@code null}
+     */
+    DisposeContainerTestTask(@NotNull ContainerTestTaskHandler testTaskHandler, @NotNull String containerId) {
         super(testTaskHandler, TestContainerStatusMsg.Phase.STOP);
+        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         this.containerId = containerId;
     }
 

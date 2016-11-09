@@ -152,6 +152,15 @@ public class OfficialAgentImageResolver {
         return Integer.compare(versionTokens1.length, versionTokens2.length);
     }
 
+    /**
+     * Creates a resolver for the provided build server instance.
+     *
+     * @param server the build server
+     *
+     * @return the resolver
+     *
+     * @throws NullPointerException if {@code server} is {@code null}
+     */
     @NotNull
     public static OfficialAgentImageResolver forServer(@NotNull SBuildServer server) {
         DockerCloudUtils.requireNonNull(server, "Server instance cannot be null.");

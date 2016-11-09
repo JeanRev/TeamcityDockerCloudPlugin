@@ -38,7 +38,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class DockerStreamingController extends AbstractController {
 
-
     private final static Logger LOG = DockerCloudUtils.getLogger(DockerStreamingController.class);
 
     private final AtmosphereFramework atmosphereFramework;
@@ -54,8 +53,8 @@ public class DockerStreamingController extends AbstractController {
             WebControllerManager
             mgr) {
         this.atmosphereFramework = atmosphereFrameworkHolder.getAtmosphereFramework();
+
         mgr.registerController("/app/docker-cloud/streaming/**", this);
-        mgr.registerController("/plugins/docker-cloud/streaming/**", this);
 
         atmosphereFramework.addWebSocketHandler("/app/docker-cloud/streaming/logs", new LogsHandler());
         atmosphereFramework.addWebSocketHandler("/app/docker-cloud/streaming/attach", new AttachHandler());

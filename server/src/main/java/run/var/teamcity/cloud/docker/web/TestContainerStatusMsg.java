@@ -2,26 +2,57 @@ package run.var.teamcity.cloud.docker.web;
 
 import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import java.util.UUID;
 
+/**
+ * A container test status message to be transmitted to the client.
+ */
 public class TestContainerStatusMsg {
 
-
-
+    /**
+     * Status of the test.
+     */
     public enum Status {
+        /**
+         * The test is still running.
+         */
         PENDING,
+        /**
+         * The test failed.
+         */
         FAILURE,
+        /**
+         * The test succeeded.
+         */
         SUCCESS
     }
 
+    /**
+     * Phase of the rcontainer test.
+     */
     public enum Phase {
-        UNDEFINED,
+        /**
+         * Creating the container.
+         */
         CREATE,
+        /**
+         * Starting the container.
+         */
         START,
+        /**
+         * Waiting for the agent to connect.
+         */
         WAIT_FOR_AGENT,
+        /**
+         * Stopping the container.
+         */
         STOP,
+        /**
+         * Disposing the container.
+         */
         DISPOSE
     }
 
@@ -31,7 +62,22 @@ public class TestContainerStatusMsg {
     private final Phase phase;
     private final Throwable throwable;
 
-    public TestContainerStatusMsg(UUID uuid, Phase phase, Status status, String msg, Throwable failure) {
+    /**
+     * Creates a new status message instance.
+     *
+     * @param uuid the test UUID
+     * @param phase the test phase
+     * @param status the test status
+     * @param msg the status message (may be {@code null})
+     * @param failure a failure cause (may be {@code null})
+     *
+     * @throws NullPointerException if {@code uuid}, {@code phase}, or {@code status} are {@code null}
+     */
+    public TestContainerStatusMsg(@NotNull UUID uuid, @NotNull Phase phase, @NotNull Status status, @Nullable String msg,
+                                  @Nullable Throwable failure) {
+        DockerCloudUtils.requireNonNull(uuid, "Test UUID cannot be null.");
+        DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
+        DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
         this.taskUuid = uuid;
         this.phase = phase;
         this.status = status;
@@ -39,26 +85,62 @@ public class TestContainerStatusMsg {
         this.throwable = failure;
     }
 
+    /**
+     * Gets the status message if any.
+     *
+     * @return the status message or {@code null}
+     */
+    @Nullable
     public String getMsg() {
         return msg;
     }
 
+    /**
+     * Retrieve the test status.
+     *
+     * @return the test status
+     */
+    @NotNull
     public Status getStatus() {
         return status;
     }
 
+    /**
+     * Gets the test phase.
+     *
+     * @return the test phase
+     */
+    @NotNull
     public Phase getPhase() {
         return phase;
     }
 
+    /**
+     * Gets the test UUID.
+     *
+     * @return the test UUID
+     */
+    @NotNull
     public UUID getTaskUuid() {
         return taskUuid;
     }
 
+    /**
+     * Gets the failure cause if any.
+     *
+     * @return the failure cause
+     */
+    @Nullable
     public Throwable getThrowable() {
         return throwable;
     }
 
+    /**
+     * Marshall this status message to a XML tree.
+     *
+     * @return the tree root element
+     */
+    @NotNull
     public Element toExternalForm() {
         Element root = new Element("statusMsg");
         if (msg != null) {
@@ -67,8 +149,9 @@ public class TestContainerStatusMsg {
         addChildElement(root, "status", status);
         addChildElement(root, "phase", phase);
         addChildElement(root, "taskUuid", taskUuid);
-        addChildElement(root, "failureCause", DockerCloudUtils.getStackTrace(throwable));
-
+        if (throwable != null) {
+            addChildElement(root, "failureCause", DockerCloudUtils.getStackTrace(throwable));
+        }
         return root;
     }
 

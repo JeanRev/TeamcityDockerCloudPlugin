@@ -1,12 +1,12 @@
 package run.var.teamcity.cloud.docker.web;
 
-
 import jetbrains.buildServer.serverSide.BuildAgentManager;
 import jetbrains.buildServer.serverSide.SBuildAgent;
 import org.atmosphere.cpr.AtmosphereResource;
 import org.atmosphere.cpr.Broadcaster;
 import org.jdom.output.XMLOutputter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
@@ -16,6 +16,7 @@ import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
+
 
 public class ContainerSpecTest implements ContainerTestTaskHandler{
 
@@ -30,7 +31,8 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
 
     private String containerId;
     private AtmosphereResource atmosphereResource;
-    private TestContainerStatusMsg statusMsg;
+    private TestContainerStatusMsg statusMsg = new TestContainerStatusMsg(uuid, Phase.CREATE, Status.PENDING, null,
+            null);
     private ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTaskFuture = null;
 
     private ContainerSpecTest(Broadcaster broadcaster, DockerCloudClientConfig clientConfig, DockerClient client,
@@ -54,10 +56,24 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         return new ContainerSpecTest(broadcaster, clientConfig, client, agentMgr);
     }
 
+    /**
+     * Gets the test UUID.
+     *
+     * @return the test UUID
+     *
+     */
+    @NotNull
     public UUID getUuid() {
         return uuid;
     }
 
+    /**
+     * Gets the container ID associated with this test. May be {@code null} if the container creation did not succeed
+     * yet.
+     *
+     * @return the container ID or {@code null}
+     */
+    @Nullable
     public String getContainerId() {
         lock.lock();
         try {
@@ -67,6 +83,12 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         }
     }
 
+    /**
+     * Gets the atmosphere resource associated with this test if any.
+     *
+     * @return the atmosphere resource or {@code null}
+     */
+    @Nullable
     public AtmosphereResource getAtmosphereResource() {
         lock.lock();
         try {
@@ -76,6 +98,12 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         }
     }
 
+    /**
+     * Gets the task currently associated with this test. May be {@code null} if no task was associated yet.
+     *
+     * @return the task
+     */
+    @Nullable
     public ScheduledFutureWithRunnable<? extends ContainerTestTask> getCurrentTaskFuture() {
         lock.lock();
         try {
@@ -85,21 +113,38 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         }
     }
 
+    @NotNull
     @Override
     public DockerClient getDockerClient() {
         return client;
     }
 
+    /**
+     * Notify a user interaction for this test.
+     */
     public void notifyInteraction() {
         lastInteraction = System.nanoTime();
     }
 
+    /**
+     * Gets the last user interaction for this test as a nano timestamp.
+     *
+     * @return a nano timestamp
+     */
     public long getLastInteraction() {
         return lastInteraction;
     }
 
-    public void setCurrentTask(ScheduledFutureWithRunnable<? extends ContainerTestTask>
+    /**
+     * Sets the current task associated with this test.
+     *
+     * @param currentTask the test task
+     *
+     * @throws NullPointerException if {@code currentTask} is {@code null}
+     */
+    public void setCurrentTask(@NotNull ScheduledFutureWithRunnable<? extends ContainerTestTask>
             currentTask) {
+        DockerCloudUtils.requireNonNull(currentTask, "Current task cannot be null.");
         lock.lock();
         try {
             this.currentTaskFuture = currentTask;
@@ -110,7 +155,15 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
 
     }
 
-    public void setAtmosphereResource(AtmosphereResource atmosphereResource) {
+    /**
+     * Sets the atmosphere resource for the client to be notified.
+     *
+     * @param atmosphereResource the atmosphere resource
+     *
+     * @throws NullPointerException if {@code atmosphereResource} is {@code null}
+     */
+    public void setAtmosphereResource(@NotNull AtmosphereResource atmosphereResource) {
+        DockerCloudUtils.requireNonNull(atmosphereResource, "Atmosphere resource cannot be null.");
         lock.lock();
         try {
             this.atmosphereResource = atmosphereResource;
@@ -123,7 +176,8 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
     }
 
     @Override
-    public void notifyContainerId(String containerId) {
+    public void notifyContainerId(@NotNull String containerId) {
+        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         lock.lock();
         try {
             this.containerId = containerId;
@@ -134,7 +188,10 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
     }
 
     @Override
-    public void notifyStatus(Phase phase, Status status, String msg, Throwable failure) {
+    public void notifyStatus(@NotNull Phase phase, @NotNull Status status, @Nullable String msg,
+                             @Nullable Throwable failure) {
+        DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
+        DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
         statusMsg = new TestContainerStatusMsg(uuid, phase, status, msg, failure);
         broadcastStatus();
     }
@@ -146,6 +203,12 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         }
     }
 
+    /**
+     * Gets the current status message for this test.
+     *
+     * @return the current test message
+     */
+    @NotNull
     public TestContainerStatusMsg getStatusMsg() {
         return statusMsg;
     }

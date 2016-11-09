@@ -1,5 +1,6 @@
 package run.var.teamcity.cloud.docker.web;
 
+import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -10,6 +11,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * {@link ContainerTestTask} to start the test container.
+ */
 class StartContainerTestTask extends ContainerTestTask {
 
     private final static int AGENT_WAIT_TIMEOUT_SEC = 120;
@@ -18,9 +22,18 @@ class StartContainerTestTask extends ContainerTestTask {
     private final UUID instanceUuid;
     private long containerStartTime = -1;
 
-
-    StartContainerTestTask(ContainerTestTaskHandler testTaskHandler, String containerId, UUID instanceUuid) {
+    /**
+     * Creates a new task instance.
+     *
+     * @param testTaskHandler the test task handler
+     * @param containerId the ID of the container to be started
+     * @param instanceUuid the container test instance UUID
+     */
+    StartContainerTestTask(@NotNull ContainerTestTaskHandler testTaskHandler, @NotNull String containerId,
+                           @NotNull UUID instanceUuid) {
         super(testTaskHandler, Phase.START);
+        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
+        DockerCloudUtils.requireNonNull(instanceUuid, "Test instance UUID cannot be null.");
         this.containerId = containerId;
         this.instanceUuid = instanceUuid;
     }

@@ -12,7 +12,7 @@ import java.util.concurrent.TimeoutException;
 /**
  * A {@link RunnableScheduledFuture} wrapper with a reference to a source task.
  *
- *<p>This class permits to keep tracks of the callable associated with a {@code RunnableScheduledFuture} to which all
+ * <p>This class permits to keep tracks of the callable associated with a {@code RunnableScheduledFuture} to which all
  * method invocation will be delegated.</p>
  *
  * @param <V> the callable return type

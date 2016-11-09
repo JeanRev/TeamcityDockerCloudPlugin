@@ -1,6 +1,6 @@
 package run.var.teamcity.cloud.docker.web;
 
-import jetbrains.buildServer.clouds.CloudException;
+import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
@@ -14,7 +14,10 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.UUID;
 
-public class CreateContainerTestTask extends ContainerTestTask {
+/**
+ * {@link ContainerTestTask} to create a test container.
+ */
+class CreateContainerTestTask extends ContainerTestTask {
 
     private final static BigInteger UNKNOWN_PROGRESS = BigInteger.valueOf(-1);
 
@@ -23,9 +26,26 @@ public class CreateContainerTestTask extends ContainerTestTask {
     private final UUID instanceUuid;
     private final OfficialAgentImageResolver officialAgentImageResolver;
 
-    CreateContainerTestTask(ContainerTestTaskHandler testTaskHandler, DockerImageConfig imageConfig, String
-            serverUrl, UUID instanceUuid, OfficialAgentImageResolver officialAgentImageResolver) {
+    /**
+     * Creates a new task instance.
+     *
+     * @param testTaskHandler the test task handler
+     * @param imageConfig the cloud image configuration to use for creating the container
+     * @param serverUrl the TeamCity server URL for the agent to connect
+     * @param instanceUuid the container test instance UUID to be published (will be used to detect connection from
+     * the test agent latter)
+     * @param officialAgentImageResolver resolver for official agent images
+     *
+     * @throws NullPointerException if any argument is {@code null}
+     */
+    CreateContainerTestTask(@NotNull ContainerTestTaskHandler testTaskHandler, @NotNull DockerImageConfig imageConfig,
+                            @NotNull String serverUrl, @NotNull UUID instanceUuid,
+                            @NotNull OfficialAgentImageResolver officialAgentImageResolver) {
         super(testTaskHandler, TestContainerStatusMsg.Phase.CREATE);
+        DockerCloudUtils.requireNonNull(imageConfig, "Cloud image configuration cannot be null.");
+        DockerCloudUtils.requireNonNull(serverUrl, "Server URL cannot be null.");
+        DockerCloudUtils.requireNonNull(instanceUuid, "Test instance UUID cannot be null.");
+        DockerCloudUtils.requireNonNull(officialAgentImageResolver, "Official image resolver cannot be null.");
         this.imageConfig = imageConfig;
         this.serverUrl = serverUrl;
         this.instanceUuid = instanceUuid;

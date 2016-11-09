@@ -60,7 +60,9 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-
+/**
+ * Spring controller to manage lifecycle of container tests.
+ */
 public class ContainerTestsController extends BaseFormXmlController {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(ContainerTestsController.class);
