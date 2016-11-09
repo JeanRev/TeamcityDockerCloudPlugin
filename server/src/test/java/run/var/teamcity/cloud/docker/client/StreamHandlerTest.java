@@ -8,6 +8,7 @@ import run.var.teamcity.cloud.docker.test.TestOutputStream;
 import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.in;
 
 @Test
@@ -25,9 +26,22 @@ public abstract class StreamHandlerTest {
         assertThat(outputStream.isClosed()).isTrue();
     }
 
+    public void nullArguments() {
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> createHandler(null, inputStream,
+                outputStream));
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> createHandler(closeHandle, null,
+                outputStream));
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> createHandler(closeHandle, inputStream,
+                null));
+    }
+
     public void getOutputStream() {
         assertThat(createHandler().getOutputStream()).isSameAs(outputStream);
     }
 
-    protected abstract StreamHandler createHandler();
+    protected StreamHandler createHandler() {
+        return createHandler(closeHandle, inputStream, outputStream);
+    }
+    protected abstract StreamHandler createHandler(TestInputStream closeHandle, TestInputStream inputStream,
+                                                   TestOutputStream outputStream);
 }

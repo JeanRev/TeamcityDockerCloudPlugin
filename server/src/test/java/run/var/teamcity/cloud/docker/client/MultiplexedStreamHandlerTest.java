@@ -2,6 +2,7 @@ package run.var.teamcity.cloud.docker.client;
 
 import org.testng.annotations.BeforeMethod;
 import run.var.teamcity.cloud.docker.test.TestInputStream;
+import run.var.teamcity.cloud.docker.test.TestOutputStream;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import java.io.ByteArrayInputStream;
@@ -70,7 +71,7 @@ public class MultiplexedStreamHandlerTest extends StreamHandlerTest {
     }
 
     @Override
-    protected StreamHandler createHandler() {
+    protected StreamHandler createHandler(TestInputStream closeHandle, TestInputStream inputStream, TestOutputStream outputStream) {
         return new MultiplexedStreamHandler(closeHandle, inputStream, outputStream);
     }
 }

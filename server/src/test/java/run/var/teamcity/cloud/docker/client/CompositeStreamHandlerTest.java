@@ -1,5 +1,8 @@
 package run.var.teamcity.cloud.docker.client;
 
+import run.var.teamcity.cloud.docker.test.TestInputStream;
+import run.var.teamcity.cloud.docker.test.TestOutputStream;
+
 import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,7 +27,7 @@ public class CompositeStreamHandlerTest extends StreamHandlerTest {
     }
 
     @Override
-    protected CompositeStreamHandler createHandler() {
+    protected StreamHandler createHandler(TestInputStream closeHandle, TestInputStream inputStream, TestOutputStream outputStream) {
         return new CompositeStreamHandler(closeHandle, inputStream, outputStream);
     }
 }
