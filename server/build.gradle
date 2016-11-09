@@ -10,6 +10,11 @@ configurations {
     extraCompile.extendsFrom provided
 }
 
+compileTestJava {
+    // Enable Java 1.8 goodies for testing. God I love gradle.
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+}
 
 dependencies {
     provided 'org.jetbrains.teamcity:cloud-interface:10.0'
@@ -26,6 +31,7 @@ dependencies {
 
     provided 'org.atmosphere:atmosphere-runtime:2.2.4'
     testCompile group: 'org.testng', name: 'testng', version: '6.9.13.6'
+    testCompile 'org.assertj:assertj-core:3.5.2'
 }
 
 test {
