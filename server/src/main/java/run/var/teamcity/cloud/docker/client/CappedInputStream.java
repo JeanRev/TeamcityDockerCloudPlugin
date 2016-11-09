@@ -58,9 +58,12 @@ class CappedInputStream extends FilterInputStream {
     }
 
     @Override
-    public int available() throws IOException {
+    public int available() {
         lock.lock();
         try {
+            if (closed) {
+                return 0;
+            }
             long available = capacity - readSoFar;
 
             assert available >= 0;
@@ -91,7 +94,7 @@ class CappedInputStream extends FilterInputStream {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         closed = true;
     }
 
@@ -116,6 +119,22 @@ class CappedInputStream extends FilterInputStream {
             lock.unlock();
         }
     }
+
+    @Override
+    public boolean markSupported() {
+        return false;
+    }
+
+    @Override
+    public synchronized void reset() throws IOException {
+        throw new IOException("Mark not supported.");
+    }
+
+    @Override
+    public synchronized void mark(int readlimit) {
+        // Not supported.
+    }
+
     private void checkNotClosed() throws IOException {
         if (closed) {
             throw new IOException("Stream is closed.");
