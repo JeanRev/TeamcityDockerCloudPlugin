@@ -1,5 +1,7 @@
 package run.var.teamcity.cloud.docker.client;
 
+import org.jetbrains.annotations.NotNull;
+import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.ws.rs.HttpMethod;
@@ -33,8 +35,18 @@ public class DockerRegistryClient extends DockerAbstractClient {
 
     private final Client jerseyClient;
 
-    public DockerRegistryClient(URI registryURI, URI authServiceURI, String service) {
+    /**
+     * Creates a new registry client.
+     *
+     * @param registryURI the registry URI
+     * @param authServiceURI the authentication service URI
+     * @param service the authentication service name
+     */
+    public DockerRegistryClient(@NotNull URI registryURI, @NotNull URI authServiceURI, @NotNull String service) {
         super(ClientBuilder.newClient());
+        DockerCloudUtils.requireNonNull(registryURI, "Resgistry URI cannot be null.");
+        DockerCloudUtils.requireNonNull(authServiceURI, "Authentication service URI cannot be null.");
+        DockerCloudUtils.requireNonNull(service, "Authentication server name cannot be null.");
         jerseyClient = ClientBuilder.newClient();
         target = jerseyClient.target(registryURI);
         authTarget = jerseyClient.target(authServiceURI);
@@ -42,13 +54,31 @@ public class DockerRegistryClient extends DockerAbstractClient {
         this.service = service;
     }
 
-    public Node anonymousLogin(String scope) {
+    /**
+     * Perform an anonymous login on the authentication service and returns the result.
+     *
+     * @param scope authentication scope
+     *
+     * @return the authentication outcome
+     */
+    @NotNull
+    public Node anonymousLogin(@NotNull String scope) {
+        DockerCloudUtils.requireNonNull(scope, "Authentication scope cannot be null.");
         return invoke(authTarget.
                 path("token").
                 queryParam("service", service).
                 queryParam("scope", scope), HttpMethod.GET, null, null, null);
     }
 
+    /**
+     * List tags available for a repo.
+     *
+     * @param loginToken the authentication token
+     * @param repo the repo to query
+     *
+     * @return the fetched tag list
+     */
+    @NotNull
     public Node listTags(String loginToken, String repo) {
         return invoke(target.
                 path("v2").
@@ -56,6 +86,12 @@ public class DockerRegistryClient extends DockerAbstractClient {
                 path("tags/list"), HttpMethod.GET, null, loginToken, null);
     }
 
+    /**
+     * Creates a new Docker client for the default registry (Docker Hub).
+     *
+     * @return the new client
+     */
+    @NotNull
     public static DockerRegistryClient openDockerHubClient() {
         return new DockerRegistryClient(DOCKER_HUB_URI, DOCKER_IO_AUTH_SERVICE_URI, DOCKER_IO_AUTH_SERVICE);
     }

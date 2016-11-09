@@ -116,7 +116,7 @@ public abstract class DockerAbstractClient implements Closeable {
 
 
         try {
-            return Node.parseMany(new JaxWsResponseFilterInputStream(response));
+            return Node.parseMany(JaxWsResponseFilterInputStream.wrap(response));
         } catch (IOException e) {
             throw new DockerClientProcessingException("Failed to parse response from server.", e);
         }
@@ -144,7 +144,7 @@ public abstract class DockerAbstractClient implements Closeable {
 
         validate(getRequestSpec(target, method), response, errorCodeMapper);
 
-        return new JaxWsResponseFilterInputStream(response);
+        return JaxWsResponseFilterInputStream.wrap(response);
     }
 
     /**

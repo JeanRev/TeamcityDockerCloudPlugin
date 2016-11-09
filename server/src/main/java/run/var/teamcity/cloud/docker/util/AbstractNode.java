@@ -17,8 +17,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A JSON node abstraction. This is just an overlay to a JSON backend providing a relatively strict validation, and
- * does not assume the mutability of the nodes.
+ * A JSON node abstraction. This is just an overlay to a JSON backend. It provides a relatively strict validation, and
+ * does not assume mutability of the nodes.
  *
  * <p>The current JSON backend is Jackson.</p>
  *
