@@ -7,15 +7,12 @@ import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.Closeable;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -229,8 +226,8 @@ public final class DockerCloudUtils {
     }
 
     /**
-     * Simple to read an UTF-8 string from an input stream. Encoding error will be ignored. The provided stream will
-     * NOT be closed on completion.
+     * Simple to read an UTF-8 string from an input stream. Encoding error will be ignored (replacement character will
+     * be used when applicable). The provided stream will NOT be closed on completion.
      *
      * @param inputStream the input stream to read from
      *
@@ -246,8 +243,8 @@ public final class DockerCloudUtils {
 
     /**
      * Simple to read an UTF-8 string from an input stream up to a max length. Encoding error (which may
-     * commonly occurs while truncating the string) will be ignored. The provided stream will NOT be closed on
-     * completion.
+     * commonly occurs while truncating the string) will be ignored (replacement character will be used when
+     * applicable). The provided stream will NOT be closed on completion.
      *
      * @param inputStream the input stream to read from
      * @param maxByteLength the maximum count of bytes to be read or {@code -1} to read the whole stream.
@@ -265,8 +262,9 @@ public final class DockerCloudUtils {
         if (maxByteLength != -1 && maxByteLength < 1) {
             throw new IllegalArgumentException("Invalid byte length: " + maxByteLength);
         }
+        final int defBufferSize = 4096;
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        byte[] buffer = new byte[4906];
+        byte[] buffer = maxByteLength == -1 ? new byte[defBufferSize] : new byte[Math.min(maxByteLength, defBufferSize)];
         int c;
         while ((c = inputStream.read(buffer)) != -1) {
             if (maxByteLength != -1) {

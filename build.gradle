@@ -27,6 +27,7 @@ subprojects {
         }
         test {
             runtimeClasspath += configurations.provided
+            compileClasspath += configurations.provided
         }
     }
 }
