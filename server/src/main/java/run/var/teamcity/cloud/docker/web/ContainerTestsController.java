@@ -73,7 +73,6 @@ public class ContainerTestsController extends BaseFormXmlController {
     private final static int CLEANUP_TASK_RATE_SEC = 60;
     private final static int TEST_MAX_IDLE_TIME_MINUTES = 10;
 
-    private final DockerStreamingController streamingController;
     private final OfficialAgentImageResolver officialAgentImageResolver;
     private final AtmosphereFramework atmosphereFramework;
     private final ReentrantLock lock = new ReentrantLock();
@@ -94,7 +93,7 @@ public class ContainerTestsController extends BaseFormXmlController {
             PluginDescriptor
             pluginDescriptor,
                                     @NotNull WebControllerManager manager, @NotNull BuildAgentManager agentMgr,
-                                    @NotNull WebLinks webLinks, @NotNull DockerStreamingController streamingController) {
+                                    @NotNull WebLinks webLinks) {
 
         this.webLinks = webLinks;
 
@@ -110,7 +109,6 @@ public class ContainerTestsController extends BaseFormXmlController {
                 AtmosphereFramework.REFLECTOR_ATMOSPHEREHANDLER, Collections.<AtmosphereInterceptor>emptyList());
 
         this.agentMgr = agentMgr;
-        this.streamingController = streamingController;
         this.officialAgentImageResolver = OfficialAgentImageResolver.forServer(server);
     }
 
@@ -161,8 +159,6 @@ public class ContainerTestsController extends BaseFormXmlController {
             client = test.getDockerClient();
             atmosphereResource = test.getAtmosphereResource();
             containerId = test.getContainerId();
-
-            streamingController.clearConfiguration(test.getUuid());
         } finally {
             lock.unlock();
         }
