@@ -12,8 +12,8 @@ configurations {
 
 
 dependencies {
-    provided 'org.jetbrains.teamcity:cloud-interface:10.0-SNAPSHOT'
-    provided 'org.jetbrains.teamcity:server-api:10.0-SNAPSHOT'
+    provided 'org.jetbrains.teamcity:cloud-interface:10.0'
+    provided 'org.jetbrains.teamcity:server-api:10.0'
     //provided 'org.jetbrains.teamcity:web:9.1.5'
     provided 'com.github.docker-java:docker-java:3.0.0-RC5'
     compile 'de.gesellix:unix-socket-factory:2016-04-06T22-21-19'
