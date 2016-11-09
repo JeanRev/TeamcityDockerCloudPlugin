@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Simple input stream filter tracking various interactions.
@@ -73,7 +74,11 @@ public class TestInputStream extends FilterInputStream {
         closed = true;
     }
 
-    public static TestInputStream dummy() {
+    public static TestInputStream empty() {
         return new TestInputStream(new ByteArrayInputStream(new byte[0]));
+    }
+
+    public static TestInputStream withUTF8String(String msg) {
+        return new TestInputStream(new ByteArrayInputStream(msg.getBytes(StandardCharsets.UTF_8)));
     }
 }

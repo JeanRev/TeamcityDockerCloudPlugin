@@ -9,13 +9,12 @@ import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.in;
 
 @Test
 public abstract class StreamHandlerTest {
 
-    protected TestInputStream closeHandle = TestInputStream.dummy();
-    protected TestInputStream inputStream = TestInputStream.dummy();
+    protected TestInputStream closeHandle = TestInputStream.empty();
+    protected TestInputStream inputStream = TestInputStream.empty();
     protected TestOutputStream outputStream = TestOutputStream.dummy();
 
     public void closeHandler() throws IOException {
