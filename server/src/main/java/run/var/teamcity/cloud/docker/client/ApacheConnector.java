@@ -359,18 +359,6 @@ class ApacheConnector implements Connector {
         this.client = clientBuilder.build();
     }
 
-    // DK_CLD: new method to expose the HttpContext. It would be much nicer to have it bind to some meta-data map in
-    // the apply() method, but there is no obvious way of doing so.
-    /**
-     * Gets the {@link HttpContext} associated with the last request on the current.
-     *
-     * @return the found context or {@code null} if none is associated with the current thread
-     */
-    @Nullable
-    public HttpContext getHttpContext() {
-        return localHttpContext.get();
-    }
-
     private HttpClientConnectionManager getConnectionManager(final Client client,
                                                              final Configuration config,
                                                              final SSLContext sslContext) {

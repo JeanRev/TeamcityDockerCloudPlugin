@@ -242,11 +242,6 @@ public class DockerClient extends DockerAbstractClient {
 
         validate(getRequestSpec(target, method), response, errorCodeMapper);
 
-        HttpCoreContext httpContext = (HttpCoreContext) ApacheConnectorProvider.getHttpContext(jerseyClient);
-
-
-        assert httpContext != null: "No http context associated with the current thread.";
-
         DockerHttpConnection connection = connectionFactory.getThreadLocalHttpConnection();
 
         Closeable closeHandle = new JaxWsResponseCloseableAdapter(response);

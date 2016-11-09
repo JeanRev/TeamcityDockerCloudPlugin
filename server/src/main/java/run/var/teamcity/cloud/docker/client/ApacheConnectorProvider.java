@@ -147,23 +147,6 @@ public class ApacheConnectorProvider implements ConnectorProvider {
     }
 
     /**
-     * Gets the {@link HttpContext} associated with the last request on the current.
-     *
-     *  @param component {@code JerseyClient} or {@code JerseyWebTarget} instance that is configured to use
-     *                  {@code ApacheConnectorProvider}.
-     *
-     * @return the found context or {@code null} if none is associated with the current thread
-     *
-     * @throws java.lang.IllegalArgumentException in case the {@code component} is neither {@code JerseyClient}
-     *                                            nor {@code JerseyWebTarget} instance or in case the component
-     *                                            is not configured to use a {@code ApacheConnectorProvider}.
-     */
-    @Nullable
-    public static HttpContext getHttpContext(final Configurable<?> component) {
-        return getConnector(component).getHttpContext();
-    }
-
-    /**
      * Retrieve the underlying Apache {@link CookieStore} instance from
      * {@link org.glassfish.jersey.client.JerseyClient} or {@link org.glassfish.jersey.client.JerseyWebTarget}
      * configured to use {@code ApacheConnectorProvider}.
