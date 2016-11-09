@@ -1,4 +1,3 @@
 rootProject.name = 'teamcity-docker-cld-plugin'
-include 'agent'
 include 'server'
 
