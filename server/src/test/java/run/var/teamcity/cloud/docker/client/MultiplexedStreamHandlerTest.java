@@ -6,7 +6,6 @@ import run.var.teamcity.cloud.docker.test.TestOutputStream;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -15,6 +14,9 @@ import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * {@link MultiplexedStreamHandler} test suite.
+ */
 public class MultiplexedStreamHandlerTest extends StreamHandlerTest {
 
     private final static String STDIN_MSG = "echo hello world!";
