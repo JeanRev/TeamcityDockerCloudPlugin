@@ -1,21 +1,23 @@
 package run.var.teamcity.cloud.docker.test;
 
+import java.io.ByteArrayInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Simple input stream filter counting the number of bytes consumed so far.
+ * Simple input stream filter tracking various interactions.
  * <p>
  *     For test purpose only.
  * </p>
  */
-public class CountingInputStream extends FilterInputStream {
+public class TestInputStream extends FilterInputStream {
 
     private int readCount = 0;
     private int skipCount = 0;
+    private boolean closed = false;
 
-    public CountingInputStream(InputStream in) {
+    public TestInputStream(InputStream in) {
         super(in);
     }
 
@@ -59,5 +61,19 @@ public class CountingInputStream extends FilterInputStream {
 
     public int getSkipCount() {
         return skipCount;
+    }
+
+    public boolean isClosed() {
+        return closed;
+    }
+
+    @Override
+    public void close() throws IOException {
+        super.close();
+        closed = true;
+    }
+
+    public static TestInputStream dummy() {
+        return new TestInputStream(new ByteArrayInputStream(new byte[0]));
     }
 }

@@ -25,6 +25,9 @@ subprojects {
             compileClasspath += configurations.provided
             compileClasspath += extra.output
         }
+        test {
+            runtimeClasspath += configurations.provided
+        }
     }
 }
 task (tcDist, type: Zip) {

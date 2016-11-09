@@ -3,7 +3,7 @@ package run.var.teamcity.cloud.docker.client;
 
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import run.var.teamcity.cloud.docker.test.CountingInputStream;
+import run.var.teamcity.cloud.docker.test.TestInputStream;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -11,8 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.*;
 
 /**
  * {@link CappedInputStream} test suite.
@@ -101,7 +100,7 @@ public class CappedInputStreamTest {
     }
 
     public void exhaustAndClose() throws IOException {
-        CountingInputStream countingStream = new CountingInputStream(testStream);
+        TestInputStream countingStream = new TestInputStream(testStream);
         CappedInputStream cappedStream = new CappedInputStream(countingStream, 50);
 
         cappedStream.exhaustAndClose();

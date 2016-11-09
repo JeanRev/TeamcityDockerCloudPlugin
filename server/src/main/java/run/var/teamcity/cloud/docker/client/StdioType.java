@@ -1,5 +1,6 @@
 package run.var.teamcity.cloud.docker.client;
 
+import com.github.dockerjava.api.model.StreamType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumSet;
@@ -12,15 +13,30 @@ public enum StdioType {
     /**
      * Standard input.
      */
-    STDIN,
+    STDIN(0),
     /**
      * Standard output.
      */
-    STDOUT,
+    STDOUT(1),
     /**
      * Standard error.
      */
-    STDERR;
+    STDERR(2);
+
+    private final long streamType;
+
+    StdioType(long streamType) {
+        this.streamType = streamType;
+    }
+
+    /**
+     * Gets the stream type as defined in the Docker remote API.
+     *
+     * @return the stream type
+     */
+    public long streamType() {
+        return streamType;
+    }
 
     public static Set<StdioType> all() {
         return EnumSet.allOf(StdioType.class);
@@ -37,14 +53,11 @@ public enum StdioType {
      */
     @NotNull
     static StdioType fromStreamType(long streamType) {
-        if (streamType == 0L) {
-            return STDIN;
-        } else if (streamType == 1L) {
-            return STDOUT;
-        } else if (streamType == 2L) {
-            return STDERR;
-        } else {
-            throw new IllegalArgumentException("Invalid stream type: " + streamType);
+        for (StdioType type : values()) {
+            if (type.streamType == streamType) {
+                return type;
+            }
         }
+        throw new IllegalArgumentException("Invalid stream type: " + streamType);
     }
 }
