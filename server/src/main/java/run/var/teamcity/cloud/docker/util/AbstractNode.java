@@ -44,7 +44,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      */
     @NotNull
     public List<N> getArrayValues() {
-       checkArray();
+        checkArray();
         List<N> arrayValues = new ArrayList<>(node.size());
         for (JsonNode child : node) {
             arrayValues.add(newNode(child));

@@ -46,6 +46,7 @@ public class TestAgentDescription implements AgentDescription {
 
     @NotNull
     @Override
+    @SuppressWarnings("deprecation")
     public Map<String, String> getDefinedParameters() {
         return Collections.emptyMap();
     }

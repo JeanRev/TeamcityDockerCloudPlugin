@@ -80,15 +80,4 @@ public class Node extends AbstractNode<Node> {
     public EditableNode editNode() {
         return new EditableNode(node.deepCopy());
     }
-
-    public static void main(String[] args) throws IOException {
-
-        ByteArrayInputStream inputStream = new ByteArrayInputStream("{\"status\": 0}\n{\"status\": 1}".getBytes());
-        NodeStream ns = Node.parseMany(inputStream);
-
-        Node node;
-        while ((node = ns.next()) != null) {
-            System.out.println(node + " == ");
-        }
-    }
 }
