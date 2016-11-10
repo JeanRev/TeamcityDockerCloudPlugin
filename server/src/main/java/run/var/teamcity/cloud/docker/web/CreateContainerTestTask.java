@@ -2,6 +2,7 @@ package run.var.teamcity.cloud.docker.web;
 
 import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
+import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;

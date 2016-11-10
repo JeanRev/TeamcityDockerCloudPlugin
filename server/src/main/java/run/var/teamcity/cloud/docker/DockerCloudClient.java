@@ -21,7 +21,10 @@ import jetbrains.buildServer.serverSide.SBuildServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
+import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClient;
+import run.var.teamcity.cloud.docker.client.DockerClientConfig;
+import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.NotFoundException;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
@@ -120,10 +123,16 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
      */
     private DockerClient dockerClient;
 
-    DockerCloudClient(@NotNull final DockerCloudClientConfig clientConfig, @NotNull final List<DockerImageConfig> imageConfigs,
-                      CloudState cloudState, final SBuildServer buildServer) {
-        DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
+    DockerCloudClient(@NotNull DockerCloudClientConfig clientConfig,
+                      @NotNull final DockerClientFactory dockerClientFactory,
+                      @NotNull final List<DockerImageConfig> imageConfigs,
+                      @NotNull CloudState cloudState,
+                      @NotNull final SBuildServer buildServer) {
+        DockerCloudUtils.requireNonNull(dockerClient, "Docker client cannot be null.");
         DockerCloudUtils.requireNonNull(imageConfigs, "List of images cannot be null.");
+        DockerCloudUtils.requireNonNull(cloudState, "Cloud state cannot be null.");
+        DockerCloudUtils.requireNonNull(buildServer, "Build server cannot be null.");
+
         if (imageConfigs.isEmpty()) {
             throw new IllegalArgumentException("At least one image must be provided.");
         }
@@ -131,36 +140,16 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         this.cloudState = cloudState;
         this.agentMgr = buildServer.getBuildAgentManager();
 
-        final int threadPoolSize = Math.min(imageConfigs.size() * 2, Runtime.getRuntime().availableProcessors() + 1);
+        taskScheduler = new DockerTaskScheduler(clientConfig.getDockerClientConfig().getThreadPoolSize());
 
-        taskScheduler = new DockerTaskScheduler(threadPoolSize);
+        for (DockerImageConfig imageConfig : imageConfigs) {
+            DockerImage image = new DockerImage(DockerCloudClient.this, imageConfig);
+            images.put(image.getUuid(), image);
+        }
 
-        taskScheduler.scheduleClientTask(new DockerClientTask("Cloud initialisation", this) {
-            @Override
-            public void callInternal() throws Exception {
-                dockerClient = DockerClient.open(clientConfig.getInstanceURI(), clientConfig.isUseTLS(),
-                        threadPoolSize);
+        dockerClient = dockerClientFactory.createClient(clientConfig.getDockerClientConfig());
 
-                try {
-                    lock.lock();
-                    assert state == State.CREATED;
-
-                    for (DockerImageConfig imageConfig : imageConfigs) {
-                        DockerImage image = new DockerImage(DockerCloudClient.this, imageConfig);
-                        images.put(image.getUuid(), image);
-                    }
-
-                    buildServer.addListener(DockerCloudClient.this);
-
-                    state = State.READY;
-                } finally {
-                    lock.unlock();
-                }
-
-
-                taskScheduler.scheduleClientTask(new SyncWithDockerTask(DOCKER_SYNC_RATE_SEC, TimeUnit.SECONDS));
-            }
-        });
+        taskScheduler.scheduleClientTask(new SyncWithDockerTask(DOCKER_SYNC_RATE_SEC, TimeUnit.SECONDS));
 
         officialAgentImageResolver = OfficialAgentImageResolver.forServer(buildServer);
     }
@@ -591,7 +580,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         }
 
         SyncWithDockerTask(long delaySec, TimeUnit timeUnit) {
-            super("Retrieve container status.", DockerCloudClient.this, delaySec, delaySec, timeUnit);
+            super("Retrieve container status.", DockerCloudClient.this, 0, delaySec, timeUnit);
         }
 
         @Override

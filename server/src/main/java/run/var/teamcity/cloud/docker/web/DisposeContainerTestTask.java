@@ -3,6 +3,7 @@ package run.var.teamcity.cloud.docker.web;
 import com.intellij.openapi.diagnostic.Logger;
 import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
+import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.NotFoundException;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;

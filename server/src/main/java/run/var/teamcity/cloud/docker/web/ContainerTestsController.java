@@ -29,6 +29,7 @@ import org.springframework.web.servlet.ModelAndView;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
+import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientException;
 import run.var.teamcity.cloud.docker.client.NotFoundException;

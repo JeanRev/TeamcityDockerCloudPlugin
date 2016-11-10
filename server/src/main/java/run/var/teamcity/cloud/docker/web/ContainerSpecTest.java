@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClient;
+import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
@@ -24,7 +25,6 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
     private final long startTime = System.currentTimeMillis();
     private final ReentrantLock lock = new ReentrantLock();
     private final Broadcaster broadcaster;
-    private final DockerCloudClientConfig clientConfig;
     private final DockerClient client;
     private final BuildAgentManager agentMgr;
     private long lastInteraction;
@@ -35,12 +35,10 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
             null);
     private ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTaskFuture = null;
 
-    private ContainerSpecTest(Broadcaster broadcaster, DockerCloudClientConfig clientConfig, DockerClient client,
-                              BuildAgentManager agentMgr) {
-        assert broadcaster != null && clientConfig != null && client != null && agentMgr != null;
+    private ContainerSpecTest(Broadcaster broadcaster, DockerClient client, BuildAgentManager agentMgr) {
+        assert broadcaster != null && client != null && agentMgr != null;
 
         this.broadcaster = broadcaster;
-        this.clientConfig = clientConfig;
         this.client = client;
         this.agentMgr = agentMgr;
 
@@ -52,8 +50,9 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
                                                     @NotNull BuildAgentManager agentMgr) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null");
         DockerCloudUtils.requireNonNull(agentMgr, "Agent manager cannot be null");
-        DockerClient client = DockerClient.open(clientConfig.getInstanceURI(), clientConfig.isUseTLS(), 1);
-        return new ContainerSpecTest(broadcaster, clientConfig, client, agentMgr);
+        DockerClient client = DockerClientFactory.getDefault().createClient(clientConfig.getDockerClientConfig()
+                .threadPoolSize(1));
+        return new ContainerSpecTest(broadcaster, client, agentMgr);
     }
 
     /**

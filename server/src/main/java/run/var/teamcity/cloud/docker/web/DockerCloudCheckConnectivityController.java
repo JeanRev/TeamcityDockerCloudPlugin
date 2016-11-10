@@ -10,7 +10,7 @@ import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.web.servlet.ModelAndView;
-import run.var.teamcity.cloud.docker.client.DockerClient;
+import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
@@ -50,7 +50,7 @@ public class DockerCloudCheckConnectivityController extends BaseFormXmlControlle
         String errorMsg = null;
         try {
 
-            DockerClient client = DockerClient.open(new URI(uri), useTLS, 1);
+            DefaultDockerClient client = DefaultDockerClient.open(new URI(uri), useTLS, 1);
 
             Node version = client.getVersion();
             Element versionElt = new Element("version");

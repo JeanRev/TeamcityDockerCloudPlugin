@@ -2,6 +2,7 @@ package run.var.teamcity.cloud.docker.web;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;

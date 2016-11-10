@@ -3,7 +3,7 @@ package run.var.teamcity.cloud.docker.client;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Base class for all exceptions related to the {@link DockerClient}.
+ * Base class for all exceptions related to the {@link DefaultDockerClient}.
  */
 public class DockerClientException extends RuntimeException {
 

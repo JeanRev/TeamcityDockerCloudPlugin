@@ -1,13 +1,17 @@
 package run.var.teamcity.cloud.docker;
 
-import jetbrains.buildServer.clouds.*;
+import jetbrains.buildServer.clouds.CloudClientEx;
+import jetbrains.buildServer.clouds.CloudClientFactory;
+import jetbrains.buildServer.clouds.CloudClientParameters;
+import jetbrains.buildServer.clouds.CloudRegistrar;
+import jetbrains.buildServer.clouds.CloudState;
 import jetbrains.buildServer.serverSide.AgentDescription;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.ServerPaths;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import org.jetbrains.annotations.NotNull;
+import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.DockerCloudSettingsController;
 
 import java.util.Collection;
@@ -47,7 +51,11 @@ public class DockerCloudClientFactory implements CloudClientFactory {
         }
         DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(properties);
         List<DockerImageConfig> imageConfigs = DockerImageConfig.processParams(properties);
-        return new DockerCloudClient(clientConfig, imageConfigs, state, buildServer);
+
+        final int threadPoolSize = Math.min(imageConfigs.size() * 2, Runtime.getRuntime().availableProcessors() + 1);
+        clientConfig.getDockerClientConfig().threadPoolSize(threadPoolSize);
+
+        return new DockerCloudClient(clientConfig, DockerClientFactory.getDefault(), imageConfigs, state, buildServer);
     }
 
     @NotNull
