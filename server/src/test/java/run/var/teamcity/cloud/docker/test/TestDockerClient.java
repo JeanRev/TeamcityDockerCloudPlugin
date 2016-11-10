@@ -69,7 +69,7 @@ public class TestDockerClient implements DockerClient {
 
     @NotNull
     @Override
-    public Node createContainer(@NotNull Node containerSpec) {
+    public Node createContainer(@NotNull Node containerSpec, @Nullable String name) {
         String containerId = createRandomSha256();
         containerSpec.getAsString("Image");
 

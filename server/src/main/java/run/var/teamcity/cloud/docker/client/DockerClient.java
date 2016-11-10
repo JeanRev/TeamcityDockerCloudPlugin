@@ -16,7 +16,7 @@ public interface DockerClient extends Closeable {
     Node getVersion();
 
     @NotNull
-    Node createContainer(@NotNull Node containerSpec);
+    Node createContainer(@NotNull Node containerSpec, @Nullable String name);
 
     void startContainer(@NotNull String containerId);
 

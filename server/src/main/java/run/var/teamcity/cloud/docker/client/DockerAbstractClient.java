@@ -40,6 +40,18 @@ public abstract class DockerAbstractClient implements Closeable {
 
     private final static Charset SUPPORTED_CHARSET = StandardCharsets.UTF_8;
 
+    private final ErrorCodeMapper DEFAULT_ERROR_CODE_MAPPER = new ErrorCodeMapper() {
+        @Nullable
+        @Override
+        public InvocationFailedException mapToException(int errorCode, String msg) {
+            switch (errorCode) {
+                case 404:
+                    return new NotFoundException(msg);
+            }
+            return null;
+        }
+    };
+
     private final Client jerseyClient;
 
     private volatile boolean closed = false;
@@ -262,6 +274,9 @@ public abstract class DockerAbstractClient implements Closeable {
 
         if (errorCodeMapper != null) {
             e = errorCodeMapper.mapToException(statusCode, msg);
+        }
+        if (e == null) {
+            e = DEFAULT_ERROR_CODE_MAPPER.mapToException(statusCode, msg);
         }
         if (e == null) {
             e = new InvocationFailedException(msg);

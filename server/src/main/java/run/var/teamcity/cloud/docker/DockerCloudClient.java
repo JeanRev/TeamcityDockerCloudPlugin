@@ -344,7 +344,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                         LOG.warn("Failed to pull image " + image + " for instance " + instance.getUuid() +
                                 ", proceeding anyway.", e);
                     }
-                    Node createNode =  dockerClient.createContainer(containerSpec);
+                    Node createNode =  dockerClient.createContainer(containerSpec, null);
                     containerId = createNode.getAsString("Id");
                     LOG.info("New container " + containerId + " created.");
                 } else {

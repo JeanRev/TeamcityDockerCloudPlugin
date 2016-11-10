@@ -94,9 +94,14 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
 
     @NotNull
-    public Node createContainer(@NotNull Node containerSpec) {
+    public Node createContainer(@NotNull Node containerSpec, @Nullable String name) {
         DockerCloudUtils.requireNonNull(containerSpec, "Container JSON specification cannot be null.");
-        return invoke(target.path("/containers/create"), HttpMethod.POST, containerSpec, null, null);
+        WebTarget target = this.target.path("/containers/create");
+        if (name != null) {
+            target.queryParam("name", name);
+        }
+
+        return invoke(target, HttpMethod.POST, containerSpec, null, null);
     }
 
     public void startContainer(@NotNull final String containerId) {
@@ -181,8 +186,6 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                         switch (errorCode) {
                             case 304:
                                 return new ContainerAlreadyStoppedException(msg);
-                            case 404:
-                                return new NotFoundException(msg);
                         }
                         return null;
                     }
