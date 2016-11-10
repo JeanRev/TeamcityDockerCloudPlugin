@@ -52,11 +52,6 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     private final UUID uuid;
 
     /**
-     * Rate at which Docker syncs are performed.
-     */
-    private final static int DOCKER_SYNC_RATE_SEC = 30;
-
-    /**
      * Asynchronous task scheduler.
      */
     private final DockerTaskScheduler taskScheduler;
@@ -150,7 +145,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
         dockerClient = dockerClientFactory.createClient(clientConfig.getDockerClientConfig());
 
-        taskScheduler.scheduleClientTask(new SyncWithDockerTask(DOCKER_SYNC_RATE_SEC, TimeUnit.SECONDS));
+        taskScheduler.scheduleClientTask(new SyncWithDockerTask(clientConfig.getDockerSyncRateSec(), TimeUnit.SECONDS));
 
         state = State.READY;
     }

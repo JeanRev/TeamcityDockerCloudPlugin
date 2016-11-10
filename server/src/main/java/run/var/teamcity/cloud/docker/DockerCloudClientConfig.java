@@ -30,9 +30,12 @@ import java.util.UUID;
  */
 public class DockerCloudClientConfig {
 
+    private static final int DEFAULT_DOCKER_SYNC_RATE_SEC = 30;
+
     private final UUID uuid;
     private final DockerClientConfig dockerClientConfig;
     private final boolean usingDaemonThreads;
+    private final int dockerSyncRateSec;
 
     /**
      * Creates a new configuration instance.
@@ -40,14 +43,36 @@ public class DockerCloudClientConfig {
      * @param uuid the cloud client UUID
      * @param dockerClientConfig the Docker client configuration
      * @param usingDaemonThreads {@code true} if the client must use daemon threads to manage containers
+     *
+     * @throws NullPointerException if any argument is {@code null}
      */
     public DockerCloudClientConfig(@NotNull UUID uuid, @NotNull DockerClientConfig dockerClientConfig,
                                    boolean usingDaemonThreads) {
+        this(uuid, dockerClientConfig, usingDaemonThreads, DEFAULT_DOCKER_SYNC_RATE_SEC);
+    }
+
+    /**
+     * Creates a new configuration instance.
+     *
+     * @param uuid the cloud client UUID
+     * @param dockerClientConfig the Docker client configuration
+     * @param usingDaemonThreads {@code true} if the client must use daemon threads to manage containers
+     * @param dockerSyncRateSec the rate at which the client is synchronized with the Docker daemon, in seconds
+     *
+     * @throws NullPointerException if any argument is {@code null}
+     * @throws IllegalArgumentException if the Docker sync rate is below 2 seconds
+     */
+    public DockerCloudClientConfig(@NotNull UUID uuid, @NotNull DockerClientConfig dockerClientConfig,
+                                   boolean usingDaemonThreads, int dockerSyncRateSec) {
         DockerCloudUtils.requireNonNull(uuid, "Client UUID cannot be null.");
         DockerCloudUtils.requireNonNull(dockerClientConfig, "Docker client configuration cannot be null.");
+        if (dockerSyncRateSec < 2) {
+            throw new IllegalArgumentException("Docker sync rate must be of at least 2 second.");
+        }
         this.uuid = uuid;
         this.dockerClientConfig = dockerClientConfig;
         this.usingDaemonThreads = usingDaemonThreads;
+        this.dockerSyncRateSec = dockerSyncRateSec;
     }
 
     /**
@@ -76,6 +101,10 @@ public class DockerCloudClientConfig {
      */
     public boolean isUsingDaemonThreads() {
         return usingDaemonThreads;
+    }
+
+    public int getDockerSyncRateSec() {
+        return dockerSyncRateSec;
     }
 
     /**

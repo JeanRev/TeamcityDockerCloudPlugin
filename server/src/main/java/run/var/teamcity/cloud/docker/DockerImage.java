@@ -77,7 +77,12 @@ public class DockerImage implements CloudImage {
 
     @Nullable
     public String getImageName() {
-        return imageName;
+        lock.lock();
+        try {
+            return imageName;
+        } finally {
+            lock.unlock();
+        }
     }
 
     void setImageName(@NotNull String imageName) {

@@ -20,7 +20,7 @@ public class TestDockerClientFactory extends DockerClientFactory {
         return client;
     }
 
-    public void configureClient(TestDockerClient client) {
+    public void configureClient(TestDockerClient dockerClient) {
         // Do nothing.
     }
 }

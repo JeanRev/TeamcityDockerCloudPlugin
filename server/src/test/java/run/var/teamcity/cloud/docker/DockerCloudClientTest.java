@@ -42,9 +42,14 @@ public class DockerCloudClientTest {
 
     @BeforeMethod
     public void init() {
-        dockerClientFactory = new TestDockerClientFactory();
+        dockerClientFactory = new TestDockerClientFactory() {
+            @Override
+            public void configureClient(TestDockerClient dockerClient) {
+                dockerClient.knownImage("resolved-image", "latest");
+            }
+        };
         DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI);
-        clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false);
+        clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2);
         Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
         imageConfig = new DockerImageConfig("UnitTest", containerSpec, true, false, 1);
         buildServer = new TestSBuildServer();
@@ -58,7 +63,6 @@ public class DockerCloudClientTest {
         client = createClient();
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
-        dockerClient.knownImage("resolved-image", "latest");
 
         assertThat(dockerClient).isNotNull();
 
@@ -84,14 +88,17 @@ public class DockerCloudClientTest {
         assertThat(instance.getStatus()).isIn(InstanceStatus.UNKNOWN, InstanceStatus.SCHEDULED_TO_START, InstanceStatus
                 .STARTING);
 
-        assertThat(image.getImageName()).isEqualTo("resolved-image:latest");
-
         dockerClient.unlock();
 
         TestUtils.waitSec(6);
 
         assertThat(instance.getErrorInfo()).isNull();
         assertThat(instance.getStatus()).isSameAs(InstanceStatus.RUNNING);
+
+        Collection<TestDockerClient.Container> containers = dockerClient.getContainers();
+        assertThat(containers).hasSize(1);
+        TestDockerClient.Container container = containers.iterator().next();
+        assertThat(instance.getContainerId()).isEqualTo(container.getId());
 
         dockerClient.lock();
 
@@ -113,6 +120,8 @@ public class DockerCloudClientTest {
         TestUtils.waitSec(2);
 
         assertThat(instance.getErrorInfo()).isNull();
+
+        assertThat(image.getImageName()).isEqualTo("resolved-image:latest");
     }
 
     public void discardUnregisteredAgents() {
@@ -173,6 +182,36 @@ public class DockerCloudClientTest {
                 withEnvironmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, TestUtils.TEST_UUID_2.toString());
 
         assertThat(client.findInstanceByAgent(anotherAgent)).isNull();
+    }
+
+    public void orphanedContainers() {
+        DockerCloudClient client = createClient();
+
+        Collection<DockerImage> images = client.getImages();
+        assertThat(images).hasSize(1);
+
+        DockerImage dockerImage = images.iterator().next();
+        client.startNewInstance(dockerImage, userData);
+
+        TestUtils.waitSec(6);
+
+        Collection<DockerInstance> instances = dockerImage.getInstances();
+
+        assertThat(instances).hasSize(1);
+
+        DockerInstance instance = instances.iterator().next();
+
+        assertThat(instance.getStatus()).isSameAs(InstanceStatus.RUNNING);
+
+        TestDockerClient dockerClient = dockerClientFactory.getClient();
+
+        //noinspection ConstantConditions
+        dockerClient.removeContainer(instance.getContainerId(), true, true);
+
+        // Will takes two sync to be effective (one to mark the instance in error state), and another one to remove it.
+        TestUtils.waitSec(8);
+
+        assertThat(dockerImage.getInstances()).isEmpty();
     }
 
     @AfterMethod

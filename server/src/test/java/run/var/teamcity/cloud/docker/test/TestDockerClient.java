@@ -346,15 +346,31 @@ public class TestDockerClient implements DockerClient {
     }
 
     public static class Container {
-        final String id;
-        final Map<String, Node> labels;
-        final Image image;
-        ContainerStatus status = ContainerStatus.CREATED;
+        private final String id;
+        private final Map<String, Node> labels;
+        private final Image image;
+        private ContainerStatus status = ContainerStatus.CREATED;
 
         private Container(String id, Map<String, Node> labels, Image image) {
             this.id = id;
             this.labels = labels;
             this.image = image;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public Map<String, Node> getLabels() {
+            return labels;
+        }
+
+        public Image getImage() {
+            return image;
+        }
+
+        public ContainerStatus getStatus() {
+            return status;
         }
     }
 
