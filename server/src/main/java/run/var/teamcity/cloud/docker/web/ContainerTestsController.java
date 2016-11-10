@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.ModelAndView;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
+import run.var.teamcity.cloud.docker.DockerImageNameResolver;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientException;
@@ -83,7 +84,7 @@ public class ContainerTestsController extends BaseFormXmlController {
     private final static int TEST_MAX_IDLE_TIME_MINUTES = 10;
 
     private final DockerClientFactory dockerClientFactory;
-    private final OfficialAgentImageResolver officialAgentImageResolver;
+    private final DockerImageNameResolver imageNameResolver;
     private final AtmosphereFrameworkFacade atmosphereFramework;
     private final ReentrantLock lock = new ReentrantLock();
     private final BuildAgentManager agentMgr;
@@ -100,12 +101,13 @@ public class ContainerTestsController extends BaseFormXmlController {
                                     @NotNull WebControllerManager manager,
                                     @NotNull BuildAgentManager agentMgr,
                                     @NotNull WebLinks webLinks) {
-        this(atmosphereFramework, DockerClientFactory.getDefault(), server,
-                pluginDescriptor, manager, agentMgr, webLinks);
+        this(atmosphereFramework, DockerClientFactory.getDefault(), OfficialAgentImageResolver.forServer(server),
+                server, pluginDescriptor, manager, agentMgr, webLinks);
     }
 
     ContainerTestsController(@NotNull AtmosphereFrameworkFacade atmosphereFramework,
                                     @NotNull DockerClientFactory dockerClientFactory,
+                                    @NotNull DockerImageNameResolver imageNameResolver,
                                     @NotNull SBuildServer server,
                                     @NotNull PluginDescriptor pluginDescriptor,
                                     @NotNull WebControllerManager manager,
@@ -125,27 +127,27 @@ public class ContainerTestsController extends BaseFormXmlController {
                 AtmosphereFramework.REFLECTOR_ATMOSPHEREHANDLER, Collections.<AtmosphereInterceptor>emptyList());
 
         this.agentMgr = agentMgr;
-        this.officialAgentImageResolver = OfficialAgentImageResolver.forServer(server);
+        this.imageNameResolver = imageNameResolver;
     }
 
     private void disposeTask(ContainerSpecTest test) {
-        assert lock.isHeldByCurrentThread();
 
-        String containerId = test.getContainerId();
+        lock.lock();
 
-        Phase phase = test.getCurrentTaskFuture().getTask().getPhase();
-        if (phase == Phase.CREATE) {
-            throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Container not created yet.");
+        try {
+            String containerId = test.getContainerId();
+
+            if (containerId == null) {
+                LOG.error("Cannot dispose container for test " + test.getUuid() + ", no container ID available.");
+                throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Container not registered.");
+            }
+
+            DisposeContainerTestTask disposeTask = new DisposeContainerTestTask(test, containerId);
+
+            test.setCurrentTask(schedule(disposeTask));
+        } finally {
+            lock.unlock();
         }
-
-        if (containerId == null) {
-            LOG.error("Cannot dispose container for test " + test.getUuid() + ", no container ID available.");
-            throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Container not registered.");
-        }
-
-        DisposeContainerTestTask disposeTask = new DisposeContainerTestTask(test, containerId);
-
-        test.setCurrentTask(schedule(disposeTask));
     }
 
     private void dispose(UUID uuid) {
@@ -226,7 +228,7 @@ public class ContainerTestsController extends BaseFormXmlController {
         ContainerSpecTest test = newTestInstance(clientConfig);
 
         CreateContainerTestTask testTask = new CreateContainerTestTask(test, imageConfig, webLinks.getRootUrl(), test
-                .getUuid(), officialAgentImageResolver);
+                .getUuid(), imageNameResolver);
         test.setCurrentTask(schedule(testTask));
 
         return test;
@@ -586,11 +588,12 @@ public class ContainerTestsController extends BaseFormXmlController {
         }
     }
 
-    private static class ActionException extends RuntimeException {
+    static class ActionException extends RuntimeException {
         final int code;
         final String message;
 
         ActionException(int code, String message) {
+            super(message);
             this.code = code;
             this.message = message;
         }

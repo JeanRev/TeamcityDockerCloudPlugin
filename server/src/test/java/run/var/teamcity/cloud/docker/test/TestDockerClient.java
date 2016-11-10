@@ -175,13 +175,13 @@ public class TestDockerClient implements DockerClient {
                         node = Node.EMPTY_OBJECT.editNode();
                         if (pulledLayer.contains(layer)) {
                             node.put("status", "Already exists").
-                                    put("progressDetail", Node.EMPTY_OBJECT.editNode()).
-                                    put("id", DockerCloudUtils.toShortId(layer));
+                                    put("id", DockerCloudUtils.toShortId(layer)).
+                                    getOrCreateObject("progressDetail");
                             result.add(node.saveNode());
                         } else {
                             node.put("status", "Pulling fs layer").
-                                    put("progressDetail", Node.EMPTY_OBJECT.editNode()).
-                                    put("id", DockerCloudUtils.toShortId(layer));
+                                    put("id", DockerCloudUtils.toShortId(layer)).
+                                    getOrCreateObject("progressDetail");;
                             result.add(node.saveNode());
                             for (int i = 0; i <= 100; i += 10) {
                                 node = Node.EMPTY_OBJECT.editNode();
@@ -193,8 +193,8 @@ public class TestDockerClient implements DockerClient {
                             }
                             node = Node.EMPTY_OBJECT.editNode();
                             node.put("status", "Pull complete").
-                                    put("progressDetail", Node.EMPTY_OBJECT.editNode()).
-                                    put("id", DockerCloudUtils.toShortId(layer));
+                                    put("id", DockerCloudUtils.toShortId(layer)).
+                                    getOrCreateObject("progressDetail");
                             result.add(node.saveNode());
                             pulledLayer.add(layer);
                         }

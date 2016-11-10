@@ -2,12 +2,12 @@ package run.var.teamcity.cloud.docker.web;
 
 import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
+import run.var.teamcity.cloud.docker.DockerImageNameResolver;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
-import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import java.io.IOException;
@@ -24,7 +24,7 @@ class CreateContainerTestTask extends ContainerTestTask {
     private final DockerImageConfig imageConfig;
     private final String serverUrl;
     private final UUID instanceUuid;
-    private final OfficialAgentImageResolver officialAgentImageResolver;
+    private final DockerImageNameResolver imageResolver;
 
     /**
      * Creates a new task instance.
@@ -34,22 +34,22 @@ class CreateContainerTestTask extends ContainerTestTask {
      * @param serverUrl the TeamCity server URL for the agent to connect
      * @param instanceUuid the container test instance UUID to be published (will be used to detect connection from
      * the test agent latter)
-     * @param officialAgentImageResolver resolver for official agent images
+     * @param imageResolver resolver for agent images
      *
      * @throws NullPointerException if any argument is {@code null}
      */
     CreateContainerTestTask(@NotNull ContainerTestTaskHandler testTaskHandler, @NotNull DockerImageConfig imageConfig,
                             @NotNull String serverUrl, @NotNull UUID instanceUuid,
-                            @NotNull OfficialAgentImageResolver officialAgentImageResolver) {
+                            @NotNull DockerImageNameResolver imageResolver) {
         super(testTaskHandler, TestContainerStatusMsg.Phase.CREATE);
         DockerCloudUtils.requireNonNull(imageConfig, "Cloud image configuration cannot be null.");
         DockerCloudUtils.requireNonNull(serverUrl, "Server URL cannot be null.");
         DockerCloudUtils.requireNonNull(instanceUuid, "Test instance UUID cannot be null.");
-        DockerCloudUtils.requireNonNull(officialAgentImageResolver, "Official image resolver cannot be null.");
+        DockerCloudUtils.requireNonNull(imageResolver, "Image resolver cannot be null.");
         this.imageConfig = imageConfig;
         this.serverUrl = serverUrl;
         this.instanceUuid = instanceUuid;
-        this.officialAgentImageResolver = officialAgentImageResolver;
+        this.imageResolver = imageResolver;
     }
 
     @Override
@@ -61,7 +61,7 @@ class CreateContainerTestTask extends ContainerTestTask {
         container.getOrCreateArray("Env").add(DockerCloudUtils.ENV_TEST_INSTANCE_ID + "=" + instanceUuid).add
                 ("SERVER_URL=" + serverUrl);
         container.getOrCreateObject("Labels").put(DockerCloudUtils.TEST_INSTANCE_ID_LABEL, instanceUuid.toString());
-        String image = officialAgentImageResolver.resolve(imageConfig);
+        String image = imageResolver.resolve(imageConfig);
 
         if (image == null) {
             // Illegal configuration, should not happen.

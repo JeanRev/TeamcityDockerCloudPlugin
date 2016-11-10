@@ -74,7 +74,7 @@ public class DockerCloudClientTest {
 
         client.startNewInstance(image, userData);
 
-        TestUtils.waitSec(2);
+        TestUtils.waitSec(4);
 
         Collection<DockerInstance> instances = image.getInstances();
         assertThat(instances).hasSize(1);

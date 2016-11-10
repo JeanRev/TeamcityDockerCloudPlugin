@@ -11,11 +11,16 @@ public class TestDockerClientFactory extends DockerClientFactory {
     @Override
     public DockerClient createClient(DockerClientConfig config) {
         TestDockerClient client = new TestDockerClient(config);
+        configureClient(client);
         this.client = client;
         return client;
     }
 
     public TestDockerClient  getClient() {
         return client;
+    }
+
+    public void configureClient(TestDockerClient client) {
+        // Do nothing.
     }
 }
