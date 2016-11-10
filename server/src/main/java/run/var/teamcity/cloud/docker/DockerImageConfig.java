@@ -23,10 +23,10 @@ public class DockerImageConfig {
     private final boolean useOfficialTCAgentImage;
     private final int maxInstanceCount;
 
-    private DockerImageConfig(String profileName, Node containerSpec, boolean rmOnExit, boolean
-            useOfficialTCAgentImage, int maxInstanceCount) {
-        assert profileName != null;
-        assert containerSpec != null;
+    public DockerImageConfig(@NotNull String profileName, @NotNull Node containerSpec, boolean rmOnExit,
+                             boolean useOfficialTCAgentImage, int maxInstanceCount) {
+        DockerCloudUtils.requireNonNull(profileName, "Profile name cannot be null.");
+        DockerCloudUtils.requireNonNull(profileName, "Container specification cannot be null.");
         this.profileName = profileName;
         this.containerSpec = containerSpec;
         this.rmOnExit = rmOnExit;

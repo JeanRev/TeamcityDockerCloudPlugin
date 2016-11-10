@@ -3,6 +3,10 @@ package run.var.teamcity.cloud.docker.util;
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import run.var.teamcity.cloud.docker.DockerImageConfig;
+import run.var.teamcity.cloud.docker.DockerImageDefaultResolver;
+import run.var.teamcity.cloud.docker.DockerImageNameResolver;
 import run.var.teamcity.cloud.docker.client.DockerClientException;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClient;
 
@@ -29,7 +33,7 @@ import java.util.regex.Pattern;
  *     This class is thread-safe.
  * </p>
  */
-public class OfficialAgentImageResolver {
+public class OfficialAgentImageResolver extends DockerImageNameResolver {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(OfficialAgentImageResolver.class);
     private final static String REPO = "jetbrains/teamcity-agent";
@@ -52,6 +56,7 @@ public class OfficialAgentImageResolver {
      * @throws IllegalArgumentException if any version number is negative
      */
     public OfficialAgentImageResolver(int serverMajorVersion, int serverMinorVersion) {
+        super(new DockerImageDefaultResolver());
         if (serverMajorVersion < 0 || serverMinorVersion < 0) {
             throw new IllegalArgumentException("Invalid version: " + serverMajorVersion + "." + serverMinorVersion);
         }
@@ -64,8 +69,12 @@ public class OfficialAgentImageResolver {
      *
      * @return the resolved image, including the version tag
      */
-    @NotNull
-    public String resolve() {
+    @Nullable
+    @Override
+    protected String resolveInternal(DockerImageConfig imgConfig) {
+        if (!imgConfig.isUseOfficialTCAgentImage()) {
+            return null;
+        }
         String imageTag;
         lock.lock();
         try {

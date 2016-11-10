@@ -12,7 +12,7 @@ public class ContainerAlreadyStoppedException extends InvocationFailedException 
          *
          * @param msg the message (may be null)
          */
-    ContainerAlreadyStoppedException(@Nullable String msg) {
+    public ContainerAlreadyStoppedException(@Nullable String msg) {
         super(msg);
     }
 }

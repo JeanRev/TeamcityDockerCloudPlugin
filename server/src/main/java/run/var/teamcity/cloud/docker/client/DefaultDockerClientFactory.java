@@ -5,6 +5,6 @@ class DefaultDockerClientFactory extends DockerClientFactory {
 
     @Override
     public DockerClient createClient(DockerClientConfig config) {
-        return DefaultDockerClient.open(config.getInstanceURI(), config.isUseTLS(), config.getThreadPoolSize());
+        return DefaultDockerClient.open(config.getInstanceURI(), config.isUsingTLS(), config.getThreadPoolSize());
     }
 }

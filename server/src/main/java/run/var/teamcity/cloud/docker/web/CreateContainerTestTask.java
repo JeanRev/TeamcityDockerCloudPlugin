@@ -2,7 +2,6 @@ package run.var.teamcity.cloud.docker.web;
 
 import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
-import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
@@ -62,22 +61,13 @@ class CreateContainerTestTask extends ContainerTestTask {
         container.getOrCreateArray("Env").add(DockerCloudUtils.ENV_TEST_INSTANCE_ID + "=" + instanceUuid).add
                 ("SERVER_URL=" + serverUrl);
         container.getOrCreateObject("Labels").put(DockerCloudUtils.TEST_INSTANCE_ID_LABEL, instanceUuid.toString());
-        String image;
-        if (imageConfig.isUseOfficialTCAgentImage()) {
-            msg("Resolving image version");
-            image = officialAgentImageResolver.resolve();
-            container.put("Image", image);
-        } else {
-            image = container.getAsString("Image");
-        }
+        String image = officialAgentImageResolver.resolve(imageConfig);
 
-        // TODO: remove-me
-        image = "jetbrains/teamcity-agent:10.0.1";
-
-        if (!DockerCloudUtils.hasImageTag(image)) {
-            // Note: if no tag is specified, the Docker remote API will pull *all* of them.
-            image += ":latest";
+        if (image == null) {
+            // Illegal configuration, should not happen.
+            throw new ContainerTestTaskException("Failed to resolve image name.");
         }
+        container.put("Image", image);
 
         msg("Pulling image");
 

@@ -12,6 +12,7 @@ import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.DockerCloudSettingsController;
 
 import java.util.Collection;
@@ -55,7 +56,8 @@ public class DockerCloudClientFactory implements CloudClientFactory {
         final int threadPoolSize = Math.min(imageConfigs.size() * 2, Runtime.getRuntime().availableProcessors() + 1);
         clientConfig.getDockerClientConfig().threadPoolSize(threadPoolSize);
 
-        return new DockerCloudClient(clientConfig, DockerClientFactory.getDefault(), imageConfigs, state, buildServer);
+        return new DockerCloudClient(clientConfig, DockerClientFactory.getDefault(), imageConfigs,
+                OfficialAgentImageResolver.forServer(buildServer), state, buildServer);
     }
 
     @NotNull

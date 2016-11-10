@@ -8,7 +8,7 @@ import java.net.URI;
 public class DockerClientConfig {
 
     private final URI instanceURI;
-    private boolean useTLS = false;
+    private boolean usingTLS = false;
     private int threadPoolSize = 1;
 
     public DockerClientConfig(@NotNull URI instanceURI) {
@@ -17,7 +17,7 @@ public class DockerClientConfig {
     }
 
     public DockerClientConfig withTLS(boolean useTLS) {
-        this.useTLS = useTLS;
+        this.usingTLS = useTLS;
         return this;
     }
 
@@ -34,8 +34,8 @@ public class DockerClientConfig {
         return instanceURI;
     }
 
-    public boolean isUseTLS() {
-        return useTLS;
+    public boolean isUsingTLS() {
+        return usingTLS;
     }
 
     public int getThreadPoolSize() {

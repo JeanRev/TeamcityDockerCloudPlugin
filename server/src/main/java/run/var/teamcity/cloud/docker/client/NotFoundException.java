@@ -10,7 +10,7 @@ public class NotFoundException extends InvocationFailedException {
      *
      * @param msg the message (may be null)
      */
-    NotFoundException(String msg) {
+    public NotFoundException(String msg) {
         super(msg);
     }
 }

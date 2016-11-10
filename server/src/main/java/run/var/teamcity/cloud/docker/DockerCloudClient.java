@@ -21,16 +21,13 @@ import jetbrains.buildServer.serverSide.SBuildServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
-import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClient;
-import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.NotFoundException;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
-import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -114,8 +111,6 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
      */
     private final Map<UUID, DockerImage> images = new HashMap<>();
 
-    private final OfficialAgentImageResolver officialAgentImageResolver;
-
     private final BuildAgentManager agentMgr;
 
     /**
@@ -123,13 +118,17 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
      */
     private DockerClient dockerClient;
 
+    private final DockerImageNameResolver resolver;
+
     DockerCloudClient(@NotNull DockerCloudClientConfig clientConfig,
                       @NotNull final DockerClientFactory dockerClientFactory,
                       @NotNull final List<DockerImageConfig> imageConfigs,
+                      @NotNull final DockerImageNameResolver resolver,
                       @NotNull CloudState cloudState,
                       @NotNull final SBuildServer buildServer) {
-        DockerCloudUtils.requireNonNull(dockerClient, "Docker client cannot be null.");
+        DockerCloudUtils.requireNonNull(clientConfig, "Docker client configuration cannot be null.");
         DockerCloudUtils.requireNonNull(imageConfigs, "List of images cannot be null.");
+        DockerCloudUtils.requireNonNull(resolver, "Image name resolver cannot be null.");
         DockerCloudUtils.requireNonNull(cloudState, "Cloud state cannot be null.");
         DockerCloudUtils.requireNonNull(buildServer, "Build server cannot be null.");
 
@@ -137,10 +136,12 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
             throw new IllegalArgumentException("At least one image must be provided.");
         }
         this.uuid = clientConfig.getUuid();
+        this.resolver = resolver;
         this.cloudState = cloudState;
         this.agentMgr = buildServer.getBuildAgentManager();
 
-        taskScheduler = new DockerTaskScheduler(clientConfig.getDockerClientConfig().getThreadPoolSize());
+        taskScheduler = new DockerTaskScheduler(clientConfig.getDockerClientConfig().getThreadPoolSize(),
+                clientConfig.isUsingDaemonThreads());
 
         for (DockerImageConfig imageConfig : imageConfigs) {
             DockerImage image = new DockerImage(DockerCloudClient.this, imageConfig);
@@ -151,7 +152,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
         taskScheduler.scheduleClientTask(new SyncWithDockerTask(DOCKER_SYNC_RATE_SEC, TimeUnit.SECONDS));
 
-        officialAgentImageResolver = OfficialAgentImageResolver.forServer(buildServer);
+        state = State.READY;
     }
 
     /**
@@ -315,18 +316,15 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 }
 
                 if (containerId == null) {
-                    String image;
-                    DockerImageConfig imageConfig = dockerImage.getConfig();
-                    if (imageConfig.isUseOfficialTCAgentImage()) {
-                        image = officialAgentImageResolver.resolve();
-                    } else {
-                        image = imageConfig.getContainerSpec().getAsString("Image");
+                    String image = resolver.resolve(dockerImage.getConfig());
+
+                    if (image == null) {
+                        throw new CloudException("No valid image name can be resolved for image " +
+                                dockerImage.getUuid());
                     }
 
-                    if (!DockerCloudUtils.hasImageTag(image)) {
-                        // Note: if no tag is specified, the Docker remote API will pull *all* of them.
-                        image += ":latest";
-                    }
+                    // Makes sure the image name is actual.
+                    dockerImage.setImageName(image);
 
                     Node containerSpec = authorContainerSpec(instance, image, tag.getServerAddress());
 
@@ -589,17 +587,21 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         }
 
         private boolean reschedule() {
-            assert lock.isHeldByCurrentThread();
 
-            long delay = super.getDelay();
-            long delaySinceLastExec = System.currentTimeMillis() - lastDockerSyncTimeMillis;
-            long remainingDelay = delay - delaySinceLastExec;
-            if (remainingDelay > 0) {
-                nextDelay = remainingDelay;
-                return true;
-            }  else {
-                nextDelay = delay;
-                return false;
+            lock.lock();
+            try {
+                long delay = super.getDelay();
+                long delaySinceLastExec = System.currentTimeMillis() - lastDockerSyncTimeMillis;
+                long remainingDelay = delay - delaySinceLastExec;
+                if (remainingDelay > 0) {
+                    nextDelay = remainingDelay;
+                    return true;
+                }  else {
+                    nextDelay = delay;
+                    return false;
+                }
+            } finally {
+                lock.unlock();
             }
         }
 
@@ -667,11 +669,15 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                             orphanedContainers.add(containerId);
                         }
                         itr.remove();
+                    } else if (status == InstanceStatus.UNKNOWN || status == InstanceStatus.SCHEDULED_TO_START
+                            || status == InstanceStatus.STARTING) {
+                        // Instance is currently starting, container may not be available yet, skip sync.
+                        itr.remove();
                     }
                 }
 
                 // Step 3, process each found container and conciliate it with our data model.
-                for (Node container : containers.getArrayValues()) {
+                for (Node container : containersValues) {
                     String instanceIdStr = container.getObject("Labels").getAsString(DockerCloudUtils.INSTANCE_ID_LABEL);
                     final UUID instanceUuid = DockerCloudUtils.tryParseAsUUID(instanceIdStr);
                     final String containerId = container.getAsString("Id");
@@ -700,7 +706,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                         }
                     } else {
                         if (instanceStatus == InstanceStatus.RUNNING) {
-                            instance.notifyFailure("Container " + containerId + " exited prematurely.", new IllegalArgumentException("Hello world"));
+                            instance.notifyFailure("Container " + containerId + " exited prematurely.", null);
                             LOG.error("Container " + containerId + " exited prematurely.");
                             cloudState.registerTerminatedInstance(instance.getImageId(), instanceIdStr);
                         }

@@ -18,6 +18,13 @@ import java.util.UUID;
 
 /**
  * Configuration of a {@link DockerCloudClient}.
+ * <p>
+ *     Beyond basic configuration parameters, a cloud client can be configured to use daemon threads. Daemon threads
+ *     are, generally speaking, not a very good practice. They are however are necessity when running on the real
+ *     server instance since our clean-up process can take some time to complete which in turn can slow the server
+ *     shutdown time significantly. This should not be critical, except that Tomcat will complain if the JVM takes
+ *     too long to shutdown, and then refuse to clean-up resources such as PID files properly.
+ * </p>
  *
  * <p>Instances of this class are immutable.</p>
  */
@@ -25,18 +32,22 @@ public class DockerCloudClientConfig {
 
     private final UUID uuid;
     private final DockerClientConfig dockerClientConfig;
+    private final boolean usingDaemonThreads;
 
     /**
      * Creates a new configuration instance.
      *
      * @param uuid the cloud client UUID
      * @param dockerClientConfig the Docker client configuration
+     * @param usingDaemonThreads {@code true} if the client must use daemon threads to manage containers
      */
-    public DockerCloudClientConfig(@NotNull UUID uuid, @NotNull DockerClientConfig dockerClientConfig) {
+    public DockerCloudClientConfig(@NotNull UUID uuid, @NotNull DockerClientConfig dockerClientConfig,
+                                   boolean usingDaemonThreads) {
         DockerCloudUtils.requireNonNull(uuid, "Client UUID cannot be null.");
         DockerCloudUtils.requireNonNull(dockerClientConfig, "Docker client configuration cannot be null.");
         this.uuid = uuid;
         this.dockerClientConfig = dockerClientConfig;
+        this.usingDaemonThreads = usingDaemonThreads;
     }
 
     /**
@@ -56,6 +67,15 @@ public class DockerCloudClientConfig {
     @NotNull
     public DockerClientConfig getDockerClientConfig() {
         return dockerClientConfig;
+    }
+
+    /**
+     * Checks if the cloud client must use daemon threads for managing containers.
+     *
+     * @return {@code true} if daemon threads must be used
+     */
+    public boolean isUsingDaemonThreads() {
+        return usingDaemonThreads;
     }
 
     /**
@@ -136,7 +156,7 @@ public class DockerCloudClientConfig {
 
         DockerClientConfig dockerClientConfig = new DockerClientConfig(instanceURI).withTLS(useTLS);
 
-        return new DockerCloudClientConfig(clientUuid, dockerClientConfig);
+        return new DockerCloudClientConfig(clientUuid, dockerClientConfig, true);
     }
 
     /**

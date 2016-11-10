@@ -68,14 +68,16 @@ class DockerTaskScheduler {
      * Creates a new scheduler instance.
      *
      * @param threadPoolSize the size of the thread pool
+     * @param usingDaemonThread {@code true} to use daemon threads
      *
      * @throws IllegalArgumentException if {@code threadPoolSize} is smaller than 1
      */
-    DockerTaskScheduler(int threadPoolSize) {
+    DockerTaskScheduler(int threadPoolSize, boolean usingDaemonThread) {
         if (threadPoolSize < 1) {
             throw new IllegalArgumentException("Thread pool size must be strictly greater than 1.");
         }
-         executor = new ScheduledThreadPoolExecutor(threadPoolSize, new NamedThreadFactory("DockerTaskScheduler", true)) {
+         executor = new ScheduledThreadPoolExecutor(threadPoolSize,
+                 new NamedThreadFactory("DockerTaskScheduler", usingDaemonThread)) {
             @Override
             protected <V> RunnableScheduledFuture<V> decorateTask(Callable<V> callable, RunnableScheduledFuture<V> task) {
                 return new WrappedRunnableScheduledFuture<>(callable, task);

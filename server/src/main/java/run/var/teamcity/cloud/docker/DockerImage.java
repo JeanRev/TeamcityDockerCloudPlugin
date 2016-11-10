@@ -25,22 +25,19 @@ public class DockerImage implements CloudImage {
     private final DockerCloudClient cloudClient;
     private final UUID uuid = UUID.randomUUID();
     private final DockerImageConfig config;
-    private final String name;
 
     // This lock ensure a thread-safe usage of all the variables below.
     private final Lock lock = new ReentrantLock();
 
     private final Map<UUID, DockerInstance> instances = new ConcurrentHashMap<>();
 
+    @Nullable
+    private String imageName;
+
     DockerImage(DockerCloudClient cloudClient, DockerImageConfig config) {
         this.cloudClient = cloudClient;
         this.config = config;
-        String image = config.getContainerSpec().getAsString("Image", null);
-        String name = config.getProfileName();
-        if (image != null) {
-            name += " (" + image + ")";
-        }
-        this.name = name;
+        imageName = config.getContainerSpec().getAsString("Image", null);
     }
 
     public DockerCloudClient getCloudClient() {
@@ -66,7 +63,30 @@ public class DockerImage implements CloudImage {
     @NotNull
     @Override
     public String getName() {
-        return name;
+        try {
+            lock.lock();
+            String name = config.getProfileName();
+            if (imageName != null) {
+                name += " (" + imageName + ")";
+            }
+            return name;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Nullable
+    public String getImageName() {
+        return imageName;
+    }
+
+    void setImageName(@NotNull String imageName) {
+        lock.lock();
+        try {
+            this.imageName = imageName;
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -75,7 +95,7 @@ public class DockerImage implements CloudImage {
      * @return the image configuration
      */
     @NotNull
-    DockerImageConfig getConfig() {
+    public DockerImageConfig getConfig() {
         return config;
     }
 

@@ -6,7 +6,6 @@ import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 /**
  * A Docker client.
