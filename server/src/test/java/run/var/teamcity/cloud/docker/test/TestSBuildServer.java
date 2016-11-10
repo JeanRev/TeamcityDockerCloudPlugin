@@ -163,7 +163,7 @@ public class TestSBuildServer implements SBuildServer {
 
     @NotNull
     @Override
-    public BuildAgentManager getBuildAgentManager() {
+    public TestBuildAgentManager getBuildAgentManager() {
         return buildAgentManager;
     }
 

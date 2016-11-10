@@ -9,11 +9,17 @@ import jetbrains.buildServer.users.SUser;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
+@SuppressWarnings("unchecked")
 public class TestBuildAgentManager implements BuildAgentManager {
+
+    private final List<TestSBuildAgent> unregisteredAgents = new CopyOnWriteArrayList<>();
+
     @Override
     public <T extends SBuildAgent> List<T> getRegisteredAgents() {
         return Collections.emptyList();
@@ -25,8 +31,8 @@ public class TestBuildAgentManager implements BuildAgentManager {
     }
 
     @Override
-    public <T extends SBuildAgent> List<T> getUnregisteredAgents() {
-        return Collections.emptyList();
+    public List<TestSBuildAgent> getUnregisteredAgents() {
+        return unregisteredAgents;
     }
 
     @Nullable
@@ -43,7 +49,8 @@ public class TestBuildAgentManager implements BuildAgentManager {
 
     @Override
     public void removeAgent(@NotNull SBuildAgent agent, @Nullable SUser user) throws AgentCannotBeRemovedException {
-        // Do nothing.
+        //noinspection SuspiciousMethodCalls
+        unregisteredAgents.remove(agent);
     }
 
     @Override
@@ -84,5 +91,10 @@ public class TestBuildAgentManager implements BuildAgentManager {
     @Override
     public <T extends SBuildAgent> List<AgentCompatibility> getAgentCompatibilities(T agent) {
         throw new UnsupportedOperationException("Not a real build agent manager");
+    }
+
+    public TestBuildAgentManager unregisteredAgent(TestSBuildAgent agent) {
+        unregisteredAgents.add(agent);
+        return this;
     }
 }

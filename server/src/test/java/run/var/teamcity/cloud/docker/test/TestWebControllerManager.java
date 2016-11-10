@@ -13,6 +13,7 @@ import org.springframework.web.servlet.mvc.Controller;
 
 import javax.servlet.http.HttpServletRequest;
 
+@SuppressWarnings("deprecation")
 public class TestWebControllerManager implements WebControllerManager {
     @Override
     public void registerController(@NotNull String path, @NotNull Controller controller) {
@@ -35,7 +36,6 @@ public class TestWebControllerManager implements WebControllerManager {
         throw new UnsupportedOperationException("Not a real manager.");
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public void removePageExtension(WebPlace removeFrom, WebExtension extension) {
         throw new UnsupportedOperationException("Not a real manager.");

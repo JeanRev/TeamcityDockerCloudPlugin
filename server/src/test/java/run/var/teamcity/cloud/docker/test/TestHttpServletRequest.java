@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+@SuppressWarnings("deprecation")
 public class TestHttpServletRequest implements HttpServletRequest {
 
     private final Map<String, String[]> parameters = new HashMap<>();

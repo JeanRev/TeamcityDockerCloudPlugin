@@ -2,7 +2,7 @@ package run.var.teamcity.cloud.docker.util;
 
 import jetbrains.buildServer.serverSide.AgentDescription;
 import org.testng.annotations.Test;
-import run.var.teamcity.cloud.docker.test.TestAgentDescription;
+import run.var.teamcity.cloud.docker.test.TestSBuildAgent;
 import run.var.teamcity.cloud.docker.test.TestInputStream;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 
@@ -24,18 +24,18 @@ public class DockerCloudUtilsTest {
     }
 
     public void getClientId() {
-        AgentDescription description = new TestAgentDescription().
+        AgentDescription description = new TestSBuildAgent().
                 withEnvironmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString());
         assertThat(DockerCloudUtils.getClientId(description)).isEqualTo(TestUtils.TEST_UUID);
     }
 
     public void getClientIdWithNoEnvVariable() {
-        AgentDescription description = new TestAgentDescription();
+        AgentDescription description = new TestSBuildAgent();
         assertThat(DockerCloudUtils.getClientId(description)).isNull();
     }
 
     public void getClientIdWithInvalidUUID() {
-        AgentDescription description = new TestAgentDescription().
+        AgentDescription description = new TestSBuildAgent().
                 withEnvironmentVariable(DockerCloudUtils.ENV_CLIENT_ID, "Not an UUID");
         assertThat(DockerCloudUtils.getClientId(description)).isNull();
     }
@@ -45,18 +45,18 @@ public class DockerCloudUtilsTest {
     }
 
     public void getImageId() {
-        AgentDescription description = new TestAgentDescription().
+        AgentDescription description = new TestSBuildAgent().
                 withEnvironmentVariable(DockerCloudUtils.ENV_IMAGE_ID, TestUtils.TEST_UUID.toString());
         assertThat(DockerCloudUtils.getImageId(description)).isEqualTo(TestUtils.TEST_UUID);
     }
 
     public void getImageIdWithNoEnvVariable() {
-        AgentDescription description = new TestAgentDescription();
+        AgentDescription description = new TestSBuildAgent();
         assertThat(DockerCloudUtils.getImageId(description)).isNull();
     }
 
     public void getImageIdWithInvalidUUID() {
-        AgentDescription description = new TestAgentDescription().
+        AgentDescription description = new TestSBuildAgent().
                 withEnvironmentVariable(DockerCloudUtils.ENV_IMAGE_ID, "Not an UUID");
         assertThat(DockerCloudUtils.getImageId(description)).isNull();
     }
@@ -66,18 +66,18 @@ public class DockerCloudUtilsTest {
     }
 
     public void getInstanceId() {
-        AgentDescription description = new TestAgentDescription().
+        AgentDescription description = new TestSBuildAgent().
                 withEnvironmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, TestUtils.TEST_UUID.toString());
         assertThat(DockerCloudUtils.getInstanceId(description)).isEqualTo(TestUtils.TEST_UUID);
     }
 
     public void getInstanceIdWithNoEnvVariable() {
-        AgentDescription description = new TestAgentDescription();
+        AgentDescription description = new TestSBuildAgent();
         assertThat(DockerCloudUtils.getInstanceId(description)).isNull();
     }
 
     public void getInstanceIdWithInvalidUUID() {
-        AgentDescription description = new TestAgentDescription().
+        AgentDescription description = new TestSBuildAgent().
                 withEnvironmentVariable(DockerCloudUtils.ENV_IMAGE_ID, "Not an UUID");
         assertThat(DockerCloudUtils.getInstanceId(description)).isNull();
     }
@@ -120,7 +120,7 @@ public class DockerCloudUtilsTest {
     }
 
     public void getEnvParameter() {
-        AgentDescription description = new TestAgentDescription().
+        AgentDescription description = new TestSBuildAgent().
                 withEnvironmentVariable("ABC", "123").
                 withEnvironmentVariable("CDF", "456");
 
@@ -130,7 +130,7 @@ public class DockerCloudUtilsTest {
     }
 
     public void getEnvParameterWithNullArguments() {
-        AgentDescription description = new TestAgentDescription().
+        AgentDescription description = new TestSBuildAgent().
                 withEnvironmentVariable("ABC", "123").
                 withEnvironmentVariable("CDF", "456");
 

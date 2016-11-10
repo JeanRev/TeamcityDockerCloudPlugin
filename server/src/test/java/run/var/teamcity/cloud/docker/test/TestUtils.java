@@ -7,7 +7,10 @@ import java.util.concurrent.TimeUnit;
  * All purpose utility class for tests.
  */
 public final class TestUtils {
+
     public static final UUID TEST_UUID = UUID.fromString("00000000-dead-beef-0000-000000000000");
+
+    public static final UUID TEST_UUID_2 = UUID.fromString("00000000-1ced-beef-0000-000000000000");
 
     public static void waitSec(long sec) {
         try {
