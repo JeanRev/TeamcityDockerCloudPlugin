@@ -11,9 +11,6 @@ import org.springframework.web.servlet.ModelAndView;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-/**
- * Created by jr on 10.05.16.
- */
 public class DockerCloudSettingsController extends BaseController {
 
     public final static String EDIT_PATH = "docker-cloud-settings.html";

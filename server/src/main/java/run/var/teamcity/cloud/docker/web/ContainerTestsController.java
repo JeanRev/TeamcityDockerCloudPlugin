@@ -75,7 +75,7 @@ public class ContainerTestsController extends BaseFormXmlController {
     private final static int TEST_MAX_IDLE_TIME_MINUTES = 10;
 
     private final OfficialAgentImageResolver officialAgentImageResolver;
-    private final AtmosphereFramework atmosphereFramework;
+    private final AtmosphereFrameworkFacade atmosphereFramework;
     private final ReentrantLock lock = new ReentrantLock();
     private final BuildAgentManager agentMgr;
     private final Map<UUID, ContainerSpecTest> tasks = new HashMap<>();
@@ -85,15 +85,20 @@ public class ContainerTestsController extends BaseFormXmlController {
     private final WebLinks webLinks;
 
     @Autowired
-    public ContainerTestsController(AtmosphereFrameworkHolder
-                                            atmosphereFrameworkHolder,
-                                    @NotNull
-            SBuildServer
-            server,
-                                    @NotNull
-            PluginDescriptor
-            pluginDescriptor,
-                                    @NotNull WebControllerManager manager, @NotNull BuildAgentManager agentMgr,
+    public ContainerTestsController(@NotNull DefaultAtmosphereFacade atmosphereFramework,
+                                    @NotNull SBuildServer server,
+                                    @NotNull PluginDescriptor pluginDescriptor,
+                                    @NotNull WebControllerManager manager,
+                                    @NotNull BuildAgentManager agentMgr,
+                                    @NotNull WebLinks webLinks) {
+        this((AtmosphereFrameworkFacade) atmosphereFramework, server, pluginDescriptor, manager, agentMgr, webLinks);
+    }
+
+    ContainerTestsController(@NotNull AtmosphereFrameworkFacade atmosphereFramework,
+                                    @NotNull SBuildServer server,
+                                    @NotNull PluginDescriptor pluginDescriptor,
+                                    @NotNull WebControllerManager manager,
+                                    @NotNull BuildAgentManager agentMgr,
                                     @NotNull WebLinks webLinks) {
 
         this.webLinks = webLinks;
@@ -102,9 +107,7 @@ public class ContainerTestsController extends BaseFormXmlController {
         manager.registerController(pluginDescriptor.getPluginResourcesPath(PATH), this);
         manager.registerController("/app/docker-cloud/test-container/**", this);
 
-        // It was attempted to reuse the same framework instance configured by the TC server but it was not successful
-        // (it breaks somehow the built-in web-socket based subscription mechanism).
-        this.atmosphereFramework = atmosphereFrameworkHolder.getAtmosphereFramework();
+        this.atmosphereFramework = atmosphereFramework;
 
         atmosphereFramework.addWebSocketHandler("/app/docker-cloud/test-container/getStatus", new WSHandler(),
                 AtmosphereFramework.REFLECTOR_ATMOSPHEREHANDLER, Collections.<AtmosphereInterceptor>emptyList());
@@ -304,6 +307,11 @@ public class ContainerTestsController extends BaseFormXmlController {
 
         String action = request.getParameter("action");
 
+        if (action == null) {
+            sendErrorQuietly(response, HttpServletResponse.SC_BAD_REQUEST, "Missing action parameter");
+            return;
+        }
+
         ContainerSpecTest test;
 
         if (action.equals("create")) {
@@ -452,26 +460,32 @@ public class ContainerTestsController extends BaseFormXmlController {
     }
 
     private void activate() {
-        assert lock.isHeldByCurrentThread();
         assert executorService == null && statusBroadcaster == null;
-
-        executorService = createScheduledExecutor();
-        executorService.scheduleWithFixedDelay(new CleanupTask(), CLEANUP_TASK_RATE_SEC,
-                CLEANUP_TASK_RATE_SEC, TimeUnit.SECONDS);
-        statusBroadcaster = atmosphereFramework.getBroadcasterFactory().get(SimpleBroadcaster.class, UUID.randomUUID());
-
+        lock.lock();
+        try {
+            executorService = createScheduledExecutor();
+            executorService.scheduleWithFixedDelay(new CleanupTask(), CLEANUP_TASK_RATE_SEC,
+                    CLEANUP_TASK_RATE_SEC, TimeUnit.SECONDS);
+            statusBroadcaster = atmosphereFramework.getBroadcasterFactory().get(SimpleBroadcaster.class, UUID.randomUUID());
+        } finally {
+            lock.unlock();
+        }
     }
 
     private void passivate() {
-        assert lock.isHeldByCurrentThread();
         assert executorService != null && statusBroadcaster != null;
 
-        executorService.shutdownNow();
-        statusBroadcaster.destroy();
-        atmosphereFramework.getBroadcasterFactory().remove(statusBroadcaster.getID());
+        lock.lock();
+        try {
+            executorService.shutdownNow();
+            statusBroadcaster.destroy();
+            atmosphereFramework.getBroadcasterFactory().remove(statusBroadcaster.getID());
 
-        executorService = null;
-        statusBroadcaster = null;
+            executorService = null;
+            statusBroadcaster = null;
+        } finally {
+            lock.unlock();
+        }
     }
 
     private class BuildServerListener extends BuildServerAdapter {

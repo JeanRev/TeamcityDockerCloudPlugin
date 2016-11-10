@@ -31,6 +31,11 @@ public class TestOutputStream extends FilterOutputStream {
     }
 
     public static TestOutputStream dummy() {
-        return new TestOutputStream(new ByteArrayOutputStream());
+        return new TestOutputStream(new OutputStream() {
+            @Override
+            public void write(int b) throws IOException {
+                // Do nothing.
+            }
+        });
     }
 }

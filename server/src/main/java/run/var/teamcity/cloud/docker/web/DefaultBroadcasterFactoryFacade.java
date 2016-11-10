@@ -1,0 +1,23 @@
+package run.var.teamcity.cloud.docker.web;
+
+import org.atmosphere.cpr.Broadcaster;
+import org.atmosphere.cpr.BroadcasterFactory;
+
+public class DefaultBroadcasterFactoryFacade implements BroadcasterFactoryFacade {
+
+    private final BroadcasterFactory broadcasterFactory;
+
+    public DefaultBroadcasterFactoryFacade(BroadcasterFactory broadcasterFactory) {
+        this.broadcasterFactory = broadcasterFactory;
+    }
+
+    @Override
+    public <T extends Broadcaster> T get(Class<T> c, Object id) {
+        return broadcasterFactory.get(c, id);
+    }
+
+    @Override
+    public boolean remove(String id) {
+        return broadcasterFactory.remove(id);
+    }
+}
