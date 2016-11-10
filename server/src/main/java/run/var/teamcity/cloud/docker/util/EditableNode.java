@@ -30,6 +30,13 @@ public class EditableNode extends AbstractNode<EditableNode>{
     }
 
     @NotNull
+    public EditableNode put(@NotNull String key, Boolean value) {
+        DockerCloudUtils.requireNonNull(key, "Key cannot be null.");
+        getObjectNode().put(key, value);
+        return this;
+    }
+
+    @NotNull
     public EditableNode put(@NotNull String key, @Nullable Object value) {
         DockerCloudUtils.requireNonNull(key, "Key cannot be null.");
         getObjectNode().put(key, value != null ? value.toString() : null);
