@@ -26,17 +26,15 @@ import static org.assertj.core.api.Assertions.in;
 @Test
 public class DockerCloudClientTest {
 
-    public void startContainer() {
-
+    public void generalLifecycle() {
         TestDockerClientFactory dockerClientFactory = new TestDockerClientFactory();
         DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI);
         DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false);
         Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
         DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, true, false, 1);
-        DockerCloudClient client = new DockerCloudClient(clientConfig, dockerClientFactory, Collections
-                .singletonList(imageConfig), new TestDockerImageResolver("resolved-image:latest"), new TestCloudState(),
-                new
-                TestSBuildServer());
+        DockerCloudClient client = new DockerCloudClient(clientConfig, dockerClientFactory,
+                Collections.singletonList(imageConfig), new TestDockerImageResolver("resolved-image:latest"),
+                new TestCloudState(), new TestSBuildServer());
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
@@ -67,8 +65,6 @@ public class DockerCloudClientTest {
         assertThat(image.getImageName()).isEqualTo("resolved-image:latest");
         assertThat(instances).hasSize(1);
 
-
-
         dockerClient.unlock();
 
         TestUtils.waitSec(6);
@@ -90,7 +86,11 @@ public class DockerCloudClientTest {
 
         assertThat(instance.getErrorInfo()).isNull();
         assertThat(instance.getStatus()).isSameAs(InstanceStatus.STOPPED);
+
+        client.dispose();
+
+        TestUtils.waitSec(2);
+
+        assertThat(instance.getErrorInfo()).isNull();
     }
-
-
 }
