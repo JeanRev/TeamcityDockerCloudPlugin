@@ -7,7 +7,7 @@ public class TestRootUrlHolder implements RootUrlHolder {
     @NotNull
     @Override
     public String getRootUrl() {
-        throw new UnsupportedOperationException("Not a real plugin.");
+        return  "/not/a/real/server";
     }
 
     @Override

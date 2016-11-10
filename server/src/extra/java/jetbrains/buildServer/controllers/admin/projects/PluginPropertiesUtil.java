@@ -15,10 +15,10 @@ public class PluginPropertiesUtil {
     }
 
     public static void bindPropertiesFromRequest(HttpServletRequest var0, BasePropertiesBean var1) {
-        throw new AssertionError("Not implemented.");
+        // Do nothing.
     }
 
     public static void bindPropertiesFromRequest(HttpServletRequest var0, BasePropertiesBean var1, boolean var2) {
-        throw new AssertionError("Not implemented.");
+        // Do nothing.
     }
 }

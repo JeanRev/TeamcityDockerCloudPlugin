@@ -29,9 +29,9 @@ import org.springframework.web.servlet.ModelAndView;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
-import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientException;
+import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.NotFoundException;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
@@ -66,6 +66,14 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class ContainerTestsController extends BaseFormXmlController {
 
+    enum Action {
+        CREATE,
+        START,
+        DISPOSE,
+        CANCEL,
+        QUERY
+    }
+
     private final static Logger LOG = DockerCloudUtils.getLogger(ContainerTestsController.class);
 
     public static final String PATH = "test-container.html";
@@ -74,6 +82,7 @@ public class ContainerTestsController extends BaseFormXmlController {
     private final static int CLEANUP_TASK_RATE_SEC = 60;
     private final static int TEST_MAX_IDLE_TIME_MINUTES = 10;
 
+    private final DockerClientFactory dockerClientFactory;
     private final OfficialAgentImageResolver officialAgentImageResolver;
     private final AtmosphereFrameworkFacade atmosphereFramework;
     private final ReentrantLock lock = new ReentrantLock();
@@ -91,16 +100,19 @@ public class ContainerTestsController extends BaseFormXmlController {
                                     @NotNull WebControllerManager manager,
                                     @NotNull BuildAgentManager agentMgr,
                                     @NotNull WebLinks webLinks) {
-        this((AtmosphereFrameworkFacade) atmosphereFramework, server, pluginDescriptor, manager, agentMgr, webLinks);
+        this(atmosphereFramework, DockerClientFactory.getDefault(), server,
+                pluginDescriptor, manager, agentMgr, webLinks);
     }
 
     ContainerTestsController(@NotNull AtmosphereFrameworkFacade atmosphereFramework,
+                                    @NotNull DockerClientFactory dockerClientFactory,
                                     @NotNull SBuildServer server,
                                     @NotNull PluginDescriptor pluginDescriptor,
                                     @NotNull WebControllerManager manager,
                                     @NotNull BuildAgentManager agentMgr,
                                     @NotNull WebLinks webLinks) {
 
+        this.dockerClientFactory = dockerClientFactory;
         this.webLinks = webLinks;
 
         server.addListener(new BuildServerListener());
@@ -116,21 +128,19 @@ public class ContainerTestsController extends BaseFormXmlController {
         this.officialAgentImageResolver = OfficialAgentImageResolver.forServer(server);
     }
 
-    private void disposeTask(ContainerSpecTest test, HttpServletResponse response) {
+    private void disposeTask(ContainerSpecTest test) {
         assert lock.isHeldByCurrentThread();
 
         String containerId = test.getContainerId();
 
         Phase phase = test.getCurrentTaskFuture().getTask().getPhase();
         if (phase == Phase.CREATE) {
-            sendErrorQuietly(response, HttpServletResponse.SC_BAD_REQUEST, "Container not created yet.");
-            return;
+            throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Container not created yet.");
         }
 
         if (containerId == null) {
             LOG.error("Cannot dispose container for test " + test.getUuid() + ", no container ID available.");
-            sendErrorQuietly(response, HttpServletResponse.SC_BAD_REQUEST, "Container not registered.");
-            return;
+            throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Container not registered.");
         }
 
         DisposeContainerTestTask disposeTask = new DisposeContainerTestTask(test, containerId);
@@ -211,23 +221,9 @@ public class ContainerTestsController extends BaseFormXmlController {
         }
     }
 
-    private ContainerSpecTest submitCreateJob(HttpServletRequest request, HttpServletResponse response) {
-        BasePropertiesBean propsBean = new BasePropertiesBean(null);
-        PluginPropertiesUtil.bindPropertiesFromRequest(request, propsBean, true);
-
-        DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(propsBean.getProperties());
+    private ContainerSpecTest submitCreateJob(DockerCloudClientConfig clientConfig, DockerImageConfig imageConfig) {
 
         ContainerSpecTest test = newTestInstance(clientConfig);
-
-        DockerImageConfig imageConfig;
-        try {
-            imageConfig = DockerImageConfig.fromJSon(Node.parse(propsBean.getProperties
-                    ().get("run.var.teamcity.docker.cloud.tested_image")));
-        } catch (IOException e) {
-            LOG.error("Image parsing failed.", e);
-            sendErrorQuietly(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to parse image data.");
-            return test;
-        }
 
         CreateContainerTestTask testTask = new CreateContainerTestTask(test, imageConfig, webLinks.getRootUrl(), test
                 .getUuid(), officialAgentImageResolver);
@@ -247,7 +243,8 @@ public class ContainerTestsController extends BaseFormXmlController {
         try {
             lock.lock();
 
-            ContainerSpecTest test = ContainerSpecTest.newTestInstance(statusBroadcaster, clientConfig, agentMgr);
+            ContainerSpecTest test = ContainerSpecTest.newTestInstance(statusBroadcaster, clientConfig,
+                    dockerClientFactory, agentMgr);
 
             boolean duplicate = tasks.put(test.getUuid(), test) != null;
             assert !duplicate;
@@ -305,38 +302,79 @@ public class ContainerTestsController extends BaseFormXmlController {
             activate();
         }
 
-        String action = request.getParameter("action");
+        String actionParam = request.getParameter("action");
 
-        if (action == null) {
+        if (actionParam == null) {
             sendErrorQuietly(response, HttpServletResponse.SC_BAD_REQUEST, "Missing action parameter");
             return;
         }
 
-        ContainerSpecTest test;
+        Action action;
+        try {
+            action = Action.valueOf(actionParam.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            sendErrorQuietly(response, HttpServletResponse.SC_BAD_REQUEST, "Bad action parameter: " + actionParam);
+            return;
+        }
 
-        if (action.equals("create")) {
-            test = submitCreateJob(request, response);
-        } else {
-            test = retrieveTestTask(request);
-            if (test == null) {
-                sendErrorQuietly(response, HttpServletResponse.SC_NOT_FOUND, "Bad or expired request.");
+        DockerCloudClientConfig clientConfig = null;
+        DockerImageConfig imageConfig = null;
+
+        if (action == Action.CREATE) {
+            BasePropertiesBean propsBean = new BasePropertiesBean(null);
+            PluginPropertiesUtil.bindPropertiesFromRequest(request, propsBean, true);
+
+            clientConfig = DockerCloudClientConfig.processParams(propsBean.getProperties());
+            try {
+                imageConfig = DockerImageConfig.fromJSon(Node.parse(propsBean.getProperties
+                        ().get("run.var.teamcity.docker.cloud.tested_image")));
+            } catch (IOException e) {
+                LOG.error("Image parsing failed.", e);
+                sendErrorQuietly(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to parse image data.");
                 return;
             }
-            if (!action.equals("query")) {
-                switch (action) {
-                    case "start":
-                        submitStartTask(test);
-                        break;
-                    case "dispose":
-                        disposeTask(test, response);
-                        break;
-                    case "cancel":
-                        dispose(test.getUuid());
-                        break;
-                    default:
-                        sendErrorQuietly(response, HttpServletResponse.SC_BAD_REQUEST, "No such action: " + action);
-                        return;
-                }
+        }
+
+        String uuidParam = request.getParameter("taskUuid");
+        UUID testUuid = DockerCloudUtils.tryParseAsUUID(uuidParam);
+
+        TestContainerStatusMsg statusMsg = doAction(action, testUuid, clientConfig, imageConfig);
+        xmlResponse.addContent(statusMsg.toExternalForm());
+    }
+
+    TestContainerStatusMsg doAction(Action action, UUID testUuid, DockerCloudClientConfig clientConfig,
+                                    DockerImageConfig imageConfig) {
+        if (executorService == null) {
+            activate();
+        }
+
+        if (action == null) {
+            throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Missing action parameter");
+        }
+
+        ContainerSpecTest test = retrieveTestTask(testUuid);
+
+        if (action == Action.CREATE) {
+            test = submitCreateJob(clientConfig, imageConfig);
+        } else {
+            if (test == null) {
+                throw new ActionException(HttpServletResponse.SC_NOT_FOUND, "Bad or expired request.");
+            }
+            switch (action) {
+                case START:
+                    submitStartTask(test);
+                    break;
+                case DISPOSE:
+                    disposeTask(test);
+                    break;
+                case CANCEL:
+                    dispose(test.getUuid());
+                    break;
+                case QUERY:
+                    // Nothing to do.
+                    break;
+                default:
+                    throw new AssertionError("Unknown enum member: " + action);
             }
         }
 
@@ -344,9 +382,7 @@ public class ContainerTestsController extends BaseFormXmlController {
 
         test.notifyInteraction();
 
-        if (!response.isCommitted()) {
-            xmlResponse.addContent(test.getStatusMsg().toExternalForm());
-        }
+        return test.getStatusMsg();
     }
 
     private void sendErrorQuietly(HttpServletResponse response, int sc, String msg) {
@@ -361,22 +397,16 @@ public class ContainerTestsController extends BaseFormXmlController {
         }
     }
 
-    private ContainerSpecTest retrieveTestTask(HttpServletRequest request) {
-        String uuidParam = request.getParameter("taskUuid");
-        UUID taskUuid = DockerCloudUtils.tryParseAsUUID(uuidParam);
+    private ContainerSpecTest retrieveTestTask(UUID testUuid) {
 
         ContainerSpecTest test = null;
-        if (taskUuid != null) {
+        if (testUuid != null) {
             try {
                 lock.lock();
-                test = tasks.get(taskUuid);
+                test = tasks.get(testUuid);
             } finally {
                 lock.unlock();
             }
-        }
-
-        if (test == null) {
-            LOG.warn("Bad or expired UUID parameter: " + uuidParam);
         }
 
         return  test;
@@ -553,6 +583,16 @@ public class ContainerTestsController extends BaseFormXmlController {
         @Override
         public void onError(WebSocket webSocket, WebSocketProcessor.WebSocketException t) {
             LOG.error("An error occurred while processing a request.");
+        }
+    }
+
+    private static class ActionException extends RuntimeException {
+        final int code;
+        final String message;
+
+        ActionException(int code, String message) {
+            this.code = code;
+            this.message = message;
         }
     }
 }

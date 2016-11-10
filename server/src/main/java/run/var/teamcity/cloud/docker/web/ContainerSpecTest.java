@@ -47,10 +47,13 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
 
     public static ContainerSpecTest newTestInstance(@NotNull Broadcaster broadcaster,
                                                     @NotNull DockerCloudClientConfig clientConfig,
+                                                    @NotNull DockerClientFactory dockerClientFactory,
                                                     @NotNull BuildAgentManager agentMgr) {
-        DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null");
+        DockerCloudUtils.requireNonNull(broadcaster, "Broadcaster cannot be null.");
+        DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
+        DockerCloudUtils.requireNonNull(dockerClientFactory, "Docker client factory cannot be null.");
         DockerCloudUtils.requireNonNull(agentMgr, "Agent manager cannot be null");
-        DockerClient client = DockerClientFactory.getDefault().createClient(clientConfig.getDockerClientConfig()
+        DockerClient client = dockerClientFactory.createClient(clientConfig.getDockerClientConfig()
                 .threadPoolSize(1));
         return new ContainerSpecTest(broadcaster, client, agentMgr);
     }
