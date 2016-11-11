@@ -35,6 +35,15 @@ dependencies {
     testCompile 'org.assertj:assertj-core:3.5.2'
 }
 
+jacocoTestReport {
+    // Exclude the ApacheConnector class from test code coverage. We do not own most of the code there.
+    afterEvaluate {
+        classDirectories = files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: 'run/var/teamcity/cloud/docker/client/ApacheConnector.class*')
+        })
+    }
+}
+
 test {
     useTestNG()
 }
