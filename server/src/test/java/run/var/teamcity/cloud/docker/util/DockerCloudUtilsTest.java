@@ -25,7 +25,7 @@ public class DockerCloudUtilsTest {
 
     public void getClientId() {
         AgentDescription description = new TestSBuildAgent().
-                withEnvironmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString());
+                environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString());
         assertThat(DockerCloudUtils.getClientId(description)).isEqualTo(TestUtils.TEST_UUID);
     }
 
@@ -36,7 +36,7 @@ public class DockerCloudUtilsTest {
 
     public void getClientIdWithInvalidUUID() {
         AgentDescription description = new TestSBuildAgent().
-                withEnvironmentVariable(DockerCloudUtils.ENV_CLIENT_ID, "Not an UUID");
+                environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, "Not an UUID");
         assertThat(DockerCloudUtils.getClientId(description)).isNull();
     }
 
@@ -46,7 +46,7 @@ public class DockerCloudUtilsTest {
 
     public void getImageId() {
         AgentDescription description = new TestSBuildAgent().
-                withEnvironmentVariable(DockerCloudUtils.ENV_IMAGE_ID, TestUtils.TEST_UUID.toString());
+                environmentVariable(DockerCloudUtils.ENV_IMAGE_ID, TestUtils.TEST_UUID.toString());
         assertThat(DockerCloudUtils.getImageId(description)).isEqualTo(TestUtils.TEST_UUID);
     }
 
@@ -57,7 +57,7 @@ public class DockerCloudUtilsTest {
 
     public void getImageIdWithInvalidUUID() {
         AgentDescription description = new TestSBuildAgent().
-                withEnvironmentVariable(DockerCloudUtils.ENV_IMAGE_ID, "Not an UUID");
+                environmentVariable(DockerCloudUtils.ENV_IMAGE_ID, "Not an UUID");
         assertThat(DockerCloudUtils.getImageId(description)).isNull();
     }
 
@@ -67,7 +67,7 @@ public class DockerCloudUtilsTest {
 
     public void getInstanceId() {
         AgentDescription description = new TestSBuildAgent().
-                withEnvironmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, TestUtils.TEST_UUID.toString());
+                environmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, TestUtils.TEST_UUID.toString());
         assertThat(DockerCloudUtils.getInstanceId(description)).isEqualTo(TestUtils.TEST_UUID);
     }
 
@@ -78,7 +78,7 @@ public class DockerCloudUtilsTest {
 
     public void getInstanceIdWithInvalidUUID() {
         AgentDescription description = new TestSBuildAgent().
-                withEnvironmentVariable(DockerCloudUtils.ENV_IMAGE_ID, "Not an UUID");
+                environmentVariable(DockerCloudUtils.ENV_IMAGE_ID, "Not an UUID");
         assertThat(DockerCloudUtils.getInstanceId(description)).isNull();
     }
 
@@ -121,8 +121,8 @@ public class DockerCloudUtilsTest {
 
     public void getEnvParameter() {
         AgentDescription description = new TestSBuildAgent().
-                withEnvironmentVariable("ABC", "123").
-                withEnvironmentVariable("CDF", "456");
+                environmentVariable("ABC", "123").
+                environmentVariable("CDF", "456");
 
         assertThat(DockerCloudUtils.getEnvParameter(description, "ABC")).isEqualTo("123");
         assertThat(DockerCloudUtils.getEnvParameter(description, "CDF")).isEqualTo("456");
@@ -131,8 +131,8 @@ public class DockerCloudUtilsTest {
 
     public void getEnvParameterWithNullArguments() {
         AgentDescription description = new TestSBuildAgent().
-                withEnvironmentVariable("ABC", "123").
-                withEnvironmentVariable("CDF", "456");
+                environmentVariable("ABC", "123").
+                environmentVariable("CDF", "456");
 
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() ->
                 DockerCloudUtils.getEnvParameter(description, null));

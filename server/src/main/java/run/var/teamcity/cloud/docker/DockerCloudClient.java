@@ -253,7 +253,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
     @NotNull
     @Override
-    public CloudInstance startNewInstance(@NotNull final CloudImage image, @NotNull final CloudInstanceUserData tag) throws QuotaException {
+    public DockerInstance startNewInstance(@NotNull final CloudImage image, @NotNull final CloudInstanceUserData tag) throws
+            QuotaException {
 
         LOG.info("Creating new instance from image: " + image);
 

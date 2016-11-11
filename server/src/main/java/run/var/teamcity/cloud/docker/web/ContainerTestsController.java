@@ -40,7 +40,6 @@ import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
 import run.var.teamcity.cloud.docker.util.WrappedRunnableScheduledFuture;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.servlet.ServletException;
@@ -79,9 +78,9 @@ public class ContainerTestsController extends BaseFormXmlController {
 
     public static final String PATH = "test-container.html";
 
-    private final static int REFRESH_TASK_RATE_SEC = 10;
-    private final static int CLEANUP_TASK_RATE_SEC = 60;
-    private final static int TEST_MAX_IDLE_TIME_MINUTES = 10;
+    private final static long REFRESH_TASK_RATE_SEC = 10;
+    final static long CLEANUP_DEFAULT_TASK_RATE_SEC = 60;
+    final static long TEST_DEFAULT_IDLE_TIME_SEC = TimeUnit.MINUTES.toSeconds(10);
 
     private final DockerClientFactory dockerClientFactory;
     private final DockerImageNameResolver imageNameResolver;
@@ -93,6 +92,8 @@ public class ContainerTestsController extends BaseFormXmlController {
     private Broadcaster statusBroadcaster = null;
     private boolean disposed = false;
     private final WebLinks webLinks;
+    private final long testMaxIdleTimeSec;
+    private final long cleanupRateSec;
 
     @Autowired
     public ContainerTestsController(@NotNull DefaultAtmosphereFacade atmosphereFramework,
@@ -102,7 +103,8 @@ public class ContainerTestsController extends BaseFormXmlController {
                                     @NotNull BuildAgentManager agentMgr,
                                     @NotNull WebLinks webLinks) {
         this(atmosphereFramework, DockerClientFactory.getDefault(), OfficialAgentImageResolver.forServer(server),
-                server, pluginDescriptor, manager, agentMgr, webLinks);
+                server, pluginDescriptor, manager, agentMgr, webLinks, TEST_DEFAULT_IDLE_TIME_SEC,
+                CLEANUP_DEFAULT_TASK_RATE_SEC);
     }
 
     ContainerTestsController(@NotNull AtmosphereFrameworkFacade atmosphereFramework,
@@ -112,10 +114,14 @@ public class ContainerTestsController extends BaseFormXmlController {
                                     @NotNull PluginDescriptor pluginDescriptor,
                                     @NotNull WebControllerManager manager,
                                     @NotNull BuildAgentManager agentMgr,
-                                    @NotNull WebLinks webLinks) {
+                                    @NotNull WebLinks webLinks,
+                                    long testMaxIdleTimeSec,
+                                    long cleanupRateSec) {
 
         this.dockerClientFactory = dockerClientFactory;
         this.webLinks = webLinks;
+        this.testMaxIdleTimeSec = testMaxIdleTimeSec;
+        this.cleanupRateSec = cleanupRateSec;
 
         server.addListener(new BuildServerListener());
         manager.registerController(pluginDescriptor.getPluginResourcesPath(PATH), this);
@@ -426,8 +432,8 @@ public class ContainerTestsController extends BaseFormXmlController {
 
                 for (ContainerSpecTest test : tasks.values()) {
                     if (test.getCurrentTaskFuture() != null) {
-                        if ((System.nanoTime() - test.getLastInteraction()) > TimeUnit.MINUTES.toNanos
-                                (TEST_MAX_IDLE_TIME_MINUTES)) {
+                        if (Math.abs(System.nanoTime() - test.getLastInteraction()) > TimeUnit.SECONDS.toNanos
+                                (testMaxIdleTimeSec)) {
                             toDispose.add(test.getUuid());
                         }
                     }
@@ -496,8 +502,8 @@ public class ContainerTestsController extends BaseFormXmlController {
         lock.lock();
         try {
             executorService = createScheduledExecutor();
-            executorService.scheduleWithFixedDelay(new CleanupTask(), CLEANUP_TASK_RATE_SEC,
-                    CLEANUP_TASK_RATE_SEC, TimeUnit.SECONDS);
+            executorService.scheduleWithFixedDelay(new CleanupTask(), cleanupRateSec, cleanupRateSec,
+                    TimeUnit.SECONDS);
             statusBroadcaster = atmosphereFramework.getBroadcasterFactory().get(SimpleBroadcaster.class, UUID.randomUUID());
         } finally {
             lock.unlock();

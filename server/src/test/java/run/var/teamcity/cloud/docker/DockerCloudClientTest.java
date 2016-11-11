@@ -5,9 +5,7 @@ import jetbrains.buildServer.clouds.InstanceStatus;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.test.TestBuildAgentManager;
 import run.var.teamcity.cloud.docker.test.TestCloudState;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
 import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
@@ -23,7 +21,8 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.in;
+import static org.assertj.core.api.Assertions.fail;
+import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
 
 
 /**
@@ -75,22 +74,24 @@ public class DockerCloudClientTest {
 
         dockerClient.lock();
 
-        client.startNewInstance(image, userData);
+        DockerInstance instance = client.startNewInstance(image, userData);
 
-        TestUtils.waitSec(4);
-
-        DockerInstance instance = extractInstance(image);
-
+        assertThat(instance).isSameAs(extractInstance(image));
         assertThat(instance.getErrorInfo()).isNull();
-        assertThat(instance.getStatus()).isIn(InstanceStatus.UNKNOWN, InstanceStatus.SCHEDULED_TO_START, InstanceStatus
-                .STARTING);
+        assertThat(instance.getStatus()).isIn(InstanceStatus.UNKNOWN, InstanceStatus.SCHEDULED_TO_START,
+                InstanceStatus.STARTING);
 
         dockerClient.unlock();
 
-        TestUtils.waitSec(6);
+        waitUntil(() -> {
+            InstanceStatus status = instance.getStatus();
+            assertThat(status).isIn(InstanceStatus.UNKNOWN, InstanceStatus.SCHEDULED_TO_START,
+                    InstanceStatus.STARTING, InstanceStatus.RUNNING);
+            return status == InstanceStatus.RUNNING;
+        });
+
 
         assertThat(instance.getErrorInfo()).isNull();
-        assertThat(instance.getStatus()).isSameAs(InstanceStatus.RUNNING);
 
         Collection<TestDockerClient.Container> containers = dockerClient.getContainers();
         assertThat(containers).hasSize(1);
@@ -101,24 +102,25 @@ public class DockerCloudClientTest {
 
         client.terminateInstance(instance);
 
-        TestUtils.waitSec(2);
-
-        assertThat(instance.getStatus()).isIn(InstanceStatus.SCHEDULED_TO_STOP, InstanceStatus.STOPPING);
+        assertThat(instance.getStatus()).isIn(InstanceStatus.RUNNING, InstanceStatus.SCHEDULED_TO_STOP,
+                InstanceStatus.STOPPING);
 
         dockerClient.unlock();
 
-        TestUtils.waitSec(6);
+        waitUntil(() -> {
+            InstanceStatus status = instance.getStatus();
+            assertThat(status).isIn(InstanceStatus.RUNNING, InstanceStatus.SCHEDULED_TO_STOP, InstanceStatus.STOPPING,
+                    InstanceStatus.STOPPED);
+            return status == InstanceStatus.STOPPED;
+        });
 
+        assertThat(image.getImageName()).isEqualTo("resolved-image:latest");
         assertThat(instance.getErrorInfo()).isNull();
         assertThat(instance.getStatus()).isSameAs(InstanceStatus.STOPPED);
 
         client.dispose();
 
-        TestUtils.waitSec(2);
-
         assertThat(instance.getErrorInfo()).isNull();
-
-        assertThat(image.getImageName()).isEqualTo("resolved-image:latest");
     }
 
     public void reuseContainers() {
@@ -128,11 +130,9 @@ public class DockerCloudClientTest {
 
         DockerImage dockerImage = extractImage(client);
 
-        client.startNewInstance(dockerImage, userData);
+        DockerInstance instance = client.startNewInstance(dockerImage, userData);
 
-        TestUtils.waitSec(4);
-
-        DockerInstance instance = extractInstance(dockerImage);
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
@@ -146,26 +146,24 @@ public class DockerCloudClientTest {
 
         client.terminateInstance(instance);
 
-        TestUtils.waitSec(2);
+        waitUntil(() -> instance.getStatus() == InstanceStatus.STOPPED);
 
-        assertThat(instance.getStatus()).isSameAs(InstanceStatus.STOPPED);
         assertThat(dockerClient.getContainers()).containsOnly(container);
 
         client.startNewInstance(dockerImage, userData);
 
-        TestUtils.waitSec(2);
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
 
-        assertThat(instance.getStatus()).isSameAs(InstanceStatus.RUNNING);
         assertThat(instance.getContainerId()).isEqualTo(containerId);
         assertThat(dockerClient.getContainers()).containsOnly(container);
     }
 
     public void discardUnregisteredAgents() {
         TestSBuildAgent agentWithCloudAndInstanceIds = new TestSBuildAgent().
-                withEnvironmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString()).
-                withEnvironmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, TestUtils.TEST_UUID_2.toString());
+                environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString()).
+                environmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, TestUtils.TEST_UUID_2.toString());
         TestSBuildAgent agentWithCloudIdOnly = new TestSBuildAgent().
-                withEnvironmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString());
+                environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString());
         TestSBuildAgent otherAgent = new TestSBuildAgent();
 
         buildServer.getBuildAgentManager().
@@ -175,12 +173,11 @@ public class DockerCloudClientTest {
 
         DockerCloudClient client = createClient();
 
-        TestUtils.waitSec(2);
+        waitUntil(() -> client.getLastDockerSyncTimeMillis() != -1);
 
         List<TestSBuildAgent> unregisteredAgents = buildServer.getBuildAgentManager().getUnregisteredAgents();
 
         assertThat(unregisteredAgents).hasSize(1).first().isSameAs(otherAgent);
-
     }
 
     public void findInstanceByAgent() {
@@ -188,22 +185,20 @@ public class DockerCloudClientTest {
 
         DockerImage dockerImage = extractImage(client);
 
-        client.startNewInstance(dockerImage, userData);
+        DockerInstance instance = client.startNewInstance(dockerImage, userData);
 
-        TestUtils.waitSec(2);
-
-        DockerInstance instance = extractInstance(dockerImage);
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
 
         TestSBuildAgent agent = new TestSBuildAgent().
-                withEnvironmentVariable(DockerCloudUtils.ENV_CLIENT_ID, client.getUuid().toString()).
-                withEnvironmentVariable(DockerCloudUtils.ENV_IMAGE_ID, dockerImage.getUuid().toString()).
-                withEnvironmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, instance.getUuid().toString());
+                environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, client.getUuid().toString()).
+                environmentVariable(DockerCloudUtils.ENV_IMAGE_ID, dockerImage.getUuid().toString()).
+                environmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, instance.getUuid().toString());
 
         assertThat(client.findInstanceByAgent(agent)).isSameAs(instance);
         TestSBuildAgent anotherAgent = new TestSBuildAgent().
-                withEnvironmentVariable(DockerCloudUtils.ENV_CLIENT_ID, client.getUuid().toString()).
-                withEnvironmentVariable(DockerCloudUtils.ENV_IMAGE_ID, dockerImage.getUuid().toString()).
-                withEnvironmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, TestUtils.TEST_UUID_2.toString());
+                environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, client.getUuid().toString()).
+                environmentVariable(DockerCloudUtils.ENV_IMAGE_ID, dockerImage.getUuid().toString()).
+                environmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, TestUtils.TEST_UUID_2.toString());
 
         assertThat(client.findInstanceByAgent(anotherAgent)).isNull();
     }
@@ -213,13 +208,9 @@ public class DockerCloudClientTest {
 
         DockerImage dockerImage = extractImage(client);
 
-        client.startNewInstance(dockerImage, userData);
+        DockerInstance instance = client.startNewInstance(dockerImage, userData);
 
-        TestUtils.waitSec(6);
-
-        DockerInstance instance = extractInstance(dockerImage);
-
-        assertThat(instance.getStatus()).isSameAs(InstanceStatus.RUNNING);
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
@@ -227,9 +218,7 @@ public class DockerCloudClientTest {
         dockerClient.removeContainer(instance.getContainerId(), true, true);
 
         // Will takes two sync to be effective (one to mark the instance in error state), and another one to remove it.
-        TestUtils.waitSec(8);
-
-        assertThat(dockerImage.getInstances()).isEmpty();
+        waitUntil(() -> dockerImage.getInstances().isEmpty());
     }
 
     private DockerInstance extractInstance(DockerImage dockerImage) {

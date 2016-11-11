@@ -1,17 +1,16 @@
 package run.var.teamcity.cloud.docker.web;
 
 import jetbrains.buildServer.serverSide.WebLinks;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
-import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.test.TestAtmosphereFrameworkFacade;
 import run.var.teamcity.cloud.docker.test.TestBuildAgentManager;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
 import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
 import run.var.teamcity.cloud.docker.test.TestDockerImageResolver;
-import run.var.teamcity.cloud.docker.test.TestHttpServletRequest;
 import run.var.teamcity.cloud.docker.test.TestPluginDescriptor;
 import run.var.teamcity.cloud.docker.test.TestRootUrlHolder;
 import run.var.teamcity.cloud.docker.test.TestSBuildServer;
@@ -22,9 +21,10 @@ import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
 
 /**
  * {@link ContainerTestsController} test suite.
@@ -32,29 +32,34 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Test
 public class ContainerTestsControllerTest {
 
-    public void fullTest() {
+    private long testMaxIdleTime = ContainerTestsController.TEST_DEFAULT_IDLE_TIME_SEC;
+    private long cleanupRateSec = ContainerTestsController.CLEANUP_DEFAULT_TASK_RATE_SEC;
 
-        TestDockerClientFactory dockerClientFactory = new TestDockerClientFactory() {
+    private TestDockerClientFactory dockerClientFactory;
+    private DockerCloudClientConfig clientConfig;
+    private DockerImageConfig imageConfig;
+
+    @BeforeMethod
+    public void init() {
+        dockerClientFactory = new TestDockerClientFactory() {
             @Override
             public void configureClient(TestDockerClient dockerClient) {
                 dockerClient.knownImage("resolved-image", "1.0");
             }
         };
 
-        ContainerTestsController ctrl = new ContainerTestsController(new TestAtmosphereFrameworkFacade(),
-                dockerClientFactory, new TestDockerImageResolver("resolved-image:1.0"),
-                new TestSBuildServer(), new TestPluginDescriptor(), new TestWebControllerManager(),
-                new TestBuildAgentManager(), new WebLinks(new TestRootUrlHolder()));
-
-        TestHttpServletRequest request = new TestHttpServletRequest().parameter("action", "create");
 
         DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI);
-
-        DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig,
+        clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig,
                 false);
 
         Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
-        DockerImageConfig imageConfig = new DockerImageConfig("test", containerSpec, true, false, 1);
+        imageConfig = new DockerImageConfig("test", containerSpec, true, false, 1);
+    }
+
+    public void fullTest() {
+
+        ContainerTestsController ctrl = createController();
 
         TestContainerStatusMsg statusMsg = ctrl.doAction(ContainerTestsController.Action.CREATE, null, clientConfig,
                 imageConfig);
@@ -63,26 +68,59 @@ public class ContainerTestsControllerTest {
 
         dockerClient.lock();
 
-        UUID testUuuid = statusMsg.getTaskUuid();
+        UUID testUuid = statusMsg.getTaskUuid();
         Status status = statusMsg.getStatus();
 
         assertThat(status).isSameAs(Status.PENDING);
 
         dockerClient.unlock();
 
-        final long maxDelay = TimeUnit.SECONDS.toNanos(100);
-        final long waitSince = System.nanoTime();
-        while (status == Status.PENDING && Math.abs(System.nanoTime() - waitSince) < maxDelay) {
-            statusMsg = ctrl.doAction(ContainerTestsController.Action.QUERY, testUuuid, null, null);
-            assertThat(statusMsg.getPhase()).isSameAs(Phase.CREATE);
+        queryUntilSuccess(ctrl, testUuid, Phase.CREATE);
 
-            status = statusMsg.getStatus();
+        queryUntilSuccess(ctrl, testUuid, Phase.CREATE);
 
-            TestUtils.waitSec(1);
-        }
+        ctrl.doAction(ContainerTestsController.Action.DISPOSE, testUuid, null, null);
 
-        assertThat(status).isSameAs(Status.SUCCESS);
+        queryUntilSuccess(ctrl, testUuid, Phase.DISPOSE, Phase.STOP);
+    }
 
-        ctrl.doAction(ContainerTestsController.Action.DISPOSE, testUuuid, null, null);
+    public void autoDispose() {
+
+        cleanupRateSec = 2;
+        testMaxIdleTime = 3;
+
+        ContainerTestsController ctrl = createController();
+
+        TestContainerStatusMsg statusMsg = ctrl.doAction(ContainerTestsController.Action.CREATE, null, clientConfig,
+                imageConfig);
+
+        UUID testUuid = statusMsg.getTaskUuid();
+
+        queryUntilSuccess(ctrl, testUuid);
+
+        TestUtils.waitSec(5);
+
+        assertThatExceptionOfType(ContainerTestsController.ActionException.class).isThrownBy( () -> ctrl.doAction
+                (ContainerTestsController.Action.QUERY, testUuid, null, null));
+    }
+
+    private void queryUntilSuccess(ContainerTestsController ctrl, UUID testUuid, Phase... allowedPhases) {
+        waitUntil(() -> {
+            TestContainerStatusMsg queryMsg = ctrl.doAction(ContainerTestsController.Action.QUERY, testUuid, null,
+                    null);
+            Status status = queryMsg.getStatus();
+            assertThat(status).isNotSameAs(Status.FAILURE);
+            if (allowedPhases != null && allowedPhases.length > 0) {
+                assertThat(queryMsg.getPhase()).isIn((Object[]) allowedPhases);
+            }
+            return status == Status.SUCCESS;
+        });
+    }
+
+    private ContainerTestsController createController() {
+        return new ContainerTestsController(new TestAtmosphereFrameworkFacade(),
+                dockerClientFactory, new TestDockerImageResolver("resolved-image:1.0"),
+                new TestSBuildServer(), new TestPluginDescriptor(), new TestWebControllerManager(),
+                new TestBuildAgentManager(), new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRateSec);
     }
 }

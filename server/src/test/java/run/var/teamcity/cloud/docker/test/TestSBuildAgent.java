@@ -84,7 +84,7 @@ public class TestSBuildAgent implements SBuildAgent {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    public TestSBuildAgent withEnvironmentVariable(String key, String value) {
+    public TestSBuildAgent environmentVariable(String key, String value) {
         availableParameters.put("env." + key, value);
         return this;
     }
