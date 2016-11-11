@@ -279,6 +279,7 @@ public class TestDockerClient implements DockerClient {
                 EditableNode containerNode = result.addObject();
                 containerNode.put("Id", container.id);
                 containerNode.put("State", container.status == ContainerStatus.STARTED ? "running" : "stopped");
+                containerNode.getOrCreateArray("Names").add(DockerCloudUtils.toShortId(container.id));
                 EditableNode labels = containerNode.getOrCreateObject("Labels");
                 for (Map.Entry<String, Node> labelEntry : container.labels.entrySet()) {
                     labels.put(labelEntry.getKey(), labelEntry.getValue().getAsString());

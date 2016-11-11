@@ -5,6 +5,7 @@ import jetbrains.buildServer.clouds.InstanceStatus;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.test.TestBuildAgentManager;
 import run.var.teamcity.cloud.docker.test.TestCloudState;
@@ -34,6 +35,7 @@ public class DockerCloudClientTest {
     private DockerCloudClient client;
     private TestDockerClientFactory dockerClientFactory;
     private DockerCloudClientConfig clientConfig;
+    private Node containerSpec;
     private DockerImageConfig imageConfig;
     private TestSBuildServer buildServer;
     private TestDockerImageResolver dockerImageResolver;
@@ -50,7 +52,7 @@ public class DockerCloudClientTest {
         };
         DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI);
         clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2);
-        Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
+        containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
         imageConfig = new DockerImageConfig("UnitTest", containerSpec, true, false, 1);
         buildServer = new TestSBuildServer();
         dockerImageResolver = new TestDockerImageResolver("resolved-image:latest");
@@ -66,11 +68,8 @@ public class DockerCloudClientTest {
 
         assertThat(dockerClient).isNotNull();
 
-        Collection<DockerImage> dockerImages = client.getImages();
+        DockerImage image = extractImage(client);
 
-        assertThat(dockerImages).hasSize(1);
-
-        DockerImage image = dockerImages.iterator().next();
         assertThat(image.getImageName()).isEqualTo("test-image");
         assertThat(image.getInstances()).isEmpty();
 
@@ -80,10 +79,8 @@ public class DockerCloudClientTest {
 
         TestUtils.waitSec(4);
 
-        Collection<DockerInstance> instances = image.getInstances();
-        assertThat(instances).hasSize(1);
+        DockerInstance instance = extractInstance(image);
 
-        DockerInstance instance = instances.iterator().next();
         assertThat(instance.getErrorInfo()).isNull();
         assertThat(instance.getStatus()).isIn(InstanceStatus.UNKNOWN, InstanceStatus.SCHEDULED_TO_START, InstanceStatus
                 .STARTING);
@@ -124,6 +121,45 @@ public class DockerCloudClientTest {
         assertThat(image.getImageName()).isEqualTo("resolved-image:latest");
     }
 
+    public void reuseContainers() {
+        imageConfig = new DockerImageConfig("UnitTest", containerSpec, false, false, 1);
+
+        DockerCloudClient client = createClient();
+
+        DockerImage dockerImage = extractImage(client);
+
+        client.startNewInstance(dockerImage, userData);
+
+        TestUtils.waitSec(4);
+
+        DockerInstance instance = extractInstance(dockerImage);
+
+        TestDockerClient dockerClient = dockerClientFactory.getClient();
+
+        assertThat(dockerClient.getContainers()).hasSize(1);
+
+        TestDockerClient.Container container = dockerClient.getContainers().iterator().next();
+
+        String containerId = container.getId();
+
+        assertThat(instance.getContainerId()).isEqualTo(containerId);
+
+        client.terminateInstance(instance);
+
+        TestUtils.waitSec(2);
+
+        assertThat(instance.getStatus()).isSameAs(InstanceStatus.STOPPED);
+        assertThat(dockerClient.getContainers()).containsOnly(container);
+
+        client.startNewInstance(dockerImage, userData);
+
+        TestUtils.waitSec(2);
+
+        assertThat(instance.getStatus()).isSameAs(InstanceStatus.RUNNING);
+        assertThat(instance.getContainerId()).isEqualTo(containerId);
+        assertThat(dockerClient.getContainers()).containsOnly(container);
+    }
+
     public void discardUnregisteredAgents() {
         TestSBuildAgent agentWithCloudAndInstanceIds = new TestSBuildAgent().
                 withEnvironmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString()).
@@ -147,28 +183,16 @@ public class DockerCloudClientTest {
 
     }
 
-    private DockerCloudClient createClient() {
-        return client = new DockerCloudClient(clientConfig, dockerClientFactory,
-                Collections.singletonList(imageConfig), dockerImageResolver,
-                cloudState, buildServer);
-    }
-
     public void findInstanceByAgent() {
         DockerCloudClient client = createClient();
 
-        Collection<DockerImage> images = client.getImages();
-        assertThat(images).hasSize(1);
+        DockerImage dockerImage = extractImage(client);
 
-        DockerImage dockerImage = images.iterator().next();
         client.startNewInstance(dockerImage, userData);
 
         TestUtils.waitSec(2);
 
-        Collection<DockerInstance> instances = dockerImage.getInstances();
-
-        assertThat(instances).hasSize(1);
-
-        DockerInstance instance = instances.iterator().next();
+        DockerInstance instance = extractInstance(dockerImage);
 
         TestSBuildAgent agent = new TestSBuildAgent().
                 withEnvironmentVariable(DockerCloudUtils.ENV_CLIENT_ID, client.getUuid().toString()).
@@ -187,19 +211,13 @@ public class DockerCloudClientTest {
     public void orphanedContainers() {
         DockerCloudClient client = createClient();
 
-        Collection<DockerImage> images = client.getImages();
-        assertThat(images).hasSize(1);
+        DockerImage dockerImage = extractImage(client);
 
-        DockerImage dockerImage = images.iterator().next();
         client.startNewInstance(dockerImage, userData);
 
         TestUtils.waitSec(6);
 
-        Collection<DockerInstance> instances = dockerImage.getInstances();
-
-        assertThat(instances).hasSize(1);
-
-        DockerInstance instance = instances.iterator().next();
+        DockerInstance instance = extractInstance(dockerImage);
 
         assertThat(instance.getStatus()).isSameAs(InstanceStatus.RUNNING);
 
@@ -213,6 +231,28 @@ public class DockerCloudClientTest {
 
         assertThat(dockerImage.getInstances()).isEmpty();
     }
+
+    private DockerInstance extractInstance(DockerImage dockerImage) {
+        Collection<DockerInstance> instances = dockerImage.getInstances();
+
+        assertThat(instances).hasSize(1);
+
+        return instances.iterator().next();
+    }
+
+    private DockerImage extractImage(DockerCloudClient client) {
+        Collection<DockerImage> images = client.getImages();
+        assertThat(images).hasSize(1);
+
+        return images.iterator().next();
+    }
+
+    private DockerCloudClient createClient() {
+        return client = new DockerCloudClient(clientConfig, dockerClientFactory,
+                Collections.singletonList(imageConfig), dockerImageResolver,
+                cloudState, buildServer);
+    }
+
 
     @AfterMethod
     public void tearDown() {
