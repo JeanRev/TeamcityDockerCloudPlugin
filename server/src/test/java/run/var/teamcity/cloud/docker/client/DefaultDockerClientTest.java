@@ -7,7 +7,6 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.URI;
@@ -15,22 +14,23 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.in;
 
 /**
  * {@link DefaultDockerClient} test suite.
  */
 @Test
-public class DefaultDockerClientTest {
+public abstract class DefaultDockerClientTest {
 
     public final static String TEST_IMAGE = "tc_dk_cld_plugin_test_img:1.0";
 
     private DefaultDockerClient client;
     private String containerId;
+    private URI uri;
 
     @BeforeMethod
     public void init() {
         containerId = null;
+        uri = URI.create("unix:/var/run/docker.sock");
     }
 
     public void fullTest() throws URISyntaxException {
@@ -112,7 +112,8 @@ public class DefaultDockerClientTest {
     }
 
     private DefaultDockerClient createClient() throws URISyntaxException {
-        // Note: we need a least two threads to be able to destroy a container we are currently streaming from.
-        return client = DefaultDockerClient.open(new URI("unix://var/run/docker.sock"), false, 2);
+        return client = createClientInternal();
     }
+
+    protected abstract DefaultDockerClient createClientInternal() throws URISyntaxException;
 }
