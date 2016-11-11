@@ -141,7 +141,7 @@ public class DockerCloudClientConfig {
         URI instanceURI = null;
         if (useDefaultUnixSocket) {
             instanceURI = DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI;
-        } else  {
+        } else if (useDefaultInstanceStr != null) {
             String instanceURLStr = notEmpty("Instance URL ist not set", DockerCloudUtils.INSTANCE_URI, properties, invalidProperties);
             if (instanceURLStr != null) {
 
@@ -160,11 +160,23 @@ public class DockerCloudClientConfig {
 
                         if (scheme == DefaultDockerClient.SupportedScheme.UNIX) {
                             if (instanceURI.getHost() != null || instanceURI.getPort() != -1 || instanceURI.getUserInfo() != null || instanceURI.getQuery() != null || instanceURI.getFragment() != null ) {
-                                invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Only path can be provided for tcp scheme."));
+                                invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Only path " +
+                                        "can be provided for unix scheme."));
+                            } else if (instanceURI.getPath() == null) {
+                                invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Missing " +
+                                        "path in URI."));
                             }
                         } else if (scheme == DefaultDockerClient.SupportedScheme.TCP) {
-                            if (instanceURI.getPath() != null || instanceURI.getUserInfo() != null || instanceURI.getQuery() != null || instanceURI.getFragment() != null ) {
+                            if ((instanceURI.getPath() != null && !instanceURI.getPath().isEmpty()) ||
+                                    instanceURI.getUserInfo() != null || instanceURI.getQuery() != null ||
+                                    instanceURI.getFragment() != null ) {
                                 invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Only host ip/name and port can be provided for tcp scheme."));
+                            } else if (instanceURI.getHost() == null) {
+                                invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Missing " +
+                                        "host in URI."));
+                            } else if (instanceURI.getPort() == -1) {
+                                invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Missing " +
+                                        "port in URI."));
                             }
                         }
                     }
