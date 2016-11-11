@@ -1,7 +1,7 @@
 
 <%@ page import="run.var.teamcity.cloud.docker.util.DockerCloudUtils" %>
 <%@ page import="run.var.teamcity.cloud.docker.web.DockerCloudCheckConnectivityController" %>
-<%@ page import="run.var.teamcity.cloud.docker.web.ContainerTestsController" %>
+<%@ page import="run.var.teamcity.cloud.docker.web.ContainerTestController" %>
 <%@ taglib prefix="props" tagdir="/WEB-INF/tags/props" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="l" tagdir="/WEB-INF/tags/layout" %>
@@ -65,7 +65,7 @@
 
 <h2 class="noBorder section-header">Agent Images</h2>
 
-    <props:hiddenProperty name="run.var.teamcity.docker.cloud.tested_image"/>
+    <props:hiddenProperty name="<%=DockerCloudUtils.TEST_IMAGE_PARAM%>"/>
     <props:hiddenProperty name="<%=DockerCloudUtils.CLIENT_UUID%>"/>
 
     <%--<props:hiddenProperty name="run.var.teamcity.docker.cloud.img_param"/>--%>
@@ -652,7 +652,7 @@
         success: function() {
             BS.Clouds.Docker.init('<%=DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI%>',
                     '${resPath}<%=DockerCloudCheckConnectivityController.PATH%>',
-                    '${resPath}<%=ContainerTestsController.PATH%>',
+                    '${resPath}<%=ContainerTestController.PATH%>',
                     '<%=DockerCloudUtils.IMAGES_PARAM%>');
             /* Register callbacks to react on DOM changes.
             $j(document).ready (BS.Clouds.Docker._refreshSettingsState);

@@ -15,7 +15,7 @@ import java.util.Map;
  */
 public class DockerImageConfig {
 
-    private static final int DOCKER_IMAGE_SPEC_VERSION = 1;
+    public static final int DOCKER_IMAGE_SPEC_VERSION = 1;
 
     private final String profileName;
     private final Node containerSpec;

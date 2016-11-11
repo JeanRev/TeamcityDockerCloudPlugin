@@ -7,15 +7,12 @@ import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.test.TestAtmosphereFrameworkFacade;
-import run.var.teamcity.cloud.docker.test.TestBuildAgentManager;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
 import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
 import run.var.teamcity.cloud.docker.test.TestDockerImageResolver;
-import run.var.teamcity.cloud.docker.test.TestPluginDescriptor;
 import run.var.teamcity.cloud.docker.test.TestRootUrlHolder;
 import run.var.teamcity.cloud.docker.test.TestSBuildServer;
 import run.var.teamcity.cloud.docker.test.TestUtils;
-import run.var.teamcity.cloud.docker.test.TestWebControllerManager;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
@@ -25,15 +22,16 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
+import static run.var.teamcity.cloud.docker.web.ContainerTestManager.*;
 
 /**
- * {@link ContainerTestsController} test suite.
+ * {@link ContainerTestController} test suite.
  */
 @Test
-public class ContainerTestsControllerTest {
+public class DefaultContainerTestManagerTest {
 
-    private long testMaxIdleTime = ContainerTestsController.TEST_DEFAULT_IDLE_TIME_SEC;
-    private long cleanupRateSec = ContainerTestsController.CLEANUP_DEFAULT_TASK_RATE_SEC;
+    private long testMaxIdleTime = DefaultContainerTestManager.TEST_DEFAULT_IDLE_TIME_SEC;
+    private long cleanupRateSec = DefaultContainerTestManager.CLEANUP_DEFAULT_TASK_RATE_SEC;
 
     private TestDockerClientFactory dockerClientFactory;
     private DockerCloudClientConfig clientConfig;
@@ -59,9 +57,9 @@ public class ContainerTestsControllerTest {
 
     public void fullTest() {
 
-        ContainerTestsController ctrl = createController();
+        ContainerTestManager mgr = createManager();
 
-        TestContainerStatusMsg statusMsg = ctrl.doAction(ContainerTestsController.Action.CREATE, null, clientConfig,
+        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
                 imageConfig);
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
@@ -75,13 +73,13 @@ public class ContainerTestsControllerTest {
 
         dockerClient.unlock();
 
-        queryUntilSuccess(ctrl, testUuid, Phase.CREATE);
+        queryUntilSuccess(mgr, testUuid, Phase.CREATE);
 
-        queryUntilSuccess(ctrl, testUuid, Phase.CREATE);
+        queryUntilSuccess(mgr, testUuid, Phase.CREATE);
 
-        ctrl.doAction(ContainerTestsController.Action.DISPOSE, testUuid, null, null);
+        mgr.doAction(Action.DISPOSE, testUuid, null, null);
 
-        queryUntilSuccess(ctrl, testUuid, Phase.DISPOSE, Phase.STOP);
+        queryUntilSuccess(mgr, testUuid, Phase.DISPOSE, Phase.STOP);
     }
 
     public void autoDispose() {
@@ -89,24 +87,24 @@ public class ContainerTestsControllerTest {
         cleanupRateSec = 2;
         testMaxIdleTime = 3;
 
-        ContainerTestsController ctrl = createController();
+        ContainerTestManager mgr = createManager();
 
-        TestContainerStatusMsg statusMsg = ctrl.doAction(ContainerTestsController.Action.CREATE, null, clientConfig,
+        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
                 imageConfig);
 
         UUID testUuid = statusMsg.getTaskUuid();
 
-        queryUntilSuccess(ctrl, testUuid);
+        queryUntilSuccess(mgr, testUuid);
 
         TestUtils.waitSec(5);
 
-        assertThatExceptionOfType(ContainerTestsController.ActionException.class).isThrownBy( () -> ctrl.doAction
-                (ContainerTestsController.Action.QUERY, testUuid, null, null));
+        assertThatExceptionOfType(ActionException.class).isThrownBy( () -> mgr.doAction
+                (Action.QUERY, testUuid, null, null));
     }
 
-    private void queryUntilSuccess(ContainerTestsController ctrl, UUID testUuid, Phase... allowedPhases) {
+    private void queryUntilSuccess(ContainerTestManager mgr, UUID testUuid, Phase... allowedPhases) {
         waitUntil(() -> {
-            TestContainerStatusMsg queryMsg = ctrl.doAction(ContainerTestsController.Action.QUERY, testUuid, null,
+            TestContainerStatusMsg queryMsg = mgr.doAction(Action.QUERY, testUuid, null,
                     null);
             Status status = queryMsg.getStatus();
             assertThat(status).isNotSameAs(Status.FAILURE);
@@ -117,10 +115,9 @@ public class ContainerTestsControllerTest {
         });
     }
 
-    private ContainerTestsController createController() {
-        return new ContainerTestsController(new TestAtmosphereFrameworkFacade(),
-                dockerClientFactory, new TestDockerImageResolver("resolved-image:1.0"),
-                new TestSBuildServer(), new TestPluginDescriptor(), new TestWebControllerManager(),
-                new TestBuildAgentManager(), new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRateSec);
+    private ContainerTestManager createManager() {
+        return new DefaultContainerTestManager(new TestAtmosphereFrameworkFacade(),
+                new TestDockerImageResolver("resolved-image:1.0"), dockerClientFactory,
+                new TestSBuildServer(), new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRateSec);
     }
 }

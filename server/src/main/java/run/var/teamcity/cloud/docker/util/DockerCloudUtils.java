@@ -4,9 +4,11 @@ import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.AgentDescription;
 import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.bouncycastle.crypto.agreement.srp.SRP6Client;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
@@ -14,6 +16,8 @@ import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -50,6 +54,10 @@ public final class DockerCloudUtils {
      * Docker cloud parameter: images configuration.
      */
     public static final String IMAGES_PARAM = NS_PREFIX + "img_param";
+    /**
+     * Docker cloud parameter: the image configuration to be tested.
+     */
+    public static final String TEST_IMAGE_PARAM = NS_PREFIX + "tested_image";
     /**
      * Docker cloud parameter: use default Docker socket on the local machine.
      */
@@ -334,5 +342,24 @@ public final class DockerCloudUtils {
         }
 
         return sw.toString();
+    }
+
+    public static final String TC_PROPERTY_PREFIX = "prop:";
+
+    @NotNull
+    public static Map<String, String> extractTCPluginParams(@NotNull HttpServletRequest request) {
+        DockerCloudUtils.requireNonNull(request, "Request cannot be null.");
+        Map<String, String> params = new HashMap<>();
+        for (Map.Entry<String, String[]> param : request.getParameterMap().entrySet()) {
+            String key = param.getKey();
+            if (key != null && key.startsWith(TC_PROPERTY_PREFIX) && key.length() > TC_PROPERTY_PREFIX.length()) {
+                String[] value = param.getValue();
+                if (value != null && value.length > 0) {
+                    params.put(key.substring(TC_PROPERTY_PREFIX.length()), value[0]);
+                }
+            }
+        }
+
+        return params;
     }
 }
