@@ -5,7 +5,7 @@
        default-autowire="constructor">
 
   <bean class="run.var.teamcity.cloud.docker.DockerCloudClientFactory"/>
-  <bean class="run.var.teamcity.cloud.docker.web.DockerCloudCheckConnectivityController"/>
+  <bean class="run.var.teamcity.cloud.docker.web.CheckConnectivityController"/>
   <bean class="run.var.teamcity.cloud.docker.web.DockerCloudSettingsController"/>
   <bean class="run.var.teamcity.cloud.docker.web.DockerImageDetailsExtension"/>
   <bean class="run.var.teamcity.cloud.docker.web.ContainerTestController"/>

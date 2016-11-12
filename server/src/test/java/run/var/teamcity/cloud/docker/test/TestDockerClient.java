@@ -54,7 +54,7 @@ public class TestDockerClient implements DockerClient {
     /**
      * The only URI supported by this Docker client.
      */
-    public static URI TEST_CLIENT_URI = URI.create("test://not.a.real.docker.client");
+    public static URI TEST_CLIENT_URI = URI.create("tcp://not.a.real.docker.client:0000");
     private boolean closed = false;
     private DockerClientProcessingException failOnAccessException = null;
 
@@ -67,7 +67,16 @@ public class TestDockerClient implements DockerClient {
     @NotNull
     @Override
     public Node getVersion() {
-        throw new UnsupportedOperationException();
+        return Node.EMPTY_OBJECT.editNode().
+                put("Version", "1.0").
+                put("ApiVersion", "1.0").
+                put("Os", "NotARealOS").
+                put("Arch", "NotARealArch").
+                put("Kernel", "1.0").
+                put("build", "00000000").
+                put("buildtime", "0000-00-00T00:00:00.000000000+00:00").
+                put("GoVersion", "go1.0").
+                put("experimental", false).saveNode();
     }
 
     @NotNull

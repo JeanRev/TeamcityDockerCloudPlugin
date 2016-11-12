@@ -54,9 +54,9 @@ public final class TestUtils {
         Map<String, String> params = new HashMap<>();
         params.put(DockerCloudUtils.TC_PROPERTY_PREFIX + DockerCloudUtils.CLIENT_UUID, TEST_UUID.toString());
         params.put(DockerCloudUtils.TC_PROPERTY_PREFIX + DockerCloudUtils.INSTANCE_URI,
-                DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI.toString());
+                TestDockerClient.TEST_CLIENT_URI.toString());
         params.put(DockerCloudUtils.TC_PROPERTY_PREFIX + DockerCloudUtils.USE_TLS, "false");
-        params.put(DockerCloudUtils.TC_PROPERTY_PREFIX + DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, "true");
+        params.put(DockerCloudUtils.TC_PROPERTY_PREFIX + DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, "false");
         return params;
     }
 

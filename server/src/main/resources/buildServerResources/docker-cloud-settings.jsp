@@ -1,6 +1,6 @@
 
 <%@ page import="run.var.teamcity.cloud.docker.util.DockerCloudUtils" %>
-<%@ page import="run.var.teamcity.cloud.docker.web.DockerCloudCheckConnectivityController" %>
+<%@ page import="run.var.teamcity.cloud.docker.web.CheckConnectivityController" %>
 <%@ page import="run.var.teamcity.cloud.docker.web.ContainerTestController" %>
 <%@ taglib prefix="props" tagdir="/WEB-INF/tags/props" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
@@ -651,7 +651,7 @@
         dataType: "script",
         success: function() {
             BS.Clouds.Docker.init('<%=DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI%>',
-                    '${resPath}<%=DockerCloudCheckConnectivityController.PATH%>',
+                    '${resPath}<%=CheckConnectivityController.PATH%>',
                     '${resPath}<%=ContainerTestController.PATH%>',
                     '<%=DockerCloudUtils.IMAGES_PARAM%>');
             /* Register callbacks to react on DOM changes.
