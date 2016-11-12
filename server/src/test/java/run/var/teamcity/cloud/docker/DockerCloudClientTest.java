@@ -10,6 +10,8 @@ import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
 import run.var.teamcity.cloud.docker.test.TestCloudState;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
+import run.var.teamcity.cloud.docker.test.TestDockerClient.Container;
+import run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus;
 import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
 import run.var.teamcity.cloud.docker.test.TestDockerImageResolver;
 import run.var.teamcity.cloud.docker.test.TestSBuildAgent;
@@ -96,9 +98,9 @@ public class DockerCloudClientTest {
 
         assertThat(instance.getErrorInfo()).isNull();
 
-        Collection<TestDockerClient.Container> containers = dockerClient.getContainers();
+        Collection<Container> containers = dockerClient.getContainers();
         assertThat(containers).hasSize(1);
-        TestDockerClient.Container container = containers.iterator().next();
+        Container container = containers.iterator().next();
         assertThat(instance.getContainerId()).isEqualTo(container.getId());
 
         dockerClient.lock();
@@ -169,7 +171,7 @@ public class DockerCloudClientTest {
 
         assertThat(dockerClient.getContainers()).hasSize(1);
 
-        TestDockerClient.Container container = dockerClient.getContainers().iterator().next();
+        Container container = dockerClient.getContainers().iterator().next();
 
         String containerId = container.getId();
 
@@ -195,11 +197,16 @@ public class DockerCloudClientTest {
                 environmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, TestUtils.TEST_UUID_2.toString());
         TestSBuildAgent agentWithCloudIdOnly = new TestSBuildAgent().
                 environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString());
+        TestSBuildAgent agentWithCloudAndInstanceIdsNotRemovable = new TestSBuildAgent().
+                environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString()).
+                environmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, TestUtils.TEST_UUID_2.toString()).
+                removable(false);
         TestSBuildAgent otherAgent = new TestSBuildAgent();
 
         buildServer.getBuildAgentManager().
                 unregisteredAgent(agentWithCloudAndInstanceIds).
                 unregisteredAgent(agentWithCloudIdOnly).
+                unregisteredAgent(agentWithCloudAndInstanceIdsNotRemovable).
                 unregisteredAgent(otherAgent);
 
         DockerCloudClient client = createClient();
@@ -208,7 +215,8 @@ public class DockerCloudClientTest {
 
         List<TestSBuildAgent> unregisteredAgents = buildServer.getBuildAgentManager().getUnregisteredAgents();
 
-        assertThat(unregisteredAgents).hasSize(1).first().isSameAs(otherAgent);
+        assertThat(unregisteredAgents).containsOnly(agentWithCloudAndInstanceIdsNotRemovable, otherAgent);
+        assertThat(client.getErrorInfo()).isNull();
     }
 
     public void findInstanceByAgent() {
@@ -258,6 +266,22 @@ public class DockerCloudClientTest {
 
         // Will takes two sync to be effective (one to mark the instance in error state), and another one to remove it.
         waitUntil(() -> dockerImage.getInstances().isEmpty());
+
+        Container nonRelevantContainer;
+
+        dockerClient.container(nonRelevantContainer = new Container(ContainerStatus.CREATED));
+        dockerClient.container(new Container(ContainerStatus.CREATED).label(DockerCloudUtils.CLIENT_ID_LABEL,
+                TestUtils.TEST_UUID.toString()));
+        dockerClient.container(new Container(ContainerStatus.CREATED).
+                label(DockerCloudUtils.CLIENT_ID_LABEL, TestUtils.TEST_UUID.toString()).
+                label(DockerCloudUtils.INSTANCE_ID_LABEL, TestUtils.TEST_UUID_2.toString())
+        );
+
+        waitUntil(() -> {
+            assertThat(client.getErrorInfo()).isNull();
+            return dockerClient.getContainers().size() == 1;
+        });
+        assertThat(dockerClient.getContainers()).containsOnly(nonRelevantContainer);
     }
 
     @SuppressWarnings("ConstantConditions")

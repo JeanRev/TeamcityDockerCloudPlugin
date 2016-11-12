@@ -674,7 +674,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
                 // Step 3, process each found container and conciliate it with our data model.
                 for (Node container : containersValues) {
-                    String instanceIdStr = container.getObject("Labels").getAsString(DockerCloudUtils.INSTANCE_ID_LABEL);
+                    String instanceIdStr = container.getObject("Labels").getAsString(DockerCloudUtils
+                            .INSTANCE_ID_LABEL, null);
                     final UUID instanceUuid = DockerCloudUtils.tryParseAsUUID(instanceIdStr);
                     final String containerId = container.getAsString("Id");
                     if (instanceUuid == null) {

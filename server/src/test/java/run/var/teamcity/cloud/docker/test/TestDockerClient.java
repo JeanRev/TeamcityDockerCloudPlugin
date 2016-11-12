@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -72,11 +73,10 @@ public class TestDockerClient implements DockerClient {
     @NotNull
     @Override
     public Node createContainer(@NotNull Node containerSpec, @Nullable String name) {
-        String containerId = createRandomSha256();
-        containerSpec.getAsString("Image");
 
         TestUtils.waitSec(1);
 
+        String containerId;
         lock.lock();
         try {
             checkForFailure();
@@ -85,8 +85,14 @@ public class TestDockerClient implements DockerClient {
             if (!knownImages.contains(img)) {
                 throw new NotFoundException("No such image: " + imageName);
             }
-            Map<String, Node> labels = containerSpec.getObject("Labels", Node.EMPTY_OBJECT).getObjectValues();
-            containers.put(containerId, new Container(containerId, labels, img));
+
+            Map<String, String> labels = new HashMap<>();
+            containerSpec.getObject("Labels", Node.EMPTY_OBJECT).getObjectValues().
+                    entrySet().forEach(entry -> labels.put(entry.getKey(), entry.getValue().getAsString()));
+
+            Container container = new Container(labels);
+            containerId = container.getId();
+            containers.put(containerId, container);
         } finally {
             lock.unlock();
         }
@@ -278,8 +284,8 @@ public class TestDockerClient implements DockerClient {
             checkForFailure();
             List<Container> filtered = containers.values().stream().
                     filter(container -> {
-                        Node node = container.labels.get(key);
-                        return node != null && value.equals(node.getAsString());
+                        String labelValue = container.labels.get(key);
+                        return labelValue != null && value.equals(labelValue);
                     }).collect(Collectors.toList());
 
             result = Node.EMPTY_ARRAY.editNode();
@@ -289,8 +295,8 @@ public class TestDockerClient implements DockerClient {
                 containerNode.put("State", container.status == ContainerStatus.STARTED ? "running" : "stopped");
                 containerNode.getOrCreateArray("Names").add(DockerCloudUtils.toShortId(container.id));
                 EditableNode labels = containerNode.getOrCreateObject("Labels");
-                for (Map.Entry<String, Node> labelEntry : container.labels.entrySet()) {
-                    labels.put(labelEntry.getKey(), labelEntry.getValue().getAsString());
+                for (Map.Entry<String, String> labelEntry : container.labels.entrySet()) {
+                    labels.put(labelEntry.getKey(), labelEntry.getValue());
                 }
             }
         } finally {
@@ -367,32 +373,49 @@ public class TestDockerClient implements DockerClient {
     }
 
     public static class Container {
-        private final String id;
-        private final Map<String, Node> labels;
-        private final Image image;
-        private ContainerStatus status = ContainerStatus.CREATED;
+        private final String id = createRandomSha256();
+        private final Map<String, String> labels = new HashMap<>();
+        private ContainerStatus status;
 
-        private Container(String id, Map<String, Node> labels, Image image) {
-            this.id = id;
-            this.labels = labels;
-            this.image = image;
+        public Container(ContainerStatus status) {
+            this(Collections.emptyMap(), status);
+        }
+
+        public Container(Map<String, String> labels) {
+           this(labels, ContainerStatus.CREATED);
+        }
+
+        public Container(Map<String, String> labels, ContainerStatus status) {
+            this.labels.putAll(labels);
+            this.status = status;
         }
 
         public String getId() {
             return id;
         }
 
-        public Map<String, Node> getLabels() {
+        public Map<String, String> getLabels() {
             return labels;
-        }
-
-        public Image getImage() {
-            return image;
         }
 
         public ContainerStatus getStatus() {
             return status;
         }
+
+        public Container label(String key, String value) {
+            labels.put(key, value);
+            return this;
+        }
+    }
+
+    public TestDockerClient container(Container container) {
+        lock.lock();
+        try {
+            containers.put(container.getId(), container);
+        } finally {
+            lock.unlock();
+        }
+        return this;
     }
 
     public static class Image {

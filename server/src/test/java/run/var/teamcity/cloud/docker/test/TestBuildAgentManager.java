@@ -1,5 +1,6 @@
 package run.var.teamcity.cloud.docker.test;
 
+import com.intellij.util.containers.ArrayListSet;
 import jetbrains.buildServer.BuildTypeDescriptor;
 import jetbrains.buildServer.serverSide.AgentCannotBeRemovedException;
 import jetbrains.buildServer.serverSide.AgentCompatibility;
@@ -11,6 +12,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -20,6 +22,8 @@ public class TestBuildAgentManager implements BuildAgentManager {
 
     private final List<TestSBuildAgent> registeredAgents = new CopyOnWriteArrayList<>();
     private final List<TestSBuildAgent> unregisteredAgents = new CopyOnWriteArrayList<>();
+
+    private volatile boolean allowingAgentRemoval = true;
 
     @Override
     public List<TestSBuildAgent> getRegisteredAgents() {
@@ -50,6 +54,9 @@ public class TestBuildAgentManager implements BuildAgentManager {
 
     @Override
     public void removeAgent(@NotNull SBuildAgent agent, @Nullable SUser user) throws AgentCannotBeRemovedException {
+        if (!((TestSBuildAgent) agent).isRemovable()) {
+            throw new AgentCannotBeRemovedException("Test agent removal forbidden.");
+        }
         //noinspection SuspiciousMethodCalls
         unregisteredAgents.remove(agent);
     }
@@ -102,5 +109,9 @@ public class TestBuildAgentManager implements BuildAgentManager {
     public TestBuildAgentManager unregisteredAgent(TestSBuildAgent agent) {
         unregisteredAgents.add(agent);
         return this;
+    }
+
+    public void setAllowingAgentRemoval(boolean allowingAgentRemoval) {
+        this.allowingAgentRemoval = allowingAgentRemoval;
     }
 }

@@ -25,6 +25,8 @@ import java.util.Map;
  */
 public class TestSBuildAgent implements SBuildAgent {
 
+    private boolean removable = true;
+
     private final Map<String, String> availableParameters = new HashMap<>();
     @NotNull
     @Override
@@ -282,5 +284,14 @@ public class TestSBuildAgent implements SBuildAgent {
     @Override
     public List<SFinishedBuild> getBuildHistory(@Nullable User user, boolean includeCanceled) {
         throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    public boolean isRemovable() {
+        return removable;
+    }
+
+    public TestSBuildAgent removable(boolean removable) {
+        this.removable = removable;
+        return this;
     }
 }
