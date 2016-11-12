@@ -43,7 +43,6 @@ public class DockerCloudClientTest {
     private TestCloudState cloudState;
     private CloudInstanceUserData userData;
     private CloudErrorInfo errorInfo;
-    private long lastSync;
 
     @BeforeMethod
     public void init() {
@@ -62,7 +61,6 @@ public class DockerCloudClientTest {
         cloudState = new TestCloudState();
         userData = new CloudInstanceUserData("", "", "", null, "", "", Collections.emptyMap());
         errorInfo = null;
-        lastSync = -1;
     }
 
     public void generalLifecycle() {
@@ -231,7 +229,7 @@ public class DockerCloudClientTest {
     public void clientErrorHandling() {
         DockerCloudClient client = createClient();
 
-        waitUntil(() -> (lastSync = client.getLastDockerSyncTimeMillis()) != -1);
+        waitUntil(() -> (client.getLastDockerSyncTimeMillis()) != -1);
 
         assertThat(client.getErrorInfo()).isNull();
 
