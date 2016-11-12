@@ -172,9 +172,14 @@ public class ContainerTestController extends BaseFormXmlController {
             if (taskUuid != null) {
                 atmosphereResource.setBroadcaster(statusBroadcaster);
                 statusBroadcaster.addAtmosphereResource(atmosphereResource);
-                testMgr.setStatusListener(taskUuid, new StatusListener(atmosphereResource));
+                StatusListener listener = new StatusListener(atmosphereResource);
+                try {
+                    testMgr.setStatusListener(taskUuid, listener);
+                } catch (IllegalArgumentException e) {
+                    LOG.warn("Test was disposed, cannot register listener.");
+                    listener.disposed();
+                }
             }
-
         }
 
         @Override

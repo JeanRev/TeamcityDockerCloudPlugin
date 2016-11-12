@@ -5,6 +5,7 @@ import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
+import run.var.teamcity.cloud.docker.client.TestContainerTestStatusListener;
 import run.var.teamcity.cloud.docker.test.TestBuildAgentManager;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
 import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
@@ -84,8 +85,7 @@ public class DefaultContainerTestManagerTest {
 
     public void disposalOfTests() {
 
-        cleanupRateSec = 2;
-        testMaxIdleTime = 3;
+        setupFastCleanupRate();
 
         ContainerTestManager mgr = createManager();
 
@@ -100,6 +100,68 @@ public class DefaultContainerTestManagerTest {
 
         assertThatExceptionOfType(ActionException.class).isThrownBy( () -> mgr.doAction
                 (Action.QUERY, testUuid, null, null));
+    }
+
+    public void statusListenerBaseFunction() {
+
+        // To test listener disposal.
+        setupFastCleanupRate();
+
+        ContainerTestManager mgr = createManager();
+
+        TestContainerTestStatusListener listener = new TestContainerTestStatusListener();
+
+        // Listener for unknown test.
+        assertThatExceptionOfType(IllegalArgumentException.class).
+                isThrownBy(() -> mgr.setStatusListener(TestUtils.TEST_UUID, listener));
+
+        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
+                imageConfig);
+
+
+        UUID testUuid = statusMsg.getTaskUuid();
+
+        mgr.setStatusListener(testUuid, listener);
+
+        assertThat(listener.getMsgs()).hasSize(1);
+
+        statusMsg = listener.getMsgs().iterator().next();
+
+        assertThat(statusMsg.getStatus()).isIn(Status.PENDING, Status.SUCCESS);
+
+        waitUntil(() -> listener.getMsgs().getLast().getStatus() == Status.SUCCESS);
+
+        assertThat(listener.isDisposed()).isFalse();
+
+        TestUtils.waitSec(5);
+
+        assertThat(listener.isDisposed()).isTrue();
+
+    }
+
+    public void statusListenerAlwaysInvokedAtLeastOnce() {
+        ContainerTestManager mgr = createManager();
+
+        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
+                imageConfig);
+
+        UUID testUuid = statusMsg.getTaskUuid();
+
+        queryUntilSuccess(mgr, testUuid);
+
+        // Test is already successful. However, the listener should always receive the last known status message
+        TestContainerTestStatusListener statusListener = new TestContainerTestStatusListener();
+
+        mgr.setStatusListener(testUuid, statusListener);
+
+        assertThat(statusListener.getMsgs()).hasSize(1);
+
+        assertThat(statusListener.getMsgs().getFirst().getStatus()).isSameAs(Status.SUCCESS);
+    }
+
+    private void setupFastCleanupRate(){
+        cleanupRateSec = 2;
+        testMaxIdleTime = 3;
     }
 
     private void queryUntilSuccess(ContainerTestManager mgr, UUID testUuid, Phase... allowedPhases) {

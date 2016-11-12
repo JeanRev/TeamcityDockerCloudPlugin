@@ -194,6 +194,7 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         ContainerTestStatusListener statusListener = getStatusListener();
         if (statusListener != null) {
             statusListener.notifyStatus(statusMsg);
+            notifyInteraction();
         }
     }
 

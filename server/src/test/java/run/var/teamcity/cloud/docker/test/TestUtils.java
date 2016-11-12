@@ -1,10 +1,6 @@
 package run.var.teamcity.cloud.docker.test;
 
-import org.jetbrains.annotations.NotNull;
-import run.var.teamcity.cloud.docker.DockerCloudClient;
-import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
-import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -14,8 +10,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
@@ -27,7 +21,7 @@ public final class TestUtils {
 
     public static final UUID TEST_UUID_2 = UUID.fromString("00000000-1ced-beef-0000-000000000000");
 
-    private final static int WAIT_DEFAULT_REFRESH_RATE_SEC = 1;
+    private final static int WAIT_DEFAULT_REFRESH_RATE_MSEC = 500;
     private final static int WAIT_DEFAULT_MAX_WAIT_TIME_SEC = 10;
 
     public static void waitSec(long sec) {
@@ -49,7 +43,7 @@ public final class TestUtils {
                 throw new RuntimeException("Time out.");
             }
             try {
-                Thread.sleep(TimeUnit.SECONDS.toMillis(WAIT_DEFAULT_REFRESH_RATE_SEC));
+                Thread.sleep(WAIT_DEFAULT_REFRESH_RATE_MSEC);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
