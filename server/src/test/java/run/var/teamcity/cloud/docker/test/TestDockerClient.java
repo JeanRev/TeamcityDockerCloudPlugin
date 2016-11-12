@@ -115,7 +115,13 @@ public class TestDockerClient implements DockerClient {
 
     @Override
     public void restartContainer(@NotNull String containerId) {
-        throw new UnsupportedOperationException();
+        // Virtually no difference with a simple start from a test perspective.
+        try {
+            stopContainer(containerId, 0);
+        } catch (ContainerAlreadyStoppedException e) {
+            // Ignore.
+        }
+        startContainer(containerId);
     }
 
     @NotNull

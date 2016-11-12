@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
 import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
 
 
@@ -127,6 +126,34 @@ public class DockerCloudClientTest {
         assertThat(instance.getErrorInfo()).isNull();
     }
 
+    public void restartInstance() {
+
+        DockerCloudClient client = createClient();
+
+        DockerImage dockerImage = extractImage(client);
+
+        DockerInstance instance = client.startNewInstance(dockerImage, userData);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        TestDockerClient dockerClient = dockerClientFactory.getClient();
+
+        dockerClient.lock();
+
+        client.restartInstance(instance);
+
+        waitUntil(() -> {
+            assertThat(instance.getErrorInfo()).isNull();
+            return instance.getStatus() == InstanceStatus.RESTARTING;
+        });
+
+        dockerClient.unlock();
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        assertThat(instance.getErrorInfo()).isNull();
+    }
+
     public void reuseContainers() {
         imageConfig = new DockerImageConfig("UnitTest", containerSpec, false, false, 1);
 
@@ -205,6 +232,14 @@ public class DockerCloudClientTest {
                 environmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, TestUtils.TEST_UUID_2.toString());
 
         assertThat(client.findInstanceByAgent(anotherAgent)).isNull();
+    }
+
+    public void findImageById() {
+        DockerCloudClient client = createClient();
+
+        DockerImage dockerImage = extractImage(client);
+
+        assertThat(client.findImageById(dockerImage.getId())).isSameAs(dockerImage);
     }
 
     public void orphanedContainers() {
