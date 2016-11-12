@@ -1,17 +1,14 @@
 package run.var.teamcity.cloud.docker.web;
 
-import jetbrains.buildServer.serverSide.WebLinks;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.test.TestAtmosphereFrameworkFacade;
+import run.var.teamcity.cloud.docker.test.TestBuildAgentManager;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
 import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
 import run.var.teamcity.cloud.docker.test.TestDockerImageResolver;
-import run.var.teamcity.cloud.docker.test.TestRootUrlHolder;
-import run.var.teamcity.cloud.docker.test.TestSBuildServer;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
@@ -22,7 +19,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
-import static run.var.teamcity.cloud.docker.web.ContainerTestManager.*;
+import static run.var.teamcity.cloud.docker.web.ContainerTestManager.Action;
+import static run.var.teamcity.cloud.docker.web.ContainerTestManager.ActionException;
 
 /**
  * {@link ContainerTestController} test suite.
@@ -80,9 +78,11 @@ public class DefaultContainerTestManagerTest {
         mgr.doAction(Action.DISPOSE, testUuid, null, null);
 
         queryUntilSuccess(mgr, testUuid, Phase.DISPOSE, Phase.STOP);
+
+        mgr.dispose();
     }
 
-    public void autoDispose() {
+    public void disposalOfTests() {
 
         cleanupRateSec = 2;
         testMaxIdleTime = 3;
@@ -116,8 +116,7 @@ public class DefaultContainerTestManagerTest {
     }
 
     private ContainerTestManager createManager() {
-        return new DefaultContainerTestManager(new TestAtmosphereFrameworkFacade(),
-                new TestDockerImageResolver("resolved-image:1.0"), dockerClientFactory,
-                new TestSBuildServer(), new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRateSec);
+        return new DefaultContainerTestManager(new TestDockerImageResolver("resolved-image:1.0"), dockerClientFactory,
+                new TestBuildAgentManager(), "/not/a/real/server/url", testMaxIdleTime, cleanupRateSec);
     }
 }

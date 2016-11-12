@@ -19,6 +19,10 @@ abstract class ContainerTestManager {
     abstract TestContainerStatusMsg doAction(Action action, UUID testUuid,
                                              DockerCloudClientConfig clientConfig, DockerImageConfig imageConfig);
 
+    abstract void dispose();
+
+    abstract void setStatusListener(UUID testUuid, ContainerTestStatusListener listener);
+
     static class ActionException extends RuntimeException {
         final int code;
         final String message;

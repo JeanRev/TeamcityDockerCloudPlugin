@@ -3,13 +3,24 @@ package run.var.teamcity.cloud.docker.web;
 
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.controllers.BaseFormXmlController;
+import jetbrains.buildServer.serverSide.BuildServerAdapter;
+import jetbrains.buildServer.serverSide.SBuildAgent;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.WebLinks;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
+import org.atmosphere.cpr.AtmosphereFramework;
+import org.atmosphere.cpr.AtmosphereInterceptor;
 import org.atmosphere.cpr.AtmosphereRequest;
+import org.atmosphere.cpr.AtmosphereResource;
 import org.atmosphere.cpr.AtmosphereResponse;
+import org.atmosphere.cpr.Broadcaster;
+import org.atmosphere.util.SimpleBroadcaster;
+import org.atmosphere.websocket.WebSocket;
+import org.atmosphere.websocket.WebSocketHandlerAdapter;
+import org.atmosphere.websocket.WebSocketProcessor;
 import org.jdom.Element;
+import org.jdom.output.XMLOutputter;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.ModelAndView;
@@ -26,6 +37,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
@@ -40,6 +52,7 @@ public class ContainerTestController extends BaseFormXmlController {
 
     private final ContainerTestManager testMgr;
     private final AtmosphereFrameworkFacade atmosphereFramework;
+    private final Broadcaster statusBroadcaster;
 
     @Autowired
     public ContainerTestController(@NotNull DefaultAtmosphereFacade atmosphereFramework,
@@ -47,14 +60,14 @@ public class ContainerTestController extends BaseFormXmlController {
                                    @NotNull PluginDescriptor pluginDescriptor,
                                    @NotNull WebControllerManager manager,
                                    @NotNull WebLinks webLinks) {
-        this(atmosphereFramework, pluginDescriptor, manager, new DefaultContainerTestManager(atmosphereFramework,
-                        OfficialAgentImageResolver.forServer(server), DockerClientFactory.getDefault(),
-                        server, webLinks));
-
+        this(atmosphereFramework, server, pluginDescriptor, manager,
+                new DefaultContainerTestManager(OfficialAgentImageResolver.forServer(server),
+                        DockerClientFactory.getDefault(), server.getBuildAgentManager(), webLinks.getRootUrl()));
 
     }
 
     ContainerTestController(@NotNull AtmosphereFrameworkFacade atmosphereFramework,
+                            @NotNull SBuildServer buildServer,
                             @NotNull PluginDescriptor pluginDescriptor,
                             @NotNull WebControllerManager manager,
                             @NotNull ContainerTestManager testMgr) {
@@ -62,9 +75,14 @@ public class ContainerTestController extends BaseFormXmlController {
 
         this.testMgr = testMgr;
 
-
+        buildServer.addListener(new BuildServerListener());
         manager.registerController(pluginDescriptor.getPluginResourcesPath(PATH), this);
         manager.registerController("/app/docker-cloud/test-container/**", this);
+
+        atmosphereFramework.addWebSocketHandler("/app/docker-cloud/test-container/getStatus", new WSHandler(),
+                AtmosphereFramework.REFLECTOR_ATMOSPHEREHANDLER, Collections.<AtmosphereInterceptor>emptyList());
+
+        statusBroadcaster = atmosphereFramework.getBroadcasterFactory().get(SimpleBroadcaster.class, UUID.randomUUID());
 
         this.atmosphereFramework = atmosphereFramework;
     }
@@ -139,6 +157,74 @@ public class ContainerTestController extends BaseFormXmlController {
             writer.close();
         } catch (IOException e) {
             LOG.warn("Failed to transmit error to client.", e);
+        }
+    }
+
+    private class WSHandler extends WebSocketHandlerAdapter {
+        @Override
+        public void onOpen(WebSocket webSocket) throws IOException {
+
+            AtmosphereResource atmosphereResource = webSocket.resource();
+
+            String uuidParam = atmosphereResource.getRequest().getParameter("taskUuid");
+            UUID taskUuid = DockerCloudUtils.tryParseAsUUID(uuidParam);
+
+            if (taskUuid != null) {
+                atmosphereResource.setBroadcaster(statusBroadcaster);
+                statusBroadcaster.addAtmosphereResource(atmosphereResource);
+                testMgr.setStatusListener(taskUuid, new StatusListener(atmosphereResource));
+            }
+
+        }
+
+        @Override
+        public void onError(WebSocket webSocket, WebSocketProcessor.WebSocketException t) {
+            LOG.error("An error occurred while processing a request.");
+        }
+    }
+
+    private class BuildServerListener extends BuildServerAdapter {
+        @Override
+        public void serverShutdown() {
+            statusBroadcaster.destroy();
+            atmosphereFramework.getBroadcasterFactory().remove(statusBroadcaster.getID());
+            testMgr.dispose();
+            super.serverShutdown();
+        }
+
+        @Override
+        public void agentStatusChanged(@NotNull SBuildAgent agent, boolean wasEnabled, boolean wasAuthorized) {
+
+            // We attempt here to disable the agent as soon as possible to prevent it from starting any job.
+            UUID testInstanceUuid = DockerCloudUtils.tryParseAsUUID(DockerCloudUtils.getEnvParameter(agent,
+                    DockerCloudUtils.ENV_TEST_INSTANCE_ID));
+
+            if (testInstanceUuid != null) {
+                agent.setEnabled(false, null, "Docker cloud test instance: should not accept any task.");
+            }
+        }
+    }
+
+    private class StatusListener implements ContainerTestStatusListener {
+
+        final AtmosphereResource atmosphereResource;
+
+        StatusListener(AtmosphereResource atmosphereResource) {
+            this.atmosphereResource = atmosphereResource;
+        }
+
+        @Override
+        public void notifyStatus(TestContainerStatusMsg statusMsg) {
+            statusBroadcaster.broadcast(new XMLOutputter().outputString(statusMsg.toExternalForm()), atmosphereResource);
+        }
+
+        @Override
+        public void disposed() {
+            try {
+                atmosphereResource.close();
+            } catch (IOException e) {
+                // Ignore
+            }
         }
     }
 }

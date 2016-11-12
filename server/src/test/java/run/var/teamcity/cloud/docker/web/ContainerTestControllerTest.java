@@ -7,6 +7,7 @@ import run.var.teamcity.cloud.docker.test.TestAtmosphereFrameworkFacade;
 import run.var.teamcity.cloud.docker.test.TestHttpServletRequest;
 import run.var.teamcity.cloud.docker.test.TestHttpServletResponse;
 import run.var.teamcity.cloud.docker.test.TestPluginDescriptor;
+import run.var.teamcity.cloud.docker.test.TestSBuildServer;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.test.TestWebControllerManager;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
@@ -120,7 +121,7 @@ public class ContainerTestControllerTest {
 
     private ContainerTestController createController() {
         return new ContainerTestController(new TestAtmosphereFrameworkFacade(),
-                new TestPluginDescriptor(), new TestWebControllerManager(), testMgr);
+                new TestSBuildServer(), new TestPluginDescriptor(), new TestWebControllerManager(), testMgr);
     }
 
     private TestContainerStatusMsg createStatusMsg(Phase phase) {

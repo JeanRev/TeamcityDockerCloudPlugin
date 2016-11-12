@@ -2,9 +2,6 @@ package run.var.teamcity.cloud.docker.web;
 
 import jetbrains.buildServer.serverSide.BuildAgentManager;
 import jetbrains.buildServer.serverSide.SBuildAgent;
-import org.atmosphere.cpr.AtmosphereResource;
-import org.atmosphere.cpr.Broadcaster;
-import org.jdom.output.XMLOutputter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
@@ -22,40 +19,35 @@ import java.util.concurrent.locks.ReentrantLock;
 public class ContainerSpecTest implements ContainerTestTaskHandler{
 
     private final UUID uuid = UUID.randomUUID();
-    private final long startTime = System.currentTimeMillis();
     private final ReentrantLock lock = new ReentrantLock();
-    private final Broadcaster broadcaster;
     private final DockerClient client;
     private final BuildAgentManager agentMgr;
     private long lastInteraction;
 
     private String containerId;
-    private AtmosphereResource atmosphereResource;
+    private ContainerTestStatusListener statusListener;
     private TestContainerStatusMsg statusMsg = new TestContainerStatusMsg(uuid, Phase.CREATE, Status.PENDING, null,
             null);
     private ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTaskFuture = null;
 
-    private ContainerSpecTest(Broadcaster broadcaster, DockerClient client, BuildAgentManager agentMgr) {
-        assert broadcaster != null && client != null && agentMgr != null;
+    private ContainerSpecTest(DockerClient client, BuildAgentManager agentMgr) {
+        assert client != null && agentMgr != null;
 
-        this.broadcaster = broadcaster;
         this.client = client;
         this.agentMgr = agentMgr;
 
         notifyInteraction();
     }
 
-    public static ContainerSpecTest newTestInstance(@NotNull Broadcaster broadcaster,
-                                                    @NotNull DockerCloudClientConfig clientConfig,
+    public static ContainerSpecTest newTestInstance(@NotNull DockerCloudClientConfig clientConfig,
                                                     @NotNull DockerClientFactory dockerClientFactory,
                                                     @NotNull BuildAgentManager agentMgr) {
-        DockerCloudUtils.requireNonNull(broadcaster, "Broadcaster cannot be null.");
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
         DockerCloudUtils.requireNonNull(dockerClientFactory, "Docker client factory cannot be null.");
         DockerCloudUtils.requireNonNull(agentMgr, "Agent manager cannot be null");
         DockerClient client = dockerClientFactory.createClient(clientConfig.getDockerClientConfig()
                 .threadPoolSize(1));
-        return new ContainerSpecTest(broadcaster, client, agentMgr);
+        return new ContainerSpecTest(client, agentMgr);
     }
 
     /**
@@ -91,10 +83,10 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
      * @return the atmosphere resource or {@code null}
      */
     @Nullable
-    public AtmosphereResource getAtmosphereResource() {
+    public ContainerTestStatusListener getStatusListener() {
         lock.lock();
         try {
-            return atmosphereResource;
+            return statusListener;
         } finally {
             lock.unlock();
         }
@@ -160,15 +152,15 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
     /**
      * Sets the atmosphere resource for the client to be notified.
      *
-     * @param atmosphereResource the atmosphere resource
+     * @param statusListener the atmosphere resource
      *
-     * @throws NullPointerException if {@code atmosphereResource} is {@code null}
+     * @throws NullPointerException if {@code statusListener} is {@code null}
      */
-    public void setAtmosphereResource(@NotNull AtmosphereResource atmosphereResource) {
-        DockerCloudUtils.requireNonNull(atmosphereResource, "Atmosphere resource cannot be null.");
+    public void setStatusListener(@NotNull ContainerTestStatusListener statusListener) {
+        DockerCloudUtils.requireNonNull(statusListener, "Atmosphere resource cannot be null.");
         lock.lock();
         try {
-            this.atmosphereResource = atmosphereResource;
+            this.statusListener = statusListener;
         } finally {
             lock.unlock();
         }
@@ -199,9 +191,9 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
     }
 
     private void broadcastStatus() {
-        AtmosphereResource atmosphereResource = getAtmosphereResource();
-        if (atmosphereResource != null) {
-            broadcaster.broadcast(new XMLOutputter().outputString(statusMsg.toExternalForm()), atmosphereResource);
+        ContainerTestStatusListener statusListener = getStatusListener();
+        if (statusListener != null) {
+            statusListener.notifyStatus(statusMsg);
         }
     }
 
