@@ -50,7 +50,7 @@ class StartContainerTestTask extends ContainerTestTask {
 
             client.startContainer(containerId);
 
-            setPhase(Phase.WAIT_FOR_AGENT);
+            msg("Waiting for agent to connect", Phase.WAIT_FOR_AGENT);
 
             return Status.PENDING;
         } else if (testTaskHandler.isBuildAgentDetected()) {

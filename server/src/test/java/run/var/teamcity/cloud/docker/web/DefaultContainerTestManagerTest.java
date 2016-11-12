@@ -8,17 +8,22 @@ import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.TestContainerTestStatusListener;
 import run.var.teamcity.cloud.docker.test.TestBuildAgentManager;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
+import run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus;
 import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
 import run.var.teamcity.cloud.docker.test.TestDockerImageResolver;
+import run.var.teamcity.cloud.docker.test.TestSBuildAgent;
 import run.var.teamcity.cloud.docker.test.TestUtils;
+import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
+import javax.servlet.http.HttpServletResponse;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
 import static run.var.teamcity.cloud.docker.web.ContainerTestManager.Action;
 import static run.var.teamcity.cloud.docker.web.ContainerTestManager.ActionException;
@@ -35,6 +40,7 @@ public class DefaultContainerTestManagerTest {
     private TestDockerClientFactory dockerClientFactory;
     private DockerCloudClientConfig clientConfig;
     private DockerImageConfig imageConfig;
+    private TestBuildAgentManager agentMgr;
 
     @BeforeMethod
     public void init() {
@@ -52,6 +58,7 @@ public class DefaultContainerTestManagerTest {
 
         Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
         imageConfig = new DockerImageConfig("test", containerSpec, true, false, 1);
+        agentMgr = new TestBuildAgentManager();
     }
 
     public void fullTest() {
@@ -74,13 +81,42 @@ public class DefaultContainerTestManagerTest {
 
         queryUntilSuccess(mgr, testUuid, Phase.CREATE);
 
-        queryUntilSuccess(mgr, testUuid, Phase.CREATE);
+        assertThat(dockerClient.getContainers()).hasSize(1);
+        assertThat(dockerClient.getContainers().iterator().next().getStatus()).isSameAs(ContainerStatus.CREATED);
+
+        statusMsg = mgr.doAction(Action.START, testUuid, null, null);
+
+        assertThat(statusMsg.getPhase()).isIn(Phase.START);
+        assertThat(statusMsg.getStatus()).isSameAs(Status.PENDING);
+
+        queryUntilPhase(mgr, testUuid, Phase.WAIT_FOR_AGENT);
+
+        assertThat(dockerClient.getContainers()).hasSize(1);
+        assertThat(dockerClient.getContainers().iterator().next().getStatus()).isSameAs(ContainerStatus.STARTED);
+
+        TestSBuildAgent agent = new TestSBuildAgent().
+                environmentVariable(DockerCloudUtils.ENV_TEST_INSTANCE_ID, testUuid.toString());
+
+        agentMgr.registeredAgent(agent);
+
+        queryUntilSuccess(mgr, testUuid, Phase.WAIT_FOR_AGENT);
 
         mgr.doAction(Action.DISPOSE, testUuid, null, null);
 
         queryUntilSuccess(mgr, testUuid, Phase.DISPOSE, Phase.STOP);
 
+        assertThat(dockerClient.getContainers()).isEmpty();
+
         mgr.dispose();
+    }
+
+    public void noAction() {
+        ContainerTestManager mgr = createManager();
+
+        Throwable throwable = catchThrowable(() -> mgr.doAction(null, null, null, null));
+
+        assertThat(throwable).isInstanceOf(ActionException.class);
+        assertThat(((ActionException) throwable).code).isEqualTo(HttpServletResponse.SC_BAD_REQUEST);
     }
 
     public void disposalOfTests() {
@@ -177,8 +213,18 @@ public class DefaultContainerTestManagerTest {
         });
     }
 
+    private void queryUntilPhase(ContainerTestManager mgr, UUID testUuid, Phase targetPhase) {
+        waitUntil(() -> {
+            TestContainerStatusMsg queryMsg = mgr.doAction(Action.QUERY, testUuid, null,
+                    null);
+            Status status = queryMsg.getStatus();
+            assertThat(status).isNotSameAs(Status.FAILURE);
+            return queryMsg.getPhase() == targetPhase;
+        });
+    }
+
     private ContainerTestManager createManager() {
         return new DefaultContainerTestManager(new TestDockerImageResolver("resolved-image:1.0"), dockerClientFactory,
-                new TestBuildAgentManager(), "/not/a/real/server/url", testMaxIdleTime, cleanupRateSec);
+                agentMgr, "/not/a/real/server/url", testMaxIdleTime, cleanupRateSec);
     }
 }

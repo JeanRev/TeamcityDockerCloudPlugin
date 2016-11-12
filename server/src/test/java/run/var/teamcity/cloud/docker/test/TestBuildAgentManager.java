@@ -18,16 +18,17 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @SuppressWarnings("unchecked")
 public class TestBuildAgentManager implements BuildAgentManager {
 
+    private final List<TestSBuildAgent> registeredAgents = new CopyOnWriteArrayList<>();
     private final List<TestSBuildAgent> unregisteredAgents = new CopyOnWriteArrayList<>();
 
     @Override
-    public <T extends SBuildAgent> List<T> getRegisteredAgents() {
-        return Collections.emptyList();
+    public List<TestSBuildAgent> getRegisteredAgents() {
+        return registeredAgents;
     }
 
     @Override
-    public <T extends SBuildAgent> List<T> getRegisteredAgents(boolean includeUnauthorized) {
-        return Collections.emptyList();
+    public List<TestSBuildAgent> getRegisteredAgents(boolean includeUnauthorized) {
+        return registeredAgents;
     }
 
     @Override
@@ -91,6 +92,11 @@ public class TestBuildAgentManager implements BuildAgentManager {
     @Override
     public <T extends SBuildAgent> List<AgentCompatibility> getAgentCompatibilities(T agent) {
         throw new UnsupportedOperationException("Not a real build agent manager");
+    }
+
+    public TestBuildAgentManager registeredAgent(TestSBuildAgent agent) {
+        registeredAgents.add(agent);
+        return this;
     }
 
     public TestBuildAgentManager unregisteredAgent(TestSBuildAgent agent) {

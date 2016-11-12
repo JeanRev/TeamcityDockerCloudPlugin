@@ -87,8 +87,6 @@ class CreateContainerTestTask extends ContainerTestTask {
                     throw new ContainerTestTaskException("Failed to pull image: " + error + " -- " + details
                             .getAsString("message", null), null);
                 }
-                // TODO: remove-me
-                System.out.println("Received status: " + status);
                 String newStatusMsg = status.getAsString("status", null);
                 if (newStatusMsg != null) {
                     Node progressDetails = status.getObject("progressDetail", Node.EMPTY_OBJECT);
@@ -135,10 +133,6 @@ class CreateContainerTestTask extends ContainerTestTask {
         String containerId = client.createContainer(container.saveNode(), null).getAsString("Id");
 
         testTaskHandler.notifyContainerId(containerId);
-
-        msg("Removing container");
-
-        //client.removeContainer(containerId, true, true);
 
         return Status.SUCCESS;
     }

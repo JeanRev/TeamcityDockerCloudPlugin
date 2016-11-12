@@ -66,15 +66,6 @@ abstract class ContainerTestTask implements Runnable {
         msg(msg, phase, status);
     }
 
-    /**
-     * Sets the test current phase.
-     *
-     * @param phase the test phase
-     */
-    void setPhase(@NotNull Phase phase) {
-        this.phase = phase;
-    }
-
     private void msg(String msg, Phase phase, Status status) {
         assert lock.isHeldByCurrentThread();
         assert phase != null;
