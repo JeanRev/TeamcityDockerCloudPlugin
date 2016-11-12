@@ -1,11 +1,13 @@
 package run.var.teamcity.cloud.docker;
 
+import jetbrains.buildServer.clouds.CloudErrorInfo;
 import jetbrains.buildServer.clouds.CloudInstanceUserData;
 import jetbrains.buildServer.clouds.InstanceStatus;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
+import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
 import run.var.teamcity.cloud.docker.test.TestCloudState;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
 import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
@@ -40,6 +42,8 @@ public class DockerCloudClientTest {
     private TestDockerImageResolver dockerImageResolver;
     private TestCloudState cloudState;
     private CloudInstanceUserData userData;
+    private CloudErrorInfo errorInfo;
+    private long lastSync;
 
     @BeforeMethod
     public void init() {
@@ -57,6 +61,8 @@ public class DockerCloudClientTest {
         dockerImageResolver = new TestDockerImageResolver("resolved-image:latest");
         cloudState = new TestCloudState();
         userData = new CloudInstanceUserData("", "", "", null, "", "", Collections.emptyMap());
+        errorInfo = null;
+        lastSync = -1;
     }
 
     public void generalLifecycle() {
@@ -219,6 +225,28 @@ public class DockerCloudClientTest {
 
         // Will takes two sync to be effective (one to mark the instance in error state), and another one to remove it.
         waitUntil(() -> dockerImage.getInstances().isEmpty());
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    public void clientErrorHandling() {
+        DockerCloudClient client = createClient();
+
+        waitUntil(() -> (lastSync = client.getLastDockerSyncTimeMillis()) != -1);
+
+        assertThat(client.getErrorInfo()).isNull();
+
+        TestDockerClient dockerClient = dockerClientFactory.getClient();
+
+        DockerClientProcessingException exception = new DockerClientProcessingException("Test failure");
+        dockerClient.setFailOnAccessException(exception);
+
+        waitUntil(() ->  (errorInfo = client.getErrorInfo()) != null);
+
+        assertThat(errorInfo.getDetailedMessage().contains(exception.getMessage()));
+
+        dockerClient.setFailOnAccessException(null);
+
+        waitUntil(() -> (client.getErrorInfo() == null));
     }
 
     private DockerInstance extractInstance(DockerImage dockerImage) {

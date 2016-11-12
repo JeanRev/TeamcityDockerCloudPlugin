@@ -13,7 +13,7 @@ public class DockerClientProcessingException extends DockerClientException {
      *
      * @param msg the message (may be null)
      */
-    DockerClientProcessingException(@Nullable String msg) {
+    public DockerClientProcessingException(@Nullable String msg) {
         super(msg);
     }
 
@@ -23,7 +23,7 @@ public class DockerClientProcessingException extends DockerClientException {
      * @param msg the message (may be null)
      * @param cause the exception cause (may be null)
      */
-    DockerClientProcessingException(@Nullable String msg, @Nullable Throwable cause) {
+    public DockerClientProcessingException(@Nullable String msg, @Nullable Throwable cause) {
         super(msg, cause);
     }
 }

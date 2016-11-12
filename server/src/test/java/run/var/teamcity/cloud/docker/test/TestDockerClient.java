@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
+import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
 import run.var.teamcity.cloud.docker.client.InvocationFailedException;
 import run.var.teamcity.cloud.docker.client.NotFoundException;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
@@ -54,6 +55,7 @@ public class TestDockerClient implements DockerClient {
      */
     public static URI TEST_CLIENT_URI = URI.create("test://not.a.real.docker.client");
     private boolean closed = false;
+    private DockerClientProcessingException failOnAccessException = null;
 
     public TestDockerClient(DockerClientConfig config) {
         if (!TEST_CLIENT_URI.equals(config.getInstanceURI())) {
@@ -77,7 +79,7 @@ public class TestDockerClient implements DockerClient {
 
         lock.lock();
         try {
-            checkNotClosed();
+            checkForFailure();
             String imageName = containerSpec.getAsString("Image");
             Image img = Image.parse(containerSpec.getAsString("Image"));
             if (!knownImages.contains(img)) {
@@ -97,7 +99,7 @@ public class TestDockerClient implements DockerClient {
         TestUtils.waitSec(1);
         lock.lock();
         try {
-            checkNotClosed();
+            checkForFailure();
             Container container = containers.get(containerId);
             if (container == null) {
                 throw new NotFoundException("No such container: " + containerId);
@@ -181,7 +183,7 @@ public class TestDockerClient implements DockerClient {
                         } else {
                             node.put("status", "Pulling fs layer").
                                     put("id", DockerCloudUtils.toShortId(layer)).
-                                    getOrCreateObject("progressDetail");;
+                                    getOrCreateObject("progressDetail");
                             result.add(node.saveNode());
                             for (int i = 0; i <= 100; i += 10) {
                                 node = Node.EMPTY_OBJECT.editNode();
@@ -226,7 +228,7 @@ public class TestDockerClient implements DockerClient {
         TestUtils.waitSec(1);
         lock.lock();
         try {
-            checkNotClosed();
+            checkForFailure();
             Container container = containers.get(containerId);
             if (container == null) {
                 throw new NotFoundException("No such container: " + containerId);
@@ -246,7 +248,7 @@ public class TestDockerClient implements DockerClient {
 
         TestUtils.waitSec(1);
         try {
-            checkNotClosed();
+            checkForFailure();
             Container container = containers.get(containerId);
             if (container == null) {
                 throw new NotFoundException("No such container: " + containerId);
@@ -267,7 +269,7 @@ public class TestDockerClient implements DockerClient {
 
         lock.lock();
         try {
-            checkNotClosed();
+            checkForFailure();
             List<Container> filtered = containers.values().stream().
                     filter(container -> {
                         Node node = container.labels.get(key);
@@ -313,6 +315,15 @@ public class TestDockerClient implements DockerClient {
         }
     }
 
+    public void setFailOnAccessException(DockerClientProcessingException exception) {
+        lock.lock();
+        try {
+            failOnAccessException = exception;
+        } finally {
+            lock.unlock();
+        }
+    }
+
     public void lock() {
         lock.lock();
     }
@@ -325,9 +336,12 @@ public class TestDockerClient implements DockerClient {
         return Collections.unmodifiableCollection(containers.values());
     }
 
-    private void checkNotClosed() {
+    private void checkForFailure() {
         if (closed) {
             throw new IllegalStateException("Client has been closed.");
+        }
+        if (failOnAccessException != null) {
+            throw failOnAccessException;
         }
     }
 
