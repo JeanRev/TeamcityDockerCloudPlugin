@@ -68,6 +68,8 @@ public class DockerCloudClientTest {
 
         client = createClient();
 
+        assertThat(client.isInitialized()).isTrue();
+
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
         assertThat(dockerClient).isNotNull();
