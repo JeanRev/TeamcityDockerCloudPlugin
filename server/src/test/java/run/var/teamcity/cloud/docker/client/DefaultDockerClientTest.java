@@ -3,18 +3,17 @@ package run.var.teamcity.cloud.docker.client;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import run.var.teamcity.cloud.docker.DockerCloudClient;
-import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.EnumSet;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -25,16 +24,15 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 @Test
 public abstract class DefaultDockerClientTest {
 
-    public final static String TEST_IMAGE = "tc_dk_cld_plugin_test_img:1.0";
+    private final static String TEST_IMAGE = "tc_dk_cld_plugin_test_img:1.0";
+    private final static String STDERR_MSG_PREFIX = "ERR";
 
     private DefaultDockerClient client;
     private String containerId;
-    private URI uri;
 
     @BeforeMethod
     public void init() {
         containerId = null;
-        uri = URI.create("unix:/var/run/docker.sock");
     }
 
     public void fullTest() throws URISyntaxException {
@@ -69,8 +67,8 @@ public abstract class DefaultDockerClientTest {
     }
 
     @SuppressWarnings("ConstantConditions")
-    public void attach() throws URISyntaxException, IOException {
-        DefaultDockerClient client = createClient();
+    public void attachAndLogs() throws URISyntaxException, IOException {
+        DefaultDockerClient client = createClient(3);
 
         Node containerSpec = Node.EMPTY_OBJECT.editNode().
                 put("Image", TEST_IMAGE).
@@ -85,33 +83,58 @@ public abstract class DefaultDockerClientTest {
 
         client.startContainer(containerId);
 
-        StreamHandler handler = client.attach(containerId);
+        final String stdoutMsg = "print something on stdout";
+        final String stderrMsg = STDERR_MSG_PREFIX + "print something on stderr";
 
+        try (StreamHandler attachHandler = client.attach(containerId)) {
+            try(StreamHandler logHandler = client.streamLogs(containerId, 3, StdioType.all(), true)) {
+                try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(attachHandler.getOutputStream(),
+                        StandardCharsets.UTF_8))) {
 
-        try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(handler.getOutputStream(),
-                StandardCharsets.UTF_8))) {
+                    writer.println(stdoutMsg);
+                    writer.flush();
 
-            String msg;
-            writer.println(msg = "print something on stdout");
-            writer.flush();
+                    for (StreamHandler handler : Arrays.asList(attachHandler, logHandler)) {
+                        assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDOUT, stdoutMsg);
+                    }
 
-            StdioInputStream fragment = handler.getNextStreamFragment();
-            assertThat(fragment).isNotNull();
-            assertThat(DockerCloudUtils.readUTF8String(fragment)).isEqualTo(msg + "\n");
-            assertThat(fragment.getType()).isSameAs(StdioType.STDOUT);
+                    writer.println(stderrMsg);
+                    writer.flush();
 
-            writer.println(msg = "ERR print something on stdout");
-            writer.flush();
+                    for (StreamHandler handler : Arrays.asList(attachHandler, logHandler)) {
+                        assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDERR, stderrMsg);
+                    }
 
-            fragment = handler.getNextStreamFragment();
-            assertThat(fragment).isNotNull();
-            assertThat(DockerCloudUtils.readUTF8String(fragment)).isEqualTo(msg + "\n");
-            assertThat(fragment.getType()).isSameAs(StdioType.STDERR);
+                    client.stopContainer(containerId, 0);
 
-            client.removeContainer(containerId, true, true);
+                    assertThat(attachHandler.getNextStreamFragment()).isNull();
+                    assertThat(logHandler.getNextStreamFragment()).isNull();
+                }
+            }
+        }
 
+        // Testing "post mortem" logs.
+        try (StreamHandler handler = client.streamLogs(containerId, 3, StdioType.all(), false)) {
+            assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDOUT, stdoutMsg);
+            assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDERR, stderrMsg);
             assertThat(handler.getNextStreamFragment()).isNull();
         }
+
+        try (StreamHandler handler = client.streamLogs(containerId, 1, StdioType.all(), false)) {
+            assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDERR, stderrMsg);
+            assertThat(handler.getNextStreamFragment()).isNull();
+        }
+
+        try (StreamHandler handler = client.streamLogs(containerId, 3, EnumSet.of(StdioType.STDERR), false)) {
+            assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDERR, stderrMsg);
+            assertThat(handler.getNextStreamFragment()).isNull();
+        }
+    }
+
+    private void assertFragmentContent(StdioInputStream fragment, StdioType type, String msg) throws IOException {
+        assertThat(fragment).isNotNull();
+        assertThat(DockerCloudUtils.readUTF8String(fragment)).isEqualTo(msg + "\n");
+        assertThat(fragment.getType()).isSameAs(type);
     }
 
 
@@ -130,8 +153,12 @@ public abstract class DefaultDockerClientTest {
     }
 
     private DefaultDockerClient createClient() throws URISyntaxException {
-        return client = createClientInternal();
+        return createClient(1);
     }
 
-    protected abstract DefaultDockerClient createClientInternal() throws URISyntaxException;
+    private DefaultDockerClient createClient(int threadPoolSize) throws URISyntaxException {
+        return client = createClientInternal(threadPoolSize);
+    }
+
+    protected abstract DefaultDockerClient createClientInternal(int threadPoolSize) throws URISyntaxException;
 }

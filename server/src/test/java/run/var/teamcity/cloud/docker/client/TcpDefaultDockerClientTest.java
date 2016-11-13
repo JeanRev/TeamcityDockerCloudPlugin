@@ -1,7 +1,5 @@
 package run.var.teamcity.cloud.docker.client;
 
-import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -9,8 +7,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
     @Override
-    protected DefaultDockerClient createClientInternal() throws URISyntaxException {
-        return DefaultDockerClient.open(new URI("tcp://127.0.0.1:2375"), false, 2);
+    protected DefaultDockerClient createClientInternal(int threadPoolSize) throws URISyntaxException {
+        return DefaultDockerClient.open(new URI("tcp://127.0.0.1:2375"), false, threadPoolSize);
     }
 
     public  void openValidInput() {

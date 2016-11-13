@@ -143,14 +143,11 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 null, hasTty(containerId));
     }
 
-    public StreamHandler streamLogs(@NotNull String containerId, int lineCount, Set<StdioType> stdioTypes) {
+    public StreamHandler streamLogs(@NotNull String containerId, int lineCount, Set<StdioType> stdioTypes, boolean
+            follow) {
 
-        return invokeStream(prepareLogsTarget(target, containerId, lineCount, stdioTypes).queryParam("follow", 1),
-                HttpMethod.GET, null, hasTty(containerId));
-    }
-
-    public InputStream getLogs(@NotNull String containerId, int lineCount, Set<StdioType> stdioTypes) {
-        return invokeRaw(prepareLogsTarget(target, containerId, lineCount, stdioTypes), HttpMethod.GET, null);
+        return invokeStream(prepareLogsTarget(target, containerId, lineCount, stdioTypes).queryParam("follow",
+                follow ? 1 : 0), HttpMethod.GET, null, hasTty(containerId));
     }
 
     private WebTarget prepareLogsTarget(WebTarget target, String containerId, int lineCount, Set<StdioType>
@@ -221,7 +218,6 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
         return target;
     }
-
 
     private StreamHandler invokeStream(WebTarget target, String method, ErrorCodeMapper errorCodeMapper, boolean
             hasTty) {

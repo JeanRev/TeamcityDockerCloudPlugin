@@ -33,7 +33,7 @@ public class UnixSocketDefaultDockerClientTest extends DefaultDockerClientTest {
     }
 
     @Override
-    protected DefaultDockerClient createClientInternal() throws URISyntaxException {
-        return  DefaultDockerClient.open(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI, false, 2);
+    protected DefaultDockerClient createClientInternal(int threadPoolSize) throws URISyntaxException {
+        return  DefaultDockerClient.open(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI, false, threadPoolSize);
     }
 }
