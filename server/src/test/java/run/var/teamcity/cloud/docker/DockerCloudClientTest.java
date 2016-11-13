@@ -38,7 +38,8 @@ public class DockerCloudClientTest {
     private TestDockerClientFactory dockerClientFactory;
     private DockerCloudClientConfig clientConfig;
     private Node containerSpec;
-    private DockerImageConfig imageConfig;
+    private boolean rmOnExit = true;
+    private int maxInstanceCount = 1;
     private TestSBuildServer buildServer;
     private TestDockerImageResolver dockerImageResolver;
     private TestCloudState cloudState;
@@ -56,7 +57,6 @@ public class DockerCloudClientTest {
         DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI);
         clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2);
         containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
-        imageConfig = new DockerImageConfig("UnitTest", containerSpec, true, false, 1);
         buildServer = new TestSBuildServer();
         dockerImageResolver = new TestDockerImageResolver("resolved-image:latest");
         cloudState = new TestCloudState();
@@ -159,7 +159,7 @@ public class DockerCloudClientTest {
     }
 
     public void reuseContainers() {
-        imageConfig = new DockerImageConfig("UnitTest", containerSpec, false, false, 1);
+        rmOnExit = false;
 
         DockerCloudClient client = createClient();
 
@@ -308,6 +308,52 @@ public class DockerCloudClientTest {
         waitUntil(() -> (client.getErrorInfo() == null));
     }
 
+    public void maxInstanceCount() {
+        maxInstanceCount = 2;
+
+        DockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+
+        assertThat(client.canStartNewInstance(image)).isTrue();
+
+        client.startNewInstance(image, userData);
+
+        assertThat(client.canStartNewInstance(image)).isTrue();
+
+        client.startNewInstance(image, userData);
+
+        assertThat(client.canStartNewInstance(image)).isFalse();
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    public void instanceErrorHandling() {
+        maxInstanceCount = 2;
+
+        DockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        TestDockerClient dockerClient = dockerClientFactory.getClient();
+
+        // Destroy the newly created container. During the next sync the instance should be marked in error state.
+        dockerClient.removeContainer(instance.getContainerId(), true, true);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.ERROR);
+
+        // No new instance can be started for this image as long as a failed instance exists.
+        assertThat(client.canStartNewInstance(image)).isFalse();
+
+        // On next sync, instances in error state should be cleaned up. New instances may be started.
+        waitUntil(() -> image.getInstances().isEmpty());
+
+        assertThat(client.canStartNewInstance(image)).isTrue();
+    }
+
     private DockerInstance extractInstance(DockerImage dockerImage) {
         Collection<DockerInstance> instances = dockerImage.getInstances();
 
@@ -324,6 +370,8 @@ public class DockerCloudClientTest {
     }
 
     private DockerCloudClient createClient() {
+        DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, rmOnExit, false,
+                maxInstanceCount);
         return client = new DockerCloudClient(clientConfig, dockerClientFactory,
                 Collections.singletonList(imageConfig), dockerImageResolver,
                 cloudState, buildServer);
