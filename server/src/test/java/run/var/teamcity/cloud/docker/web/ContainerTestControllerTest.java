@@ -31,7 +31,7 @@ public class ContainerTestControllerTest {
 
         request = new TestHttpServletRequest().
                 parameters(TestUtils.getSampleDockerConfigParams()).
-                parameters(TestUtils.getSampleImageConfigParams());
+                parameters(TestUtils.getSampleTestImageConfigParams());
 
         response = new TestHttpServletResponse();
         element = new Element("root");

@@ -28,36 +28,40 @@ public class DockerCloudClientFactory implements CloudClientFactory {
 
     @NotNull private final String editProfileUrl;
     @NotNull private final SBuildServer buildServer;
-    @NotNull private final ServerPaths serverPaths;
+    @NotNull private final DockerClientFactory dockerClientFactory;
 
     public DockerCloudClientFactory(@NotNull final SBuildServer buildServer,
                                     @NotNull final CloudRegistrar cloudRegistrar,
-                                   @NotNull final PluginDescriptor pluginDescriptor,
-                                    @NotNull final ServerPaths serverPaths) {
+                                   @NotNull final PluginDescriptor pluginDescriptor) {
+        this(buildServer, cloudRegistrar, pluginDescriptor, DockerClientFactory.getDefault());
+    }
+
+    DockerCloudClientFactory(@NotNull final SBuildServer buildServer,
+                                    @NotNull final CloudRegistrar cloudRegistrar,
+                                    @NotNull final PluginDescriptor pluginDescriptor,
+                                    @NotNull final DockerClientFactory dockerClientFactory) {
         this.editProfileUrl = pluginDescriptor.getPluginResourcesPath(DockerCloudSettingsController.EDIT_PATH);
         cloudRegistrar.registerCloudFactory(this);
         this.buildServer = buildServer;
-        this.serverPaths = serverPaths;
+        this.dockerClientFactory = dockerClientFactory;
     }
 
 
     @NotNull
     @Override
     public CloudClientEx createNewClient(@NotNull CloudState state, @NotNull CloudClientParameters params) {
-        serverPaths.getPluginDataDirectory();
         Collection<String> paramNames = params.listParameterNames();
         Map<String, String> properties = new HashMap<>(paramNames.size());
         for (String paramName : paramNames) {
             properties.put(paramName, params.getParameter(paramName));
         }
-        DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(properties,
-                DockerClientFactory.getDefault());
+        DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(properties, dockerClientFactory);
         List<DockerImageConfig> imageConfigs = DockerImageConfig.processParams(properties);
 
         final int threadPoolSize = Math.min(imageConfigs.size() * 2, Runtime.getRuntime().availableProcessors() + 1);
         clientConfig.getDockerClientConfig().threadPoolSize(threadPoolSize);
 
-        return new DockerCloudClient(clientConfig, DockerClientFactory.getDefault(), imageConfigs,
+        return new DockerCloudClient(clientConfig, dockerClientFactory, imageConfigs,
                 OfficialAgentImageResolver.forServer(buildServer), state, buildServer);
     }
 
@@ -98,6 +102,6 @@ public class DockerCloudClientFactory implements CloudClientFactory {
 
     @Override
     public boolean canBeAgentOfType(@NotNull AgentDescription description) {
-        return DockerCloudUtils.getImageId(description) != null && DockerCloudUtils.getInstanceId(description) != null;
+        return DockerCloudUtils.getClientId(description) != null;
     }
 }

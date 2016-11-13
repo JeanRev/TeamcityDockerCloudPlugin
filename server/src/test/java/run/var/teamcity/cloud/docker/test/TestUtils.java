@@ -1,8 +1,5 @@
 package run.var.teamcity.cloud.docker.test;
 
-import jetbrains.buildServer.serverSide.InvalidProperty;
-import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
-import run.var.teamcity.cloud.docker.DockerCloudClientConfigException;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
@@ -10,14 +7,12 @@ import run.var.teamcity.cloud.docker.util.Node;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
  * All purpose utility class for tests.
@@ -58,18 +53,40 @@ public final class TestUtils {
     }
 
     public static Map<String, String> getSampleDockerConfigParams() {
+       return getSampleDockerConfigParams(true);
+    }
+
+    public static Map<String, String> getSampleDockerConfigParams(boolean withPrefix) {
+        String prefix = withPrefix ? DockerCloudUtils.TC_PROPERTY_PREFIX : "";
+        
         Map<String, String> params = new HashMap<>();
-        params.put(DockerCloudUtils.TC_PROPERTY_PREFIX + DockerCloudUtils.CLIENT_UUID, TEST_UUID.toString());
-        params.put(DockerCloudUtils.TC_PROPERTY_PREFIX + DockerCloudUtils.INSTANCE_URI,
-                TestDockerClient.TEST_CLIENT_URI.toString());
-        params.put(DockerCloudUtils.TC_PROPERTY_PREFIX + DockerCloudUtils.USE_TLS, "false");
-        params.put(DockerCloudUtils.TC_PROPERTY_PREFIX + DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, "false");
+        params.put(prefix + DockerCloudUtils.CLIENT_UUID, TEST_UUID.toString());
+        params.put(prefix + DockerCloudUtils.INSTANCE_URI, TestDockerClient.TEST_CLIENT_URI.toString());
+        params.put(prefix + DockerCloudUtils.USE_TLS, "false");
+        params.put(prefix + DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, "false");
         return params;
     }
 
-    public static Map<String, String> getSampleImageConfigParams() {
-        return Collections.singletonMap(DockerCloudUtils.TC_PROPERTY_PREFIX +
+    public static Map<String, String> getSampleTestImageConfigParams() {
+        return getSampleTestImageConfigParams(true);
+    }
+
+    public static Map<String, String> getSampleTestImageConfigParams(boolean withPrefix) {
+        String prefix = withPrefix ? DockerCloudUtils.TC_PROPERTY_PREFIX : "";
+        return Collections.singletonMap(prefix +
                 DockerCloudUtils.TEST_IMAGE_PARAM, getSampleImageConfigSpec().toString());
+    }
+
+    public static Map<String, String> getSampleImagesConfigParams() {
+        return getSampleTestImageConfigParams(true);
+    }
+
+    public static Map<String, String> getSampleImagesConfigParams(boolean withPrefix) {
+        String prefix = withPrefix ? DockerCloudUtils.TC_PROPERTY_PREFIX : "";
+        EditableNode images = Node.EMPTY_ARRAY.editNode();
+        EditableNode image = images.addObject();
+        getSampleImageConfigSpec(image);
+        return Collections.singletonMap(prefix + DockerCloudUtils.IMAGES_PARAM, images.toString());
     }
 
     public static Node getSampleImageConfigSpec() {
