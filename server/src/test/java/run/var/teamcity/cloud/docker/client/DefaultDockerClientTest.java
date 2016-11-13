@@ -3,9 +3,12 @@ package run.var.teamcity.cloud.docker.client;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import run.var.teamcity.cloud.docker.DockerCloudClient;
+import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -14,6 +17,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * {@link DefaultDockerClient} test suite.
@@ -49,6 +53,19 @@ public abstract class DefaultDockerClientTest {
         client.stopContainer(containerId, 0);
 
         client.removeContainer(containerId, true, true);
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    public void openAllInvalidInput() {
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() ->
+                DefaultDockerClient.open(null, false, 1));
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.open(URI.create("/a/relative/uri"), false, 1));
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.open(URI.create("tcp:an.opaque.url"), false, 1));
+        // Unknown scheme.
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.open(URI.create("http://127.0.0.1:2375"), false, 1));
     }
 
     @SuppressWarnings("ConstantConditions")
@@ -96,6 +113,7 @@ public abstract class DefaultDockerClientTest {
             assertThat(handler.getNextStreamFragment()).isNull();
         }
     }
+
 
     @AfterMethod
     public void tearDown() throws URISyntaxException {

@@ -4,6 +4,7 @@ import org.jdom.Element;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.test.TestAtmosphereFrameworkFacade;
+import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
 import run.var.teamcity.cloud.docker.test.TestHttpServletRequest;
 import run.var.teamcity.cloud.docker.test.TestHttpServletResponse;
 import run.var.teamcity.cloud.docker.test.TestPluginDescriptor;
@@ -120,7 +121,7 @@ public class ContainerTestControllerTest {
     }
 
     private ContainerTestController createController() {
-        return new ContainerTestController(new TestAtmosphereFrameworkFacade(),
+        return new ContainerTestController(new TestDockerClientFactory(), new TestAtmosphereFrameworkFacade(),
                 new TestSBuildServer(), new TestPluginDescriptor(), new TestWebControllerManager(), testMgr);
     }
 

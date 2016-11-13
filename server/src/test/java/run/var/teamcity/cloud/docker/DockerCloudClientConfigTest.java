@@ -1,8 +1,11 @@
 package run.var.teamcity.cloud.docker;
 
 import jetbrains.buildServer.serverSide.InvalidProperty;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
+import run.var.teamcity.cloud.docker.test.TestDockerClient;
+import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
@@ -18,6 +21,13 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
 @Test
 public class DockerCloudClientConfigTest {
+
+    private TestDockerClientFactory dockerClientFactory;
+
+    @BeforeMethod
+    public void init() {
+        dockerClientFactory = new TestDockerClientFactory();
+    }
 
     public void fromConstructor() {
         DockerClientConfig dockerConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
@@ -54,7 +64,7 @@ public class DockerCloudClientConfigTest {
         params.put(DockerCloudUtils.USE_TLS, "false");
         params.put(DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, "true");
 
-        DockerCloudClientConfig config = DockerCloudClientConfig.processParams(params);
+        DockerCloudClientConfig config = DockerCloudClientConfig.processParams(params, dockerClientFactory);
 
         assertThat(config.getUuid()).isEqualTo(TestUtils.TEST_UUID);
 
@@ -64,32 +74,17 @@ public class DockerCloudClientConfigTest {
         assertThat(dockerConfig.getInstanceURI()).isEqualTo(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
 
         params.put(DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, "false");
-        URI uri = URI.create("tcp://127.0.0.1:2375");
-        params.put(DockerCloudUtils.INSTANCE_URI, uri.toString());
+        params.put(DockerCloudUtils.INSTANCE_URI, TestDockerClient.TEST_CLIENT_URI.toString());
 
-        config = DockerCloudClientConfig.processParams(params);
+        config = DockerCloudClientConfig.processParams(params, dockerClientFactory);
         dockerConfig = config.getDockerClientConfig();
 
         assertThat(dockerConfig.isUsingTLS()).isFalse();
-        assertThat(dockerConfig.getInstanceURI()).isEqualTo(uri);
-
-        uri = URI.create("unix:/some/non/standard/location.sock");
-        params.put(DockerCloudUtils.INSTANCE_URI, uri.toString());
-
-        config = DockerCloudClientConfig.processParams(params);
-        dockerConfig = config.getDockerClientConfig();
-
-        assertThat(dockerConfig.getInstanceURI()).isEqualTo(uri);
-
-        // Other URI syntax, all of them must be valid;
-        params.put(DockerCloudUtils.INSTANCE_URI, "unix:/some/non/sandard/location.sock");
-        DockerCloudClientConfig.processParams(params);
-        params.put(DockerCloudUtils.INSTANCE_URI, "unix:///some/non/standard/location.sock");
-        DockerCloudClientConfig.processParams(params);
+        assertThat(dockerConfig.getInstanceURI()).isEqualTo(TestDockerClient.TEST_CLIENT_URI);
 
         params.put(DockerCloudUtils.USE_TLS, "true");
 
-        config = DockerCloudClientConfig.processParams(params);
+        config = DockerCloudClientConfig.processParams(params, dockerClientFactory);
         dockerConfig = config.getDockerClientConfig();
 
         assertThat(dockerConfig.isUsingTLS()).isTrue();
@@ -102,7 +97,7 @@ public class DockerCloudClientConfigTest {
         params.put(DockerCloudUtils.USE_TLS, "false");
         params.put(DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, "true");
 
-        DockerCloudClientConfig.processParams(params);
+        DockerCloudClientConfig.processParams(params, dockerClientFactory);
 
         params.remove(DockerCloudUtils.CLIENT_UUID);
 
@@ -115,36 +110,10 @@ public class DockerCloudClientConfigTest {
 
         params.put(DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, "false");
 
-        // Invalid slash count after scheme.
-        params.put(DockerCloudUtils.INSTANCE_URI, "unix://some/non/standard/location.sock");
-        assertInvalidProperty(params, DockerCloudUtils.INSTANCE_URI);
-        params.put(DockerCloudUtils.INSTANCE_URI, "tcp:/127.0.0.1:2375");
-        assertInvalidProperty(params, DockerCloudUtils.INSTANCE_URI);
-        params.put(DockerCloudUtils.INSTANCE_URI, "tcp:///127.0.0.1:2375");
-        assertInvalidProperty(params, DockerCloudUtils.INSTANCE_URI);
-
-        // Invalid scheme.
-        params.put(DockerCloudUtils.INSTANCE_URI, "http://127.0.0.1:2375");
-        assertInvalidProperty(params, DockerCloudUtils.INSTANCE_URI);
-
-        // Contains path but not allowed.
-        params.put(DockerCloudUtils.INSTANCE_URI, "tcp://127.0.0.1:2375/blah");
-        assertInvalidProperty(params, DockerCloudUtils.INSTANCE_URI);
-
-        // Contains no path but required.
-        params.put(DockerCloudUtils.INSTANCE_URI, "unix://");
-        assertInvalidProperty(params, DockerCloudUtils.INSTANCE_URI);
-
-        // Contains query.
-        params.put(DockerCloudUtils.INSTANCE_URI, "tcp://127.0.0.1:2375?param=value");
-        assertInvalidProperty(params, DockerCloudUtils.INSTANCE_URI);
-        params.put(DockerCloudUtils.INSTANCE_URI, "unix:///var/run/docker.sock?param=value");
-        assertInvalidProperty(params, DockerCloudUtils.INSTANCE_URI);
-
     }
 
     private void assertInvalidProperty(Map<String, String> params, String name) {
-        Throwable throwable = catchThrowable(() -> DockerCloudClientConfig.processParams(params));
+        Throwable throwable = catchThrowable(() -> DockerCloudClientConfig.processParams(params, dockerClientFactory));
         assertThat(throwable).isInstanceOf(DockerCloudClientConfigException.class);
 
         List<InvalidProperty> invalidProperties = ((DockerCloudClientConfigException) throwable).getInvalidProperties();

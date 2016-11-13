@@ -16,8 +16,8 @@ public class DockerClientConfig {
         this.instanceURI = instanceURI;
     }
 
-    public DockerClientConfig withTLS(boolean useTLS) {
-        this.usingTLS = useTLS;
+    public DockerClientConfig usingTls(boolean usingTls) {
+        this.usingTLS = usingTls;
         return this;
     }
 

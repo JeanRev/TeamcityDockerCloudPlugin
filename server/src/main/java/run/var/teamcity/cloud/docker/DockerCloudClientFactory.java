@@ -50,7 +50,8 @@ public class DockerCloudClientFactory implements CloudClientFactory {
         for (String paramName : paramNames) {
             properties.put(paramName, params.getParameter(paramName));
         }
-        DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(properties);
+        DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(properties,
+                DockerClientFactory.getDefault());
         List<DockerImageConfig> imageConfigs = DockerImageConfig.processParams(properties);
 
         final int threadPoolSize = Math.min(imageConfigs.size() * 2, Runtime.getRuntime().availableProcessors() + 1);

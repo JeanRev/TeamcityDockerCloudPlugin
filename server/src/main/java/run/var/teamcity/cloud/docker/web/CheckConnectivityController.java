@@ -60,7 +60,7 @@ public class CheckConnectivityController extends BaseFormXmlController {
         String errorMsg = null;
         try {
 
-            DockerClientConfig dockerConfig = new DockerClientConfig(new URI(uri)).withTLS(useTLS).threadPoolSize(1);
+            DockerClientConfig dockerConfig = new DockerClientConfig(new URI(uri)).usingTls(useTLS).threadPoolSize(1);
 
             DockerClient client = dockerClientFactory.createClient(dockerConfig);
 

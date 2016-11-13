@@ -53,6 +53,7 @@ public class ContainerTestController extends BaseFormXmlController {
     private final ContainerTestManager testMgr;
     private final AtmosphereFrameworkFacade atmosphereFramework;
     private final Broadcaster statusBroadcaster;
+    private final DockerClientFactory dockerClientFactory;
 
     @Autowired
     public ContainerTestController(@NotNull DefaultAtmosphereFacade atmosphereFramework,
@@ -60,19 +61,21 @@ public class ContainerTestController extends BaseFormXmlController {
                                    @NotNull PluginDescriptor pluginDescriptor,
                                    @NotNull WebControllerManager manager,
                                    @NotNull WebLinks webLinks) {
-        this(atmosphereFramework, server, pluginDescriptor, manager,
+        this(DockerClientFactory.getDefault(), atmosphereFramework, server, pluginDescriptor, manager,
                 new DefaultContainerTestManager(OfficialAgentImageResolver.forServer(server),
                         DockerClientFactory.getDefault(), server.getBuildAgentManager(), webLinks.getRootUrl()));
 
     }
 
-    ContainerTestController(@NotNull AtmosphereFrameworkFacade atmosphereFramework,
+    ContainerTestController(@NotNull DockerClientFactory dockerClientFactory,
+                            @NotNull AtmosphereFrameworkFacade atmosphereFramework,
                             @NotNull SBuildServer buildServer,
                             @NotNull PluginDescriptor pluginDescriptor,
                             @NotNull WebControllerManager manager,
                             @NotNull ContainerTestManager testMgr) {
 
 
+        this.dockerClientFactory = dockerClientFactory;
         this.testMgr = testMgr;
 
         buildServer.addListener(new BuildServerListener());
@@ -131,7 +134,7 @@ public class ContainerTestController extends BaseFormXmlController {
         if (action == Action.CREATE) {
             Map<String, String> params = DockerCloudUtils.extractTCPluginParams(request);
 
-            clientConfig = DockerCloudClientConfig.processParams(params);
+            clientConfig = DockerCloudClientConfig.processParams(params, dockerClientFactory);
             try {
                 imageConfig = DockerImageConfig.fromJSon(Node.parse(params.get(DockerCloudUtils.TEST_IMAGE_PARAM)));
             } catch (IOException e) {

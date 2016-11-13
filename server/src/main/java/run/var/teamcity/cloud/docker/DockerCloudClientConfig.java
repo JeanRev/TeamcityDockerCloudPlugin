@@ -6,13 +6,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
+import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -118,8 +118,10 @@ public class DockerCloudClientConfig {
      * @throws DockerCloudClientConfigException if no valid configuration could be build from the properties map
      */
     @NotNull
-    public static DockerCloudClientConfig processParams(@NotNull Map<String, String> properties) {
+    public static DockerCloudClientConfig processParams(@NotNull Map<String, String> properties,
+                                                        @NotNull DockerClientFactory dockerClientFactory) {
         DockerCloudUtils.requireNonNull(properties, "Properties map cannot be null.");
+        DockerCloudUtils.requireNonNull(properties, "Docker client factory cannot be null.");
 
         List<InvalidProperty> invalidProperties = new ArrayList<>();
 
@@ -134,7 +136,7 @@ public class DockerCloudClientConfig {
             }
         }
 
-        boolean useTLS = Boolean.valueOf(properties.get(DockerCloudUtils.USE_TLS));
+        boolean usingTls = Boolean.valueOf(properties.get(DockerCloudUtils.USE_TLS));
 
         String useDefaultInstanceStr = notEmpty("Select an instance type", DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, properties,
                 invalidProperties);
@@ -145,46 +147,15 @@ public class DockerCloudClientConfig {
         } else if (useDefaultInstanceStr != null) {
             String instanceURLStr = notEmpty("Instance URL ist not set", DockerCloudUtils.INSTANCE_URI, properties, invalidProperties);
             if (instanceURLStr != null) {
-
-                boolean valid = false;
                 try {
                     instanceURI = new URI(instanceURLStr);
-                    if (!instanceURI.isOpaque() && instanceURI.isAbsolute()) {
-                        valid = true;
-                        DefaultDockerClient.SupportedScheme scheme = null;
-                        String schemeStr = instanceURI.getScheme().toUpperCase();
-                        try {
-                            scheme = DefaultDockerClient.SupportedScheme.valueOf(schemeStr);
-                        } catch (IllegalArgumentException e) {
-                            invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Not a supported scheme: " + schemeStr));
-                        }
-
-                        if (scheme == DefaultDockerClient.SupportedScheme.UNIX) {
-                            if (instanceURI.getHost() != null || instanceURI.getPort() != -1 || instanceURI.getUserInfo() != null || instanceURI.getQuery() != null || instanceURI.getFragment() != null ) {
-                                invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Only path " +
-                                        "can be provided for unix scheme."));
-                            } else if (instanceURI.getPath() == null) {
-                                invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Missing " +
-                                        "path in URI."));
-                            }
-                        } else if (scheme == DefaultDockerClient.SupportedScheme.TCP) {
-                            if ((instanceURI.getPath() != null && !instanceURI.getPath().isEmpty()) ||
-                                    instanceURI.getUserInfo() != null || instanceURI.getQuery() != null ||
-                                    instanceURI.getFragment() != null ) {
-                                invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Only host ip/name and port can be provided for tcp scheme."));
-                            } else if (instanceURI.getHost() == null) {
-                                invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Missing " +
-                                        "host in URI."));
-                            } else if (instanceURI.getPort() == -1) {
-                                invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Missing " +
-                                        "port in URI."));
-                            }
-                        }
+                    DockerClientConfig dockerConfig = new DockerClientConfig(instanceURI).usingTls(usingTls);
+                    try {
+                        dockerClientFactory.createClient(dockerConfig);
+                    } catch (IllegalArgumentException e) {
+                        invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, e.getMessage()));
                     }
                 } catch (URISyntaxException e) {
-                    // Ignore.
-                }
-                if (!valid) {
                     invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Not a valid URI"));
                 }
             }
@@ -196,7 +167,7 @@ public class DockerCloudClientConfig {
 
         assert clientUuid != null && instanceURI != null;
 
-        DockerClientConfig dockerClientConfig = new DockerClientConfig(instanceURI).withTLS(useTLS);
+        DockerClientConfig dockerClientConfig = new DockerClientConfig(instanceURI).usingTls(usingTls);
 
         return new DockerCloudClientConfig(clientUuid, dockerClientConfig, true);
     }

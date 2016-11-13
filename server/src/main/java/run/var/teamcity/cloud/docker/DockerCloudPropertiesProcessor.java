@@ -2,6 +2,7 @@ package run.var.teamcity.cloud.docker;
 
 import jetbrains.buildServer.serverSide.InvalidProperty;
 import jetbrains.buildServer.serverSide.PropertiesProcessor;
+import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -16,7 +17,7 @@ class DockerCloudPropertiesProcessor implements PropertiesProcessor {
     @Override
     public Collection<InvalidProperty> process(Map<String, String> properties) {
         try {
-            DockerCloudClientConfig.processParams(properties);
+            DockerCloudClientConfig.processParams(properties, DockerClientFactory.getDefault());
         } catch (DockerCloudClientConfigException e) {
             return e.getInvalidProperties();
         }

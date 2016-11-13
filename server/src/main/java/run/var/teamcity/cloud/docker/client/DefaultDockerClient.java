@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker.client;
 
 import com.intellij.openapi.diagnostic.Logger;
+import jetbrains.buildServer.serverSide.InvalidProperty;
 import org.apache.http.HttpStatus;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
@@ -272,12 +273,16 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     @NotNull
     public static DefaultDockerClient open(@NotNull URI dockerURI, boolean useTLS, int connectionPoolSize) {
         DockerCloudUtils.requireNonNull(dockerURI, "Docker URI cannot be null.");
-        if (!dockerURI.isAbsolute()) {
-            throw new IllegalArgumentException("Absolute URI expected: " + dockerURI);
-        }
         if (connectionPoolSize < 1) {
             throw new IllegalArgumentException("Connection pool size must greater than 0: " + connectionPoolSize);
         }
+        if (dockerURI.isOpaque()) {
+            throw new IllegalArgumentException("Non opaque URI expected: " + dockerURI);
+        }
+        if (!dockerURI.isAbsolute()) {
+            throw new IllegalArgumentException("Absolute URI expected: " + dockerURI);
+        }
+
         ClientConfig config  = new ClientConfig();
         config.connectorProvider(new ApacheConnectorProvider());
 
@@ -291,6 +296,17 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
         switch (scheme) {
             case TCP:
+                if ((dockerURI.getPath() != null && !dockerURI.getPath().isEmpty()) ||
+                        dockerURI.getUserInfo() != null || dockerURI.getQuery() != null ||
+                        dockerURI.getFragment() != null ) {
+                    throw new IllegalArgumentException("Only host ip/name and port can be provided for tcp scheme.");
+                }
+                if (dockerURI.getHost() == null) {
+                    throw new IllegalArgumentException("Missing host in URI.");
+                }
+                if(dockerURI.getPort() == -1) {
+                    throw new IllegalArgumentException("Missing port.");
+                }
                 try {
                     TranslatedScheme translatedScheme = useTLS ? TranslatedScheme.HTTPS : TranslatedScheme.HTTP;
                     effectiveURI = new URI(translatedScheme.part(), dockerURI.getUserInfo(), dockerURI.getHost(), dockerURI.getPort
@@ -300,6 +316,13 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 }
                 break;
             case UNIX:
+                if (dockerURI.getHost() != null || dockerURI.getPort() != -1 || dockerURI.getUserInfo() != null ||
+                        dockerURI.getQuery() != null || dockerURI.getFragment() != null ) {
+                    throw new IllegalArgumentException("Only path can be provided for unix scheme.");
+                }
+                if (dockerURI.getPath() == null) {
+                    throw new IllegalArgumentException("Missing path in URI.");
+                }
                 if (useTLS) {
                     throw new IllegalArgumentException("TLS not available with Unix sockets.");
                 }
@@ -315,7 +338,6 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         }
 
         DockerHttpConnectionFactory connectionFactory = new DockerHttpConnectionFactory();
-
 
         PoolingHttpClientConnectionManager connManager;
         if (connectionOperator != null) {
