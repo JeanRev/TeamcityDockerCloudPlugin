@@ -57,6 +57,11 @@ public abstract class DefaultDockerClientTest {
     public void openAllInvalidInput() {
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() ->
                 DefaultDockerClient.open(null, false, 1));
+        // Invalid connection pool size.
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.open(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI, false, 0));
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.open(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI, false, -1));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
                 DefaultDockerClient.open(URI.create("/a/relative/uri"), false, 1));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->

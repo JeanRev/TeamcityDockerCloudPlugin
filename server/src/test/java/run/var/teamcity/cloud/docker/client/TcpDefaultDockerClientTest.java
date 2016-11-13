@@ -27,10 +27,10 @@ public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
                 DefaultDockerClient.open(URI.create("tcp:/127.0.0.1:2375"), false, 1));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
                 DefaultDockerClient.open(URI.create("tcp:///127.0.0.1:2375"), false, 1));
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                DefaultDockerClient.open(URI.create("tcp:///127.0.0.1:2375"), false, 1));
+        // With path.
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
                 DefaultDockerClient.open(URI.create("tcp://127.0.0.1:2375/blah"), false, 1));;
+        // With query.
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
                 DefaultDockerClient.open(URI.create("tcp://127.0.0.1:2375?param=value"), false, 1));
     }

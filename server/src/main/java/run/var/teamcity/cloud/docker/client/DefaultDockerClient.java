@@ -297,9 +297,6 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                         dockerURI.getFragment() != null ) {
                     throw new IllegalArgumentException("Only host ip/name and port can be provided for tcp scheme.");
                 }
-                if (dockerURI.getHost() == null) {
-                    throw new IllegalArgumentException("Missing host in URI.");
-                }
                 if(dockerURI.getPort() == -1) {
                     throw new IllegalArgumentException("Missing port.");
                 }
@@ -315,9 +312,6 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 if (dockerURI.getHost() != null || dockerURI.getPort() != -1 || dockerURI.getUserInfo() != null ||
                         dockerURI.getQuery() != null || dockerURI.getFragment() != null ) {
                     throw new IllegalArgumentException("Only path can be provided for unix scheme.");
-                }
-                if (dockerURI.getPath() == null) {
-                    throw new IllegalArgumentException("Missing path in URI.");
                 }
                 if (useTLS) {
                     throw new IllegalArgumentException("TLS not available with Unix sockets.");
