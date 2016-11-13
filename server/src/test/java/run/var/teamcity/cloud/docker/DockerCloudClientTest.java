@@ -290,9 +290,12 @@ public class DockerCloudClientTest {
     public void clientErrorHandling() {
         DockerCloudClient client = createClient();
 
+        DockerImage image = extractImage(client);
+
         waitUntil(() -> (client.getLastDockerSyncTimeMillis()) != -1);
 
         assertThat(client.getErrorInfo()).isNull();
+        assertThat(client.canStartNewInstance(image)).isTrue();
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
@@ -302,10 +305,13 @@ public class DockerCloudClientTest {
         waitUntil(() ->  (errorInfo = client.getErrorInfo()) != null);
 
         assertThat(errorInfo.getDetailedMessage().contains(exception.getMessage()));
+        assertThat(client.canStartNewInstance(image)).isFalse();
 
         dockerClient.setFailOnAccessException(null);
 
         waitUntil(() -> (client.getErrorInfo() == null));
+
+        assertThat(client.canStartNewInstance(image)).isTrue();
     }
 
     public void maxInstanceCount() {
