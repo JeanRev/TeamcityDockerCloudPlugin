@@ -5,6 +5,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
+import run.var.teamcity.cloud.docker.util.NodeStream;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -140,6 +141,24 @@ public abstract class DefaultDockerClientTest {
         assertThat(fragment).isNotNull();
         assertThat(DockerCloudUtils.readUTF8String(fragment)).isEqualTo(msg + "\n");
         assertThat(fragment.getType()).isSameAs(type);
+    }
+
+    public void createImage() throws URISyntaxException, IOException {
+        DockerClient client = createClient();
+
+        NodeStream nodeStream = client.createImage("run.var.teamcity.cloud.docker.client.not_a_real_image", "1.0");
+
+        Node node = nodeStream.next();
+
+        assertThat(node).isNotNull();
+        assertThat(node.getAsString("status", null)).isNotEmpty();
+
+        node = nodeStream.next();
+        assertThat(node).isNotNull();
+        assertThat(node.getObject("errorDetail", Node.EMPTY_OBJECT).getAsString("message", null)).isNotNull();
+        assertThat(node.getAsString("error", null)).isNotEmpty();
+
+        assertThat(nodeStream.next()).isNull();
     }
 
 
