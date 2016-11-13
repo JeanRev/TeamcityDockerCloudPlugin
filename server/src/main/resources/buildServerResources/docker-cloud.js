@@ -897,7 +897,11 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     var newProfile = settings.Administration.Profile;
                     delete self.imagesData[currentProfile];
                     self.imagesData[newProfile] = settings;
-                    self.$images.val(JSON.stringify(self.imagesData));
+                    var tmp = [];
+                    self._safeKeyValueEach(function(key, value) {
+                       tmp.push(value);
+                    });
+                    self.$images.val(JSON.stringify(tmp));
                     BS.DockerImageDialog.close();
                     self._renderImagesTable();
                 });

@@ -26,7 +26,10 @@ public class DockerImageConfig {
     public DockerImageConfig(@NotNull String profileName, @NotNull Node containerSpec, boolean rmOnExit,
                              boolean useOfficialTCAgentImage, int maxInstanceCount) {
         DockerCloudUtils.requireNonNull(profileName, "Profile name cannot be null.");
-        DockerCloudUtils.requireNonNull(profileName, "Container specification cannot be null.");
+        DockerCloudUtils.requireNonNull(containerSpec, "Container specification cannot be null.");
+        if (maxInstanceCount < 1) {
+            throw new IllegalArgumentException("At least 1 instance must be allowed.");
+        }
         this.profileName = profileName;
         this.containerSpec = containerSpec;
         this.rmOnExit = rmOnExit;
@@ -102,10 +105,9 @@ public class DockerImageConfig {
         List<DockerImageConfig> images = null;
         if (imagesJSon != null) {
             try {
-
                 Node imagesNode = Node.parse(imagesJSon);
-                images = new ArrayList<>(imagesNode.getObjectValues().size());
-                for (Node imageNode : imagesNode.getObjectValues().values()) {
+                images = new ArrayList<>(imagesNode.getArrayValues().size());
+                for (Node imageNode : imagesNode.getArrayValues()) {
                     images.add(DockerImageConfig.fromJSon(imageNode));
                 }
             } catch (Exception e) {
