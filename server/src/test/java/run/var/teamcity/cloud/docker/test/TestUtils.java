@@ -1,5 +1,8 @@
 package run.var.teamcity.cloud.docker.test;
 
+import jetbrains.buildServer.serverSide.InvalidProperty;
+import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
+import run.var.teamcity.cloud.docker.DockerCloudClientConfigException;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
@@ -7,10 +10,14 @@ import run.var.teamcity.cloud.docker.util.Node;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
  * All purpose utility class for tests.
@@ -61,17 +68,23 @@ public final class TestUtils {
     }
 
     public static Map<String, String> getSampleImageConfigParams() {
-        EditableNode image = Node.EMPTY_OBJECT.editNode();
-        image.getOrCreateObject("Administration").
+        return Collections.singletonMap(DockerCloudUtils.TC_PROPERTY_PREFIX +
+                DockerCloudUtils.TEST_IMAGE_PARAM, getSampleImageConfigSpec().toString());
+    }
+
+    public static Node getSampleImageConfigSpec() {
+        return getSampleImageConfigSpec(Node.EMPTY_OBJECT.editNode());
+    }
+
+    public static Node getSampleImageConfigSpec(EditableNode parent) {
+        parent.getOrCreateObject("Administration").
                 put("Version", DockerImageConfig.DOCKER_IMAGE_SPEC_VERSION).
                 put("Profile", "Test").
                 put("RmOnExit", true).
                 put("MaxInstanceCount", 2).
                 put("UseOfficialTCAgentImage", false);
 
-        image.getOrCreateObject("Container").put("Image", "test-image");
-
-        return Collections.singletonMap(DockerCloudUtils.TC_PROPERTY_PREFIX +
-                DockerCloudUtils.TEST_IMAGE_PARAM, image.toString());
+        parent.getOrCreateObject("Container").put("Image", "test-image");
+        return parent.saveNode();
     }
 }

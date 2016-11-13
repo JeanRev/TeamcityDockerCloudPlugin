@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Exception thrown if the no valid {@link DockerCloudClientConfig} can be build.
  */
-class DockerCloudClientConfigException extends RuntimeException {
+public class DockerCloudClientConfigException extends RuntimeException {
 
     private final List<InvalidProperty> invalidProperties;
 
@@ -23,7 +23,7 @@ class DockerCloudClientConfigException extends RuntimeException {
      * @throws NullPointerException if {@code invalidProperties} is {@code null}
      * @throws IllegalArgumentException if {@code invalidProperties} is empty
      */
-    DockerCloudClientConfigException(@NotNull List<InvalidProperty> invalidProperties) {
+    public DockerCloudClientConfigException(@NotNull List<InvalidProperty> invalidProperties) {
         super(invalidProperties != null ? invalidProperties.toString() : null);
         DockerCloudUtils.requireNonNull(invalidProperties, "List of invalid properties must be non-null.");
         if (invalidProperties.isEmpty()) {
@@ -38,7 +38,7 @@ class DockerCloudClientConfigException extends RuntimeException {
      * @return the list of invalid properties, guaranteed to be non null and non empty.
      */
     @NotNull
-    List<InvalidProperty> getInvalidProperties() {
+    public List<InvalidProperty> getInvalidProperties() {
         return invalidProperties;
     }
 }

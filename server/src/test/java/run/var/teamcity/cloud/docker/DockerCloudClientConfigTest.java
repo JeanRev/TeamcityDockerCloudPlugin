@@ -32,7 +32,8 @@ public class DockerCloudClientConfigTest {
     public void fromConstructorInvalidInput() {
 
         DockerClientConfig dockerConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
-        DockerCloudClientConfig config = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 2);
+
+        new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 2);
 
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> new DockerCloudClientConfig(null,
                 dockerConfig, true, 2));
@@ -141,8 +142,6 @@ public class DockerCloudClientConfigTest {
         assertInvalidProperty(params, DockerCloudUtils.INSTANCE_URI);
 
     }
-
-
 
     private void assertInvalidProperty(Map<String, String> params, String name) {
         Throwable throwable = catchThrowable(() -> DockerCloudClientConfig.processParams(params));
