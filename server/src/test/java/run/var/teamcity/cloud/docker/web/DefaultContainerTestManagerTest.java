@@ -5,6 +5,7 @@ import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
+import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
 import run.var.teamcity.cloud.docker.client.TestContainerTestStatusListener;
 import run.var.teamcity.cloud.docker.test.TestBuildAgentManager;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
@@ -138,6 +139,31 @@ public class DefaultContainerTestManagerTest {
                 (Action.QUERY, testUuid, null, null));
     }
 
+    public void errorHandling() {
+        dockerClientFactory = new TestDockerClientFactory() {
+            @Override
+            public void configureClient(TestDockerClient dockerClient) {
+                dockerClient.setFailOnAccessException(new DockerClientProcessingException("Test failure"));
+            }
+        };
+
+        ContainerTestManager mgr = createManager();
+
+        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
+                imageConfig);
+
+        UUID testUuid = statusMsg.getTaskUuid();
+        queryUntilFailure(mgr, statusMsg.getTaskUuid(), Phase.CREATE);
+
+        assertThatExceptionOfType(ActionException.class).isThrownBy(
+                () -> mgr.doAction(Action.DISPOSE, testUuid, null, null));
+
+        assertThatExceptionOfType(ActionException.class).isThrownBy(
+                () -> mgr.doAction(Action.START, testUuid, null, null));
+
+        mgr.doAction(Action.CANCEL, testUuid, clientConfig, imageConfig);
+    }
+
     public void statusListenerBaseFunction() {
 
         // To test listener disposal.
@@ -201,15 +227,27 @@ public class DefaultContainerTestManagerTest {
     }
 
     private void queryUntilSuccess(ContainerTestManager mgr, UUID testUuid, Phase... allowedPhases) {
+        queryUntilStatus(mgr, testUuid, Status.SUCCESS, allowedPhases);
+    }
+
+    private void queryUntilFailure(ContainerTestManager mgr, UUID testUuid, Phase... allowedPhases) {
+        queryUntilStatus(mgr, testUuid, Status.FAILURE, allowedPhases);
+    }
+
+    private void queryUntilStatus(ContainerTestManager mgr, UUID testUuid, Status targetStatus, Phase...
+            allowedPhases) {
         waitUntil(() -> {
             TestContainerStatusMsg queryMsg = mgr.doAction(Action.QUERY, testUuid, null,
                     null);
             Status status = queryMsg.getStatus();
-            assertThat(status).isNotSameAs(Status.FAILURE);
+            if (targetStatus != Status.FAILURE) {
+                assertThat(status).isNotSameAs(Status.FAILURE);
+            }
+
             if (allowedPhases != null && allowedPhases.length > 0) {
                 assertThat(queryMsg.getPhase()).isIn((Object[]) allowedPhases);
             }
-            return status == Status.SUCCESS;
+            return status == targetStatus;
         });
     }
 

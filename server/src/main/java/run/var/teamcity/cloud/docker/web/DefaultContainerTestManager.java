@@ -164,7 +164,13 @@ class DefaultContainerTestManager extends ContainerTestManager {
 
 
     private void submitStartTask(ContainerSpecTest test) {
-        StartContainerTestTask testTask = new StartContainerTestTask(test, test.getContainerId(), test.getUuid());
+
+        String containerId = test.getContainerId();
+        if (containerId == null) {
+            LOG.error("Cannot dispose container for test " + test.getUuid() + ", no container ID available.");
+            throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Container not registered.");
+        }
+        StartContainerTestTask testTask = new StartContainerTestTask(test, containerId, test.getUuid());
         test.setCurrentTask(schedule(testTask));
     }
 
