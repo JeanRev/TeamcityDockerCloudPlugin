@@ -135,31 +135,6 @@ public abstract class DockerAbstractClient implements Closeable {
     }
 
     /**
-     * Invokes an operation on the service returning raw data.
-     * @param target the targeted resource
-     * @param method the operation method
-     * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
-     *
-     * @return the stream to the raw data
-     *
-     * @throws DockerClientException if invoking the operation failed
-     */
-    @NotNull
-    protected InputStream invokeRaw(WebTarget target, String method, ErrorCodeMapper errorCodeMapper) {
-
-        assert target != null && method != null;
-
-        checkNotClosed();
-
-        Response response = target.request(MediaType.APPLICATION_JSON).acceptEncoding(SUPPORTED_CHARSET.name()).
-                method(method);
-
-        validate(getRequestSpec(target, method), response, errorCodeMapper);
-
-        return JaxWsResponseFilterInputStream.wrap(response);
-    }
-
-    /**
      * Invokes an operation on the service with no return type.
      *
      * @param target the targeted resource

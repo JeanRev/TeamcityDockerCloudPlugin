@@ -365,7 +365,7 @@ public class DockerCloudClientTest {
 
         DockerInstance instance3 = client.startNewInstance(image, userData);
         waitUntil(() -> instance3.getStatus() == InstanceStatus.RUNNING);
-        
+
         assertThat(client.canStartNewInstance(image)).isFalse();
 
         assertThatExceptionOfType(QuotaException.class).isThrownBy(() -> client.startNewInstance(image, userData));
