@@ -94,7 +94,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
                     disposeTask(test);
                     break;
                 case CANCEL:
-                    dispose(test.getUuid());
+                    dispose(test);
                     break;
                 case QUERY:
                     // Nothing to do.
@@ -194,9 +194,9 @@ class DefaultContainerTestManager extends ContainerTestManager {
         }
     }
 
-    private void dispose(UUID uuid) {
+    private void dispose(ContainerSpecTest test) {
 
-        LOG.info("Disposing test task: " + uuid);
+        LOG.info("Disposing test task: " + test.getUuid());
 
         DockerClient client;
         ContainerTestStatusListener statusListener = null;
@@ -205,10 +205,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
         try {
             lock.lock();
 
-            ContainerSpecTest test = tasks.remove(uuid);
-            if (test == null) {
-                return;
-            }
+            tasks.remove(test.getUuid());
 
             if (tasks.isEmpty()) {
                 passivate();
@@ -227,7 +224,6 @@ class DefaultContainerTestManager extends ContainerTestManager {
             statusListener.disposed();
         }
 
-
         if (containerId != null) {
             try {
                 try {
@@ -243,7 +239,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
             } catch (DockerClientException e) {
                 // Ignore;
             } catch (Exception e) {
-                LOG.error("Unexpected error while disposing test instance: " + uuid, e);
+                LOG.error("Unexpected error while disposing test instance: " + test.getUuid(), e);
             }
         }
         client.close();
@@ -310,7 +306,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
                         // itself checked and unchecked exceptions and update its internal state accordingly.
                         // In such case we just discard the test instance.
                         LOG.error("Unexpected task failure for test: " + test, t);
-                        dispose(test.getUuid());
+                        dispose(test);
                     }
                 } else {
                     assert task instanceof CleanupTask;
@@ -343,7 +339,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
         @Override
         public void run() {
 
-            List<UUID> toDispose = new ArrayList<>();
+            List<ContainerSpecTest> tests = new ArrayList<>();
 
             try {
                 lock.lock();
@@ -352,7 +348,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
                     if (test.getCurrentTaskFuture() != null) {
                         if (Math.abs(System.nanoTime() - test.getLastInteraction()) > TimeUnit.SECONDS.toNanos
                                 (testMaxIdleTimeSec)) {
-                            toDispose.add(test.getUuid());
+                            tests.add(test);
                         }
                     }
                 }
@@ -360,8 +356,8 @@ class DefaultContainerTestManager extends ContainerTestManager {
                 lock.unlock();
             }
 
-            for (UUID uuid : toDispose) {
-                dispose(uuid);
+            for (ContainerSpecTest test : tests) {
+                dispose(test);
             }
         }
     }
@@ -390,8 +386,8 @@ class DefaultContainerTestManager extends ContainerTestManager {
                 return;
             }
 
-            for (UUID uuid : tasks.keySet()) {
-                dispose(uuid);
+            for (ContainerSpecTest test : new ArrayList<>(tasks.values())) {
+                dispose(test);
             }
 
             passivate();

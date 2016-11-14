@@ -357,6 +357,10 @@ public class TestDockerClient implements DockerClient {
         return Collections.unmodifiableCollection(containers.values());
     }
 
+    public boolean isClosed() {
+        return closed;
+    }
+
     private void checkForFailure() {
         if (closed) {
             throw new IllegalStateException("Client has been closed.");

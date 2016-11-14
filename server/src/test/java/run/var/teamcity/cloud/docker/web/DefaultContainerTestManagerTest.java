@@ -161,7 +161,33 @@ public class DefaultContainerTestManagerTest {
         assertThatExceptionOfType(ActionException.class).isThrownBy(
                 () -> mgr.doAction(Action.START, testUuid, null, null));
 
-        mgr.doAction(Action.CANCEL, testUuid, clientConfig, imageConfig);
+        mgr.doAction(Action.CANCEL, testUuid, null, null);
+    }
+
+    public void cancel() {
+        ContainerTestManager mgr = createManager();
+
+        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
+                imageConfig);
+
+        UUID testUuid = statusMsg.getTaskUuid();
+        queryUntilSuccess(mgr, statusMsg.getTaskUuid(), Phase.CREATE);
+        TestDockerClient dockerClient = dockerClientFactory.getClient();
+
+        assertThat(dockerClient.getContainers()).hasSize(1);
+
+        mgr.doAction(Action.CANCEL, testUuid, null, null);
+
+        assertThat(dockerClient.getContainers()).isEmpty();
+        assertThat(dockerClient.isClosed()).isTrue();
+
+        // Cancelling a test related to an already removed container.
+        statusMsg = mgr.doAction(Action.CREATE, null, clientConfig, imageConfig);
+        dockerClient = dockerClientFactory.getClient();
+        queryUntilSuccess(mgr, statusMsg.getTaskUuid(), Phase.CREATE);
+        dockerClient.removeContainer(dockerClient.getContainers().iterator().next().getId(), true, true);
+        mgr.doAction(Action.CANCEL, statusMsg.getTaskUuid(), null, null);
+        assertThat(dockerClient.isClosed()).isTrue();
     }
 
     public void statusListenerBaseFunction() {
