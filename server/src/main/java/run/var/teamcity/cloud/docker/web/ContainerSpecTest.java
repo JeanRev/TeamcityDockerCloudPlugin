@@ -186,7 +186,13 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
                              @Nullable Throwable failure) {
         DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
         DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
-        statusMsg = new TestContainerStatusMsg(uuid, phase, status, msg, failure);
+        lock.lock();
+        try {
+            statusMsg = new TestContainerStatusMsg(uuid, phase, status, msg, failure);
+        } finally {
+            lock.unlock();
+        }
+
         broadcastStatus();
     }
 
