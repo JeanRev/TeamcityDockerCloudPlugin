@@ -3,6 +3,7 @@ package run.var.teamcity.cloud.docker;
 import jetbrains.buildServer.clouds.CloudErrorInfo;
 import jetbrains.buildServer.clouds.CloudInstanceUserData;
 import jetbrains.buildServer.clouds.InstanceStatus;
+import jetbrains.buildServer.clouds.QuotaException;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -25,7 +26,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.in;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
 
 
@@ -39,8 +40,8 @@ public class DockerCloudClientTest {
     private TestDockerClientFactory dockerClientFactory;
     private DockerCloudClientConfig clientConfig;
     private Node containerSpec;
-    private boolean rmOnExit = true;
-    private int maxInstanceCount = 1;
+    private boolean rmOnExit;
+    private int maxInstanceCount;
     private TestSBuildServer buildServer;
     private TestDockerImageResolver dockerImageResolver;
     private TestCloudState cloudState;
@@ -63,6 +64,8 @@ public class DockerCloudClientTest {
         cloudState = new TestCloudState();
         userData = new CloudInstanceUserData("", "", "", null, "", "", Collections.emptyMap());
         errorInfo = null;
+        maxInstanceCount = 1;
+        rmOnExit = true;
     }
 
     public void generalLifecycle() {
@@ -331,6 +334,41 @@ public class DockerCloudClientTest {
         client.startNewInstance(image, userData);
 
         assertThat(client.canStartNewInstance(image)).isFalse();
+    }
+
+    public void startNewInstanceErrorHandling() {
+
+        // Image cannot be resolved.
+        dockerImageResolver.image(null);
+
+        DockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.ERROR);
+        waitUntil(() -> image.getInstances().isEmpty());
+
+        // Image does not exists.
+        dockerImageResolver.image("not a valid image:1.0");
+
+        DockerInstance instance2 = client.startNewInstance(image, userData);
+
+        waitUntil(() -> instance2.getStatus() == InstanceStatus.ERROR);
+        waitUntil(() -> image.getInstances().isEmpty());
+
+        // Image exists only locally. Pull will fail, but should start the container anyway.
+        TestDockerClient dockerClient = dockerClientFactory.getClient();
+        dockerImageResolver.image("image_not_in_repo:1.0");
+        dockerClient.knownImage("image_not_in_repo", "1.0", true);
+
+        DockerInstance instance3 = client.startNewInstance(image, userData);
+        waitUntil(() -> instance3.getStatus() == InstanceStatus.RUNNING);
+        
+        assertThat(client.canStartNewInstance(image)).isFalse();
+
+        assertThatExceptionOfType(QuotaException.class).isThrownBy(() -> client.startNewInstance(image, userData));
     }
 
     @SuppressWarnings("ConstantConditions")

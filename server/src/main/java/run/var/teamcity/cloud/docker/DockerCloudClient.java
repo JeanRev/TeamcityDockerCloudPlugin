@@ -361,8 +361,6 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 }
 
                 cloudState.registerRunningInstance(instance.getImageId(), instance.getInstanceId());
-
-
             }
         });
         return instance;

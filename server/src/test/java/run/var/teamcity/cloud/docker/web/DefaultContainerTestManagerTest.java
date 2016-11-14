@@ -140,12 +140,7 @@ public class DefaultContainerTestManagerTest {
     }
 
     public void errorHandling() {
-        dockerClientFactory = new TestDockerClientFactory() {
-            @Override
-            public void configureClient(TestDockerClient dockerClient) {
-                dockerClient.setFailOnAccessException(new DockerClientProcessingException("Test failure"));
-            }
-        };
+        dockerClientFactory = new TestDockerClientFactory();
 
         ContainerTestManager mgr = createManager();
 

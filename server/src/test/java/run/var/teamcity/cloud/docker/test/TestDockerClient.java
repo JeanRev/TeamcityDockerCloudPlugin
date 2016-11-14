@@ -28,7 +28,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -47,7 +46,8 @@ public class TestDockerClient implements DockerClient {
         STARTED
     }
     private final Map<String, Container> containers = new HashMap<>();
-    private final Set<Image> knownImages = new HashSet<>();
+    private final Set<Image> knownRepoImages = new HashSet<>();
+    private final Set<Image> knownLocalImages = new HashSet<>();
     private final Set<String> pulledLayer = new HashSet<>();
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -91,7 +91,7 @@ public class TestDockerClient implements DockerClient {
             checkForFailure();
             String imageName = containerSpec.getAsString("Image");
             Image img = Image.parse(containerSpec.getAsString("Image"));
-            if (!knownImages.contains(img)) {
+            if (!knownLocalImages.contains(img)) {
                 throw new NotFoundException("No such image: " + imageName);
             }
 
@@ -166,7 +166,7 @@ public class TestDockerClient implements DockerClient {
         Set<Image> toPull = new HashSet<>();
         lock.lock();
         try {
-            for (Image img : knownImages) {
+            for (Image img : knownRepoImages) {
                 if (img.repo.equals(from)) {
                     foundImage = true;
                     if (tag == null || tag.equals(img.tag)) {
@@ -317,14 +317,24 @@ public class TestDockerClient implements DockerClient {
     }
 
     public TestDockerClient knownImage(String repo, String tag) {
+        knownImage(repo, tag, false);
+        return this;
+    }
+
+    public TestDockerClient knownImage(String repo, String tag, boolean localOnly) {
         lock.lock();
         try {
-            knownImages.add(new Image(repo, tag));
+            Image img = new Image(repo, tag);
+            if (!localOnly) {
+                knownRepoImages.add(img);
+            }
+            knownLocalImages.add(img);
         } finally {
             lock.unlock();
         }
         return this;
     }
+
 
     @Override
     public void close() {
@@ -362,11 +372,16 @@ public class TestDockerClient implements DockerClient {
     }
 
     private void checkForFailure() {
-        if (closed) {
-            throw new IllegalStateException("Client has been closed.");
-        }
-        if (failOnAccessException != null) {
-            throw failOnAccessException;
+        lock.lock();
+        try {
+            if (closed) {
+                throw new IllegalStateException("Client has been closed.");
+            }
+            if (failOnAccessException != null) {
+                throw failOnAccessException;
+            }
+        } finally {
+            lock.unlock();
         }
     }
 

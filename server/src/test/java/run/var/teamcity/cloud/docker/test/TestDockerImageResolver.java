@@ -6,7 +6,7 @@ import run.var.teamcity.cloud.docker.DockerImageNameResolver;
 
 public class TestDockerImageResolver extends DockerImageNameResolver {
 
-    private final String image;
+    private volatile String image;
 
     public TestDockerImageResolver(String image) {
         super(null);
@@ -17,5 +17,10 @@ public class TestDockerImageResolver extends DockerImageNameResolver {
     @Override
     protected String resolveInternal(DockerImageConfig imgConfig) {
         return image;
+    }
+
+    public TestDockerImageResolver image(String image) {
+        this.image = image;
+        return this;
     }
 }
