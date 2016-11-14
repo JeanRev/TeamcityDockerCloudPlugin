@@ -684,6 +684,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                         continue;
                     }
 
+                    assert instanceIdStr != null;
+
                     DockerInstance instance = instances.remove(instanceUuid);
 
                     if (instance == null) {
@@ -696,25 +698,19 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
                     if (container.getAsString("State").equals("running")) {
                         if (instanceStatus == InstanceStatus.STOPPED) {
-                            LOG.warn("Running container " + containerId + " detected for stopped instance " +
-                                    instanceUuid + ", assume it was manually started registering it now.");
-                            instance.setStatus(InstanceStatus.RUNNING);
-                            cloudState.registerRunningInstance(instance.getImageId(), instanceIdStr);
+                            instance.notifyFailure("Container " + containerId + " started externally.", null);
+                            LOG.error("Container " + containerId + " started externally.");
                         }
                     } else {
                         if (instanceStatus == InstanceStatus.RUNNING) {
                             instance.notifyFailure("Container " + containerId + " exited prematurely.", null);
                             LOG.error("Container " + containerId + " exited prematurely.");
-                            cloudState.registerTerminatedInstance(instance.getImageId(), instanceIdStr);
                         }
                     }
 
                     instance.setContainerInfo(container);
 
                     String instanceName = container.getArray("Names").getArrayValues().get(0).getAsString();
-                    if (instanceName.startsWith("/")) {
-                        instanceName = instanceName.substring(1);
-                    }
                     instance.setName(instanceName);
                 }
 

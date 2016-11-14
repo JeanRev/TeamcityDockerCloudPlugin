@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.in;
 import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
 
 
@@ -358,6 +359,55 @@ public class DockerCloudClientTest {
         waitUntil(() -> image.getInstances().isEmpty());
 
         assertThat(client.canStartNewInstance(image)).isTrue();
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    public void instanceErrorHandlingContainerExternallyStopped() {
+        DockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        TestDockerClient dockerClient = dockerClientFactory.getClient();
+
+        dockerClient.stopContainer(instance.getContainerId(), 0);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.ERROR);
+
+        waitUntil(() -> image.getInstances().isEmpty());
+
+        waitUntil(() -> dockerClient.getContainers().isEmpty());
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    public void instanceErrorHandlingContainerExternallyStarted() {
+
+        rmOnExit = false;
+
+        DockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        client.terminateInstance(instance);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.STOPPED);
+
+        TestDockerClient dockerClient = dockerClientFactory.getClient();
+
+        dockerClient.startContainer(instance.getContainerId());
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.ERROR);
+
+        waitUntil(() -> image.getInstances().isEmpty());
+
+        waitUntil(() -> dockerClient.getContainers().isEmpty());
     }
 
     private DockerInstance extractInstance(DockerImage dockerImage) {
