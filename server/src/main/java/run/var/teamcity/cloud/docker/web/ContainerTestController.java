@@ -31,6 +31,7 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.ContainerTestManager.Action;
+import run.var.teamcity.cloud.docker.web.atmo.DefaultAtmosphereFacade;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;

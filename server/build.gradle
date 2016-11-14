@@ -36,10 +36,18 @@ dependencies {
 }
 
 jacocoTestReport {
-    // Exclude the ApacheConnector class from test code coverage. We do not own most of the code there.
     afterEvaluate {
         classDirectories = files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: 'run/var/teamcity/cloud/docker/client/ApacheConnector.class*')
+
+            fileTree(dir: it, exclude:
+                    [
+                            // Exclude the ApacheConnector related classes from test code coverage. We do not own most
+                            // of the code there.
+                            'run/var/teamcity/cloud/docker/client/apcon/**',
+                            // Also exclude the package linked to the Atmosphere framework. It only contains a couple
+                            // of minimalist classes with a direct dependency Atmosphere which cannot be mocked.
+                            'run/var/teamcity/cloud/docker/web/atmo/**'
+                    ])
         })
     }
 }

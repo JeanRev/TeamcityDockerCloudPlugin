@@ -37,7 +37,7 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package run.var.teamcity.cloud.docker.client;
+package run.var.teamcity.cloud.docker.client.apcon;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -130,7 +130,7 @@ import org.apache.http.util.TextUtils;
 import org.apache.http.util.VersionInfo;
 
 import jersey.repackaged.com.google.common.util.concurrent.MoreExecutors;
-import org.jetbrains.annotations.Nullable;
+import run.var.teamcity.cloud.docker.client.UpgradeAwareConnectionReuseStrategy;
 
 /*
  * This class is a modified version of the Jersey connector for the Apache Http Client library

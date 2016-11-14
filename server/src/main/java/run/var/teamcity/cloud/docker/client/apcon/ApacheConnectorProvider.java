@@ -37,7 +37,7 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package run.var.teamcity.cloud.docker.client;
+package run.var.teamcity.cloud.docker.client.apcon;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.core.Configurable;
@@ -52,7 +52,6 @@ import org.glassfish.jersey.client.spi.ConnectorProvider;
 
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.HttpClient;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Connector provider for Jersey {@link Connector connectors} that utilize

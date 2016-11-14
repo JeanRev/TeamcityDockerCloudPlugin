@@ -1,7 +1,8 @@
-package run.var.teamcity.cloud.docker.web;
+package run.var.teamcity.cloud.docker.web.atmo;
 
 import org.atmosphere.cpr.Broadcaster;
 import org.atmosphere.cpr.BroadcasterFactory;
+import run.var.teamcity.cloud.docker.web.BroadcasterFactoryFacade;
 
 public class DefaultBroadcasterFactoryFacade implements BroadcasterFactoryFacade {
 
