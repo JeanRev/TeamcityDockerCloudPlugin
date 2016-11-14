@@ -3,15 +3,19 @@ package run.var.teamcity.cloud.docker.test;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Collection;
 import java.util.Locale;
 
 public class TestHttpServletResponse implements HttpServletResponse {
 
     private int status = 200;
+
+    private final StringWriter writer = new StringWriter();
 
     @Override
     public void addCookie(Cookie cookie) {
@@ -135,7 +139,7 @@ public class TestHttpServletResponse implements HttpServletResponse {
 
     @Override
     public PrintWriter getWriter() throws IOException {
-        return new PrintWriter(new OutputStreamWriter(TestOutputStream.dummy()));
+        return new PrintWriter(writer);
     }
 
     @Override
@@ -191,5 +195,9 @@ public class TestHttpServletResponse implements HttpServletResponse {
     @Override
     public Locale getLocale() {
         throw new UnsupportedOperationException("Not a real response.");
+    }
+
+    public String getWrittenResponse() {
+        return writer.toString();
     }
 }

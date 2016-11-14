@@ -13,6 +13,8 @@ import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.test.TestWebControllerManager;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 
+import javax.servlet.http.HttpServletResponse;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static run.var.teamcity.cloud.docker.web.ContainerTestManager.*;
 
@@ -118,6 +120,55 @@ public class ContainerTestControllerTest {
         assertThat(testMgr.getTestUuid()).isEqualTo(TestUtils.TEST_UUID);
         assertThat(testMgr.getClientConfig()).isNull();
         assertThat(testMgr.getImageConfig()).isNull();
+    }
+
+    public void invalidQueries() {
+        ContainerTestController ctrl = createController();
+
+        TestHttpServletRequest request = new TestHttpServletRequest();
+        TestHttpServletResponse response = new TestHttpServletResponse();
+
+        // Missing action parameter.
+        ctrl.doPost(request, response, element);
+
+        assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_BAD_REQUEST);
+        assertThat(element.getChildren()).isEmpty();
+        assertThat(response.getWrittenResponse()).isNotEmpty();
+
+        // Invalid action parameter.
+        request = new TestHttpServletRequest();
+        response = new TestHttpServletResponse();
+        request.parameter("action", "not a real action");
+
+        ctrl.doPost(request, response, element);
+
+        assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_BAD_REQUEST);
+        assertThat(element.getChildren()).isEmpty();
+        assertThat(response.getWrittenResponse()).isNotEmpty();
+
+        // Missing client configuration.
+        request = new TestHttpServletRequest();
+        response = new TestHttpServletResponse();
+        request.parameters(TestUtils.getSampleTestImageConfigParams());
+        request.parameter("action", Action.CREATE.name());
+
+        ctrl.doPost(request, response, element);
+
+        assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        assertThat(element.getChildren()).isEmpty();
+        assertThat(response.getWrittenResponse()).isNotEmpty();
+
+        // Missing image configuration.
+        request = new TestHttpServletRequest();
+        response = new TestHttpServletResponse();
+        request.parameters(TestUtils.getSampleDockerConfigParams());
+        request.parameter("action", Action.CREATE.name());
+
+        ctrl.doPost(request, response, element);
+
+        assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        assertThat(element.getChildren()).isEmpty();
+        assertThat(response.getWrittenResponse()).isNotEmpty();
     }
 
     private ContainerTestController createController() {

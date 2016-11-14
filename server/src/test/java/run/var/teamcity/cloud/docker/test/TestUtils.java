@@ -24,7 +24,7 @@ public final class TestUtils {
     public static final UUID TEST_UUID_2 = UUID.fromString("00000000-1ced-beef-0000-000000000000");
 
     private final static int WAIT_DEFAULT_REFRESH_RATE_MSEC = 500;
-    private final static int WAIT_DEFAULT_MAX_WAIT_TIME_SEC = 10;
+    private final static int WAIT_DEFAULT_MAX_WAIT_TIME_SEC = 15;
 
     public static void waitSec(long sec) {
         try {

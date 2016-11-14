@@ -134,12 +134,12 @@ public class ContainerTestController extends BaseFormXmlController {
         if (action == Action.CREATE) {
             Map<String, String> params = DockerCloudUtils.extractTCPluginParams(request);
 
-            clientConfig = DockerCloudClientConfig.processParams(params, dockerClientFactory);
             try {
+                clientConfig = DockerCloudClientConfig.processParams(params, dockerClientFactory);
                 imageConfig = DockerImageConfig.fromJSon(Node.parse(params.get(DockerCloudUtils.TEST_IMAGE_PARAM)));
-            } catch (IOException e) {
-                LOG.error("Image parsing failed.", e);
-                sendErrorQuietly(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to parse image data.");
+            } catch (Exception e) {
+                LOG.error("Data parsing failed.", e);
+                sendErrorQuietly(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to parse data.");
                 return;
             }
         }
