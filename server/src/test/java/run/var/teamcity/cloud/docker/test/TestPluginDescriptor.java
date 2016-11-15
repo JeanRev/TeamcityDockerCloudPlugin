@@ -10,13 +10,13 @@ public class TestPluginDescriptor implements PluginDescriptor {
     @NotNull
     @Override
     public String getPluginName() {
-        throw new UnsupportedOperationException("Not a real plugin.");
+        return "Not a real plugin.";
     }
 
     @NotNull
     @Override
     public String getPluginResourcesPath() {
-        throw new UnsupportedOperationException("Not a real plugin.");
+        return "/test/not/a/real/plugin/resources/path";
     }
 
     @NotNull

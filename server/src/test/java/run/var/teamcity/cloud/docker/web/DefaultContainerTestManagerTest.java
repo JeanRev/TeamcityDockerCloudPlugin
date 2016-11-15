@@ -5,7 +5,6 @@ import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
 import run.var.teamcity.cloud.docker.client.TestContainerTestStatusListener;
 import run.var.teamcity.cloud.docker.test.TestBuildAgentManager;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
@@ -35,13 +34,14 @@ import static run.var.teamcity.cloud.docker.web.ContainerTestManager.ActionExcep
 @Test
 public class DefaultContainerTestManagerTest {
 
-    private long testMaxIdleTime = DefaultContainerTestManager.TEST_DEFAULT_IDLE_TIME_SEC;
-    private long cleanupRateSec = DefaultContainerTestManager.CLEANUP_DEFAULT_TASK_RATE_SEC;
+    private long testMaxIdleTime;
+    private long cleanupRateSec;
 
     private TestDockerClientFactory dockerClientFactory;
     private DockerCloudClientConfig clientConfig;
     private DockerImageConfig imageConfig;
     private TestBuildAgentManager agentMgr;
+    private TestDockerImageResolver imageResolver;
 
     @BeforeMethod
     public void init() {
@@ -63,6 +63,7 @@ public class DefaultContainerTestManagerTest {
 
         testMaxIdleTime = DefaultContainerTestManager.TEST_DEFAULT_IDLE_TIME_SEC;
         cleanupRateSec = DefaultContainerTestManager.CLEANUP_DEFAULT_TASK_RATE_SEC;
+        imageResolver = new TestDockerImageResolver("resolved-image:1.0");
     }
 
     public void fullTest() {
@@ -90,7 +91,7 @@ public class DefaultContainerTestManagerTest {
 
         statusMsg = mgr.doAction(Action.START, testUuid, null, null);
 
-        assertThat(statusMsg.getPhase()).isIn(Phase.START);
+        assertThat(statusMsg.getPhase()).isSameAs(Phase.START);
         assertThat(statusMsg.getStatus()).isSameAs(Status.PENDING);
 
         queryUntilPhase(mgr, testUuid, Phase.WAIT_FOR_AGENT);
@@ -246,6 +247,19 @@ public class DefaultContainerTestManagerTest {
         assertThat(statusListener.getMsgs().getFirst().getStatus()).isSameAs(Status.SUCCESS);
     }
 
+    public void failedToResolveImageMakesTestFail() {
+        imageResolver.image(null);
+
+        ContainerTestManager mgr = createManager();
+
+        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
+                imageConfig);
+
+        UUID testUuid = statusMsg.getTaskUuid();
+
+        queryUntilFailure(mgr, testUuid);
+    }
+
     private void setupFastCleanupRate(){
         cleanupRateSec = 2;
         testMaxIdleTime = 3;
@@ -289,7 +303,7 @@ public class DefaultContainerTestManagerTest {
     }
 
     private ContainerTestManager createManager() {
-        return new DefaultContainerTestManager(new TestDockerImageResolver("resolved-image:1.0"), dockerClientFactory,
+        return new DefaultContainerTestManager(imageResolver, dockerClientFactory,
                 agentMgr, "/not/a/real/server/url", testMaxIdleTime, cleanupRateSec);
     }
 }

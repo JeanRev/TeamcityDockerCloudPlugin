@@ -21,6 +21,10 @@ import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import java.sql.Date;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -89,6 +93,10 @@ public class DockerCloudClientTest {
 
         assertThat(instance).isSameAs(extractInstance(image));
         assertThat(instance.getErrorInfo()).isNull();
+        assertThat(instance.getNetworkIdentity()).isNull();
+        assertThat(instance.getStartedTime()).isBetween(
+                Date.from(Instant.now().minus(1, ChronoUnit.MINUTES)),
+                Date.from(Instant.now()));
         assertThat(instance.getStatus()).isIn(InstanceStatus.UNKNOWN, InstanceStatus.SCHEDULED_TO_START,
                 InstanceStatus.STARTING);
 

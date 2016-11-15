@@ -15,11 +15,11 @@ public class TestDockerImageResolver extends DockerImageNameResolver {
 
     @Nullable
     @Override
-    protected String resolveInternal(DockerImageConfig imgConfig) {
+    protected synchronized String resolveInternal(DockerImageConfig imgConfig) {
         return image;
     }
 
-    public TestDockerImageResolver image(String image) {
+    public synchronized TestDockerImageResolver image(String image) {
         this.image = image;
         return this;
     }

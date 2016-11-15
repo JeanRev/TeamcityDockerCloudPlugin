@@ -272,7 +272,7 @@ public class TestHttpServletRequest implements HttpServletRequest {
 
     @Override
     public void setAttribute(String name, Object o) {
-        throw new UnsupportedOperationException("Not a real request.");
+        // Do nothing.
     }
 
     @Override
