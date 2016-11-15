@@ -15,11 +15,7 @@ import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.net.URI;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -31,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * A {@link DockerClient} made for testing. Will simulate a Docker daemon using in-memory structures.
@@ -84,7 +79,7 @@ public class TestDockerClient implements DockerClient {
     @Override
     public Node createContainer(@NotNull Node containerSpec, @Nullable String name) {
 
-        TestUtils.waitSec(1);
+        TestUtils.waitMillis(300);
 
         String containerId;
         lock.lock();
@@ -112,7 +107,7 @@ public class TestDockerClient implements DockerClient {
 
     @Override
     public void startContainer(@NotNull String containerId) {
-        TestUtils.waitSec(1);
+        TestUtils.waitMillis(300);
         lock.lock();
         try {
             checkForFailure();
@@ -247,7 +242,7 @@ public class TestDockerClient implements DockerClient {
 
     @Override
     public void stopContainer(@NotNull String containerId, long timeoutSec) {
-        TestUtils.waitSec(1);
+        TestUtils.waitMillis(300);
         lock.lock();
         try {
             checkForFailure();
@@ -268,7 +263,7 @@ public class TestDockerClient implements DockerClient {
     public void removeContainer(@NotNull String containerId, boolean removeVolumes, boolean force) {
         lock.lock();
 
-        TestUtils.waitSec(1);
+        TestUtils.waitMillis(300);
         try {
             checkForFailure();
             Container container = containers.get(containerId);
@@ -313,7 +308,7 @@ public class TestDockerClient implements DockerClient {
             lock.unlock();
         }
 
-        TestUtils.waitSec(1);
+        TestUtils.waitMillis(300);
         return result.saveNode();
     }
 
