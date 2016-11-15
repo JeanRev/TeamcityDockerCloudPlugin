@@ -4,6 +4,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
@@ -15,6 +16,8 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -25,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 @Test
 public abstract class DefaultDockerClientTest {
 
+    private final static String TEST_LABEL_KEY = DefaultDockerClientTest.class.getName();
     private final static String TEST_IMAGE = "tc_dk_cld_plugin_test_img:1.0";
     private final static String STDERR_MSG_PREFIX = "ERR";
 
@@ -39,13 +43,28 @@ public abstract class DefaultDockerClientTest {
     public void fullTest() throws URISyntaxException {
         DefaultDockerClient client = createClient();
 
-        Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", TEST_IMAGE).saveNode();
-        Node createNode = client.createContainer(containerSpec, null);
+        EditableNode containerSpec = Node.EMPTY_OBJECT.editNode().
+                put("Image", TEST_IMAGE);
+
+        UUID test = UUID.randomUUID();
+        containerSpec.getOrCreateObject("Labels").
+                put(TEST_LABEL_KEY, test.toString());
+        Node createNode = client.createContainer(containerSpec.saveNode(), null);
         String containerId = createNode.getAsString("Id", null);
 
         this.containerId = containerId;
 
         assertThat(containerId).isNotNull().isNotEmpty();
+
+        List<Node> containers = client.listContainersWithLabel(TEST_LABEL_KEY, test.toString())
+                .getArrayValues();
+
+        assertThat(containers).hasSize(1);
+        assertThat(containers.get(0).getAsString("Id")).isEqualTo(containerId);
+
+        containers = client.listContainersWithLabel(TEST_LABEL_KEY, "not an assigend label").getArrayValues();
+
+        assertThat(containers).isEmpty();
 
         client.startContainer(containerId);
 
@@ -160,7 +179,6 @@ public abstract class DefaultDockerClientTest {
 
         assertThat(nodeStream.next()).isNull();
     }
-
 
     @AfterMethod
     public void tearDown() throws URISyntaxException {
