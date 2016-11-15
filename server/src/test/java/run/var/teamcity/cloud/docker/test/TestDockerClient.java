@@ -8,6 +8,7 @@ import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
 import run.var.teamcity.cloud.docker.client.InvocationFailedException;
 import run.var.teamcity.cloud.docker.client.NotFoundException;
+import run.var.teamcity.cloud.docker.client.TestImage;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -46,8 +47,8 @@ public class TestDockerClient implements DockerClient {
         STARTED
     }
     private final Map<String, Container> containers = new HashMap<>();
-    private final Set<Image> knownRepoImages = new HashSet<>();
-    private final Set<Image> knownLocalImages = new HashSet<>();
+    private final Set<TestImage> knownRepoImages = new HashSet<>();
+    private final Set<TestImage> knownLocalImages = new HashSet<>();
     private final Set<String> pulledLayer = new HashSet<>();
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -90,7 +91,7 @@ public class TestDockerClient implements DockerClient {
         try {
             checkForFailure();
             String imageName = containerSpec.getAsString("Image");
-            Image img = Image.parse(containerSpec.getAsString("Image"));
+            TestImage img = TestImage.parse(containerSpec.getAsString("Image"));
             if (!knownLocalImages.contains(img)) {
                 throw new NotFoundException("No such image: " + imageName);
             }
@@ -163,13 +164,13 @@ public class TestDockerClient implements DockerClient {
 
         List<Node> result = new ArrayList<>();
         boolean foundImage = false;
-        Set<Image> toPull = new HashSet<>();
+        Set<TestImage> toPull = new HashSet<>();
         lock.lock();
         try {
-            for (Image img : knownRepoImages) {
-                if (img.repo.equals(from)) {
+            for (TestImage img : knownRepoImages) {
+                if (img.getRepo().equals(from)) {
                     foundImage = true;
-                    if (tag == null || tag.equals(img.tag)) {
+                    if (tag == null || tag.equals(img.getTag())) {
                         toPull.add(img);
                     }
                 }
@@ -193,8 +194,8 @@ public class TestDockerClient implements DockerClient {
         } else {
             lock.lock();
             try {
-                for (Image img : toPull) {
-                    for (String layer : img.layers) {
+                for (TestImage img : toPull) {
+                    for (String layer : img.getLayers()) {
                         node = Node.EMPTY_OBJECT.editNode();
                         if (pulledLayer.contains(layer)) {
                             node.put("status", "Already exists").
@@ -223,7 +224,7 @@ public class TestDockerClient implements DockerClient {
                         }
                     }
                     node = Node.EMPTY_OBJECT.editNode();
-                    node.put("status", "Status: Downloaded newer image for " + img.repo + "/" + img.tag);
+                    node.put("status", "Status: Downloaded newer image for " + img);
                 }
             } finally {
                 lock.unlock();
@@ -324,7 +325,7 @@ public class TestDockerClient implements DockerClient {
     public TestDockerClient knownImage(String repo, String tag, boolean localOnly) {
         lock.lock();
         try {
-            Image img = new Image(repo, tag);
+            TestImage img = new TestImage(repo, tag);
             if (!localOnly) {
                 knownRepoImages.add(img);
             }
@@ -385,23 +386,8 @@ public class TestDockerClient implements DockerClient {
         }
     }
 
-    private static String createRandomSha256() {
-        try {
-            SecureRandom prng = new SecureRandom();
-            byte[] random = new byte[1024];
-            prng.nextBytes(random);
-            MessageDigest sha = MessageDigest.getInstance("SHA-256");
-            byte[] digest = sha.digest(random);
-            BigInteger bi = new BigInteger(1, digest);
-            return String.format("%0" + (digest.length << 1) + "x", bi);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-
-    }
-
     public static class Container {
-        private final String id = createRandomSha256();
+        private final String id = TestUtils.createRandomSha256();
         private final Map<String, String> labels = new HashMap<>();
         private ContainerStatus status;
 
@@ -444,39 +430,5 @@ public class TestDockerClient implements DockerClient {
             lock.unlock();
         }
         return this;
-    }
-
-    public static class Image {
-        final String repo;
-        final String tag;
-        final String coordinates;
-        final Set<String> layers;
-
-        private Image(String repo, String tag) {
-            this.repo = repo;
-            this.tag = tag;
-            coordinates = repo + ":" + tag;
-            layers = new HashSet<>();
-            IntStream.range(0,3).forEach(i -> layers.add(createRandomSha256()));
-        }
-
-        private static Image parse(String coordinates) {
-            int sepIndex = coordinates.lastIndexOf(':');
-            return new Image(coordinates.substring(0, sepIndex), coordinates.substring(sepIndex + 1));
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof Image) {
-                Image that = (Image) obj;
-                return coordinates.equals(that.coordinates);
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            return coordinates.hashCode();
-        }
     }
 }

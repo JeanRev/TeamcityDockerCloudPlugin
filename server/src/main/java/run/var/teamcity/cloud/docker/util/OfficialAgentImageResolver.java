@@ -9,6 +9,7 @@ import run.var.teamcity.cloud.docker.DockerImageDefaultResolver;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
 import run.var.teamcity.cloud.docker.client.DockerClientException;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClient;
+import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
@@ -36,14 +37,15 @@ import java.util.regex.Pattern;
 public class OfficialAgentImageResolver extends DockerImageNameResolver {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(OfficialAgentImageResolver.class);
-    private final static String REPO = "jetbrains/teamcity-agent";
+    final static String REPO = "jetbrains/teamcity-agent";
     static { assert !REPO.contains(":"): "Repository name must NOT contains a tag name"; }
-    private final static String DEFAULT = REPO + ":latest";
+    final static String DEFAULT = REPO + ":latest";
     private final static Pattern EXPECTED_VERSION_PTN = Pattern.compile("(?:\\d+\\.)*\\d+");
 
     private final ReentrantLock lock = new ReentrantLock();
     private final int serverMajorVersion;
     private final int serverMinorVersion;
+    private final DockerRegistryClientFactory registryClientFty;
 
     private String imageTag;
 
@@ -55,13 +57,16 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
      *
      * @throws IllegalArgumentException if any version number is negative
      */
-    public OfficialAgentImageResolver(int serverMajorVersion, int serverMinorVersion) {
+    public OfficialAgentImageResolver(int serverMajorVersion, int serverMinorVersion,
+                                      DockerRegistryClientFactory registryClientFty) {
         super(new DockerImageDefaultResolver());
+        DockerCloudUtils.requireNonNull(registryClientFty, "Registry client factory cannot be null.");
         if (serverMajorVersion < 0 || serverMinorVersion < 0) {
             throw new IllegalArgumentException("Invalid version: " + serverMajorVersion + "." + serverMinorVersion);
         }
         this.serverMajorVersion = serverMajorVersion;
         this.serverMinorVersion = serverMinorVersion;
+        this.registryClientFty = registryClientFty;
     }
 
     /**
@@ -91,7 +96,7 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
 
     private String performResolution() {
         Node tags = null;
-        try (DockerRegistryClient registry = DockerRegistryClient.openDockerHubClient()) {
+        try (DockerRegistryClient registry = registryClientFty.createDockerHubClient()) {
             String loginToken = registry.anonymousLogin("repository:" + REPO + ":pull").getAsString("token");
             tags = registry.listTags(loginToken, REPO);
         } catch (DockerClientException e) {
@@ -174,6 +179,7 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
     public static OfficialAgentImageResolver forServer(@NotNull SBuildServer server) {
         DockerCloudUtils.requireNonNull(server, "Server instance cannot be null.");
 
-        return new OfficialAgentImageResolver(server.getServerMajorVersion(), server.getServerMinorVersion());
+        return new OfficialAgentImageResolver(server.getServerMajorVersion(), server.getServerMinorVersion(),
+                DockerRegistryClientFactory.getDefault());
     }
 }

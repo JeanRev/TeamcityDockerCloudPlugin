@@ -5,6 +5,10 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,8 +31,12 @@ public final class TestUtils {
     private final static int WAIT_DEFAULT_MAX_WAIT_TIME_SEC = 20;
 
     public static void waitSec(long sec) {
+       waitMillis(TimeUnit.SECONDS.toMillis(sec));
+    }
+
+    public static void waitMillis(long ms) {
         try {
-            Thread.sleep(TimeUnit.SECONDS.toMillis(sec));
+            Thread.sleep(ms);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -50,6 +58,21 @@ public final class TestUtils {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    public static String createRandomSha256() {
+        try {
+            SecureRandom prng = new SecureRandom();
+            byte[] random = new byte[1024];
+            prng.nextBytes(random);
+            MessageDigest sha = MessageDigest.getInstance("SHA-256");
+            byte[] digest = sha.digest(random);
+            BigInteger bi = new BigInteger(1, digest);
+            return String.format("%0" + (digest.length << 1) + "x", bi);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     public static Map<String, String> getSampleDockerConfigParams() {
