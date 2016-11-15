@@ -45,6 +45,8 @@ abstract class ContainerTestTask implements Runnable {
         DockerCloudUtils.requireNonNull(initialPhase, "Initial phase cannot be null.");
         this.testTaskHandler = testTaskHandler;
         this.phase = initialPhase;
+
+        testTaskHandler.notifyStatus(phase, Status.PENDING, "", null);
     }
 
     /**
