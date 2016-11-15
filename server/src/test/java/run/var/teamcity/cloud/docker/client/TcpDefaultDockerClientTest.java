@@ -15,6 +15,13 @@ public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
         DefaultDockerClient.open(URI.create("tcp://127.0.0.1:2375"), false, 1).close();
     }
 
+    public void networkFailure() {
+        try (DockerClient client = DefaultDockerClient.open(URI.create("tcp://notanrealhost:2375"), false, 1)) {
+            assertThatExceptionOfType(DockerClientProcessingException.class).
+                    isThrownBy(client::getVersion);
+        }
+    }
+
     @SuppressWarnings("ConstantConditions")
     public void openInvalidInput() {
 
