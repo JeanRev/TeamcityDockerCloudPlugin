@@ -65,15 +65,26 @@ public class TestDockerClientRegistry implements DockerRegistryClient {
     }
 
     public TestDockerClientRegistry knownImage(String repo, String... tags) {
-        for (String tag : tags) {
-            knownImages.add(new TestImage(repo, tag));
+        lock.lock();
+        try {
+            for (String tag : tags) {
+                knownImages.add(new TestImage(repo, tag));
+            }
+        } finally {
+            lock.unlock();
         }
+
         return this;
     }
 
     public TestDockerClientRegistry failOnAccess(DockerClientProcessingException failOnAccess) {
-        this.failOnAccessException = failOnAccess;
-        return this;
+        lock.lock();
+        try {
+            this.failOnAccessException = failOnAccess;
+            return this;
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
@@ -101,6 +112,11 @@ public class TestDockerClientRegistry implements DockerRegistryClient {
     }
 
     public boolean isClosed() {
-        return closed;
+        lock.lock();
+        try {
+            return closed;
+        } finally {
+            lock.unlock();
+        }
     }
 }

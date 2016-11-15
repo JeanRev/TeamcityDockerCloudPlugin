@@ -15,13 +15,15 @@ public class OfficialAgentImageResolverTest {
     private TestDockerClientRegistryFactory clientFty;
     private DockerImageConfig imageConfig;
 
-    private int majorVersion = 5;
-    private int minorVersion = 2;
+    private int majorVersion;
+    private int minorVersion;
 
     @BeforeMethod
     public void init() {
         clientFty = new TestDockerClientRegistryFactory();
         imageConfig = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, true, 1);
+        majorVersion = 5;
+        minorVersion = 2;
     }
 
     public void normalResolution() {

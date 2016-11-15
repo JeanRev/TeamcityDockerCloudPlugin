@@ -23,7 +23,7 @@ public class TestDockerClientRegistryFactory extends DockerRegistryClientFactory
         return this.client = client;
     }
 
-    public TestDockerClientRegistry getClient() {
+    public synchronized TestDockerClientRegistry getClient() {
         return client;
     }
 }
