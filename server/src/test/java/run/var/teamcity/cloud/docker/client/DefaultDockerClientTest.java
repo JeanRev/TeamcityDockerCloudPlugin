@@ -180,6 +180,22 @@ public abstract class DefaultDockerClientTest {
         assertThat(nodeStream.next()).isNull();
     }
 
+    public void closeClient() throws URISyntaxException {
+        DockerClient client = createClient();
+
+        client.close();
+        client.close();
+
+        final String containerId = "not an existing container";
+        assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.createContainer(Node
+                .EMPTY_OBJECT, null));
+        assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.startContainer(containerId));
+        assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.stopContainer(containerId, 0));
+        assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.removeContainer(containerId,
+                true, true));
+        assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.listContainersWithLabel("", ""));
+    }
+
     @AfterMethod
     public void tearDown() throws URISyntaxException {
         if (containerId != null) {
