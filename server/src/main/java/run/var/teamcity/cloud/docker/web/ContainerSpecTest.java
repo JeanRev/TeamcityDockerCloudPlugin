@@ -211,7 +211,12 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
      */
     @NotNull
     public TestContainerStatusMsg getStatusMsg() {
-        return statusMsg;
+        lock.lock();
+        try {
+            return statusMsg;
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
