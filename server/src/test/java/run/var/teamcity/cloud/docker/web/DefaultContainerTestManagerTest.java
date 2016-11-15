@@ -60,6 +60,9 @@ public class DefaultContainerTestManagerTest {
         Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
         imageConfig = new DockerImageConfig("test", containerSpec, true, false, 1);
         agentMgr = new TestBuildAgentManager();
+
+        testMaxIdleTime = DefaultContainerTestManager.TEST_DEFAULT_IDLE_TIME_SEC;
+        cleanupRateSec = DefaultContainerTestManager.CLEANUP_DEFAULT_TASK_RATE_SEC;
     }
 
     public void fullTest() {
@@ -148,6 +151,7 @@ public class DefaultContainerTestManagerTest {
                 imageConfig);
 
         UUID testUuid = statusMsg.getTaskUuid();
+
         queryUntilFailure(mgr, statusMsg.getTaskUuid(), Phase.CREATE);
 
         assertThatExceptionOfType(ActionException.class).isThrownBy(
@@ -206,9 +210,9 @@ public class DefaultContainerTestManagerTest {
 
         mgr.setStatusListener(testUuid, listener);
 
-        assertThat(listener.getMsgs()).hasSize(1);
+        assertThat(listener.getMsgs()).isNotEmpty();
 
-        statusMsg = listener.getMsgs().iterator().next();
+        statusMsg = listener.getMsgs().getLast();
 
         assertThat(statusMsg.getStatus()).isIn(Status.PENDING, Status.SUCCESS);
 
@@ -261,8 +265,10 @@ public class DefaultContainerTestManagerTest {
             TestContainerStatusMsg queryMsg = mgr.doAction(Action.QUERY, testUuid, null,
                     null);
             Status status = queryMsg.getStatus();
-            if (targetStatus != Status.FAILURE) {
-                assertThat(status).isNotSameAs(Status.FAILURE);
+            if (targetStatus != Status.PENDING && status != Status.PENDING) {
+                // Terminal state expected, terminal state reached.
+                assertThat(targetStatus).isSameAs(status);
+                return true;
             }
 
             if (allowedPhases != null && allowedPhases.length > 0) {
