@@ -3,7 +3,8 @@ This TeamCity plugin leverages the TeamCity Cloud API in order to start and disp
 containers on demand.
 ## Requirements
 - TeamCity 10.x or greater.
-- Docker remote API v1.24 (Engine version 1.12.x).
+- A Docker daemon accessible through either TCP or Unix Socket, supporting the remote API v1.24 (Engine version 
+1.12.x).
 ## License
 Unless otherwise specified in their header, all files are distributed under the Apache License 2.0.
 ## Acknowledgments
@@ -13,8 +14,7 @@ Unless otherwise specified in their header, all files are distributed under the 
 <img src="doc/img/puzzle.png"> 
 </td>
 <td style="border: none; vertical-align:middle;">
-This software has been build with the support of <a href="https://www.puzzle.ch">Puzzle ITC</a>, kudos to
- them
-.</div>
+This software has been build with the unfailing support of my company, <a href="https://www.puzzle.ch">Puzzle 
+ITC</a>, kudos to them.</div>
 </td>
 </table>
