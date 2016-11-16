@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static run.var.teamcity.cloud.docker.web.ContainerTestManager.*;
 
 @Test
+@SuppressWarnings("unchecked")
 public class ContainerTestControllerTest {
 
     private TestHttpServletRequest request;

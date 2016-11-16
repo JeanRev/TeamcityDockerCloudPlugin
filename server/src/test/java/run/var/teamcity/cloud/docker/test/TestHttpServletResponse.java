@@ -11,6 +11,7 @@ import java.io.StringWriter;
 import java.util.Collection;
 import java.util.Locale;
 
+@SuppressWarnings("deprecation")
 public class TestHttpServletResponse implements HttpServletResponse {
 
     private int status = 200;

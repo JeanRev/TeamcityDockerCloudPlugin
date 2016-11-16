@@ -1,21 +1,24 @@
-group 'var.run.docker.cloud'
-version '1.0-SNAPSHOT'
-
 apply plugin: 'java'
 apply plugin: "jacoco"
 
-sourceCompatibility = 1.7
-targetCompatibility = 1.7
+compileJava {
+    sourceCompatibility = 1.7
+    targetCompatibility = 1.7
 
-configurations {
-    extraCompile.extendsFrom provided
+    if (project.hasProperty('rt7jar')) {
+        options.compilerArgs << "-Xbootclasspath:${project.rt7jar}"
+    }
 }
-
 compileTestJava {
     // Enable Java 1.8 goodies for testing. God I love gradle.
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
+
+    if (project.hasProperty('rt8jar')) {
+        options.compilerArgs << "-Xbootclasspath:${project.rt8jar}"
+    }
 }
+
 
 dependencies {
     provided 'org.jetbrains.teamcity:cloud-interface:10.0'

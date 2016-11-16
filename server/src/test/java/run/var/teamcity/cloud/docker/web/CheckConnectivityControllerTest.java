@@ -13,6 +13,7 @@ import run.var.teamcity.cloud.docker.test.TestWebControllerManager;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Test
+@SuppressWarnings("unchecked")
 public class CheckConnectivityControllerTest {
 
     @SuppressWarnings("ConstantConditions")

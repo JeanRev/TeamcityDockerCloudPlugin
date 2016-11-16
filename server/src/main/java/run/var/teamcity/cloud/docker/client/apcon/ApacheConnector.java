@@ -113,7 +113,6 @@ import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.LayeredConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.conn.ssl.SSLContexts;
 import org.apache.http.entity.AbstractHttpEntity;
 import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.impl.auth.BasicScheme;
@@ -411,7 +410,7 @@ class ApacheConnector implements Connector {
                         supportedProtocols, supportedCipherSuites, hostnameVerifier);
             } else {
                 sslSocketFactory = new SSLConnectionSocketFactory(
-                        SSLContexts.createDefault(),
+                        org.apache.http.conn.ssl.SSLContexts.createDefault(),
                         hostnameVerifier);
             }
         }

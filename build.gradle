@@ -1,6 +1,10 @@
 
 
 subprojects {
+
+    group 'var.run.docker.cloud'
+    version '0.1.0-SNAPSHOT'
+
     apply plugin: 'java'
 
     repositories {
@@ -16,14 +20,8 @@ subprojects {
     }
 
     sourceSets {
-        extra {
-            java {
-                srcDir 'src/extra/java'
-            }
-        }
         main {
             compileClasspath += configurations.provided
-            compileClasspath += extra.output
         }
         test {
             runtimeClasspath += configurations.provided

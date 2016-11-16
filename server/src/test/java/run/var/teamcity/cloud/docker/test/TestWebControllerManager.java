@@ -5,8 +5,6 @@ import jetbrains.buildServer.web.openapi.ControllerAction;
 import jetbrains.buildServer.web.openapi.PagePlace;
 import jetbrains.buildServer.web.openapi.PlaceId;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
-import jetbrains.buildServer.web.openapi.WebExtension;
-import jetbrains.buildServer.web.openapi.WebPlace;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.web.servlet.mvc.Controller;
@@ -32,12 +30,12 @@ public class TestWebControllerManager implements WebControllerManager {
     }
 
     @Override
-    public void addPageExtension(WebPlace addTo, WebExtension extension) {
+    public void addPageExtension(jetbrains.buildServer.web.openapi.WebPlace addTo, jetbrains.buildServer.web.openapi.WebExtension extension) {
         throw new UnsupportedOperationException("Not a real manager.");
     }
 
     @Override
-    public void removePageExtension(WebPlace removeFrom, WebExtension extension) {
+    public void removePageExtension(jetbrains.buildServer.web.openapi.WebPlace removeFrom, jetbrains.buildServer.web.openapi.WebExtension extension) {
         throw new UnsupportedOperationException("Not a real manager.");
     }
 
