@@ -21,20 +21,15 @@ compileTestJava {
 
 
 dependencies {
-    provided 'org.jetbrains.teamcity:cloud-interface:10.0'
-    provided 'org.jetbrains.teamcity:server-api:10.0'
-    //provided 'org.jetbrains.teamcity:web:9.1.5'
-    provided 'com.github.docker-java:docker-java:3.0.0-RC5'
     compile 'de.gesellix:unix-socket-factory:2016-04-06T22-21-19'
-    //compile 'org.apache.logging.log4j:log4j-slf4j-impl:2.5'
-    //compile 'org.slf4j:slf4j-api:1.7.21'
-    provided 'org.apache.logging.log4j:log4j-api:2.5'
     compile 'org.glassfish.jersey.core:jersey-client:2.23.1'
     compile 'org.glassfish.jersey.media:jersey-media-json-jackson:2.23.1'
     compile 'org.glassfish.jersey.connectors:jersey-apache-connector:2.23.1'
-
+    provided 'org.apache.logging.log4j:log4j-api:2.5'
     provided 'org.atmosphere:atmosphere-runtime:2.2.4'
-    testCompile group: 'org.testng', name: 'testng', version: '6.9.13.6'
+    provided 'org.jetbrains.teamcity:cloud-interface:10.0'
+    provided 'org.jetbrains.teamcity:server-api:10.0'
+    testCompile 'org.testng:testng:6.9.13.6'
     testCompile 'org.assertj:assertj-core:3.5.2'
 }
 

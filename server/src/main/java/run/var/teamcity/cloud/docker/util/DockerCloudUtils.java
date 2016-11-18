@@ -4,7 +4,6 @@ import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.AgentDescription;
 import org.apache.commons.io.output.ByteArrayOutputStream;
-import org.bouncycastle.crypto.agreement.srp.SRP6Client;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

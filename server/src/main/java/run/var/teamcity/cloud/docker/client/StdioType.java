@@ -1,6 +1,5 @@
 package run.var.teamcity.cloud.docker.client;
 
-import com.github.dockerjava.api.model.StreamType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumSet;
