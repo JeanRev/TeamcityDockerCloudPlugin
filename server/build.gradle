@@ -52,4 +52,7 @@ jacocoTestReport {
 
 test {
     useTestNG()
+    if (project.hasProperty('docker.test.tcp.address')) {
+        jvmArgs "-Ddocker.test.tcp.address=${project.'docker.test.tcp.address'}"
+    }
 }

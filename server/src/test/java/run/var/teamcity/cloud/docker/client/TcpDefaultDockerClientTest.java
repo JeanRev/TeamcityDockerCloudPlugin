@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
     @Override
     protected DefaultDockerClient createClientInternal(int threadPoolSize) throws URISyntaxException {
-        return DefaultDockerClient.open(new URI("tcp://127.0.0.1:2375"), false, threadPoolSize);
+        return DefaultDockerClient.open(new URI("tcp://" + System.getProperty("docker.test.tcp.address")), false, threadPoolSize);
     }
 
     public  void openValidInput() {
