@@ -103,7 +103,7 @@ public class DockerImageConfig {
 
         String imagesJSon = properties.get(DockerCloudUtils.IMAGES_PARAM);
         List<DockerImageConfig> images = null;
-        if (imagesJSon != null) {
+        if (imagesJSon != null && !imagesJSon.isEmpty()) {
             try {
                 Node imagesNode = Node.parse(imagesJSon);
                 images = new ArrayList<>(imagesNode.getArrayValues().size());

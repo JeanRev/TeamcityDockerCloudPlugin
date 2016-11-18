@@ -9,6 +9,12 @@
     margin: 2px;
 }
 
+/* Force error messages in H2 to be inlined. */
+.dockerCloudSettings h2 span.error {
+    display: inline;
+    font-size: 0.7em;
+}
+
 #DockerCloudImageDialog {
     width: 570px;
 }
