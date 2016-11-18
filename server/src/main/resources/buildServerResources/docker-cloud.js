@@ -898,7 +898,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     delete self.imagesData[currentProfile];
                     self.imagesData[newProfile] = settings;
                     var tmp = [];
-                    self._safeKeyValueEach(function(key, value) {
+                    self._safeKeyValueEach(self.imagesData, function(key, value) {
                        tmp.push(value);
                     });
                     self.$images.val(JSON.stringify(tmp));
