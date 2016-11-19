@@ -58,6 +58,9 @@ test {
     if (project.hasProperty('docker.test.tcp.address')) {
         jvmArgs "-Ddocker.test.tcp.address=${project.'docker.test.tcp.address'}"
     }
+    if (project.hasProperty('docker.test.unix.socket')) {
+        jvmArgs "-Ddocker.test.unix.socket=${project.'docker.test.unix.socket'}"
+    }
 }
 
 if (project.hasProperty('run.var.teamcity.cloud.docker.tcSvcMsg') && Boolean.valueOf(project.'run.var.teamcity.cloud.docker.tcSvcMsg')) {

@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker.client;
 
 
+import org.testng.SkipException;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import java.net.URI;
@@ -36,6 +37,11 @@ public class UnixSocketDefaultDockerClientTest extends DefaultDockerClientTest {
 
     @Override
     protected DefaultDockerClient createClientInternal(int threadPoolSize) throws URISyntaxException {
-        return  DefaultDockerClient.open(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI, false, threadPoolSize);
+
+        String dockerUnixSocket = System.getProperty("docker.test.unix.socket");
+        if (dockerUnixSocket == null) {
+            throw new SkipException("Java system variable docker.test.unix.socket not set. Skipping Unix socket based tests.");
+        }
+        return  DefaultDockerClient.open(new URI("unix://" + dockerUnixSocket), false, threadPoolSize);
     }
 }

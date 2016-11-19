@@ -1,5 +1,7 @@
 package run.var.teamcity.cloud.docker.client;
 
+import org.testng.SkipException;
+
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -8,7 +10,12 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
     @Override
     protected DefaultDockerClient createClientInternal(int threadPoolSize) throws URISyntaxException {
-        return DefaultDockerClient.open(new URI("tcp://" + System.getProperty("docker.test.tcp.address")), false, threadPoolSize);
+
+        String dockerTcpAddress = System.getProperty("docker.test.tcp.address");
+        if (dockerTcpAddress == null) {
+            throw new SkipException("Java system variable docker.test.tcp.address not set. Skipping TCP based tests.");
+        }
+        return DefaultDockerClient.open(new URI("tcp://" + dockerTcpAddress), false, threadPoolSize);
     }
 
     public  void openValidInput() {
