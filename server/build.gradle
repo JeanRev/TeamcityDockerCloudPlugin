@@ -61,5 +61,5 @@ test {
 }
 
 if (project.hasProperty('run.var.teamcity.cloud.docker.tcSvcMsg') && Boolean.valueOf(project.'run.var.teamcity.cloud.docker.tcSvcMsg')) {
-    println "##teamcity[jacocoReport dataPath='server/build/jacoco/test.exec' includes='run.var.*'] excludes='run.var.teamcity.cloud.docker.client.apcon.* run.var.teamcity.cloud.docker.web.atmo.*'"
+    println "##teamcity[jacocoReport dataPath='server/build/jacoco/test.exec' includes='run.var.*' excludes='run.var.teamcity.cloud.docker.client.apcon.* run.var.teamcity.cloud.docker.web.atmo.*']"
 }
