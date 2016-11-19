@@ -59,3 +59,7 @@ test {
         jvmArgs "-Ddocker.test.tcp.address=${project.'docker.test.tcp.address'}"
     }
 }
+
+if (project.hasProperty('run.var.teamcity.cloud.docker.tcSvcMsg') && Boolean.valueOf(project.'run.var.teamcity.cloud.docker.tcSvcMsg')) {
+    println "##teamcity[jacocoReport dataPath='server/build/test.exec']"
+}
