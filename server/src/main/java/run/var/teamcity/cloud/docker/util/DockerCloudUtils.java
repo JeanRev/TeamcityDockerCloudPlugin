@@ -345,6 +345,15 @@ public final class DockerCloudUtils {
 
     public static final String TC_PROPERTY_PREFIX = "prop:";
 
+    /**
+     * Extract TeamCity plugin parameters from an HTTP request.
+     *
+     * @param request the request
+     *
+     * @return the map of extracted properties
+     *
+     * @throws NullPointerException if {@code request} is {@code null}
+     */
     @NotNull
     public static Map<String, String> extractTCPluginParams(@NotNull HttpServletRequest request) {
         DockerCloudUtils.requireNonNull(request, "Request cannot be null.");
