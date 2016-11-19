@@ -564,12 +564,11 @@
         </table>
         <h4>Volumes:
             <i class="icon icon16 tc-icon_help_small tooltip"></i>
-            <span class="tooltiptext">Defines volumes, and optionally, their bound location on the host file system
-                .</span>
+            <span class="tooltiptext">Defines volumes, and optionally, their bound location on the host file system.</span>
         </h4>
         <table class="settings">
             <thead>
-            <tr><th class="name" style="width: 35%">Host directory</th><th class="name" style="width: 35%">Container directory&nbsp;<l:star/></th><th class="name center" style="width: 20%;">Read only</th><th class="dockerCloudCtrlCell"></th></tr>
+            <tr><th class="name" style="width: 35%">Host path</th><th class="name" style="width: 35%">Container path&nbsp;<l:star/></th><th class="name center" style="width: 20%;">Read only</th><th class="dockerCloudCtrlCell"></th></tr>
             </thead>
             <tbody id="dockerCloudImage_Volumes">
             </tbody>
