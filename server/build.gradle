@@ -19,6 +19,9 @@ compileTestJava {
     }
 }
 
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
 
 dependencies {
     compile 'de.gesellix:unix-socket-factory:2016-04-06T22-21-19'
