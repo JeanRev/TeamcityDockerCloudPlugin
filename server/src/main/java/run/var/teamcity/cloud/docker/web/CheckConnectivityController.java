@@ -22,7 +22,7 @@ import java.util.Map;
 
 public class CheckConnectivityController extends BaseFormXmlController {
 
-    public static final String PATH = "dockerCloud-checkconnectivity.html";
+    public static final String PATH = "checkconnectivity.html";
 
     private final DockerClientFactory dockerClientFactory;
 

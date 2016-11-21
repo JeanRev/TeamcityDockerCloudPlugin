@@ -619,8 +619,8 @@
         </p>
         <span class="hidden" id="dockerCloudTestContainerLoader"><i class="icon-refresh icon-spin"></i>
         </span>
-        <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerSuccess" src="/plugins/docker-cloud/img/checked.png">
-        <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerError" src="/plugins/docker-cloud/img/error.png">
+        <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerSuccess" src="<c:url value="${resPath}img/checked.png"/>">
+        <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerError" src="<c:url value="${resPath}img/error.png"/>">
         <span id="dockerCloudTestContainerLabel" class="systemProblemsBar"></span>
 
         <div class="dockerCloudBtnBlock">
@@ -648,17 +648,15 @@
         url: "<c:url value="${resPath}docker-cloud.js"/>",
         dataType: "script",
         success: function() {
-            BS.Clouds.Docker.init('<%=DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI%>',
-                    '${resPath}<%=CheckConnectivityController.PATH%>',
-                    '${resPath}<%=ContainerTestController.PATH%>',
-                    '<%=DockerCloudUtils.IMAGES_PARAM%>');
-            /* Register callbacks to react on DOM changes.
-            $j(document).ready (BS.Clouds.Docker._refreshSettingsState);
-
-            Ajax.Responders.register({
-                        onComplete: BS.Clouds.Docker._refreshSettingsState
-                    }
-            ); */
+            BS.Clouds.Docker.init({
+                defaultLocalSocketURI: '<%=DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI%>',
+                checkConnectivityCtrlURL: '<c:url value="${resPath}checkconnectivity.html"/>',
+                testContainerCtrlURL: '<c:url value="${resPath}test-container.html"/>',
+                imagesParam: '<%=DockerCloudUtils.IMAGES_PARAM%>',
+                errorIconURL: '<c:url value="/img/attentionCommentRed.png"/>',
+                warnIconURL: '<c:url value="/img/attentionComment.png"/>',
+                testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>'
+            });
         },
         cache: true
     });

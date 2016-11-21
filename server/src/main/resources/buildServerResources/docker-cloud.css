@@ -238,31 +238,31 @@ aligned on the RHS of the screen. */
 }
 
 .dockerCloudSettings .dockerCloudTestBtn > span {
-    background: url("/plugins/docker-cloud/img/test.png") no-repeat left;
+    background: url("img/test.png") no-repeat left;
     padding-left: 1.2em;
     white-space: nowrap;
 }
 
 .dockerCloudSettings .dockerCloudAddBtn > span {
-    background: url("/plugins/docker-cloud/img/add.png") no-repeat left;
+    background: url("img/add.png") no-repeat left;
     padding-left: 1.2em;
     white-space: nowrap;
 }
 
 .dockerCloudSettings .dockerCloudDeleteBtn > span {
-    background: url("/plugins/docker-cloud/img/delete.png") no-repeat left;
+    background: url("img/delete.png") no-repeat left;
     padding-left: 1.2em;
     white-space: nowrap;
 }
 
 .dockerCloudSettings .dockerCloudDeleteBtn > span {
-    background: url("/plugins/docker-cloud/img/delete.png") no-repeat left;
+    background: url("img/delete.png") no-repeat left;
     padding-left: 1.2em;
     white-space: nowrap;
 }
 
 .dockerCloudSettings .dockerCloudSettingsBtn > span {
-    background: url("/img/settingsRevision.png") no-repeat left;
+    background: url("img/settingsRevision.png") no-repeat left;
     padding-left: 1.2em;
     white-space: nowrap;
 }

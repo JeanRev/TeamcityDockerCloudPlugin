@@ -35,11 +35,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 editImageLink: '.editImageLink',
                 imagesTableRow: '.imagesTableRow'
             },
-            init: function (defaultLocalAddress, checkConnectionUrl, testContainerUrl, imagesId) {
-                self.defaultLocalAddress = defaultLocalAddress;
-                self.checkConnectionUrl = checkConnectionUrl;
-                self.testContainerUrl = testContainerUrl;
-
+            init: function (params) {
+                console.log('Initializing Docker Cloud JS support.');
+                self.defaultLocalSocketURI = params.defaultLocalSocketURI;
+                self.checkConnectivityCtrlURL = params.checkConnectivityCtrlURL;
+                self.testContainerCtrlURL = params.testContainerCtrlURL;
+                self.testStatusSocketPath = params.testStatusSocketPath;
+                self.errorIconURL = params.errorIconURL;
+                self.warnIconURL = params.warnIconURL;
+                var imagesParam = params.imagesParam;
 
                 self.hasWebSocketSupport = 'WebSocket' in window;
 
@@ -50,8 +54,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$imageDialogSubmitBtn = $j('#dockerAddImageButton');
                 self.$imageDialogCancelBtn = $j('#dockerCancelAddImageButton');
                 self.$imagesTable = $j('#dockerCloudImagesTable');
-                self.$images = $j(BS.Util.escapeId(imagesId));
-                console.log("Load image from " + BS.Util.escapeId(imagesId) + " (" + imagesId + ")");
+                self.$images = $j(BS.Util.escapeId(imagesParam));
                 self.$dockerAddress = $j("#dockerCloudDockerAddress");
                 self.$useLocalInstance = $j("#dockerCloudUseLocalInstance");
                 self.$useCustomInstance = $j("#dockerCloudUseCustomInstance");
@@ -92,6 +95,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self._initImagesData();
                 self._initTabs();
                 self._initValidators();
+                console.log("binding handlers");
                 self._bindHandlers();
                 self._renderImagesTable();
                 self._setupTooltips();
@@ -138,7 +142,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _addressState: function () {
                 console.log('updating address');
                 var useLocalInstance = self.$useLocalInstance.is(':checked');
-                self.$dockerAddress.prop('disabled', useLocalInstance).val(useLocalInstance ? self.defaultLocalAddress : "");
+                self.$dockerAddress.prop('disabled', useLocalInstance).val(useLocalInstance ? self.defaultLocalSocketURI : "");
             },
 
             _checkConnection: function () {
@@ -171,7 +175,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$checkConnectionLoader.removeClass('hidden');
                 self.$checkConnectionSuccess.addClass('hidden');
 
-                BS.ajaxRequest(self.checkConnectionUrl, {
+                BS.ajaxRequest(self.checkConnectivityCtrlURL, {
                     parameters: BS.Clouds.Admin.CreateProfileForm.serializeParameters(),
                     onFailure: function (response) {
                         self.checkConnectionDeferred.reject(response.getStatusText());
@@ -841,9 +845,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         var caption = $j(tab.myOptions.caption);
                         var span = caption.children("span").empty();
                         if (tab.errors.length) {
-                            span.append('<img src="/img/attentionCommentRed.png" />');
+                            span.append('<img src="' + self.errorIconURL + '" />');
                         } else if (tab.warnings.length) {
-                            span.append('<img src="/img/attentionComment.png" />');
+                            span.append('<img src="' + self.warnIconURL + '" />');
                         }
                         tab.setCaption(caption[0].outerHTML);
                     };
@@ -1071,8 +1075,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     if (self.hasWebSocketSupport) {
                         if (!self.testStatusSocket) {
                             console.log('Opening test status listener socket now.');
-                            // TODO: FIX URL
-                            self.testStatusSocket = new WebSocket("ws://129.0.0.1:8111/app/docker-cloud/test-container/getStatus?taskUuid=" + responseMap.taskUuid);
+                            var protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
+                            var port =  ((location.port) ? (':' + location.port) : '');
+                            var socketURL = protocol + location.hostname + port + self.testStatusSocketPath + '?taskUuid=' + responseMap.taskUuid;
+                            self.testStatusSocket = new WebSocket(socketURL);
                             self.testStatusSocket.onmessage = function (event) {
                                 console.log('Processing status from server.');
                                 self._processTestResponse(self._parseResponse(event.data));
@@ -1136,7 +1142,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var deferred = $j.Deferred();
 
                 // Invoke test action.
-                var url = self.testContainerUrl + '?action=' + action;
+                var url = self.testContainerCtrlURL + '?action=' + action;
                 if (taskUuid) {
                     url += '&taskUuid=' + taskUuid;
                 }
