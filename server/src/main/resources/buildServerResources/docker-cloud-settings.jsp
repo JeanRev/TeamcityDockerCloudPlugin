@@ -662,22 +662,6 @@
         },
         cache: true
     });
-
-    $j.ajax({
-        url: "/plugins/docker-cloud/xterm.js",
-        dataType: "script",
-        asynchronous: false
-    });
-    $j.ajax({
-        url: "/plugins/docker-cloud/attach/attach.js",
-        dataType: "script",
-        asynchronous: false
-    });
-    $j.ajax({
-        url: "/plugins/docker-cloud/fit/fit.js",
-        dataType: "script",
-        asynchronous: false
-    });
 </script>
 
 <table class="runnerFormTable">
