@@ -73,6 +73,10 @@ public final class DockerCloudUtils {
      * The Docker socket default location on Unix systems.
      */
     public static final URI DOCKER_DEFAULT_SOCKET_URI;
+    /**
+     * Debug flag system property.
+     */
+    public static final String DEBUG_SYSPROP = NS_PREFIX + "debug";
 
     static {
         try {
@@ -369,5 +373,16 @@ public final class DockerCloudUtils {
         }
 
         return params;
+    }
+
+    private final static boolean DEBUG_ENABLED = Boolean.valueOf(System.getProperty(DEBUG_SYSPROP));
+
+    /**
+     * Returns the debug flag value.
+     *
+     * @return {@code true} if debug mode is activated, {@code false} otherwise
+     */
+    public static boolean isDebugEnabled() {
+        return DEBUG_ENABLED;
     }
 }
