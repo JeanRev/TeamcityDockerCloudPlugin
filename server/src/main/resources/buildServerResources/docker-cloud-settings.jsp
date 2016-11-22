@@ -51,12 +51,12 @@
                 <label for="dockerCloudDockerAddress">Address:&nbsp;<span id="addressStar"><l:star/></span>&nbsp;</label><props:textProperty name="<%=DockerCloudUtils.INSTANCE_URI%>" id="dockerCloudDockerAddress"
                                                                                                                                              className="longField"/>
                 <a href="#" class="btn" id="dockerCloudCheckConnectionBtn">Check connection</a>
+                <span class="error" id="error_<%=DockerCloudUtils.INSTANCE_URI%>"></span>
             </p>
             <p>
                 <props:checkboxProperty name="<%=DockerCloudUtils.USE_TLS%>"/>
                 <label for="<%=DockerCloudUtils.USE_TLS%>">Use Transport Layer Security (TLS)</label>
             </p>
-            <span class="error" id="error_<%=DockerCloudUtils.INSTANCE_URI%>"></span>
             <span id="dockerCloudCheckConnectionBtnError" class="error"></span>
             <div class="hidden" id="dockerCloudCheckConnectionLoader"><i class="icon-refresh icon-spin"></i>&nbsp;Connecting to Docker instance...</div>
         </td>
