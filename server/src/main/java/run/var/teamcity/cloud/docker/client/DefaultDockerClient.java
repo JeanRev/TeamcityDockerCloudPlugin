@@ -340,10 +340,6 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         connManager.setMaxTotal(connectionPoolSize);
 
         config.property(ApacheClientProperties.CONNECTION_MANAGER, connManager);
-        /*
-        config.register(new LoggingFeature(new JULLogger(LOG), Level.FINE, LoggingFeature.Verbosity.PAYLOAD_ANY,
-               1024 * 512));
-               */
         return new DefaultDockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI);
     }
 

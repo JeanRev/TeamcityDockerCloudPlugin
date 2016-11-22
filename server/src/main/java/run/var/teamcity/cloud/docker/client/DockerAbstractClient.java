@@ -1,9 +1,11 @@
 package run.var.teamcity.cloud.docker.client;
 
 import com.intellij.openapi.diagnostic.Logger;
+import org.glassfish.jersey.logging.LoggingFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.JULLogger;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
@@ -19,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Level;
 
 /**
  * Base class to access Docker services using JAX-WS.
@@ -84,6 +87,17 @@ public abstract class DockerAbstractClient implements Closeable {
 
         assert target != null && method != null;
 
+        if (DockerCloudUtils.isDebugEnabled()) {
+            // We log here all punctual JSON based interaction between the client and the daemon.
+            // The logger will buffer the entity (up to a given size) and write it to the logs.
+            // This feature must NOT be enabled for:
+            // - Requests handling binary content.
+            // - Requests involving two way communication (TCP connection upgrade).
+            // - Long running requests (the client class must handle those itself).
+            target.register(new LoggingFeature(new JULLogger(LOG), Level.FINE, LoggingFeature.Verbosity.PAYLOAD_ANY,
+                    1024 * 512));
+        }
+
         Response response = execRequest(target,
                 target.
                         request(MediaType.APPLICATION_JSON).
@@ -125,7 +139,6 @@ public abstract class DockerAbstractClient implements Closeable {
                 target.
                         request(MediaType.APPLICATION_JSON).
                         acceptEncoding(SUPPORTED_CHARSET.name()), method, entity != null ? Entity.json(entity.toString()) : null, authToken, errorCodeMapper);
-
 
         try {
             return Node.parseMany(JaxWsResponseFilterInputStream.wrap(response));
