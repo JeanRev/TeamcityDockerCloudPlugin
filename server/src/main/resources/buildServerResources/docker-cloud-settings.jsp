@@ -9,6 +9,7 @@
 <%@ taglib prefix="forms" tagdir="/WEB-INF/tags/forms" %>
 <!-- Disable IDEA warnings about unused variables. -->
 <%--@elvariable id="resPath" type="java.lang.String"--%>
+<%--@elvariable id="debugEnabled" type="java.lang.String"--%>
 <c:set var="paramName" value="<%=DockerCloudUtils.IMAGES_PARAM%>"/>
 
 <jsp:useBean id="serverUrl" scope="request" type="java.lang.String"/>
@@ -655,7 +656,8 @@
                 imagesParam: '<%=DockerCloudUtils.IMAGES_PARAM%>',
                 errorIconURL: '<c:url value="/img/attentionCommentRed.png"/>',
                 warnIconURL: '<c:url value="/img/attentionComment.png"/>',
-                testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>'
+                testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>',
+                debugEnabled: ${debugEnabled}
             });
         },
         cache: true

@@ -19,16 +19,7 @@
 var BS = BS || {};
 BS.Clouds = BS.Clouds || {};
 BS.Clouds.Docker = BS.Clouds.Docker || (function () {
-        /* CONSTANTS
-         var START_STOP = 'START_STOP',
-         FRESH_CLONE = 'FRESH_CLONE',
-         ON_DEMAND_CLONE = 'ON_DEMAND_CLONE',
-         CURRENT_STATE = '__CURRENT_STATE__',
-         LATEST_SNAPSHOT='*';
-         */
-        /*
-         var $j=$;
-         */
+
         //noinspection JSUnresolvedVariable
         var self = {
             selectors: {
@@ -36,13 +27,16 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 imagesTableRow: '.imagesTableRow'
             },
             init: function (params) {
-                console.log('Initializing Docker Cloud JS support.');
+                self.logInfo('Initializing Docker Cloud JS support.');
+
                 self.defaultLocalSocketURI = params.defaultLocalSocketURI;
                 self.checkConnectivityCtrlURL = params.checkConnectivityCtrlURL;
                 self.testContainerCtrlURL = params.testContainerCtrlURL;
                 self.testStatusSocketPath = params.testStatusSocketPath;
                 self.errorIconURL = params.errorIconURL;
                 self.warnIconURL = params.warnIconURL;
+                self.debugEnabled = params.debugEnabled;
+
                 var imagesParam = params.imagesParam;
 
                 self.hasWebSocketSupport = 'WebSocket' in window;
@@ -91,11 +85,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$dockerTestContainerOutput = $j("#dockerTestContainerOutput");
                 self.$testedImage = $j(BS.Util.escapeId("run.var.teamcity.docker.cloud.tested_image"));
 
-
                 self._initImagesData();
                 self._initTabs();
                 self._initValidators();
-                console.log("binding handlers");
                 self._bindHandlers();
                 self._renderImagesTable();
                 self._setupTooltips();
@@ -104,6 +96,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             /* MAIN SETTINGS */
 
             _renderImagesTable: function () {
+                self.logDebug("Rendering image table.");
                 self.$imagesTable.empty();
                 $j.each(self.imagesData, function(i, val) {
                     self._renderImageRow(val);
@@ -112,6 +105,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             _setupTooltips: function() {
+                self.logDebug("Setup help tooltip.");
+
                 // Our tooltip div holder. Dynamically added at the end of the body and absolutely positioned under
                 // the tooltip icon. Having the tooltip div outside of containers with non-visible overflow (like
                 // dialogs), prevent it from being cut-off.
@@ -120,8 +115,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 $j('i.tooltip').mouseover(function() {
                     var tooltipText = $j(this).siblings('span.tooltiptext');
                     self.tooltipHolder.html(tooltipText.html());
-                    console.log('offset ist ' + $j(this).offset());
-                    console.log('top is ' + $j(this).offset()['top']);
                     self.tooltipHolder.css('top', $j(this).offset()['top'] + 25);
                     self.tooltipHolder.css('left', $j(this).offset()['left'] - (self.tooltipHolder.width() / 2) + 8);
                     self.tooltipHolder.show();
@@ -140,7 +133,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     '</tr>').data('profile', image.Administration.Profile));
             },
             _addressState: function () {
-                console.log('updating address');
                 var useLocalInstance = self.$useLocalInstance.is(':checked');
                 self.$dockerAddress.prop('disabled', useLocalInstance).val(useLocalInstance ? self.defaultLocalSocketURI : "");
             },
@@ -202,77 +194,14 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             /* IMAGE DATA MARSHALLING / UNMARSHALLING */
 
             _initImagesData: function () {
-
-                var images = [{
-                    Administration: {
-                        Profile: 'my_image',
-                        RmOnExit: true,
-                        BindAgentProps: true,
-                        UseOfficialTCAgentImage: false,
-                        MaxInstanceCount: 2,
-                        Version: 1
-                    },
-                    Container: {
-                        Image: "test/someimage",
-                        Labels:  { "com.github.blah": "42" },
-                        Entrypoint: ["/bin/bash", "B", "C"],
-                        Cmd: ["Arg 1", "", "Arg 3"],
-                        WorkingDir: "/tmp/some_dir",
-                        StopSignal: "SIGINT",
-                        Volumes: [ "/tmp/some_volume" ],
-                        Env: ["JAVA_HOME=/opt/java"],
-                        LogType: "syslog",
-                        LogConfig: { Type:  "syslog", Config: {"max-file-size" : "42"}},
-                        User: "root",
-                        Hostname: "localhost",
-                        Domainname: "test.com",
-                        ExposedPorts: {"22/tcp": {}, "23/udp": {}},
-                        HostConfig: {
-                            Links: [ "some_container:web"],
-                            Binds: [  "/tmp/host_dir:/tmp/container_dir:ro" ],
-                            PortBindings: {"24/tcp" : [{ HostIp: "129.0.0.1", HostPort: 122 }]},
-                            Privileged: true,
-                            Devices: [{
-                                PathOnHost: "/dev/some_dev",
-                                PathInContainer: "/dev/other_dev",
-                                CgroupPermissions: "blarh"
-                            }],
-                            OomKillDisable: true,
-                            Capabilities: "allow_all",
-                            CapAdd: ["CHOWN", "DAC_OVERRIDE", "FSETID"],
-                            CapDrop: ["FOWNER", "MKNOD", "NET_RAW"],
-                            NetworkMode: "host",
-                            NetworkContainer: "some_container",
-                            NetworkCustom: "my great network",
-                            Dns: ["8.8.8.8"],
-                            DnsSearch: ["example.com"],
-                            ExtraHosts: ["google.com:9.9.9.9"],
-                            PublishAllPorts: true,
-                            Memory: 268435456,
-                            MemorySwap: 134217728,
-                            CpuShares: 50,
-                            CpuPeriod: 10,
-                            CpusetCpus: "cpus",
-                            CpusetMems: "mems",
-                            BlkioWeight: 50,
-                            Ulimits: [{Name: "nofile", Soft: 5000, Hard: 6000}],
-                            CgroupParent: "cpu/Multimedia",
-                        }
-                    },
-                    Editor: {
-                        MemoryUnit: "GiB",
-                        MemorySwapUnit: "MiB"
-                    }
-                }];
+                self.logDebug("Processing images data.");
 
                 var json = self.$images.val();
-                console.log("Image data: " + self.$images.val().length + " " + self.$images.val());
 
                 images = json ? JSON.parse(self.$images.val()) : [];
                 self.imagesData = {};
-                console.log(images.length + " images to be loaded.");
+                self.logDebug(images.length + " images to be loaded.");
                 $j.each(images, function(i, image) {
-                    console.log("Loading profile: " + image.Administration.Profile);
                     self.imagesData[image.Administration.Profile] = image;
                 });
 
@@ -805,6 +734,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             /* TABS */
 
             _initTabs: function () {
+                self.logDebug("Initializing dialog tabs.");
+
                 self.tabs = [{ id: "dockerCloudImageTab_general", lbl: "General" },
                     { id: "dockerCloudImageTab_run", lbl: "Run" },
                     { id: "dockerCloudImageTab_network", lbl: "Network" },
@@ -877,7 +808,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
             /* HANDLERS */
             _bindHandlers: function () {
-                console.log("Binding handlers now");
+                self.logDebug("Binding handlers.");
 
                 self.$useLocalInstance.change(self._addressState);
                 self.$useCustomInstance.change(self._addressState)
@@ -1000,24 +931,20 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     // TODO: improve event binding. This handler will sometimes get called twice here if we do not
                     // stop propagation.
                     e.stopPropagation();
-                    console.log("Add handler invoked");
+
                     var $elt = $j(this);
 
                     // Fetch closest table.
                     var $tableBody = $elt.closest("tbody");
                     var key = $tableBody.attr("id");
                     var index = $j.data($tableBody.get(0), "index") || 0;
-                    console.log('Index on table body:' + index);
                     index++;
+                    self.logDebug("Adding row #" + index + " to table " + key + ".");
                     var $table = $elt.closest("table");
-                    console.log('Adding entry ' + index + ' to table ' + key);
-                    console.log('<tr>' + self.arrayTemplates[key].replace(/IDX/g, index) + '<td' +
-                        ' class="center dockerCloudCtrlCell">' + self.arrayTemplates.deleteCell + '</td></tr>');
                     $elt.closest("tr").before('<tr>' + self.arrayTemplates[key].replace(/IDX/g, index) + '<td' +
                     ' class="center dockerCloudCtrlCell">' + self.arrayTemplates.deleteCell + '</td></tr>');
                     $j.data($tableBody.get(0), "index", index);
                     self._updateTableMandoryStarsVisibility($table);
-                    console.log('Saving new index on table body: ' + index);
                 });
 
                 self.$swapUnlimited.change(function() {
@@ -1065,8 +992,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _processTestResponse: function (responseMap) {
                 self._testDialogHideAllBtns();
 
-                console.log('Progress: ' + responseMap.progress + ' Status: ' + responseMap.status + ' Msg: ' + responseMap.msg + ' Uuid: ' + responseMap.taskUuid);
-
+                self.logDebug('Phase: ' + responseMap.phase + ' Status: ' + responseMap.status + ' Msg: ' + responseMap.msg + ' Uuid: ' + responseMap.taskUuid);
                 if (responseMap.status == 'PENDING') {
                     self.$testContainerLabel.text(responseMap.msg);
                     self.$testContainerLoader.show();
@@ -1074,18 +1000,17 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                     if (self.hasWebSocketSupport) {
                         if (!self.testStatusSocket) {
-                            console.log('Opening test status listener socket now.');
+                            self.logInfo('Opening test status listener socket.');
                             var protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
                             var port =  ((location.port) ? (':' + location.port) : '');
                             var socketURL = protocol + location.hostname + port + self.testStatusSocketPath + '?taskUuid=' + responseMap.taskUuid;
                             self.testStatusSocket = new WebSocket(socketURL);
                             self.testStatusSocket.onmessage = function (event) {
-                                console.log('Processing status from server.');
                                 self._processTestResponse(self._parseResponse(event.data));
                             }
                         }
                     } else {
-                        console.log('Scheduling status retrieval.');
+                        self.logDebug('Scheduling status retrieval.');
                         setTimeout(self._invokeTestAction.bind(this, 'query', responseMap.taskUuid), 5000);
                     }
                 } else {
@@ -1120,7 +1045,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         self.$testContainerLabel.text("Test completed successfully.");
                         self.$testContainerCloseBtn.show();
                     } else {
-                        console.error('Unrecognized status: ' + responseMap.status)
+                        self.logError('Unrecognized status: ' + responseMap.status);
                     }
                 }
             },
@@ -1138,7 +1063,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
             _invokeTestAction: function(action, taskUuid, parameters) {
 
-                console.log('Will invoke action ' + action + ' for UUID ' + taskUuid);
+                self.logDebug('Will invoke action ' + action + ' for test UUID ' + taskUuid);
                 var deferred = $j.Deferred();
 
                 // Invoke test action.
@@ -1210,6 +1135,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
             /* VALIDATORS */
             _initValidators: function () {
+                self.logDebug("Validators setup.");
+
                 var requiredValidator = function (elt) {
                     var value = elt.val().trim();
                     elt.val(value);
@@ -1465,6 +1392,22 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             /* UTILS */
+            logInfo: function(msg) {
+                self._log(msg);
+            },
+            logError: function(msg) {
+                // Catching all errors instead of simply testing for console existence to prevent issues with IE8.
+                try { console.error(msg) } catch (e) {}
+            },
+            logDebug: function(msg) {
+              if (self.debugEnabled) {
+                  self._log(msg);
+              }
+            },
+            _log: function(msg) {
+                // Catching all errors instead of simply testing for console existence to prevent issues with IE8.
+                try { console.log(msg) } catch (e) {}
+            },
             _units_multiplier:  {
                 GiB: 134217728,
                 MiB: 131072,

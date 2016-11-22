@@ -7,9 +7,11 @@ import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.web.servlet.ModelAndView;
+import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.Map;
 
 public class DockerCloudSettingsController extends BaseController {
 
@@ -36,7 +38,9 @@ public class DockerCloudSettingsController extends BaseController {
     @Override
     protected ModelAndView doHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response) throws Exception {
         ModelAndView mv = new ModelAndView(jspPath);
-        mv.getModel().put("resPath", pluginDescriptor.getPluginResourcesPath());
+        Map<String, Object> model = mv.getModel();
+        model.put("resPath", pluginDescriptor.getPluginResourcesPath());
+        model.put("debugEnabled", DockerCloudUtils.isDebugEnabled());
         return mv;
     }
 }
