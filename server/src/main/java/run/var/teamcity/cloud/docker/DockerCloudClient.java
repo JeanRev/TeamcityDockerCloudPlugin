@@ -142,6 +142,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
             DockerImage image = new DockerImage(DockerCloudClient.this, imageConfig);
             images.put(image.getUuid(), image);
         }
+        LOG.info(images.size() + " image definitions loaded: " + images);
 
         dockerClient = dockerClientFactory.createClient(clientConfig.getDockerClientConfig());
 

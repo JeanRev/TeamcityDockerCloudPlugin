@@ -208,7 +208,7 @@ public class DockerImage implements CloudImage {
 
     @Override
     public String toString() {
-        return getName();
+        return getName() + " / " + uuid;
     }
 
 
