@@ -41,6 +41,7 @@ public class DockerCloudSettingsController extends BaseController {
         Map<String, Object> model = mv.getModel();
         model.put("resPath", pluginDescriptor.getPluginResourcesPath());
         model.put("debugEnabled", DockerCloudUtils.isDebugEnabled());
+        model.put("defaultUnixSocketAvailable", DockerCloudUtils.isDefaultDockerSocketAvailable());
         return mv;
     }
 }

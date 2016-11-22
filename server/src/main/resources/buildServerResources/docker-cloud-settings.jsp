@@ -9,7 +9,8 @@
 <%@ taglib prefix="forms" tagdir="/WEB-INF/tags/forms" %>
 <!-- Disable IDEA warnings about unused variables. -->
 <%--@elvariable id="resPath" type="java.lang.String"--%>
-<%--@elvariable id="debugEnabled" type="java.lang.String"--%>
+<%--@elvariable id="debugEnabled" type="java.lang.Boolean"--%>
+<%--@elvariable id="defaultUnixSocketAvailable" type="java.lang.Boolean"--%>
 <c:set var="paramName" value="<%=DockerCloudUtils.IMAGES_PARAM%>"/>
 
 <jsp:useBean id="serverUrl" scope="request" type="java.lang.String"/>
@@ -36,17 +37,26 @@
     <tr>
         <th>Docker instance:&nbsp;<l:star/></th>
         <td>
-            <p>
-                <props:radioButtonProperty name="<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>" id="dockerCloudUseLocalInstance"
-                                           value="true"/>
-                <label for="dockerCloudUseLocalInstance">Use local Docker instance</label>
-            </p>
-            <p>
-                <props:radioButtonProperty name="<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>" id="dockerCloudUseCustomInstance"
-                                           value="false"/>
-                <label for="dockerCloudUseCustomInstance">Use custom Docker instance URL</label>
-            </p>
-            <span class="error" id="error_<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>"></span>
+
+            <c:choose>
+                <c:when test="${defaultUnixSocketAvailable}">
+                    <p>
+                        <props:radioButtonProperty name="<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>" id="dockerCloudUseLocalInstance"
+                                                   value="true"/>
+                        <label for="dockerCloudUseLocalInstance">Use local Docker instance</label>
+                    </p>
+                    <p>
+                        <props:radioButtonProperty name="<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>" id="dockerCloudUseCustomInstance"
+                                                   value="false"/>
+                        <label for="dockerCloudUseCustomInstance">Use custom Docker instance URL</label>
+                    </p>
+                    <span class="error" id="error_<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>"></span>
+                </c:when>
+                <c:otherwise>
+                    <props:hiddenProperty name="<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>" value="false"/>
+                </c:otherwise>
+            </c:choose>
+
             <p>
                 <label for="dockerCloudDockerAddress">Address:&nbsp;<span id="addressStar"><l:star/></span>&nbsp;</label><props:textProperty name="<%=DockerCloudUtils.INSTANCE_URI%>" id="dockerCloudDockerAddress"
                                                                                                                                              className="longField"/>
@@ -657,6 +667,7 @@
                 errorIconURL: '<c:url value="/img/attentionCommentRed.png"/>',
                 warnIconURL: '<c:url value="/img/attentionComment.png"/>',
                 testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>',
+                defaultUnixSocketAvailable: ${defaultUnixSocketAvailable},
                 debugEnabled: ${debugEnabled}
             });
         },

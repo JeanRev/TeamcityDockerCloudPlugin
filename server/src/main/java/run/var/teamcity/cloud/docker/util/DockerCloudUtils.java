@@ -15,6 +15,8 @@ import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -384,5 +386,15 @@ public final class DockerCloudUtils {
      */
     public static boolean isDebugEnabled() {
         return DEBUG_ENABLED;
+    }
+
+    /**
+     * Checks if this default Docker socket is available on this host. This method will only verify the existence of
+     * the socket file without additional check.
+     *
+     * @return {@code true} if the default Docker socket is available
+     */
+    public static boolean isDefaultDockerSocketAvailable() {
+        return Files.exists(Paths.get(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI.getPath()));
     }
 }
