@@ -58,7 +58,6 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
     private final DockerHttpConnectionFactory connectionFactory;
     private final WebTarget target;
-    private final Client jerseyClient;
 
     public enum SupportedScheme {
         UNIX,
@@ -80,7 +79,6 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
     private DefaultDockerClient(DockerHttpConnectionFactory connectionFactory, Client jerseyClient, URI target) {
         super(jerseyClient);
-        this.jerseyClient = jerseyClient;
         this.connectionFactory = connectionFactory;
         this.target = jerseyClient.target(target);
     }
@@ -114,12 +112,14 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 null);
     }
 
+    @NotNull
     public Node inspectContainer(@NotNull String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         return invoke(target.path("/containers/{id}/json").resolveTemplate("id", containerId), HttpMethod.GET, null,
                 null, null);
     }
 
+    @NotNull
     public NodeStream createImage(@NotNull String from, @Nullable String tag) {
         DockerCloudUtils.requireNonNull(from, "Source image cannot be null.");
 
@@ -193,6 +193,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 .queryParam("force", force), HttpMethod.DELETE, null, null);
     }
 
+    @NotNull
     public Node listContainersWithLabel(@NotNull String key, @NotNull String value) {
         DockerCloudUtils.requireNonNull(key, "Label key cannot be null.");
         DockerCloudUtils.requireNonNull(value, "Label value cannot be null.");
