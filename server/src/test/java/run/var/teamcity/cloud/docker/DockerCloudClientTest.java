@@ -181,7 +181,10 @@ public class DockerCloudClientTest {
 
         dockerClient.unlock();
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitUntil(() -> {
+            assertThat(instance.getErrorInfo()).isNull();
+            return instance.getStatus() == InstanceStatus.RUNNING;
+        });
 
         assertThat(instance.getErrorInfo()).isNull();
     }
@@ -247,6 +250,44 @@ public class DockerCloudClientTest {
 
         assertThat(unregisteredAgents).containsOnly(agentWithCloudAndInstanceIdsNotRemovable, otherAgent);
         assertThat(client.getErrorInfo()).isNull();
+    }
+
+    public void setupAgentName() {
+
+        String agentName = "the_agent_name";
+
+
+        DockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+
+        TestSBuildAgent agent = new TestSBuildAgent().
+                environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString()).
+                environmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, instance.getInstanceId()).
+                environmentVariable(DockerCloudUtils.ENV_IMAGE_ID, image.getId()).
+                name(agentName);
+
+        buildServer.notifyAgentRegistered(agent);
+
+        assertThat(agent.getName()).isEqualTo(agentName);
+
+
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        waitUntil(() -> instance.getContainerName() != null);
+
+        buildServer.notifyAgentRegistered(agent);
+
+        agentName = agent.getName();
+
+        assertThat(agentName).startsWith(instance.getContainerName());
+
+        buildServer.notifyAgentRegistered(agent);
+
+        assertThat(agentName).isEqualTo(agentName);
     }
 
     public void findInstanceByAgent() {

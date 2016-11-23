@@ -2,29 +2,21 @@ package run.var.teamcity.cloud.docker.test;
 
 import jetbrains.buildServer.BuildAgent;
 import jetbrains.buildServer.LicenseNotGrantedException;
-import jetbrains.buildServer.serverSide.AgentDescription;
-import jetbrains.buildServer.serverSide.RunType;
-import jetbrains.buildServer.serverSide.SBuildAgent;
-import jetbrains.buildServer.serverSide.SBuildType;
-import jetbrains.buildServer.serverSide.SFinishedBuild;
-import jetbrains.buildServer.serverSide.SRunningBuild;
+import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.serverSide.comments.Comment;
 import jetbrains.buildServer.users.SUser;
 import jetbrains.buildServer.users.User;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * {@link AgentDescription} for testing.
  */
-public class TestSBuildAgent implements SBuildAgent {
+public class TestSBuildAgent implements SBuildAgent, BuildAgentInit {
 
+    private String name = "";
     private boolean removable = true;
 
     private final Map<String, String> availableParameters = new HashMap<>();
@@ -169,7 +161,7 @@ public class TestSBuildAgent implements SBuildAgent {
 
     @Override
     public String getName() {
-        throw new UnsupportedOperationException("Not a real agent.");
+        return name;
     }
 
     @Override
@@ -286,8 +278,53 @@ public class TestSBuildAgent implements SBuildAgent {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
+    @Override
+    public boolean restoreAgent() {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public void setId(int i) {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public void setAgentTypeId(int i) {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public void setAuthorizationToken(@NotNull String s) {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public void generateUniqueAgentAuthorizationToken() {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public void setName(@NotNull String s) throws IllegalStateException {
+        this.name = s;
+    }
+
+    @Override
+    public void initEnabled(boolean b) {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public void initAuthorized(boolean b) {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
     public boolean isRemovable() {
         return removable;
+    }
+
+    public TestSBuildAgent name(String name) {
+        this.name = name;
+        return this;
     }
 
     public TestSBuildAgent removable(boolean removable) {

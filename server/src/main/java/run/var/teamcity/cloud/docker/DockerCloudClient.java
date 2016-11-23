@@ -86,6 +86,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
      */
     private final Map<UUID, DockerImage> images = new HashMap<>();
 
+    private final SBuildServer buildServer;
     private final BuildAgentManager agentMgr;
 
     /**
@@ -95,6 +96,24 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
     private final URL serverURL;
     private final DockerImageNameResolver resolver;
+
+    private final BuildServerListener serverListener = new BuildServerAdapter() {
+        @Override
+        public void agentRegistered(@NotNull SBuildAgent agent, long currentlyRunningBuildId) {
+            if (agent instanceof BuildAgentInit) {
+                DockerInstance instance = findInstanceByAgent(agent);
+                if (instance != null) {
+                    String containerName = instance.getContainerName();
+                    if (containerName != null) {
+                        String defaultName = agent.getName();
+                        if (!defaultName.startsWith(containerName)) {
+                            ((BuildAgentInit) agent).setName(containerName + "/" + defaultName);
+                        }
+                    }
+                }
+            }
+        }
+    };
 
     DockerCloudClient(@NotNull DockerCloudClientConfig clientConfig,
                       @NotNull final DockerClientFactory dockerClientFactory,
@@ -116,6 +135,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         this.cloudState = cloudState;
         this.agentMgr = buildServer.getBuildAgentManager();
         this.serverURL = clientConfig.getServerURL();
+        this.buildServer = buildServer;
 
         taskScheduler = new DockerTaskScheduler(clientConfig.getDockerClientConfig().getThreadPoolSize(),
                 clientConfig.isUsingDaemonThreads());
@@ -129,6 +149,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         dockerClient = dockerClientFactory.createClient(clientConfig.getDockerClientConfig());
 
         taskScheduler.scheduleClientTask(new SyncWithDockerTask(clientConfig.getDockerSyncRateSec(), TimeUnit.SECONDS));
+
+        buildServer.addListener(serverListener);
 
         state = State.READY;
     }
@@ -405,6 +427,9 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         } finally {
             lock.unlock();
         }
+
+        buildServer.removeListener(serverListener);
+
         LOG.info("Starting disposal of client.");
         for(DockerImage image : getImages()) {
             for (DockerInstance instance : image.getInstances()) {
@@ -694,7 +719,10 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                     instance.setContainerInfo(container);
 
                     String instanceName = container.getArray("Names").getArrayValues().get(0).getAsString();
-                    instance.setName(instanceName);
+                    if (instanceName.startsWith("/")) {
+                        instanceName = instanceName.substring(1);
+                    }
+                    instance.setContainerName(instanceName);
                 }
 
                 // Step 4, process destroyed containers.

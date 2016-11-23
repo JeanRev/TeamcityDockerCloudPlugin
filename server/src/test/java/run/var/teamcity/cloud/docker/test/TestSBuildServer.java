@@ -1,26 +1,8 @@
 package run.var.teamcity.cloud.docker.test;
 
-import com.intellij.util.Time;
-import jetbrains.buildServer.ExtensionsProvider;
 import jetbrains.buildServer.ServiceNotFoundException;
 import jetbrains.buildServer.TeamCityExtension;
-import jetbrains.buildServer.serverSide.BuildAgentManager;
-import jetbrains.buildServer.serverSide.BuildDataFilter;
-import jetbrains.buildServer.serverSide.BuildHistory;
-import jetbrains.buildServer.serverSide.BuildQueryOptions;
-import jetbrains.buildServer.serverSide.BuildQueue;
-import jetbrains.buildServer.serverSide.BuildServerListener;
-import jetbrains.buildServer.serverSide.LicensingPolicy;
-import jetbrains.buildServer.serverSide.PersonalBuildManager;
-import jetbrains.buildServer.serverSide.ProjectManager;
-import jetbrains.buildServer.serverSide.RunTypeRegistry;
-import jetbrains.buildServer.serverSide.SBuild;
-import jetbrains.buildServer.serverSide.SBuildAgent;
-import jetbrains.buildServer.serverSide.SBuildServer;
-import jetbrains.buildServer.serverSide.SBuildType;
-import jetbrains.buildServer.serverSide.SQLRunner;
-import jetbrains.buildServer.serverSide.SRunningBuild;
-import jetbrains.buildServer.serverSide.SourceVersionProvider;
+import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
 import jetbrains.buildServer.status.StatusProvider;
 import jetbrains.buildServer.users.User;
@@ -34,29 +16,30 @@ import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 
 public class TestSBuildServer implements SBuildServer {
 
     private final TestBuildAgentManager buildAgentManager = new TestBuildAgentManager();
+
+    private final List<BuildServerListener> buildListeners = new CopyOnWriteArrayList<>();
+
     private byte serverMajorVersion = 1;
     private byte serverMinorVersion = 0;
 
     @Override
     public void addListener(BuildServerListener listener) {
-        // Do nothing.
+        buildListeners.add(listener);
     }
 
     @Override
     public void removeListener(BuildServerListener listener) {
-        // Do nothing.
+        buildListeners.remove(listener);
     }
 
     @NotNull
@@ -356,6 +339,13 @@ public class TestSBuildServer implements SBuildServer {
 
     public TestSBuildServer serverMinorVersion(byte serverMinorVersion) {
         this.serverMinorVersion = serverMinorVersion;
+        return this;
+    }
+
+    public TestSBuildServer notifyAgentRegistered(TestSBuildAgent agent) {
+        for (BuildServerListener listener : buildListeners) {
+            listener.agentRegistered(agent, -1);
+        }
         return this;
     }
 }
