@@ -19,13 +19,6 @@ import java.util.UUID;
 
 /**
  * Configuration of a {@link DockerCloudClient}.
- * <p>
- *     Beyond basic configuration parameters, a cloud client can be configured to use daemon threads. Daemon threads
- *     are, generally speaking, not a very good practice. They are however are necessity when running on the real
- *     server instance since our clean-up process can take some time to complete which in turn can slow the server
- *     shutdown time significantly. This should not be critical, except that Tomcat will complain if the JVM takes
- *     too long to shutdown, and then refuse to clean-up resources such as PID files properly.
- * </p>
  *
  * <p>Instances of this class are immutable.</p>
  */

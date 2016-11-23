@@ -154,7 +154,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     /**
      * Gets this client UUID. This UUID is persistent across server shutdown and reconfigurations.
      *
-     * @return the client UUDI
+     * @return the client UUID
      */
     @NotNull
     public UUID getUuid() {
