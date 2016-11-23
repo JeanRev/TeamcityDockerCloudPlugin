@@ -9,22 +9,15 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
-import run.var.teamcity.cloud.docker.test.TestCloudState;
-import run.var.teamcity.cloud.docker.test.TestDockerClient;
+import run.var.teamcity.cloud.docker.test.*;
 import run.var.teamcity.cloud.docker.test.TestDockerClient.Container;
 import run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus;
-import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
-import run.var.teamcity.cloud.docker.test.TestDockerImageResolver;
-import run.var.teamcity.cloud.docker.test.TestSBuildAgent;
-import run.var.teamcity.cloud.docker.test.TestSBuildServer;
-import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import java.sql.Date;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -37,7 +30,7 @@ import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
 /**
  * {@link DockerCloudClient} test suite.
  */
-@Test
+@Test(groups = "longRunning")
 public class DockerCloudClientTest {
 
     private DockerCloudClient client;

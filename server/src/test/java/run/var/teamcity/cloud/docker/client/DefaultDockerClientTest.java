@@ -3,6 +3,7 @@ package run.var.teamcity.cloud.docker.client;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import run.var.teamcity.cloud.docker.test.Integration;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -25,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * {@link DefaultDockerClient} test suite.
  */
-@Test
+@Test(groups = "integration")
 public abstract class DefaultDockerClientTest {
 
     private final static String TEST_LABEL_KEY = DefaultDockerClientTest.class.getName();

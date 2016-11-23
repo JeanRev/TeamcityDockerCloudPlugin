@@ -6,13 +6,8 @@ import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.TestContainerTestStatusListener;
-import run.var.teamcity.cloud.docker.test.TestBuildAgentManager;
-import run.var.teamcity.cloud.docker.test.TestDockerClient;
+import run.var.teamcity.cloud.docker.test.*;
 import run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus;
-import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
-import run.var.teamcity.cloud.docker.test.TestDockerImageResolver;
-import run.var.teamcity.cloud.docker.test.TestSBuildAgent;
-import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
@@ -31,7 +26,7 @@ import static run.var.teamcity.cloud.docker.web.ContainerTestManager.ActionExcep
 /**
  * {@link ContainerTestController} test suite.
  */
-@Test
+@Test(groups = "longRunning")
 public class DefaultContainerTestManagerTest {
 
     private long testMaxIdleTime;
