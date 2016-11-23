@@ -3,7 +3,7 @@
 <a href="https://tc.var.run/viewType.html?buildTypeId=TeamCityDockerCloudPlugin_Main">
     <img src="https://tc.var.run/app/rest/builds/buildType:(id:TeamCityDockerCloudPlugin_Main)/statusIcon" alt="Build status"/>
 </a>
-<a href="https://tc.var.run/viewLog.html?buildId=lastSuccessful&buildTypeId=TeamCityDockerCloudPlugin_Main&tab=coverage_jacoco">
+<a href="https://tc.var.run/viewLog.html?buildId=lastSuccessful&buildTypeId=TeamCityDockerCloudPlugin_Main&tab=coverage_jacoco&guest=1">
     <img src="https://tc.var.run/vr_static/dkcld_plugin_coverage_latest.png" alt="Test coverage"/>
 </a>
 
