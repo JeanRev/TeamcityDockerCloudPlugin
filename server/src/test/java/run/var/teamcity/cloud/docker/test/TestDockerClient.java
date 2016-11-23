@@ -2,13 +2,7 @@ package run.var.teamcity.cloud.docker.test;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
-import run.var.teamcity.cloud.docker.client.DockerClient;
-import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
-import run.var.teamcity.cloud.docker.client.InvocationFailedException;
-import run.var.teamcity.cloud.docker.client.NotFoundException;
-import run.var.teamcity.cloud.docker.client.TestImage;
+import run.var.teamcity.cloud.docker.client.*;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -16,15 +10,7 @@ import run.var.teamcity.cloud.docker.util.NodeStream;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
@@ -94,8 +80,15 @@ public class TestDockerClient implements DockerClient {
             Map<String, String> labels = new HashMap<>();
             containerSpec.getObject("Labels", Node.EMPTY_OBJECT).getObjectValues().
                     entrySet().forEach(entry -> labels.put(entry.getKey(), entry.getValue().getAsString()));
+            Map<String, String> env = new HashMap<>();
+            containerSpec.getArray("Env", Node.EMPTY_ARRAY).getArrayValues().
+                forEach(val -> {
+                  String entry = val.getAsString();
+                  int sepIndex = entry.indexOf('=');
+                  env.put(entry.substring(0, sepIndex), entry.substring(sepIndex + 1));
+                });
 
-            Container container = new Container(labels);
+            Container container = new Container(labels, env);
             containerId = container.getId();
             containers.put(containerId, container);
         } finally {
@@ -384,18 +377,20 @@ public class TestDockerClient implements DockerClient {
     public static class Container {
         private final String id = TestUtils.createRandomSha256();
         private final Map<String, String> labels = new HashMap<>();
+        private final Map<String, String> env = new HashMap<>();
         private ContainerStatus status;
 
         public Container(ContainerStatus status) {
-            this(Collections.emptyMap(), status);
+            this(Collections.emptyMap(), Collections.emptyMap(), status);
         }
 
-        public Container(Map<String, String> labels) {
-           this(labels, ContainerStatus.CREATED);
+        public Container(Map<String, String> labels, Map<String, String> env) {
+           this(labels, env, ContainerStatus.CREATED);
         }
 
-        public Container(Map<String, String> labels, ContainerStatus status) {
+        public Container(Map<String, String> labels, Map<String, String> env, ContainerStatus status) {
             this.labels.putAll(labels);
+            this.env.putAll(env);
             this.status = status;
         }
 
@@ -405,6 +400,10 @@ public class TestDockerClient implements DockerClient {
 
         public Map<String, String> getLabels() {
             return labels;
+        }
+
+        public Map<String, String> getEnv() {
+            return env;
         }
 
         public ContainerStatus getStatus() {

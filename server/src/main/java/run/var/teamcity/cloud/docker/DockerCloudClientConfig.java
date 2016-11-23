@@ -4,18 +4,15 @@ import com.intellij.openapi.util.text.StringUtil;
 import jetbrains.buildServer.serverSide.InvalidProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.net.URL;
+import java.util.*;
 
 /**
  * Configuration of a {@link DockerCloudClient}.
@@ -30,6 +27,7 @@ public class DockerCloudClientConfig {
     private final DockerClientConfig dockerClientConfig;
     private final boolean usingDaemonThreads;
     private final int dockerSyncRateSec;
+    private final URL serverURL;
 
     /**
      * Creates a new configuration instance.
@@ -37,12 +35,13 @@ public class DockerCloudClientConfig {
      * @param uuid the cloud client UUID
      * @param dockerClientConfig the Docker client configuration
      * @param usingDaemonThreads {@code true} if the client must use daemon threads to manage containers
+     * @param serverURL the server URL to be configured on the agents
      *
      * @throws NullPointerException if any argument is {@code null}
      */
     public DockerCloudClientConfig(@NotNull UUID uuid, @NotNull DockerClientConfig dockerClientConfig,
-                                   boolean usingDaemonThreads) {
-        this(uuid, dockerClientConfig, usingDaemonThreads, DEFAULT_DOCKER_SYNC_RATE_SEC);
+                                   boolean usingDaemonThreads, @Nullable URL serverURL) {
+        this(uuid, dockerClientConfig, usingDaemonThreads, DEFAULT_DOCKER_SYNC_RATE_SEC, serverURL);
     }
 
     /**
@@ -52,12 +51,13 @@ public class DockerCloudClientConfig {
      * @param dockerClientConfig the Docker client configuration
      * @param usingDaemonThreads {@code true} if the client must use daemon threads to manage containers
      * @param dockerSyncRateSec the rate at which the client is synchronized with the Docker daemon, in seconds
+     * @param serverURL the server URL to be configured on the agents
      *
      * @throws NullPointerException if any argument is {@code null}
      * @throws IllegalArgumentException if the Docker sync rate is below 2 seconds
      */
     public DockerCloudClientConfig(@NotNull UUID uuid, @NotNull DockerClientConfig dockerClientConfig,
-                                   boolean usingDaemonThreads, int dockerSyncRateSec) {
+                                   boolean usingDaemonThreads, int dockerSyncRateSec, @Nullable URL serverURL) {
         DockerCloudUtils.requireNonNull(uuid, "Client UUID cannot be null.");
         DockerCloudUtils.requireNonNull(dockerClientConfig, "Docker client configuration cannot be null.");
         if (dockerSyncRateSec < 2) {
@@ -67,6 +67,7 @@ public class DockerCloudClientConfig {
         this.dockerClientConfig = dockerClientConfig;
         this.usingDaemonThreads = usingDaemonThreads;
         this.dockerSyncRateSec = dockerSyncRateSec;
+        this.serverURL = serverURL;
     }
 
     /**
@@ -99,6 +100,16 @@ public class DockerCloudClientConfig {
 
     public int getDockerSyncRateSec() {
         return dockerSyncRateSec;
+    }
+
+    /**
+     * Gets the server URL for the agents to connect. May be null to use the default server URL.
+     *
+     * @return the server URL or {@code null}
+     */
+    @Nullable
+    public URL getServerURL() {
+        return serverURL;
     }
 
     /**
@@ -154,6 +165,18 @@ public class DockerCloudClientConfig {
             }
         }
 
+        URL serverURL = null;
+
+        String serverURLStr = properties.get(DockerCloudUtils.SERVER_URL_PARAM);
+
+        if (!StringUtil.isEmpty(serverURLStr)) {
+            try {
+                serverURL = new URL(serverURLStr);
+            } catch (MalformedURLException e) {
+                invalidProperties.add(new InvalidProperty(DockerCloudUtils.SERVER_URL_PARAM, "Not a valid URL"));
+            }
+        }
+
         if (!invalidProperties.isEmpty()) {
             throw new DockerCloudClientConfigException(invalidProperties);
         }
@@ -162,7 +185,7 @@ public class DockerCloudClientConfig {
 
         DockerClientConfig dockerClientConfig = new DockerClientConfig(instanceURI).usingTls(usingTls);
 
-        return new DockerCloudClientConfig(clientUuid, dockerClientConfig, true);
+        return new DockerCloudClientConfig(clientUuid, dockerClientConfig, true, serverURL);
     }
 
     /**

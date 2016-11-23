@@ -64,7 +64,7 @@ public class ContainerTestController extends BaseFormXmlController {
                                    @NotNull WebLinks webLinks) {
         this(DockerClientFactory.getDefault(), atmosphereFramework, server, pluginDescriptor, manager,
                 new DefaultContainerTestManager(OfficialAgentImageResolver.forServer(server),
-                        DockerClientFactory.getDefault(), server.getBuildAgentManager(), webLinks.getRootUrl()));
+                        DockerClientFactory.getDefault(), server.getBuildAgentManager(), webLinks));
 
     }
 

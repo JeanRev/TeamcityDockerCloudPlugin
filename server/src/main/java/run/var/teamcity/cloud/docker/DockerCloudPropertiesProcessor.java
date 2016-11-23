@@ -26,6 +26,6 @@ class DockerCloudPropertiesProcessor implements PropertiesProcessor {
         } catch (DockerCloudClientConfigException e) {
             invalidProperties.addAll(e.getInvalidProperties());
         }
-        return Collections.emptyList();
+        return invalidProperties;
     }
 }

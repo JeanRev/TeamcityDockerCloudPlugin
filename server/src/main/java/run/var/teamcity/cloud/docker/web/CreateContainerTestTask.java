@@ -59,7 +59,7 @@ class CreateContainerTestTask extends ContainerTestTask {
 
         EditableNode container = imageConfig.getContainerSpec().editNode();
         container.getOrCreateArray("Env").add(DockerCloudUtils.ENV_TEST_INSTANCE_ID + "=" + instanceUuid).add
-                ("SERVER_URL=" + serverUrl);
+                (DockerCloudUtils.ENV_SERVER_URL + "=" + serverUrl);
         container.getOrCreateObject("Labels").put(DockerCloudUtils.TEST_INSTANCE_ID_LABEL, instanceUuid.toString());
         String image = imageResolver.resolve(imageConfig);
 

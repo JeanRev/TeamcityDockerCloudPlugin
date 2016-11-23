@@ -52,6 +52,10 @@ public final class DockerCloudUtils {
      */
     public static final String CLIENT_UUID = NS_PREFIX + "client_uuid";
     /**
+     * Docker cloud parameter: use default server URL.
+     */
+    public static final String SERVER_URL_PARAM = NS_PREFIX + "server_url";
+    /**
      * Docker cloud parameter: images configuration.
      */
     public static final String IMAGES_PARAM = NS_PREFIX + "img_param";
@@ -108,6 +112,11 @@ public final class DockerCloudUtils {
      * Environment variable name to store the cloud instance UUID.
      */
     public static final String ENV_TEST_INSTANCE_ID = ENV_PREFIX + "TEST_INSTANCE_UUID";
+    /**
+     * Environment variable name to store the server URL. <strong>This environment variable is used to connect to TC
+     * server using the official agent images and should not be changed.</strong>
+     */
+    public static final String ENV_SERVER_URL = "SERVER_URL";
 
     /**
      * Test for argument nullity.

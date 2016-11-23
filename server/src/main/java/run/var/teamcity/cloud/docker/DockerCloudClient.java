@@ -1,23 +1,8 @@
 package run.var.teamcity.cloud.docker;
 
 import com.intellij.openapi.diagnostic.Logger;
-import jetbrains.buildServer.clouds.CloudClient;
-import jetbrains.buildServer.clouds.CloudClientEx;
-import jetbrains.buildServer.clouds.CloudConstants;
-import jetbrains.buildServer.clouds.CloudErrorInfo;
-import jetbrains.buildServer.clouds.CloudException;
-import jetbrains.buildServer.clouds.CloudImage;
-import jetbrains.buildServer.clouds.CloudInstance;
-import jetbrains.buildServer.clouds.CloudInstanceUserData;
-import jetbrains.buildServer.clouds.CloudState;
-import jetbrains.buildServer.clouds.InstanceStatus;
-import jetbrains.buildServer.clouds.QuotaException;
-import jetbrains.buildServer.serverSide.AgentCannotBeRemovedException;
-import jetbrains.buildServer.serverSide.AgentDescription;
-import jetbrains.buildServer.serverSide.BuildAgentManager;
-import jetbrains.buildServer.serverSide.BuildServerAdapter;
-import jetbrains.buildServer.serverSide.SBuildAgent;
-import jetbrains.buildServer.serverSide.SBuildServer;
+import jetbrains.buildServer.clouds.*;
+import jetbrains.buildServer.serverSide.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
@@ -29,13 +14,8 @@ import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.net.URL;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -113,6 +93,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
      */
     private DockerClient dockerClient;
 
+    private final URL serverURL;
     private final DockerImageNameResolver resolver;
 
     DockerCloudClient(@NotNull DockerCloudClientConfig clientConfig,
@@ -134,6 +115,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         this.resolver = resolver;
         this.cloudState = cloudState;
         this.agentMgr = buildServer.getBuildAgentManager();
+        this.serverURL = clientConfig.getServerURL();
 
         taskScheduler = new DockerTaskScheduler(clientConfig.getDockerClientConfig().getThreadPoolSize(),
                 clientConfig.isUsingDaemonThreads());
@@ -323,7 +305,9 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                     // Makes sure the image name is actual.
                     dockerImage.setImageName(image);
 
-                    Node containerSpec = authorContainerSpec(instance, image, tag.getServerAddress());
+                    String serverAddress = serverURL != null ? serverURL.toString() : tag.getServerAddress();
+
+                    Node containerSpec = authorContainerSpec(instance, image, serverAddress);
 
                     try (NodeStream nodeStream = dockerClient.createImage(image, null)) {
                         Node status;
@@ -535,7 +519,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
 
         EditableNode container = config.getContainerSpec().editNode();
         container.getOrCreateArray("Env").
-                add("SERVER_URL=" + serverUrl).
+                add(DockerCloudUtils.ENV_SERVER_URL + "=" + serverUrl).
                 add(DockerCloudUtils.ENV_CLIENT_ID + "=" + uuid).
                 add(DockerCloudUtils.ENV_IMAGE_ID + "=" + image.getId()).
                 add(DockerCloudUtils.ENV_INSTANCE_ID + "=" + instance.getUuid());

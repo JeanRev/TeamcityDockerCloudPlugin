@@ -186,7 +186,6 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
         lock.lock();
         try {
-            System.out.println("Settinggs status: " + status);
             statusMsg = new TestContainerStatusMsg(uuid, phase, status, msg, failure);
         } finally {
             lock.unlock();

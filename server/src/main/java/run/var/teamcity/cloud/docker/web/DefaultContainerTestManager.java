@@ -2,6 +2,7 @@ package run.var.teamcity.cloud.docker.web;
 
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.serverSide.BuildAgentManager;
+import jetbrains.buildServer.serverSide.WebLinks;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
@@ -16,6 +17,7 @@ import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
 import run.var.teamcity.cloud.docker.util.WrappedRunnableScheduledFuture;
 
 import javax.servlet.http.HttpServletResponse;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,27 +47,27 @@ class DefaultContainerTestManager extends ContainerTestManager {
     private final long testMaxIdleTimeSec;
     private final long cleanupRateSec;
     private final BuildAgentManager agentMgr;
-    private final String serverUrl;
+    private final WebLinks webLinks;
 
     private ScheduledExecutorService executorService = null;
     private boolean disposed = false;
 
     DefaultContainerTestManager(DockerImageNameResolver imageNameResolver,
-                         DockerClientFactory dockerClientFactory, BuildAgentManager agentMgr, String serverUrl) {
-        this(imageNameResolver, dockerClientFactory, agentMgr, serverUrl, TEST_DEFAULT_IDLE_TIME_SEC,
+                         DockerClientFactory dockerClientFactory, BuildAgentManager agentMgr, WebLinks webLinks) {
+        this(imageNameResolver, dockerClientFactory, agentMgr, webLinks, TEST_DEFAULT_IDLE_TIME_SEC,
                 CLEANUP_DEFAULT_TASK_RATE_SEC);
     }
 
 
     DefaultContainerTestManager(DockerImageNameResolver imageNameResolver,
-                                DockerClientFactory dockerClientFactory, BuildAgentManager agentMgr, String serverUrl,
+                                DockerClientFactory dockerClientFactory, BuildAgentManager agentMgr, WebLinks webLinks,
                                 long testMaxIdleTimeSec, long cleanupRateSec) {
         this.imageNameResolver = imageNameResolver;
         this.dockerClientFactory = dockerClientFactory;
         this.testMaxIdleTimeSec = testMaxIdleTimeSec;
         this.cleanupRateSec = cleanupRateSec;
         this.agentMgr = agentMgr;
-        this.serverUrl = serverUrl;
+        this.webLinks = webLinks;
     }
 
     TestContainerStatusMsg doAction(Action action, UUID testUuid, DockerCloudClientConfig clientConfig,
@@ -155,7 +157,10 @@ class DefaultContainerTestManager extends ContainerTestManager {
 
         ContainerSpecTest test = newTestInstance(clientConfig);
 
-        CreateContainerTestTask testTask = new CreateContainerTestTask(test, imageConfig, serverUrl, test
+        URL serverURL = clientConfig.getServerURL();
+        String serverURLStr = serverURL != null ? serverURL.toString() : webLinks.getRootUrl();
+
+        CreateContainerTestTask testTask = new CreateContainerTestTask(test, imageConfig, serverURLStr, test
                 .getUuid(), imageNameResolver);
         test.setCurrentTask(schedule(testTask));
 
@@ -199,8 +204,8 @@ class DefaultContainerTestManager extends ContainerTestManager {
         LOG.info("Disposing test task: " + test.getUuid());
 
         DockerClient client;
-        ContainerTestStatusListener statusListener = null;
-        String containerId = null;
+        ContainerTestStatusListener statusListener;
+        String containerId;
 
         try {
             lock.lock();

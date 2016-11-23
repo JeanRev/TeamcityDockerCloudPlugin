@@ -15,6 +15,8 @@ import run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.sql.Date;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -44,22 +46,25 @@ public class DockerCloudClientTest {
     private TestCloudState cloudState;
     private CloudInstanceUserData userData;
     private CloudErrorInfo errorInfo;
+    private URL serverURL;
+    private URL defaultServerURL;
 
     @BeforeMethod
-    public void init() {
+    public void init() throws MalformedURLException {
         dockerClientFactory = new TestDockerClientFactory() {
             @Override
             public void configureClient(TestDockerClient dockerClient) {
                 dockerClient.knownImage("resolved-image", "latest");
             }
         };
-        DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI);
-        clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2);
+        serverURL = new URL("http://not.a.real.server.url");
+        defaultServerURL = new URL("http://not.a.real.default.server.url");
         containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
         buildServer = new TestSBuildServer();
         dockerImageResolver = new TestDockerImageResolver("resolved-image:latest");
         cloudState = new TestCloudState();
-        userData = new CloudInstanceUserData("", "", "", null, "", "", Collections.emptyMap());
+        userData = new CloudInstanceUserData("", "", defaultServerURL.toString(),
+                null, "", "", Collections.emptyMap());
         errorInfo = null;
         maxInstanceCount = 1;
         rmOnExit = true;
@@ -109,6 +114,7 @@ public class DockerCloudClientTest {
         assertThat(containers).hasSize(1);
         Container container = containers.iterator().next();
         assertThat(instance.getContainerId()).isEqualTo(container.getId());
+        assertThat(container.getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(serverURL.toString());
 
         dockerClient.lock();
 
@@ -336,6 +342,20 @@ public class DockerCloudClientTest {
         assertThat(client.canStartNewInstance(image)).isTrue();
     }
 
+    public void handlingOfDefaultServerURL() {
+
+        serverURL = null;
+        DockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        assertThat(dockerClientFactory.getClient().getContainers().iterator().next().
+                getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(defaultServerURL.toString());
+    }
+
     public void maxInstanceCount() {
         maxInstanceCount = 2;
 
@@ -482,6 +502,9 @@ public class DockerCloudClientTest {
     }
 
     private DockerCloudClient createClient() {
+
+        DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI);
+        DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2, serverURL);
         DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, rmOnExit, false,
                 maxInstanceCount);
         return client = new DockerCloudClient(clientConfig, dockerClientFactory,

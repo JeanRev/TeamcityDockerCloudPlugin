@@ -1,5 +1,6 @@
 package run.var.teamcity.cloud.docker.web;
 
+import jetbrains.buildServer.serverSide.WebLinks;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
@@ -14,11 +15,11 @@ import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.servlet.http.HttpServletResponse;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.assertj.core.api.Assertions.*;
 import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
 import static run.var.teamcity.cloud.docker.web.ContainerTestManager.Action;
 import static run.var.teamcity.cloud.docker.web.ContainerTestManager.ActionException;
@@ -33,13 +34,15 @@ public class DefaultContainerTestManagerTest {
     private long cleanupRateSec;
 
     private TestDockerClientFactory dockerClientFactory;
+    private DockerClientConfig dockerClientConfig;
     private DockerCloudClientConfig clientConfig;
     private DockerImageConfig imageConfig;
     private TestBuildAgentManager agentMgr;
     private TestDockerImageResolver imageResolver;
+    private URL serverURL;
 
     @BeforeMethod
-    public void init() {
+    public void init() throws MalformedURLException {
         dockerClientFactory = new TestDockerClientFactory() {
             @Override
             public void configureClient(TestDockerClient dockerClient) {
@@ -47,10 +50,11 @@ public class DefaultContainerTestManagerTest {
             }
         };
 
+        serverURL = new URL("http://not.a.real.server");
 
-        DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI);
-        clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig,
-                false);
+        dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI);
+        clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false,
+                serverURL);
 
         Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
         imageConfig = new DockerImageConfig("test", containerSpec, true, false, 1);
@@ -82,7 +86,9 @@ public class DefaultContainerTestManagerTest {
         queryUntilSuccess(mgr, testUuid, Phase.CREATE);
 
         assertThat(dockerClient.getContainers()).hasSize(1);
-        assertThat(dockerClient.getContainers().iterator().next().getStatus()).isSameAs(ContainerStatus.CREATED);
+        TestDockerClient.Container container = dockerClient.getContainers().iterator().next();
+        assertThat(container.getStatus()).isSameAs(ContainerStatus.CREATED);
+        assertThat(container.getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(serverURL.toString());
 
         statusMsg = mgr.doAction(Action.START, testUuid, null, null);
 
@@ -242,6 +248,23 @@ public class DefaultContainerTestManagerTest {
         assertThat(statusListener.getMsgs().getFirst().getStatus()).isSameAs(Status.SUCCESS);
     }
 
+    public void handlingOfDefaultServerUrl() {
+        clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, null);
+
+        ContainerTestManager mgr = createManager();
+
+        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
+                imageConfig);
+
+        UUID testUuid = statusMsg.getTaskUuid();
+
+        queryUntilSuccess(mgr, testUuid);
+
+        assertThat(dockerClientFactory.getClient().getContainers().iterator().next().
+                getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(TestRootUrlHolder.HOLDER_URL);
+
+    }
+
     public void failedToResolveImageMakesTestFail() {
         imageResolver.image(null);
 
@@ -299,6 +322,6 @@ public class DefaultContainerTestManagerTest {
 
     private ContainerTestManager createManager() {
         return new DefaultContainerTestManager(imageResolver, dockerClientFactory,
-                agentMgr, "/not/a/real/server/url", testMaxIdleTime, cleanupRateSec);
+                agentMgr, new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRateSec);
     }
 }

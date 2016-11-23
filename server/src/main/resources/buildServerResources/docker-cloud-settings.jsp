@@ -9,6 +9,7 @@
 <%@ taglib prefix="forms" tagdir="/WEB-INF/tags/forms" %>
 <!-- Disable IDEA warnings about unused variables. -->
 <%--@elvariable id="resPath" type="java.lang.String"--%>
+<%--@elvariable id="defaultTCUrl" type="java.net.URL"--%>
 <%--@elvariable id="debugEnabled" type="java.lang.Boolean"--%>
 <%--@elvariable id="defaultUnixSocketAvailable" type="java.lang.Boolean"--%>
 <c:set var="paramName" value="<%=DockerCloudUtils.IMAGES_PARAM%>"/>
@@ -58,8 +59,8 @@
             </c:choose>
 
             <p>
-                <label for="dockerCloudDockerAddress">Address:&nbsp;<span id="addressStar"><l:star/></span>&nbsp;</label><props:textProperty name="<%=DockerCloudUtils.INSTANCE_URI%>" id="dockerCloudDockerAddress"
-                                                                                                                                             className="longField"/>
+                <label for="dockerCloudDockerAddress">Address:&nbsp;<span id="addressStar"><l:star/></span>&nbsp;</label>
+                <props:textProperty name="<%=DockerCloudUtils.INSTANCE_URI%>" id="dockerCloudDockerAddress" className="longField"/>
                 <a href="#" class="btn" id="dockerCloudCheckConnectionBtn">Check connection</a>
                 <span class="error" id="error_<%=DockerCloudUtils.INSTANCE_URI%>"></span>
             </p>
@@ -98,7 +99,21 @@
 
     </tbody>
 </table>
-</div>
+
+<table class="runnerFormTable">
+    <tbody>
+    <tr>
+        <th>TeamCity server URL:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">TeamCity server URL for the agents to connect. May be left empty to use the default server address.</span>
+        </th>
+        <td>
+            <props:textProperty name="<%=DockerCloudUtils.SERVER_URL_PARAM%>" className="longField"/>
+            <span class="error" id="error_<%=DockerCloudUtils.SERVER_URL_PARAM%>"></span>
+        </td>
+    </tr>
+    </tbody>
+</table>
 
 <bs:dialog dialogId="DockerCloudImageDialog" title="Add Image" closeCommand="BS.DockerImageDialog.close()"
            titleId="DockerImageDialogTitle">
