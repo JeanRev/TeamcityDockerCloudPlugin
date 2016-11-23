@@ -3,6 +3,10 @@
 <a href="https://tc.var.run/viewType.html?buildTypeId=TeamCityDockerCloudPlugin_Main">
     <img src="https://tc.var.run/app/rest/builds/buildType:(id:TeamCityDockerCloudPlugin_Main)/statusIcon" alt="Build status"/>
 </a>
+<a href="https://tc.var.run/viewLog.html?buildId=lastSuccessful&buildTypeId=TeamCityDockerCloudPlugin_Main&tab=coverage_jacoco">
+    <img src="https://tc.var.run/vr_static/dkcld_plugin_coverage_latest.png" alt="Test coverage"/>
+</a>
+
 </p>
 This TeamCity plugin leverages the TeamCity Cloud API in order to start and dispose TeamCity agent hosted in Docker 
 containers on demand.
