@@ -142,6 +142,23 @@ public class DockerCloudClientTest {
         assertThat(instance.getErrorInfo()).isNull();
     }
 
+    public void dispose() {
+        rmOnExit = false;
+
+        client = createClient();
+
+        DockerImage image = extractImage(client);
+        DockerInstance instance = client.startNewInstance(image, userData);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        client.dispose();
+
+        waitUntil(() -> image.getInstances().isEmpty());
+
+        assertThat(dockerClientFactory.getClient().getContainers().isEmpty());
+    }
+
     public void restartInstance() {
 
         DockerCloudClient client = createClient();
