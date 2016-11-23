@@ -5,8 +5,10 @@ containers on demand.
 - TeamCity 10.x or greater.
 - A Docker daemon accessible through either TCP or Unix Socket, supporting the remote API v1.24 (Engine version 
 1.12.x).
+
 ## License
 Unless otherwise specified in their header, all files are distributed under the Apache License 2.0.
+
 ## Acknowledgments
 <table>
 <tr>
