@@ -57,7 +57,7 @@ public class CheckConnectivityController extends BaseFormXmlController {
         String uri = properties.get(DockerCloudUtils.INSTANCE_URI);
         boolean useTLS = Boolean.parseBoolean(properties.get(DockerCloudUtils.USE_TLS));
 
-        String errorMsg = null;
+        Exception error = null;
         try {
 
             DockerClientConfig dockerConfig = new DockerClientConfig(new URI(uri)).usingTls(useTLS).threadPoolSize(1);
@@ -77,13 +77,12 @@ public class CheckConnectivityController extends BaseFormXmlController {
             setAttr(versionElt, "experimental", version.getAsBoolean("experimental", false));
             xmlResponse.addContent(versionElt);
         } catch (Exception e) {
-            errorMsg = e.getMessage();
+            error = e;
         }
 
-        if (errorMsg != null) {
-            Element errorElt = new Element("error");
-            errorElt.setText(errorMsg);
-            xmlResponse.addContent(errorElt);
+        if (error != null) {
+            xmlResponse.addContent(new Element("error").setText(error.getMessage()));
+            xmlResponse.addContent(new Element("failureCause").setText(DockerCloudUtils.getStackTrace(error)));
         }
     }
 

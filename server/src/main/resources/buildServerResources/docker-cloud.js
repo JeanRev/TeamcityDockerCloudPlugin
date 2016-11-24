@@ -43,6 +43,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self.$image = $j("#dockerCloudImage_Image");
                 self.$checkConnectionBtn = $j("#dockerCloudCheckConnectionBtn");
+                self.$checkConnectionSuccess = $j('#dockerCloudCheckConnectionSuccess');
                 self.$checkConnectionError = $j('#dockerCloudCheckConnectionError');
                 self.$newImageBtn = $j('#dockerShowDialogButton');
                 self.$imageDialogSubmitBtn = $j('#dockerAddImageButton');
@@ -63,7 +64,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerCloseBtn = $j('#dockerCloudTestContainerCloseBtn');
                 self.$testContainerSuccessIcon = $j('#dockerCloudTestContainerSuccess');
                 self.$testContainerErrorIcon = $j('#dockerCloudTestContainerError');
-                self.$checkConnectionSuccess = $j('#dockerCloudCheckConnectionSuccess');
 
                 self.$imageDataOkBtn = $j("#dockerAddImageButton");
                 self.$imageDataDialogTitle = $j("#DockerImageDialogTitle");
@@ -84,6 +84,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$imageTestContainerStartBtn = $j("#dockerStartImageTest");
                 self.$dockerTestContainerOutput = $j("#dockerTestContainerOutput");
                 self.$testedImage = $j(BS.Util.escapeId("run.var.teamcity.docker.cloud.tested_image"));
+
+                /* Diagnostic dialog */
+                self.$diagnosticMsg = $j('#dockerCloudTestContainerErrorDetailsMsg');
+                self.$diagnosticLogs = $j('#dockerCloudTestContainerErrorDetailsStackTrace');
 
                 self._initImagesData();
                 self._initTabs();
@@ -138,57 +142,51 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             _checkConnection: function () {
-                var checkConnectionDeferred = $j.Deferred()
-                    .done(function (response) {
-                        var $response = $j(response.responseXML);
-                        var $error = $response.find("error");
-                        if ($error.length) {
-                            self._setConnectionError($error.text());
-                        } else {
-                            var $version = $response.find("version");
-                            self.$checkConnectionSuccess.text('Connection successful to Docker version ' + $version.attr('docker') +
-                                ' (API: ' + $version.attr('api') + ') on ' +
-                                $version.attr('os') + '/' + $version.attr('arch')).removeClass('hidden');
-                        }
-
-                        return response;
-                    })
-                    .fail(function (errorText) {
-                        self._setConnectionError('Unable to check for connectivity: ' + errorText);
-                        return errorText;
-                    })
-                    .always(function () {
-                        self.$checkConnectionLoader.addClass('hidden');
-                        self._toggleCheckConnectionBtn(true);
-                    });
-
                 self._toggleCheckConnectionBtn();
-                //self._toggleLoadingMessage('_checkConnection', true);
-                self.$checkConnectionLoader.removeClass('hidden');
-                self.$checkConnectionSuccess.addClass('hidden');
+                self.$checkConnectionLoader.show();
+                self.$checkConnectionSuccess.hide().empty();
+                self.$checkConnectionError.hide().empty();
+
+                var deferred = $j.Deferred();
 
                 BS.ajaxRequest(self.checkConnectivityCtrlURL, {
                     parameters: BS.Clouds.Admin.CreateProfileForm.serializeParameters(),
                     onFailure: function (response) {
-                        self.checkConnectionDeferred.reject(response.getStatusText());
+                        deferred.reject(response.getStatusText());
                     },
                     onSuccess: function (response) {
-                        var $response = $j(response.responseXML),
-                            $errors = $response.find('errors:eq(0) error');
-
-                        if ($errors.length) {
-                            checkConnectionDeferred.reject($errors.text());
-                        } else {
-                            checkConnectionDeferred.resolve(response);
-                        }
+                        deferred.resolve(response);
                     }
                 });
 
-                return false; // to prevent link with href='#' to scroll to the top of the page
-            },
+                deferred.
+                fail(function(msg) {
+                    self.$checkConnectionError.append($j('<div>')).text(msg);
+                }).
+                done(function(response) {
+                    var $response = $j(response.responseXML);
+                    var $error = $response.find("error");
+                    if ($error.length) {
+                        var $container = self.$checkConnectionError.append($j('<div>').append('<span>'));
+                        $container.text($error.text());
+                        var $failureCause = $response.find("failureCause");
+                        if ($failureCause.length) {
+                            self.prepareStackTraceDialog($container, "Checking for connectivity failed.", $failureCause.text());
+                        }
+                        self.$checkConnectionError.append($container).show();
+                    } else {
+                        var $version = $response.find("version");
+                        self.$checkConnectionSuccess.text('Connection successful to Docker version ' + $version.attr('docker') +
+                            ' (API: ' + $version.attr('api') + ') on ' +
+                            $version.attr('os') + '/' + $version.attr('arch')).show();
+                    }
+                }).
+                always(function () {
+                    self.$checkConnectionLoader.hide();
+                    self._toggleCheckConnectionBtn(true);
+                });
 
-            _setConnectionError: function (errorHTML) {
-                self.$checkConnectionError.append($j('<div>').html(errorHTML));
+                return false; // to prevent link with href='#' to scroll to the top of the page
             },
 
             /* IMAGE DATA MARSHALLING / UNMARSHALLING */
@@ -1103,7 +1101,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 return false; // to prevent link with href='#' to scroll to the top of the page
             },
             _toggleCheckConnectionBtn: function (enable) {
-                // $fetchOptionsButton is basically an anchor, also attribute allows to add styling
                 self.$checkConnectionBtn.attr('disabled', !enable);
             },
             _toggleLoadingMessage: function (loaderName, show) {
@@ -1337,7 +1334,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _testDialogHideAllBtns: function() {
                 self.$imageTestContainerCreateBtn.hide();
                 self.$imageTestContainerStartBtn.hide();
-                self.$testContainerCancelBtn.hide();;
+                self.$testContainerCancelBtn.hide();
                 self.$testContainerCloseBtn.hide();
                 self.$testContainerCopyLogsBtn.hide();
                 self.$testContainerDisposeBtn.hide();
@@ -1403,6 +1400,14 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
               if (self.debugEnabled) {
                   self._log(msg);
               }
+            },
+            prepareStackTraceDialog: function($container, msg, stacktrace) {
+                self.$diagnosticMsg.text(msg);
+                self.$diagnosticLogs.text(stacktrace);
+                var viewDetailsLink = $j('<a href="#/">view details</a>)').click(function () {
+                    BS.DockerDiagnosticDialog.showCentered();
+                });
+                $container.append(' (').append(viewDetailsLink).append(')');
             },
             _log: function(msg) {
                 // Catching all errors instead of simply testing for console existence to prevent issues with IE8.
