@@ -20,6 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.ModelAndView;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
+import run.var.teamcity.cloud.docker.DockerCloudClientConfigException;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
@@ -144,6 +145,9 @@ public class ContainerTestController extends BaseFormXmlController {
             try {
                 clientConfig = DockerCloudClientConfig.processParams(params, dockerClientFactory);
                 imageConfig = DockerImageConfig.fromJSon(Node.parse(params.get(DockerCloudUtils.TEST_IMAGE_PARAM)));
+            } catch (DockerCloudClientConfigException e) {
+                sendErrorQuietly(response, HttpServletResponse.SC_BAD_REQUEST, "Invalid configuration. Please check your connection settings.");
+                return;
             } catch (Exception e) {
                 LOG.error("Data parsing failed.", e);
                 sendErrorQuietly(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to parse data.");
