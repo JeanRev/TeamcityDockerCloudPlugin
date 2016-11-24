@@ -987,6 +987,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
 
                 self.$testContainerCloseBtn.click(function() {
+                    self._cancelTest();
                     BS.DockerTestContainerDialog.close();
                 });
 
@@ -1042,6 +1043,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 if (responseMap.status == 'PENDING') {
                     self.$testContainerLabel.text(responseMap.msg);
+                    self.$testContainerCancelBtn.show();
                 } else {
                     self.$testContainerLoader.hide();
                     self.$testContainerCancelBtn.hide();
@@ -1095,7 +1097,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 // Invoke test action.
                 var url = self.testContainerCtrlURL + '?action=' + action;
                 if (self.testUuid) {
-                    url += '&testUuid=' + testUuid;
+                    url += '&testUuid=' + self.testUuid;
                 }
 
                 BS.ajaxRequest(url, {
