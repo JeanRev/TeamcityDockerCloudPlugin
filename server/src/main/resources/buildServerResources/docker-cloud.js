@@ -1148,8 +1148,14 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     onSuccess: function (response) {
                         deferred.resolve(response);
                     },
-                    onFailure: function (response) {;
-                        deferred.reject(response.responseText);
+                    onFailure: function (response) {
+                        var txt;
+                        if (response.responseText.length > 150 || response.responseText.indexOf('<html>') != -1) {
+                            txt = response.statusText;
+                        } else {
+                            txt = response.responseText;
+                        }
+                        deferred.reject(txt);
                     }
                 });
 
