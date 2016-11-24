@@ -668,8 +668,18 @@
     <span id="dockerCloudTestContainerErrorDetailsMsg" class="mono"></span>
     <div id="dockerCloudTestContainerErrorDetailsStackTrace" class="problemDetails mono custom-scroll">
     </div>
+    <div class="dockerCloudBtnBlock">
+        <p>
+            <input type="button" class="btn" id="dockerDiagnosticCopyBtn" value="Copy to clipboard" data-clipboard-target="#dockerCloudTestContainerErrorDetailsStackTrace"/>
+            <input type="button" class="btn" id="dockerDiagnosticCloseBtn" value="Close"/>
+        </p>
+    </div>
 </bs:dialog>
 <script type="text/javascript">
+    $j.ajax({
+        url: "<c:url value="${resPath}clipboard.min.js"/>",
+        dataType: "script"
+    });
     $j.ajax({
         url: "<c:url value="${resPath}docker-cloud.js"/>",
         dataType: "script",

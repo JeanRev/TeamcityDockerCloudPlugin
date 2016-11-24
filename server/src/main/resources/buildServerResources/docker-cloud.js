@@ -88,6 +88,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 /* Diagnostic dialog */
                 self.$diagnosticMsg = $j('#dockerCloudTestContainerErrorDetailsMsg');
                 self.$diagnosticLogs = $j('#dockerCloudTestContainerErrorDetailsStackTrace');
+                self.$diagnosticCopyBtn = $j('#dockerDiagnosticCopyBtn');
+                self.$diagnosticCloseBtn = $j('#dockerDiagnosticCloseBtn');
 
                 self._initImagesData();
                 self._initTabs();
@@ -988,6 +990,11 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     BS.DockerTestContainerDialog.close();
                 });
 
+                self.$diagnosticCloseBtn.click(function () {
+                   BS.DockerDiagnosticDialog.close();
+                });
+
+                self.$diagnosticCopyBtn.hide();
             },
 
             _queryTestStatus: function() {
@@ -1427,6 +1434,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     BS.DockerDiagnosticDialog.showCentered();
                 });
                 $container.append(' (').append(viewDetailsLink).append(')');
+
+                if (!self.clipboard && typeof Clipboard !== 'undefined') {
+                        self.logInfo("Clipboard operations enabled.");
+                        self.clipboard = new Clipboard('#dockerDiagnosticCopyBtn');
+                        self.clipboard.on('success', function(e) {
+                            e.clearSelection();
+                        });
+                        self.$diagnosticCopyBtn.show();
+                }
             },
             _log: function(msg) {
                 // Catching all errors instead of simply testing for console existence to prevent issues with IE8.
