@@ -130,7 +130,7 @@ abstract class ContainerTestTask implements Runnable {
                 }
                 newStatus = work();
             }  catch (Exception e) {
-                LOG.error("Processing of task " + this + " failed.", e);
+                LOG.warn("Processing of task " + this + " failed.", e);
                 newStatus = Status.FAILURE;
                 throwable = e;
             }
