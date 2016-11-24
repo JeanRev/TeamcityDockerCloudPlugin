@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -140,7 +141,7 @@ abstract class AbstractNode<N extends AbstractNode> {
             throw new IllegalArgumentException("Default node value is not an object.");
         }
         JsonNode object = node.get(fieldName);
-        if (object == null) {
+        if (object == null || object instanceof NullNode) {
             return def;
         }
         return getObject(fieldName);
@@ -186,7 +187,7 @@ abstract class AbstractNode<N extends AbstractNode> {
             throw new IllegalArgumentException("Default node value is not an array.");
         }
         JsonNode object = node.get(fieldName);
-        if (object == null) {
+        if (object == null || object instanceof NullNode) {
             return def;
         }
 
