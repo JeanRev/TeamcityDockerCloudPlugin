@@ -238,7 +238,14 @@ public abstract class DockerAbstractClient implements Closeable {
         }
 
         if (responseFromServer != null) {
-            sb.append(" -- ").append(responseFromServer);
+            String msg = null;
+            try {
+                msg = Node.parse(responseFromServer).getAsString("message", null);
+            } catch (IOException e) {
+                // Ignore.
+            }
+
+            sb.append(" -- ").append(msg != null ? msg : responseFromServer);
         } else {
             sb.append(".");
         }
