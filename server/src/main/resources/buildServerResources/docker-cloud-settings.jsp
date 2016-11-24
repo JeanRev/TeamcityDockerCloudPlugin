@@ -62,6 +62,7 @@
                 <label for="dockerCloudDockerAddress">Address:&nbsp;<span id="addressStar"><l:star/></span>&nbsp;</label>
                 <props:textProperty name="<%=DockerCloudUtils.INSTANCE_URI%>" id="dockerCloudDockerAddress" className="longField"/>
                 <a href="#/" class="btn" id="dockerCloudCheckConnectionBtn">Check connection</a>
+                <span class="smallNote">Daemon URI, starting either with a <code>tcp:</code> or <code>unix:</code> scheme.</span>
                 <span class="error" id="error_<%=DockerCloudUtils.INSTANCE_URI%>"></span>
             </p>
             <p>

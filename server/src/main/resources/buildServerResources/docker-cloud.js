@@ -809,8 +809,22 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$useCustomInstance.change(self._addressState)
                 self._addressState();
 
-                self.$checkConnectionBtn.on('click', self._checkConnectionClickHandler);
-                self.$newImageBtn.on('click', self._showImageDialogClickHandler);
+                self.$checkConnectionBtn.click(self._checkConnectionClickHandler);
+                self.$newImageBtn.click(self._showImageDialogClickHandler);
+
+                self.$dockerAddress.change(function() {
+                    var address = self.$dockerAddress.val();
+                    var match = address.match(/([a-zA-Z]+?):\/*(.*)/);
+                    if (match) {
+                        var scheme = match[1].toLowerCase();
+                        address = schme + ':' + (scheme == 'unix' ? '///' : '//') + match[2];
+                    } else if (address.match(/[0-9].*/)) {
+                        address = 'tcp://' + address;
+                    } else if (address.startsWith('/')) {
+                        address = 'unix://' + address;
+                    }
+                    self.$dockerAddress.val(address);
+                });
 
                 self.$imageDialogSubmitBtn.click(function() {
 
@@ -1046,6 +1060,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     delete self.testStatusSocket;
                 }
             },
+
             _processTestStatusResponse: function (responseMap) {
                 self._testDialogHideAllBtns();
 
@@ -1158,9 +1173,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
             _toggleCheckConnectionBtn: function (enable) {
                 self.$checkConnectionBtn.attr('disabled', !enable);
-            },
-            _toggleLoadingMessage: function (loaderName, show) {
-                self.loaders[loaderName][show ? 'removeClass' : 'addClass']('message_hidden');
             },
 
             _okBtnClicked: function (evt) {
