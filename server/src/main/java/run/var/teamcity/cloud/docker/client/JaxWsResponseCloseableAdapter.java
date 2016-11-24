@@ -4,6 +4,7 @@ package run.var.teamcity.cloud.docker.client;
 import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.core.Response;
 import java.io.Closeable;
 import java.io.IOException;
@@ -29,6 +30,10 @@ public class JaxWsResponseCloseableAdapter implements Closeable {
 
     @Override
     public void close() throws IOException {
-        response.close();
+        try {
+            response.close();
+        } catch (ProcessingException e) {
+            throw new IOException(e);
+        }
     }
 }
