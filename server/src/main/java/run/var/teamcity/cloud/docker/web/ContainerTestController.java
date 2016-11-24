@@ -284,11 +284,15 @@ public class ContainerTestController extends BaseFormXmlController {
 
         @Override
         public void disposed() {
-            try {
-                atmosphereResource.close();
-            } catch (IOException e) {
-                // Ignore
+            AtmosphereResource atmosphereResource = this.atmosphereResource;
+            if (atmosphereResource != null) {
+                try {
+                    atmosphereResource.close();
+                } catch (IOException e) {
+                    // Ignore.
+                }
             }
+
             lock.lock();
             try {
                 listeners.values().remove(this);
