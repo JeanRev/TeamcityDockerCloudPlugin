@@ -76,9 +76,6 @@ public class CheckConnectivityController extends BaseFormXmlController {
             setAttr(versionElt, "go", version.getAsString("GoVersion", null));
             setAttr(versionElt, "experimental", version.getAsBoolean("experimental", false));
             xmlResponse.addContent(versionElt);
-            if (true) {
-                throw new RuntimeException("Blah");
-            }
         } catch (Exception e) {
             error = e;
         }
