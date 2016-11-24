@@ -81,6 +81,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerDisposeBtn = $j('#dockerCloudTestContainerDisposeBtn');
                 self.$testContainerCloseBtn = $j('#dockerCloudTestContainerCloseBtn');
                 self.$testContainerSuccessIcon = $j('#dockerCloudTestContainerSuccess');
+                self.$testContainerWarningIcon = $j('#dockerCloudTestContainerWarning');
                 self.$testContainerErrorIcon = $j('#dockerCloudTestContainerError');
                 self.$dockerTestContainerOutput = $j("#dockerTestContainerOutput");
                 self.$testedImage = $j(BS.Util.escapeId("run.var.teamcity.docker.cloud.tested_image"));
@@ -961,6 +962,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     var settings = self._convertViewModelToSettings(viewModel);
                     self.$testedImage.val(JSON.stringify(settings));
 
+                    self.$testContainerLabel.text("Starting test...");
                     self._invokeTestAction('create', BS.Clouds.Admin.CreateProfileForm.serializeParameters())
                         .done(function (response) {
                             self.testUuid = $j(response.responseXML).find('testUuid').text();
@@ -1047,7 +1049,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _processTestStatusResponse: function (responseMap) {
                 self._testDialogHideAllBtns();
 
-                self.logDebug('Phase: ' + responseMap.phase + ' Status: ' + responseMap.status + ' Msg: ' + responseMap.msg + ' Uuid: ' + responseMap.taskUuid);
+                self.logDebug('Phase: ' + responseMap.phase + ' Status: ' + responseMap.status + ' Msg: ' +
+                    responseMap.msg + ' Uuid: ' + responseMap.taskUuid + ' Warnings: ' + responseMap.warnings.length);
 
                 self.$testContainerLabel.text(responseMap.msg);
 
@@ -1070,8 +1073,20 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         }
 
                     } else if (responseMap.status == 'SUCCESS') {
-                        self.$testContainerSuccessIcon.show();
-                        self.$testContainerLabel.text("Test completed successfully.");
+
+                        if (!responseMap.warnings.length) {
+                            self.$testContainerLabel.text("Test completed successfully.");
+                            self.$testContainerSuccessIcon.show();
+                        } else {
+                            self.$testContainerLabel.text("Test completed with warnings:");
+                            var $list = $j('<ul>');
+                            self._safeEach(responseMap.warnings, function(warning) {
+                                $list.append('<li>' + warning + '</li>');
+                            });
+                            self.$testContainerWarningIcon.show();
+                            self.$testContainerLabel.append($list);
+                        }
+
                         self.$testContainerCloseBtn.show();
                     } else {
                         self.logError('Unrecognized status: ' + responseMap.status);
@@ -1081,13 +1096,20 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
             _parseTestStatusResponse: function(xml) {
                 var $xml = $j(xml);
-                return {
+                var responseMap = {
                     msg: $xml.find('msg').text(),
                     status: $xml.find('status').text(),
                     phase: $xml.find('phase').text(),
                     taskUuid: $xml.find("taskUuid").text(),
-                    failureCause: $xml.find("failureCause").text()
+                    failureCause: $xml.find("failureCause").text(),
+                    warnings: []
                 };
+
+                $xml.find('warning').each(function() {
+                    responseMap.warnings.push(this.innerText);
+                });
+
+                return responseMap;
             },
 
             _invokeTestAction: function(action, parameters, ignoreFailure) {
@@ -1382,6 +1404,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerCloseBtn.show();
                 self.$testContainerLoader.hide();
                 self.$testContainerSuccessIcon.hide();
+                self.$testContainerWarningIcon.hide();
                 self.$testContainerErrorIcon.hide();
                 self.$testContainerLabel.empty();
                 self.$testContainerLabel.removeClass('containerTestError');

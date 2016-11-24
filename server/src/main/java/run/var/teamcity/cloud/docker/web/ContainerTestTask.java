@@ -5,6 +5,8 @@ import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
@@ -28,6 +30,7 @@ abstract class ContainerTestTask implements Runnable {
 
     final ReentrantLock lock = new ReentrantLock();
 
+    private final List<String> warnings = new ArrayList<>();
     private Status status = Status.PENDING;
     private Phase phase;
     ContainerTestTaskHandler testTaskHandler;
@@ -45,8 +48,6 @@ abstract class ContainerTestTask implements Runnable {
         DockerCloudUtils.requireNonNull(initialPhase, "Initial phase cannot be null.");
         this.testTaskHandler = testTaskHandler;
         this.phase = initialPhase;
-
-        testTaskHandler.notifyStatus(phase, Status.PENDING, "", null);
     }
 
     /**
@@ -68,6 +69,10 @@ abstract class ContainerTestTask implements Runnable {
         msg(msg, phase, status);
     }
 
+    void warning(@NotNull String warning) {
+        warnings.add(warning);
+    }
+
     private void msg(String msg, Phase phase, Status status) {
         assert lock.isHeldByCurrentThread();
         assert phase != null;
@@ -76,7 +81,7 @@ abstract class ContainerTestTask implements Runnable {
         this.phase = phase;
         this.status = status;
 
-        testTaskHandler.notifyStatus(phase, status, msg, null);
+        testTaskHandler.notifyStatus(phase, status, msg, null, warnings);
     }
 
     /**
@@ -137,7 +142,7 @@ abstract class ContainerTestTask implements Runnable {
 
             if (status != newStatus) {
                 testTaskHandler.notifyStatus(phase, newStatus, throwable != null ? throwable.getMessage() : null,
-                        throwable);
+                        throwable, warnings);
             }
             status = newStatus;
         } finally {

@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -53,6 +54,7 @@ public class TestContainerStatusMsg {
     private final UUID taskUuid;
     private final Phase phase;
     private final Throwable throwable;
+    private final List<String> warnings;
 
     /**
      * Creates a new status message instance.
@@ -66,15 +68,17 @@ public class TestContainerStatusMsg {
      * @throws NullPointerException if {@code uuid}, {@code phase}, or {@code status} are {@code null}
      */
     public TestContainerStatusMsg(@NotNull UUID uuid, @NotNull Phase phase, @NotNull Status status, @Nullable String msg,
-                                  @Nullable Throwable failure) {
+                                  @Nullable Throwable failure, List<String> warnings) {
         DockerCloudUtils.requireNonNull(uuid, "Test UUID cannot be null.");
         DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
         DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
+        DockerCloudUtils.requireNonNull(warnings, "Warnings list cannot be null.");
         this.taskUuid = uuid;
         this.phase = phase;
         this.status = status;
         this.msg = msg;
         this.throwable = failure;
+        this.warnings = warnings;
     }
 
     /**
@@ -141,9 +145,16 @@ public class TestContainerStatusMsg {
         addChildElement(root, "status", status);
         addChildElement(root, "phase", phase);
         addChildElement(root, "taskUuid", taskUuid);
+        Element warningsElt = new Element("warnings");
+        for (String warning : warnings) {
+            addChildElement(warningsElt, "warning", warning);
+        }
+        root.addContent(warningsElt);
+
         if (throwable != null) {
             addChildElement(root, "failureCause", DockerCloudUtils.getStackTrace(throwable));
         }
+
         return root;
     }
 

@@ -646,6 +646,7 @@
         <span class="hidden" id="dockerCloudTestContainerLoader"><i class="icon-refresh icon-spin"></i>
         </span>
         <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerSuccess" src="<c:url value="${resPath}img/checked.png"/>">
+        <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerWarning" src="<c:url value="${resPath}img/warning.png"/>">
         <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerError" src="<c:url value="${resPath}img/error.png"/>">
         <span id="dockerCloudTestContainerLabel"></span>
 

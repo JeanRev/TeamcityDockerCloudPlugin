@@ -12,6 +12,8 @@ import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.servlet.http.HttpServletResponse;
 
+import java.util.Collections;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Test
@@ -77,7 +79,7 @@ public class ContainerTestControllerTest {
         request.parameter("action", Action.CREATE.name());
         ctrl.doPost(request, response, element);
 
-        testMgr.getListener().notifyStatus(new TestContainerStatusMsg(TestUtils.TEST_UUID, Phase.CREATE, Status.PENDING, null, null));
+        testMgr.getListener().notifyStatus(new TestContainerStatusMsg(TestUtils.TEST_UUID, Phase.CREATE, Status.PENDING, null, null, Collections.emptyList()));
 
         request.
                 parameter("action", Action.QUERY.name()).
@@ -180,6 +182,6 @@ public class ContainerTestControllerTest {
 
     private TestContainerStatusMsg createStatusMsg(Phase phase) {
         return new TestContainerStatusMsg(TestUtils.TEST_UUID, phase,
-                Status.PENDING, "status msg",  null);
+                Status.PENDING, "status msg",  null, Collections.emptyList());
     }
 }

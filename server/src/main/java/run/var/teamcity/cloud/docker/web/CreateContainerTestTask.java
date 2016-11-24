@@ -133,7 +133,13 @@ class CreateContainerTestTask extends ContainerTestTask {
         }
 
         msg("Creating container");
-        String containerId = client.createContainer(container.saveNode(), null).getAsString("Id");
+        Node containerNode =  client.createContainer(container.saveNode(), null);
+        String containerId = containerNode.getAsString("Id");
+
+        Node warnings = containerNode.getArray("Warnings", Node.EMPTY_ARRAY);
+        for (Node warning : warnings.getArrayValues()) {
+            warning(warning.getAsString());
+        }
 
         testTaskHandler.notifyContainerId(containerId);
 

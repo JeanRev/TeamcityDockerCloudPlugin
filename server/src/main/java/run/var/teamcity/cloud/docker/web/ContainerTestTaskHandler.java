@@ -7,6 +7,8 @@ import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
+import java.util.List;
+
 /**
  * An container test task handler. Provides callback function to the test lifecycle.
  */
@@ -35,11 +37,12 @@ public interface ContainerTestTaskHandler {
      * @param status the test status
      * @param msg the status message (may be {@code null})
      * @param failureCause the failure cause (may be {@code null})
+     * @param warnings a list of encountered warnings
      *
-     * @throws NullPointerException if {@code phase} or {@code status} is {@code null}
+     * @throws NullPointerException if {@code phase}, {@code status} or {@code warnings} is {@code null}
      */
     void notifyStatus(@NotNull Phase phase, @NotNull Status status, @Nullable String msg,
-                      @Nullable Throwable failureCause);
+                      @Nullable Throwable failureCause, @NotNull List<String> warnings);
 
     /**
      * Query the handler to check if the build agent has been detected yet.

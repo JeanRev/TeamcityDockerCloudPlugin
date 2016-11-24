@@ -12,6 +12,7 @@ import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -26,8 +27,7 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
 
     private long lastInteraction;
     private String containerId;
-    private TestContainerStatusMsg statusMsg = new TestContainerStatusMsg(uuid, Phase.CREATE, Status.PENDING, null,
-            null);
+
     private ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTaskFuture = null;
 
     private ContainerSpecTest(DockerClient client, BuildAgentManager agentMgr,
@@ -166,24 +166,12 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
 
     @Override
     public void notifyStatus(@NotNull Phase phase, @NotNull Status status, @Nullable String msg,
-                             @Nullable Throwable failure) {
+                             @Nullable Throwable failure, @NotNull List<String> warnings) {
         DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
         DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
-        lock.lock();
-        try {
-            statusMsg = new TestContainerStatusMsg(uuid, phase, status, msg, failure);
-        } finally {
-            lock.unlock();
-        }
+        DockerCloudUtils.requireNonNull(status, "Warnings list cannot be null.");
 
-        notifyStatus();
-    }
-
-    private void notifyStatus() {
-        ContainerTestListener statusListener = getStatusListener();
-        if (statusListener != null) {
-            statusListener.notifyStatus(statusMsg);
-        }
+        statusListener.notifyStatus(new TestContainerStatusMsg(uuid, phase, status, msg, failure, warnings));
     }
 
     @Override

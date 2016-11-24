@@ -321,6 +321,10 @@ aligned on the RHS of the screen. */
     font-weight: normal;
     text-indent: 0;
 }
+#dockerCloudTestContainerLabel ul {
+    margin: 0;
+    list-style-type: square;
+}
 
 #dockerTestContainerOutput .terminal {
     background-color: #111;
