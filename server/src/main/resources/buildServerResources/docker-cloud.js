@@ -1045,11 +1045,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _cancelTest: function() {
                 self._closeStatusSocket();
 
-                if (!self.testUuid) {
-                    return;
+                if (self.testUuid) {
+                    self._invokeTestAction('cancel', null, true);
                 }
-
-                self._invokeTestAction('cancel', null, true);
 
                 BS.DockerTestContainerDialog.close();
             },
@@ -1161,10 +1159,11 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 if (!ignoreFailure) {
                     deferred.fail(function(errorMsg) {
-                        // Invocation failure, show the message, but left the UI untouched, the user may choose to retry
-                        // the failed operation.
-                        self.$testContainerLabel.text(errorMsg);
-                        self.$testContainerLabel.addClass('containerTestError');
+                        self._testDialogHideAllBtns();
+                        self.$testContainerCloseBtn.show();
+                        self.$testContainerLabel.text(errorMsg).addClass('containerTestError');
+                        self.$testContainerErrorIcon.show();
+                        self.$testContainerLoader.hide();
                     });
                 }
 
