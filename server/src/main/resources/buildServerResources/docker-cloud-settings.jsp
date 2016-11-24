@@ -61,7 +61,7 @@
             <p>
                 <label for="dockerCloudDockerAddress">Address:&nbsp;<span id="addressStar"><l:star/></span>&nbsp;</label>
                 <props:textProperty name="<%=DockerCloudUtils.INSTANCE_URI%>" id="dockerCloudDockerAddress" className="longField"/>
-                <a href="#" class="btn" id="dockerCloudCheckConnectionBtn">Check connection</a>
+                <a href="#/" class="btn" id="dockerCloudCheckConnectionBtn">Check connection</a>
                 <span class="error" id="error_<%=DockerCloudUtils.INSTANCE_URI%>"></span>
             </p>
             <p>

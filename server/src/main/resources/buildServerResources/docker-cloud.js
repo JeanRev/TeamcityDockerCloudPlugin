@@ -290,7 +290,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             _insertAddButton: function($tbody, colspan) {
-                $tbody.append('<tr class="dockerCloudAddItem"><td colspan="' + colspan + '" class="dockerCloudCtrlCell"> <a class="btn dockerCloudAddBtn" href="#"  title="Add item"><span class="dockerCloudAddBtn">Add</span></a></td></tr>');
+                $tbody.append('<tr class="dockerCloudAddItem"><td colspan="' + colspan + '" class="dockerCloudCtrlCell"> <a class="btn dockerCloudAddBtn" href="#/"  title="Add item"><span class="dockerCloudAddBtn">Add</span></a></td></tr>');
             },
             showDialog: function (profileName) {
                 var existingImage = !!profileName;
@@ -1035,7 +1035,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             errorDetailsMsg.text(responseMap.msg);
                             errorDetailsStackTrace.text(responseMap.failureCause);
 
-                            var viewDetailsLink = $j('<a href="#">view details</a>)').click(function () {
+                            var viewDetailsLink = $j('<a href="#/">view details</a>)').click(function () {
                                 BS.DockerDiagnosticDialog.showCentered();
                             });
                             self.$testContainerLabel.append(' (').append(viewDetailsLink).append(')');
@@ -1437,13 +1437,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
             },
             arrayTemplates: {
-                deleteCell: '<a class="btn dockerCloudCtrlBtn dockerCloudDeleteBtn" href="#" title="Delete"><span></span></a>',
-                settingsCell: '<a class="btn dockerCloudCtrlBtn dockerCloudSettingsBtn" href="#" title="Settings"><span></span></a>',
+                deleteCell: '<a class="btn dockerCloudCtrlBtn dockerCloudDeleteBtn" href="#/" title="Delete"><span></span></a>',
+                settingsCell: '<a class="btn dockerCloudCtrlBtn dockerCloudSettingsBtn" href="#/" title="Settings"><span></span></a>',
                 dockerCloudImage_imagesTableRow: '<tr class="imagesTableRow"><td class="image_data_Name highlight"></td>' +
                 '<td class="maxInstance highlight"></td>' +
                 '<td class="reusable highlight"></td>' +
-                '<td class="edit highlight"><a href="#" class="editImageLink">edit</a></td>\
-<td class="remove"><a href="#" class="removeImageLink">delete</a></td>' +
+                '<td class="edit highlight"><a href="#/" class="editImageLink">edit</a></td>\
+<td class="remove"><a href="#/" class="removeImageLink">delete</a></td>' +
                 '</tr>',
                 dockerCloudImage_Entrypoint: '<td><input type="text" id="dockerCloudImage_Entrypoint_IDX"/><span class="error" id="dockerCloudImage_Entrypoint_IDX_error"></span></td>',
                 dockerCloudImage_CapAdd: '<td><input type="text" id="dockerCloudImage_CapAdd_IDX"/><span class="error" id="dockerCloudImage_CapAdd_IDX_error"></span></td>',
