@@ -647,7 +647,7 @@
         </span>
         <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerSuccess" src="<c:url value="${resPath}img/checked.png"/>">
         <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerError" src="<c:url value="${resPath}img/error.png"/>">
-        <span id="dockerCloudTestContainerLabel" class="systemProblemsBar"></span>
+        <span id="dockerCloudTestContainerLabel"></span>
 
         <div class="dockerCloudBtnBlock">
             <!--

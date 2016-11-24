@@ -1027,6 +1027,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             _cancelTest: function() {
+                self._closeStatusSocket();
+
                 if (!self.testUuid) {
                     return;
                 }
@@ -1036,25 +1038,29 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 BS.DockerTestContainerDialog.close();
             },
 
+            _closeStatusSocket: function() {
+                if (self.testStatusSocket) {
+                    try { self.testStatusSocket.close() } catch (e) {}
+                    delete self.testStatusSocket;
+                }
+            },
             _processTestStatusResponse: function (responseMap) {
                 self._testDialogHideAllBtns();
 
                 self.logDebug('Phase: ' + responseMap.phase + ' Status: ' + responseMap.status + ' Msg: ' + responseMap.msg + ' Uuid: ' + responseMap.taskUuid);
 
+                self.$testContainerLabel.text(responseMap.msg);
+
                 if (responseMap.status == 'PENDING') {
-                    self.$testContainerLabel.text(responseMap.msg);
                     self.$testContainerCancelBtn.show();
                 } else {
                     self.$testContainerLoader.hide();
                     self.$testContainerCancelBtn.hide();
 
-                    if (self.testStatusSocket) {
-                        self.testStatusSocket.close();
-                        delete self.testStatusSocket;
-                    }
+                    self._closeStatusSocket();
 
                     if (responseMap.status == 'FAILURE') {
-                        self.$testContainerLabel.addClass('systemProblemsBar');
+                        self.$testContainerLabel.addClass('containerTestError');
                         self.$testContainerErrorIcon.show();
                         self.$testContainerCloseBtn.show();
 
@@ -1115,7 +1121,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         // Invocation failure, show the message, but left the UI untouched, the user may choose to retry
                         // the failed operation.
                         self.$testContainerLabel.text(errorMsg);
-                        self.$testContainerLabel.addClass('systemProblemsBar');
+                        self.$testContainerLabel.addClass('containerTestError');
                     });
                 }
 
@@ -1378,7 +1384,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerSuccessIcon.hide();
                 self.$testContainerErrorIcon.hide();
                 self.$testContainerLabel.empty();
-                self.$testContainerLabel.removeClass('systemProblemsBar');
+                self.$testContainerLabel.removeClass('containerTestError');
             },
 
             validate: function () {
