@@ -3,6 +3,10 @@ package run.var.teamcity.cloud.docker;
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.*;
 import jetbrains.buildServer.serverSide.*;
+import jetbrains.buildServer.serverSide.agentTypes.AgentType;
+import jetbrains.buildServer.serverSide.agentTypes.AgentTypeData;
+import jetbrains.buildServer.serverSide.agentTypes.AgentTypeKey;
+import jetbrains.buildServer.serverSide.agentTypes.AgentTypeStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
@@ -120,7 +124,8 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                       @NotNull final List<DockerImageConfig> imageConfigs,
                       @NotNull final DockerImageNameResolver resolver,
                       @NotNull CloudState cloudState,
-                      @NotNull final SBuildServer buildServer) {
+                      @NotNull final SBuildServer buildServer,
+                      @Nullable AgentTypeStorage agentTypeStorage) {
         DockerCloudUtils.requireNonNull(clientConfig, "Docker client configuration cannot be null.");
         DockerCloudUtils.requireNonNull(imageConfigs, "List of images cannot be null.");
         DockerCloudUtils.requireNonNull(resolver, "Image name resolver cannot be null.");
@@ -143,6 +148,20 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
         for (DockerImageConfig imageConfig : imageConfigs) {
             DockerImage image = new DockerImage(DockerCloudClient.this, imageConfig);
             images.put(image.getUuid(), image);
+
+            if (agentTypeStorage != null) {
+                // Pro-actively register our agent types.
+                // If we do not do this, TC will fail to start agents on server startup with the warning message:
+                // "Unable to find agent type by key".
+                // Possible causes:
+                // - our use of non-persistent image ids ?
+                // - images not being attached to a thread pool ?
+                // - ...
+                // To clarify: are the agent types possibly never discarded ?
+                // TODO: report this.
+                agentTypeStorage.getOrCreateAgentTypeId(new AgentTypeKey(DockerCloudUtils.CLOUD_CODE,
+                        cloudState.getProfileId(), image.getId()));
+            }
         }
         LOG.info(images.size() + " image definitions loaded: " + images);
 

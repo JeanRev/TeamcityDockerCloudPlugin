@@ -17,7 +17,6 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -80,11 +79,6 @@ public final class DockerCloudUtils {
      * The Docker socket default location on Unix systems.
      */
     public static final URI DOCKER_DEFAULT_SOCKET_URI;
-    /**
-     * Debug flag system property.
-     */
-    public static final String DEBUG_SYSPROP = NS_PREFIX + "debug";
-
     static {
         try {
             DOCKER_DEFAULT_SOCKET_URI = new URI("unix:///var/run/docker.sock");
@@ -92,6 +86,16 @@ public final class DockerCloudUtils {
             throw new AssertionError(e);
         }
     }
+    /**
+     * Debug flag system property.
+     */
+    public static final String DEBUG_SYSPROP = NS_PREFIX + "debug";
+    /**
+     * Cloud clode.
+     */
+    public static final String CLOUD_CODE = "VRDC";
+
+    static { assert CLOUD_CODE.length() == 4: "Per spec, the cloud code must be 4 chars long."; }
 
     /**
      * Prefix for environment variables to be published.

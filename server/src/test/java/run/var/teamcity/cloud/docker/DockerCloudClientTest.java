@@ -550,7 +550,7 @@ public class DockerCloudClientTest {
                 maxInstanceCount);
         return client = new DockerCloudClient(clientConfig, dockerClientFactory,
                 Collections.singletonList(imageConfig), dockerImageResolver,
-                cloudState, buildServer);
+                cloudState, buildServer, null);
     }
 
 
