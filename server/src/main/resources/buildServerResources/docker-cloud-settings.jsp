@@ -691,6 +691,7 @@
                 checkConnectivityCtrlURL: '<c:url value="${resPath}checkconnectivity.html"/>',
                 testContainerCtrlURL: '<c:url value="${resPath}test-container.html"/>',
                 imagesParam: '<%=DockerCloudUtils.IMAGES_PARAM%>',
+                usingTlsParam: '<%=DockerCloudUtils.USE_TLS%>',
                 errorIconURL: '<c:url value="/img/attentionCommentRed.png"/>',
                 warnIconURL: '<c:url value="/img/attentionComment.png"/>',
                 testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>',

@@ -38,6 +38,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.debugEnabled = params.debugEnabled;
 
                 var imagesParam = params.imagesParam;
+                var usingTlsParam = params.usingTlsParam;
 
                 self.hasWebSocketSupport = 'WebSocket' in window;
 
@@ -51,6 +52,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$imagesTable = $j('#dockerCloudImagesTable');
                 self.$images = $j(BS.Util.escapeId(imagesParam));
                 self.$dockerAddress = $j("#dockerCloudDockerAddress");
+                self.$usingTlsParam = $j(BS.Util.escapeId(usingTlsParam));
                 self.$useLocalInstance = $j("#dockerCloudUseLocalInstance");
                 self.$useCustomInstance = $j("#dockerCloudUseCustomInstance");
                 self.$checkConnectionLoader = $j('#dockerCloudCheckConnectionLoader');
@@ -814,16 +816,32 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self.$dockerAddress.change(function() {
                     var address = self.$dockerAddress.val();
+                    // First, normalize the address, auto-correct the number of slashes and make a rough guess about
+                    // the scheme if none provided.
                     var match = address.match(/([a-zA-Z]+?):\/*(.*)/);
+                    var scheme;
                     if (match) {
-                        var scheme = match[1].toLowerCase();
-                        address = schme + ':' + (scheme == 'unix' ? '///' : '//') + match[2];
+                        scheme = match[1].toLowerCase();
+                        address = match[2];
                     } else if (address.match(/[0-9].*/)) {
-                        address = 'tcp://' + address;
+                        scheme = 'tcp';
                     } else if (address.startsWith('/')) {
-                        address = 'unix://' + address;
+                        scheme = 'unix';
                     }
-                    self.$dockerAddress.val(address);
+
+                    var newAddress = scheme + ':';
+                    if (scheme == 'tcp') {
+                        newAddress += '//' + address;
+                        if (!address.match(/.*:[0-9]+/)) {
+                            newAddress += self.$usingTlsParam.is(':checked') ? ':2376' : ':2375';
+                        }
+                    } else if (scheme == 'unix') {
+                        newAddress += '///' + address;
+                    } else {
+                        newAddress = address;
+                    }
+
+                    self.$dockerAddress.val(newAddress);
                 });
 
                 self.$imageDialogSubmitBtn.click(function() {
