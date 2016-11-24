@@ -1,5 +1,6 @@
 package run.var.teamcity.cloud.docker.web;
 
+import com.intellij.openapi.diagnostic.Logger;
 import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
@@ -18,6 +19,8 @@ import java.util.UUID;
  * {@link ContainerTestTask} to create a test container.
  */
 class CreateContainerTestTask extends ContainerTestTask {
+
+    private final static Logger LOG = DockerCloudUtils.getLogger(CreateContainerTestTask.class);
 
     private final static BigInteger UNKNOWN_PROGRESS = BigInteger.valueOf(-1);
 
@@ -84,8 +87,8 @@ class CreateContainerTestTask extends ContainerTestTask {
                 String error = status.getAsString("error", null);
                 if (error != null) {
                     Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
-                    throw new ContainerTestTaskException("Failed to pull image: " + error + " -- " + details
-                            .getAsString("message", null), null);
+                    LOG.warn("Failed to pull image: " + error + " -- " + details.getAsString("message", null));
+                    break;
                 }
                 String newStatusMsg = status.getAsString("status", null);
                 if (newStatusMsg != null) {
@@ -126,7 +129,7 @@ class CreateContainerTestTask extends ContainerTestTask {
 
             }
         } catch (IOException e) {
-            throw new ContainerTestTaskException("Failed to pull image: " + image, e);
+            LOG.warn("Failed to pull image: " + image, e);
         }
 
         msg("Creating container");
