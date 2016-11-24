@@ -54,9 +54,17 @@
 }
 
 /* Help tooltips. */
-i.tooltip{position:relative; z-index:24;text-decoration:none}
-i.tooltip:hover{z-index:25;}
-/*i.tooltip span{display: none}*/
+i.tooltip{position:relative; z-index:4;text-decoration:none}
+
+#dockerCloudImageContainer i.tooltip {
+    z-index:24 !important;
+}
+i.tooltip:hover{z-index:5;}
+
+#dockerCloudImageContainer i.tooltip:hover {
+    z-index:25 !important;
+}
+
 span.tooltiptext{
     display:block;
     position:absolute;
@@ -70,7 +78,6 @@ span.tooltiptext{
     width: 300px;
     font-weight: normal;
     z-index: 999;
-
 }
 
 #tooltipHolder {
