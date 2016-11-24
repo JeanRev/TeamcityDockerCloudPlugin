@@ -54,16 +54,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$useLocalInstance = $j("#dockerCloudUseLocalInstance");
                 self.$useCustomInstance = $j("#dockerCloudUseCustomInstance");
                 self.$checkConnectionLoader = $j('#dockerCloudCheckConnectionLoader');
-                self.$testContainerLoader = $j('#dockerCloudTestContainerLoader');
-                self.$testContainerLabel = $j('#dockerCloudTestContainerLabel');
-                self.$testContainerOutcome = $j('#dockerCloudTestContainerOutcome');
-                self.$testContainerCancelBtn = $j('#dockerCloudTestContainerCancelBtn');
-                self.$testContainerShellBtn = $j('#dockerCloudTestContainerShellBtn');
-                self.$testContainerCopyLogsBtn = $j('#dockerCloudTestContainerCopyLogsBtn');
-                self.$testContainerDisposeBtn = $j('#dockerCloudTestContainerDisposeBtn');
-                self.$testContainerCloseBtn = $j('#dockerCloudTestContainerCloseBtn');
-                self.$testContainerSuccessIcon = $j('#dockerCloudTestContainerSuccess');
-                self.$testContainerErrorIcon = $j('#dockerCloudTestContainerError');
 
                 self.$imageDataOkBtn = $j("#dockerAddImageButton");
                 self.$imageDataDialogTitle = $j("#DockerImageDialogTitle");
@@ -80,8 +70,18 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 /* Test container */
                 self.$imageTestContainerBtn = $j("#dockerTestImageButton");
                 self.$testImageDialog = $j("#DockerTestContainerDialog");
-                self.$imageTestContainerCreateBtn = $j("#dockerCreateImageTest");
-                self.$imageTestContainerStartBtn = $j("#dockerStartImageTest");
+                self.$testContainerCreateBtn = $j("#dockerCreateImageTest");
+                self.$testContainerStartBtn = $j("#dockerStartImageTest");
+                self.$testContainerLoader = $j('#dockerCloudTestContainerLoader');
+                self.$testContainerLabel = $j('#dockerCloudTestContainerLabel');
+                self.$testContainerOutcome = $j('#dockerCloudTestContainerOutcome');
+                self.$testContainerCancelBtn = $j('#dockerCloudTestContainerCancelBtn');
+                self.$testContainerShellBtn = $j('#dockerCloudTestContainerShellBtn');
+                self.$testContainerCopyLogsBtn = $j('#dockerCloudTestContainerCopyLogsBtn');
+                self.$testContainerDisposeBtn = $j('#dockerCloudTestContainerDisposeBtn');
+                self.$testContainerCloseBtn = $j('#dockerCloudTestContainerCloseBtn');
+                self.$testContainerSuccessIcon = $j('#dockerCloudTestContainerSuccess');
+                self.$testContainerErrorIcon = $j('#dockerCloudTestContainerError');
                 self.$dockerTestContainerOutput = $j("#dockerTestContainerOutput");
                 self.$testedImage = $j(BS.Util.escapeId("run.var.teamcity.docker.cloud.tested_image"));
 
@@ -213,12 +213,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
             _updateTableMandoryStarsVisibility: function($table) {
                 $j(".mandatoryAsterix", $table).toggle($j('input, select', $table).length > 0);
-            },
-
-            _resetImageDataFields: function() {
-                // Only clears dynamically added rows. First-level fields are assumed to be always cleared when binding
-                // is performed.
-              $j('tbody', self.$dialog).empty();
             },
 
             _triggerAllFields: function(blurTextFields) {
@@ -956,7 +950,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
 
 
-                self.$imageTestContainerCreateBtn.click(function() {
+                self.$testContainerCreateBtn.click(function() {
 
                     self._testContainerProgress = null;
 
@@ -965,8 +959,17 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     var settings = self._convertViewModelToSettings(viewModel);
                     self.$testedImage.val(JSON.stringify(settings));
 
-                    self._invokeTestAction('create', null, BS.Clouds.Admin.CreateProfileForm.serializeParameters());
+                    self._invokeTestAction('create', BS.Clouds.Admin.CreateProfileForm.serializeParameters())
+                        .done(function (response) {
+                            self.testUuid = $j(response.responseXML).find('testUuid').text();
+                            self._queryTestStatus();
+                        });
                 });
+
+                self.$testContainerCancelBtn.click(function() {
+                    self._cancelTest();
+                });
+
 
                 self.$imageTestContainerBtn.click(function() {
 
@@ -987,30 +990,51 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
             },
 
-            _processTestResponse: function (responseMap) {
+            _queryTestStatus: function() {
+                if (!self.testUuid) {
+                    self.logError("Test UUID not resolved.");
+                    return;
+                }
+
+                if (self.hasWebSocketSupport) {
+                    if (!self.testStatusSocket) {
+                        self.logInfo('Opening test status listener socket.');
+                        var protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
+                        var port =  ((location.port) ? (':' + location.port) : '');
+                        var socketURL = protocol + location.hostname + port + self.testStatusSocketPath + '?testUuid=' + self.testUuid;
+                        self.testStatusSocket = new WebSocket(socketURL);
+                        self.testStatusSocket.onmessage = function (event) {
+                            self._processTestStatusResponse(self._parseTestStatusResponse(event.data));
+                        }
+                    }
+                } else {
+                    self._invokeTestAction('query', BS.Clouds.Admin.CreateProfileForm.serializeParameters())
+                        .done(function(response){
+                            var responseMap = self._parseTestStatusResponse(response.responseXML);
+                            self._processTestStatusResponse(responseMap);
+                        });
+                    self.logDebug('Scheduling status retrieval.');
+                    setTimeout(self._queryTestStatus, 5000);
+                }
+            },
+
+            _cancelTest: function() {
+                if (!self.testUuid) {
+                    return;
+                }
+
+                self._invokeTestAction('cancel', null, true);
+
+                BS.DockerTestContainerDialog.close();
+            },
+
+            _processTestStatusResponse: function (responseMap) {
                 self._testDialogHideAllBtns();
 
                 self.logDebug('Phase: ' + responseMap.phase + ' Status: ' + responseMap.status + ' Msg: ' + responseMap.msg + ' Uuid: ' + responseMap.taskUuid);
+
                 if (responseMap.status == 'PENDING') {
                     self.$testContainerLabel.text(responseMap.msg);
-                    self.$testContainerLoader.show();
-                    self.$testContainerCancelBtn.show();
-
-                    if (self.hasWebSocketSupport) {
-                        if (!self.testStatusSocket) {
-                            self.logInfo('Opening test status listener socket.');
-                            var protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
-                            var port =  ((location.port) ? (':' + location.port) : '');
-                            var socketURL = protocol + location.hostname + port + self.testStatusSocketPath + '?taskUuid=' + responseMap.taskUuid;
-                            self.testStatusSocket = new WebSocket(socketURL);
-                            self.testStatusSocket.onmessage = function (event) {
-                                self._processTestResponse(self._parseResponse(event.data));
-                            }
-                        }
-                    } else {
-                        self.logDebug('Scheduling status retrieval.');
-                        setTimeout(self._invokeTestAction.bind(this, 'query', responseMap.taskUuid), 5000);
-                    }
                 } else {
                     self.$testContainerLoader.hide();
                     self.$testContainerCancelBtn.hide();
@@ -1026,18 +1050,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         self.$testContainerCloseBtn.show();
 
                         if (responseMap.failureCause) {
-                            //var errorDetails = $j('#dockerCloudTestContainerErrorDetails');
-                            var errorDetailsMsg = $j('#dockerCloudTestContainerErrorDetailsMsg').empty();
-                            var errorDetailsStackTrace = $j('#dockerCloudTestContainerErrorDetailsStackTrace').empty();
-
-                            errorDetailsMsg.text(responseMap.msg);
-                            errorDetailsStackTrace.text(responseMap.failureCause);
-
-                            var viewDetailsLink = $j('<a href="#/">view details</a>)').click(function () {
-                                BS.DockerDiagnosticDialog.showCentered();
-                            });
-                            self.$testContainerLabel.append(' (').append(viewDetailsLink).append(')');
+                            self.prepareStackTraceDialog(self.$testContainerLabel, responseMap.msg,
+                                responseMap.failureCause);
                         }
+
                     } else if (responseMap.status == 'SUCCESS') {
                         self.$testContainerSuccessIcon.show();
                         self.$testContainerLabel.text("Test completed successfully.");
@@ -1048,7 +1064,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
             },
 
-            _parseResponse: function(xml) {
+            _parseTestStatusResponse: function(xml) {
                 var $xml = $j(xml);
                 return {
                     msg: $xml.find('msg').text(),
@@ -1059,37 +1075,40 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 };
             },
 
-            _invokeTestAction: function(action, taskUuid, parameters) {
+            _invokeTestAction: function(action, parameters, ignoreFailure) {
 
-                self.logDebug('Will invoke action ' + action + ' for test UUID ' + taskUuid);
+                self._testDialogHideAllBtns();
+                self.$testContainerLoader.show();
+                self.$testContainerCancelBtn.show();
+
+                self.logDebug('Will invoke action ' + action + ' for test UUID ' + self.taskUuid);
+
                 var deferred = $j.Deferred();
 
                 // Invoke test action.
                 var url = self.testContainerCtrlURL + '?action=' + action;
-                if (taskUuid) {
-                    url += '&taskUuid=' + taskUuid;
+                if (self.testUuid) {
+                    url += '&testUuid=' + testUuid;
                 }
 
                 BS.ajaxRequest(url, {
                     parameters: parameters,
                     onSuccess: function (response) {
-                        var responseMap = self._parseResponse(response.responseXML);
-                        deferred.resolve(responseMap);
+                        deferred.resolve(response);
                     },
                     onFailure: function (response) {;
                         deferred.reject(response.responseText);
                     }
                 });
 
-                // Global failure handler: only show
-                deferred.fail(function(errorMsg) {
-                    // Invocation failure, show the message, but left the UI untouched, the user may choose to retry
-                    // the failed operation.
-                    self.$testContainerLabel.text(errorMsg);
-                    self.$testContainerLabel.addClass('systemProblemsBar');
-                });
-
-                deferred.done(self._processTestResponse);
+                if (!ignoreFailure) {
+                    deferred.fail(function(errorMsg) {
+                        // Invocation failure, show the message, but left the UI untouched, the user may choose to retry
+                        // the failed operation.
+                        self.$testContainerLabel.text(errorMsg);
+                        self.$testContainerLabel.addClass('systemProblemsBar');
+                    });
+                }
 
                 return deferred;
             },
@@ -1332,8 +1351,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             _testDialogHideAllBtns: function() {
-                self.$imageTestContainerCreateBtn.hide();
-                self.$imageTestContainerStartBtn.hide();
+                self.$testContainerCreateBtn.hide();
+                self.$testContainerStartBtn.hide();
                 self.$testContainerCancelBtn.hide();
                 self.$testContainerCloseBtn.hide();
                 self.$testContainerCopyLogsBtn.hide();
@@ -1343,7 +1362,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
             _initTestDialog: function () {
                 self._testDialogHideAllBtns();
-                self.$imageTestContainerCreateBtn.show()
+                self.$testContainerCreateBtn.show()
                 self.$testContainerOutcome.text();
                 self.$testContainerCloseBtn.show();
                 self.$testContainerLoader.hide();

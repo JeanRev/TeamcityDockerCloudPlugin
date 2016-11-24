@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker.web;
 
 
+import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 
@@ -8,20 +9,18 @@ import java.util.UUID;
 
 abstract class ContainerTestManager {
 
-    enum Action {
-        CREATE,
-        START,
-        DISPOSE,
-        CANCEL,
-        QUERY
-    }
+    abstract UUID createNewTestContainer(@NotNull DockerCloudClientConfig clientConfig,
+                                         @NotNull DockerImageConfig imageConfig,
+                                         @NotNull ContainerTestListener listener);
 
-    abstract TestContainerStatusMsg doAction(Action action, UUID testUuid,
-                                             DockerCloudClientConfig clientConfig, DockerImageConfig imageConfig);
+
+    abstract void startTestContainer(@NotNull UUID testUuid);
+
+    abstract void dispose(@NotNull UUID testUuid);
+
+    abstract void notifyInteraction(@NotNull UUID testUUid);
 
     abstract void dispose();
-
-    abstract void setStatusListener(UUID testUuid, ContainerTestStatusListener listener);
 
     static class ActionException extends RuntimeException {
         final int code;

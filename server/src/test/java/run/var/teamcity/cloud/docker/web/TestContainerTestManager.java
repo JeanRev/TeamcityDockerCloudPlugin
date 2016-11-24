@@ -1,56 +1,65 @@
 package run.var.teamcity.cloud.docker.web;
 
+import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
+import run.var.teamcity.cloud.docker.test.TestUtils;
+import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 public class TestContainerTestManager extends ContainerTestManager {
 
-    private Action action;
-    private UUID testUuid;
+    public enum TestStatus {
+
+    }
+
     private DockerCloudClientConfig clientConfig;
     private DockerImageConfig imageConfig;
-
-    private TestContainerStatusMsg statusMsg;
+    private ContainerTestListener listener;
+    private Phase involvedPhase = null;
 
     private boolean disposed = false;
 
-    private final Map<UUID, ContainerTestStatusListener> statusListeners = new HashMap<>();
-    private final Set<UUID> knownTestUuids = new HashSet<>();
-
     @Override
-    TestContainerStatusMsg doAction(Action action, UUID testUuid, DockerCloudClientConfig clientConfig, DockerImageConfig imageConfig) {
-        this.action = action;
-        this.testUuid = testUuid;
+    UUID createNewTestContainer(@NotNull DockerCloudClientConfig clientConfig, @NotNull DockerImageConfig imageConfig,
+                                @NotNull ContainerTestListener listener) {
         this.clientConfig = clientConfig;
         this.imageConfig = imageConfig;
-        return statusMsg;
+        this.listener = listener;
+
+        this.involvedPhase = Phase.CREATE;
+        return TestUtils.TEST_UUID;
+    }
+
+    @Override
+    void startTestContainer(@NotNull UUID testUuid) {
+        checkUuid(testUuid);
+        this.involvedPhase = Phase.START;
+    }
+
+    @Override
+    void dispose(@NotNull UUID testUuid) {
+        checkUuid(testUuid);
+        this.involvedPhase = null;
+    }
+
+    @Override
+    void notifyInteraction(@NotNull UUID testUuid) {
+        checkUuid(testUuid);
+    }
+
+    private void checkUuid(UUID uuid) {
+        if (!TestUtils.TEST_UUID.equals(uuid)) {
+            throw new IllegalArgumentException("Unknown UUID: " + uuid);
+        }
     }
 
     @Override
     void dispose() {
         disposed = true;
-    }
-
-    @Override
-    void setStatusListener(UUID testUuid, ContainerTestStatusListener listener) {
-        if (!knownTestUuids.contains(testUuid)) {
-            throw new IllegalArgumentException("Unknown test UUID: " + testUuid);
-        }
-        statusListeners.put(testUuid, listener);
-    }
-
-    public Action getAction() {
-        return action;
-    }
-
-    public UUID getTestUuid() {
-        return testUuid;
     }
 
     public DockerCloudClientConfig getClientConfig() {
@@ -61,16 +70,20 @@ public class TestContainerTestManager extends ContainerTestManager {
         return imageConfig;
     }
 
-    public void setStatusMsg(TestContainerStatusMsg statusMsg) {
-        this.statusMsg = statusMsg;
+    public ContainerTestListener getListener() {
+        return listener;
+    }
+
+    public Phase getInvolvedPhase() {
+        return involvedPhase;
     }
 
     public boolean isDisposed() {
         return disposed;
     }
 
-    public TestContainerTestManager knownTestUuid(UUID uuid) {
-        knownTestUuids.add(uuid);
-        return this;
+
+    public class ContainerTest {
+
     }
 }

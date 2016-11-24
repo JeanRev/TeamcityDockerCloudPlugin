@@ -22,32 +22,36 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
     private final ReentrantLock lock = new ReentrantLock();
     private final DockerClient client;
     private final BuildAgentManager agentMgr;
-    private long lastInteraction;
+    private final ContainerTestListener statusListener;
 
+    private long lastInteraction;
     private String containerId;
-    private ContainerTestStatusListener statusListener;
     private TestContainerStatusMsg statusMsg = new TestContainerStatusMsg(uuid, Phase.CREATE, Status.PENDING, null,
             null);
     private ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTaskFuture = null;
 
-    private ContainerSpecTest(DockerClient client, BuildAgentManager agentMgr) {
-        assert client != null && agentMgr != null;
+    private ContainerSpecTest(DockerClient client, BuildAgentManager agentMgr,
+                              ContainerTestListener statusListener) {
+        assert client != null && agentMgr != null && statusListener != null;
 
         this.client = client;
         this.agentMgr = agentMgr;
+        this.statusListener = statusListener;
 
         notifyInteraction();
     }
 
     public static ContainerSpecTest newTestInstance(@NotNull DockerCloudClientConfig clientConfig,
                                                     @NotNull DockerClientFactory dockerClientFactory,
-                                                    @NotNull BuildAgentManager agentMgr) {
+                                                    @NotNull BuildAgentManager agentMgr,
+                                                    @NotNull ContainerTestListener statusListener) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
         DockerCloudUtils.requireNonNull(dockerClientFactory, "Docker client factory cannot be null.");
-        DockerCloudUtils.requireNonNull(agentMgr, "Agent manager cannot be null");
+        DockerCloudUtils.requireNonNull(agentMgr, "Agent manager cannot be null.");
+        DockerCloudUtils.requireNonNull(statusListener, "Status listener cannot be null.");
         DockerClient client = dockerClientFactory.createClient(clientConfig.getDockerClientConfig()
                 .threadPoolSize(1));
-        return new ContainerSpecTest(client, agentMgr);
+        return new ContainerSpecTest(client, agentMgr, statusListener);
     }
 
     /**
@@ -83,7 +87,7 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
      * @return the atmosphere resource or {@code null}
      */
     @Nullable
-    public ContainerTestStatusListener getStatusListener() {
+    public ContainerTestListener getStatusListener() {
         lock.lock();
         try {
             return statusListener;
@@ -142,29 +146,10 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         lock.lock();
         try {
             this.currentTaskFuture = currentTask;
+            notifyInteraction();
         } finally {
             lock.unlock();
         }
-    }
-
-    /**
-     * Sets the atmosphere resource for the client to be notified.
-     *
-     * @param statusListener the atmosphere resource
-     *
-     * @throws NullPointerException if {@code statusListener} is {@code null}
-     */
-    public void setStatusListener(@NotNull ContainerTestStatusListener statusListener) {
-        DockerCloudUtils.requireNonNull(statusListener, "Atmosphere resource cannot be null.");
-        lock.lock();
-        try {
-            this.statusListener = statusListener;
-        } finally {
-            lock.unlock();
-        }
-        // Important: broadcast the current status as soon as a the WebSocket resource is registered (may happens some
-        // time after the test action was invoked).
-        broadcastStatus();
     }
 
     @Override
@@ -191,29 +176,13 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
             lock.unlock();
         }
 
-        broadcastStatus();
+        notifyStatus();
     }
 
-    private void broadcastStatus() {
-        ContainerTestStatusListener statusListener = getStatusListener();
+    private void notifyStatus() {
+        ContainerTestListener statusListener = getStatusListener();
         if (statusListener != null) {
             statusListener.notifyStatus(statusMsg);
-            notifyInteraction();
-        }
-    }
-
-    /**
-     * Gets the current status message for this test.
-     *
-     * @return the current test message
-     */
-    @NotNull
-    public TestContainerStatusMsg getStatusMsg() {
-        lock.lock();
-        try {
-            return statusMsg;
-        } finally {
-            lock.unlock();
         }
     }
 

@@ -3,6 +3,7 @@ package run.var.teamcity.cloud.docker.web;
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.serverSide.BuildAgentManager;
 import jetbrains.buildServer.serverSide.WebLinks;
+import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
@@ -70,50 +71,60 @@ class DefaultContainerTestManager extends ContainerTestManager {
         this.webLinks = webLinks;
     }
 
-    TestContainerStatusMsg doAction(Action action, UUID testUuid, DockerCloudClientConfig clientConfig,
-                                    DockerImageConfig imageConfig) {
-        if (executorService == null) {
-            activate();
-        }
+    @Override
+    @NotNull
+    UUID createNewTestContainer(@NotNull DockerCloudClientConfig clientConfig, @NotNull DockerImageConfig imageConfig,
+                                @NotNull ContainerTestListener listener) {
+        DockerCloudUtils.requireNonNull(clientConfig, "Client configuration cannot be null.");
+        DockerCloudUtils.requireNonNull(imageConfig, "Image configuration cannot be null.");
+        DockerCloudUtils.requireNonNull(listener, "Test listener cannot be null.");
 
-        if (action == null) {
-            throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Missing action parameter");
-        }
+        ContainerSpecTest test = newTestInstance(clientConfig, listener);
 
-        ContainerSpecTest test = retrieveTestTask(testUuid);
+        URL serverURL = clientConfig.getServerURL();
+        String serverURLStr = serverURL != null ? serverURL.toString() : webLinks.getRootUrl();
 
-        if (action == Action.CREATE) {
-            test = submitCreateJob(clientConfig, imageConfig);
-        } else {
-            if (test == null) {
-                throw new ActionException(HttpServletResponse.SC_NOT_FOUND, "Bad or expired request.");
-            }
-            switch (action) {
-                case START:
-                    submitStartTask(test);
-                    break;
-                case DISPOSE:
-                    disposeTask(test);
-                    break;
-                case CANCEL:
-                    dispose(test);
-                    break;
-                case QUERY:
-                    // Nothing to do.
-                    break;
-                default:
-                    throw new AssertionError("Unknown enum member: " + action);
-            }
-        }
+        CreateContainerTestTask testTask = new CreateContainerTestTask(test, imageConfig, serverURLStr, test
+                .getUuid(), imageNameResolver);
+        test.setCurrentTask(schedule(testTask));
 
-        assert test != null;
-
-        test.notifyInteraction();
-
-        return test.getStatusMsg();
+        return test.getUuid();
     }
 
-    private ContainerSpecTest retrieveTestTask(UUID testUuid) {
+    @Override
+    void startTestContainer(@NotNull UUID testUuid) {
+        DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
+
+        ContainerSpecTest test = retrieveTestInstance(testUuid);
+
+        String containerId = test.getContainerId();
+
+        if (containerId == null) {
+            throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Container not created.");
+        }
+
+        assert containerId != null;
+
+        StartContainerTestTask testTask = new StartContainerTestTask(test, containerId, test.getUuid());
+        test.setCurrentTask(schedule(testTask));
+    }
+
+    @Override
+    void dispose(@NotNull UUID testUuid) {
+        DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
+
+        ContainerSpecTest test = retrieveTestInstance(testUuid);
+
+        dispose(test);
+    }
+
+    @Override
+    void notifyInteraction(@NotNull UUID testUUid) {
+        ContainerSpecTest test = retrieveTestInstance(testUUid);
+        test.notifyInteraction();
+    }
+
+    private ContainerSpecTest retrieveTestInstance(UUID testUuid) {
 
         ContainerSpecTest test = null;
         if (testUuid != null) {
@@ -123,6 +134,10 @@ class DefaultContainerTestManager extends ContainerTestManager {
             } finally {
                 lock.unlock();
             }
+        }
+
+        if (test == null) {
+            throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Bad or expired token: " + testUuid);
         }
 
         return  test;
@@ -153,58 +168,12 @@ class DefaultContainerTestManager extends ContainerTestManager {
         }
     }
 
-    private ContainerSpecTest submitCreateJob(DockerCloudClientConfig clientConfig, DockerImageConfig imageConfig) {
-
-        ContainerSpecTest test = newTestInstance(clientConfig);
-
-        URL serverURL = clientConfig.getServerURL();
-        String serverURLStr = serverURL != null ? serverURL.toString() : webLinks.getRootUrl();
-
-        CreateContainerTestTask testTask = new CreateContainerTestTask(test, imageConfig, serverURLStr, test
-                .getUuid(), imageNameResolver);
-        test.setCurrentTask(schedule(testTask));
-
-        return test;
-    }
-
-
-    private void submitStartTask(ContainerSpecTest test) {
-
-        String containerId = test.getContainerId();
-        if (containerId == null) {
-            LOG.error("Cannot dispose container for test " + test.getUuid() + ", no container ID available.");
-            throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Container not registered.");
-        }
-        StartContainerTestTask testTask = new StartContainerTestTask(test, containerId, test.getUuid());
-        test.setCurrentTask(schedule(testTask));
-    }
-
-    private void disposeTask(ContainerSpecTest test) {
-
-        lock.lock();
-
-        try {
-            String containerId = test.getContainerId();
-
-            if (containerId == null) {
-                LOG.error("Cannot dispose container for test " + test.getUuid() + ", no container ID available.");
-                throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Container not registered.");
-            }
-
-            DisposeContainerTestTask disposeTask = new DisposeContainerTestTask(test, containerId);
-
-            test.setCurrentTask(schedule(disposeTask));
-        } finally {
-            lock.unlock();
-        }
-    }
-
     private void dispose(ContainerSpecTest test) {
 
         LOG.info("Disposing test task: " + test.getUuid());
 
         DockerClient client;
-        ContainerTestStatusListener statusListener;
+        ContainerTestListener statusListener;
         String containerId;
 
         try {
@@ -256,11 +225,13 @@ class DefaultContainerTestManager extends ContainerTestManager {
         }
     }
 
-    private ContainerSpecTest newTestInstance(DockerCloudClientConfig clientConfig) {
+    private ContainerSpecTest newTestInstance(DockerCloudClientConfig clientConfig,
+                                              ContainerTestListener listener) {
         try {
             lock.lock();
 
-            ContainerSpecTest test = ContainerSpecTest.newTestInstance(clientConfig, dockerClientFactory, agentMgr);
+            ContainerSpecTest test = ContainerSpecTest.newTestInstance(clientConfig, dockerClientFactory, agentMgr,
+                    listener);
 
             boolean duplicate = tasks.put(test.getUuid(), test) != null;
             assert !duplicate;
@@ -364,21 +335,6 @@ class DefaultContainerTestManager extends ContainerTestManager {
             for (ContainerSpecTest test : tests) {
                 dispose(test);
             }
-        }
-    }
-
-    @Override
-    void setStatusListener(UUID testUuid, ContainerTestStatusListener listener) {
-        lock.lock();
-        try {
-            ContainerSpecTest test = tasks.get(testUuid);
-            if (test == null) {
-                throw new IllegalArgumentException("Unknown test UUID: " + testUuid);
-            }
-
-            test.setStatusListener(listener);
-        } finally {
-            lock.unlock();
         }
     }
 

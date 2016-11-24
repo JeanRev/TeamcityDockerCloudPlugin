@@ -9,12 +9,7 @@ import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.WebLinks;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
-import org.atmosphere.cpr.AtmosphereFramework;
-import org.atmosphere.cpr.AtmosphereInterceptor;
-import org.atmosphere.cpr.AtmosphereRequest;
-import org.atmosphere.cpr.AtmosphereResource;
-import org.atmosphere.cpr.AtmosphereResponse;
-import org.atmosphere.cpr.Broadcaster;
+import org.atmosphere.cpr.*;
 import org.atmosphere.util.SimpleBroadcaster;
 import org.atmosphere.websocket.WebSocket;
 import org.atmosphere.websocket.WebSocketHandlerAdapter;
@@ -30,7 +25,6 @@ import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
-import run.var.teamcity.cloud.docker.web.ContainerTestManager.Action;
 import run.var.teamcity.cloud.docker.web.atmo.DefaultAtmosphereFacade;
 
 import javax.servlet.ServletException;
@@ -39,8 +33,10 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Spring controller to manage lifecycle of container tests.
@@ -49,8 +45,17 @@ public class ContainerTestController extends BaseFormXmlController {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(ContainerTestController.class);
 
+    enum Action {
+        CREATE,
+        START,
+        QUERY,
+        CANCEL
+    }
+
     public static final String PATH = "test-container.html";
 
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Map<UUID, TestListener> listeners = new HashMap<>();
     private final ContainerTestManager testMgr;
     private final AtmosphereFrameworkFacade atmosphereFramework;
     private final Broadcaster statusBroadcaster;
@@ -129,11 +134,12 @@ public class ContainerTestController extends BaseFormXmlController {
             return;
         }
 
-        DockerCloudClientConfig clientConfig = null;
-        DockerImageConfig imageConfig = null;
 
         if (action == Action.CREATE) {
             Map<String, String> params = DockerCloudUtils.extractTCPluginParams(request);
+
+            DockerCloudClientConfig clientConfig;
+            DockerImageConfig imageConfig;
 
             try {
                 clientConfig = DockerCloudClientConfig.processParams(params, dockerClientFactory);
@@ -143,13 +149,49 @@ public class ContainerTestController extends BaseFormXmlController {
                 sendErrorQuietly(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to parse data.");
                 return;
             }
+
+            TestListener listener = new TestListener();
+            UUID testUuid = testMgr.createNewTestContainer(clientConfig, imageConfig, listener);
+            lock.lock();
+            try {
+                listeners.put(testUuid, listener);
+            } finally {
+                lock.unlock();
+            }
+
+            xmlResponse.addContent(new Element("testUuid").addContent(testUuid.toString()));
+            return;
         }
 
-        String uuidParam = request.getParameter("taskUuid");
+        String uuidParam = request.getParameter("testUuid");
         UUID testUuid = DockerCloudUtils.tryParseAsUUID(uuidParam);
+        TestListener listener = listeners.get(testUuid);
+        if (testUuid == null || listener == null) {
+            sendErrorQuietly(response, HttpServletResponse.SC_BAD_REQUEST, "Bad request identifier: " + uuidParam);
+            return;
+        }
 
-        TestContainerStatusMsg statusMsg = testMgr.doAction(action, testUuid, clientConfig, imageConfig);
-        xmlResponse.addContent(statusMsg.toExternalForm());
+        if (action == Action.START) {
+            testMgr.startTestContainer(testUuid);
+            return;
+        }
+
+        if (action == Action.QUERY) {
+            TestContainerStatusMsg lastStatus = listener.lastStatus;
+            if (lastStatus != null) {
+                xmlResponse.addContent(listener.lastStatus.toExternalForm());
+            }
+            testMgr.notifyInteraction(testUuid);
+            return;
+        }
+
+        assert action == Action.CANCEL: "Unknown enum member: " + action;
+
+        try {
+            testMgr.dispose(testUuid);
+        } catch (Exception e) {
+            // Ignore.
+        }
     }
 
     private void sendErrorQuietly(HttpServletResponse response, int sc, String msg) {
@@ -170,20 +212,22 @@ public class ContainerTestController extends BaseFormXmlController {
 
             AtmosphereResource atmosphereResource = webSocket.resource();
 
-            String uuidParam = atmosphereResource.getRequest().getParameter("taskUuid");
-            UUID taskUuid = DockerCloudUtils.tryParseAsUUID(uuidParam);
-
-            if (taskUuid != null) {
-                atmosphereResource.setBroadcaster(statusBroadcaster);
-                statusBroadcaster.addAtmosphereResource(atmosphereResource);
-                StatusListener listener = new StatusListener(atmosphereResource);
-                try {
-                    testMgr.setStatusListener(taskUuid, listener);
-                } catch (IllegalArgumentException e) {
-                    LOG.warn("Test was disposed, cannot register listener.");
-                    listener.disposed();
-                }
+            String uuidParam = atmosphereResource.getRequest().getParameter("testUuid");
+            TestListener listener = null;
+            UUID testUuid = DockerCloudUtils.tryParseAsUUID(uuidParam);
+            if (testUuid != null) {
+                listener = listeners.get(testUuid);
             }
+            if (listener == null) {
+                webSocket.writeError(atmosphereResource.getResponse(), HttpServletResponse.SC_BAD_REQUEST,
+                        "Bad or expired request");
+                webSocket.close();
+                return;
+            }
+
+            atmosphereResource.setBroadcaster(statusBroadcaster);
+            statusBroadcaster.addAtmosphereResource(atmosphereResource);
+            listener.setAtmosphereResource(atmosphereResource);
         }
 
         @Override
@@ -214,17 +258,28 @@ public class ContainerTestController extends BaseFormXmlController {
         }
     }
 
-    private class StatusListener implements ContainerTestStatusListener {
+    private class TestListener implements ContainerTestListener {
 
-        final AtmosphereResource atmosphereResource;
-
-        StatusListener(AtmosphereResource atmosphereResource) {
-            this.atmosphereResource = atmosphereResource;
-        }
+        volatile TestContainerStatusMsg lastStatus;
+        volatile AtmosphereResource atmosphereResource;
 
         @Override
         public void notifyStatus(TestContainerStatusMsg statusMsg) {
-            statusBroadcaster.broadcast(new XMLOutputter().outputString(statusMsg.toExternalForm()), atmosphereResource);
+            lastStatus = statusMsg;
+            broadcast(statusMsg);
+        }
+
+        void setAtmosphereResource(AtmosphereResource atmosphereResource) {
+            this.atmosphereResource = atmosphereResource;
+            // Important: broadcast the current status as soon as a the WebSocket resource is registered (may happens some
+            // time after the test action was invoked).
+            broadcast(lastStatus);
+        }
+
+        private void broadcast(TestContainerStatusMsg statusMsg) {
+            if (atmosphereResource != null && statusMsg != null) {
+                statusBroadcaster.broadcast(new XMLOutputter().outputString(statusMsg.toExternalForm()), atmosphereResource);
+            }
         }
 
         @Override
@@ -233,6 +288,12 @@ public class ContainerTestController extends BaseFormXmlController {
                 atmosphereResource.close();
             } catch (IOException e) {
                 // Ignore
+            }
+            lock.lock();
+            try {
+                listeners.values().remove(this);
+            } finally {
+                lock.unlock();
             }
         }
     }

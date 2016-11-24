@@ -1,22 +1,18 @@
 package run.var.teamcity.cloud.docker.web;
 
+import org.assertj.core.api.AssertProvider;
 import org.jdom.Element;
+import org.jdom.output.XMLOutputter;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import run.var.teamcity.cloud.docker.test.TestAtmosphereFrameworkFacade;
-import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
-import run.var.teamcity.cloud.docker.test.TestHttpServletRequest;
-import run.var.teamcity.cloud.docker.test.TestHttpServletResponse;
-import run.var.teamcity.cloud.docker.test.TestPluginDescriptor;
-import run.var.teamcity.cloud.docker.test.TestSBuildServer;
-import run.var.teamcity.cloud.docker.test.TestUtils;
-import run.var.teamcity.cloud.docker.test.TestWebControllerManager;
+import run.var.teamcity.cloud.docker.test.*;
+import run.var.teamcity.cloud.docker.web.ContainerTestController.Action;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
+import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.servlet.http.HttpServletResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static run.var.teamcity.cloud.docker.web.ContainerTestManager.*;
 
 @Test
 @SuppressWarnings("unchecked")
@@ -36,8 +32,7 @@ public class ContainerTestControllerTest {
                 parameters(TestUtils.getSampleDockerConfigParams()).
                 parameters(TestUtils.getSampleTestImageConfigParams());
 
-        response = new TestHttpServletResponse();
-        element = new Element("root");
+        resetResponse();
     }
 
     public void createAction() {
@@ -45,83 +40,80 @@ public class ContainerTestControllerTest {
 
         request.parameter("action", Action.CREATE.name());
 
-        testMgr.setStatusMsg(createStatusMsg(Phase.CREATE));
-
         ctrl.doPost(request, response, element);
 
-        assertThat(testMgr.getAction()).isSameAs(Action.CREATE);
-        assertThat(testMgr.getTestUuid()).isNull();
+        assertThat(testMgr.getInvolvedPhase()).isSameAs(Phase.CREATE);
         assertThat(testMgr.getClientConfig()).isNotNull();
         assertThat(testMgr.getImageConfig()).isNotNull();
+        assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_OK);
+        assertThat(response.getWrittenResponse()).isEmpty();
+        assertThat(getResponseString()).containsIgnoringCase(TestUtils.TEST_UUID.toString());
+
     }
 
     public void startAction() {
         ContainerTestController ctrl = createController();
 
+        request.parameter("action", Action.CREATE.name());
+        ctrl.doPost(request, response, element);
+
         request.
                 parameter("action", Action.START.name()).
-                parameter("taskUuid", TestUtils.TEST_UUID.toString());
+                parameter("testUuid", TestUtils.TEST_UUID.toString());
 
-        testMgr.setStatusMsg(createStatusMsg(Phase.START));
+        resetResponse();
 
         ctrl.doPost(request, response, element);
 
-        assertThat(testMgr.getAction()).isSameAs(Action.START);
-        assertThat(testMgr.getTestUuid()).isEqualTo(TestUtils.TEST_UUID);
-        assertThat(testMgr.getClientConfig()).isNull();
-        assertThat(testMgr.getImageConfig()).isNull();
+        assertThat(testMgr.getInvolvedPhase()).isSameAs(Phase.START);
+        assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_OK);
+        assertThat(response.getWrittenResponse()).isEmpty();
+        assertThat(element.getChildren()).isEmpty();
     }
 
     public void queryAction() {
         ContainerTestController ctrl = createController();
 
+        request.parameter("action", Action.CREATE.name());
+        ctrl.doPost(request, response, element);
+
+        testMgr.getListener().notifyStatus(new TestContainerStatusMsg(TestUtils.TEST_UUID, Phase.CREATE, Status.PENDING, null, null));
+
         request.
                 parameter("action", Action.QUERY.name()).
-                parameter("taskUuid", TestUtils.TEST_UUID.toString());
+                parameter("testUuid", TestUtils.TEST_UUID.toString());
 
-        testMgr.setStatusMsg(createStatusMsg(Phase.CREATE));
+        resetResponse();
 
         ctrl.doPost(request, response, element);
 
-        assertThat(testMgr.getAction()).isSameAs(Action.QUERY);
-        assertThat(testMgr.getTestUuid()).isEqualTo(TestUtils.TEST_UUID);
-        assertThat(testMgr.getClientConfig()).isNull();
-        assertThat(testMgr.getImageConfig()).isNull();
+        assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_OK);
+        assertThat(response.getWrittenResponse()).isEmpty();
+        assertThat(getResponseString())
+                .containsIgnoringCase(TestUtils.TEST_UUID.toString())
+                .containsIgnoringCase(Phase.CREATE.name())
+                .containsIgnoringCase(Status.PENDING.name());
     }
 
     public void cancelAction() {
         ContainerTestController ctrl = createController();
 
+        request.parameter("action", Action.CREATE.name());
+        ctrl.doPost(request, response, element);
+
         request.
                 parameter("action", Action.CANCEL.name()).
-                parameter("taskUuid", TestUtils.TEST_UUID.toString());
+                parameter("testUuid", TestUtils.TEST_UUID.toString());
 
-        testMgr.setStatusMsg(createStatusMsg(Phase.CREATE));
-
-        ctrl.doPost(request, response, element);
-
-        assertThat(testMgr.getAction()).isSameAs(Action.CANCEL);
-        assertThat(testMgr.getTestUuid()).isEqualTo(TestUtils.TEST_UUID);
-        assertThat(testMgr.getClientConfig()).isNull();
-        assertThat(testMgr.getImageConfig()).isNull();
-    }
-
-    public void disposeAction() {
-        ContainerTestController ctrl = createController();
-
-        request.
-                parameter("action", Action.DISPOSE.name()).
-                parameter("taskUuid", TestUtils.TEST_UUID.toString());
-
-        testMgr.setStatusMsg(createStatusMsg(Phase.CREATE));
+        resetResponse();
 
         ctrl.doPost(request, response, element);
 
-        assertThat(testMgr.getAction()).isSameAs(Action.DISPOSE);
-        assertThat(testMgr.getTestUuid()).isEqualTo(TestUtils.TEST_UUID);
-        assertThat(testMgr.getClientConfig()).isNull();
-        assertThat(testMgr.getImageConfig()).isNull();
+        assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_OK);
+        assertThat(response.getWrittenResponse()).isEmpty();
+        assertThat(element.getChildren()).isEmpty();
     }
+
 
     public void invalidQueries() {
         ContainerTestController ctrl = createController();
@@ -172,6 +164,15 @@ public class ContainerTestControllerTest {
         assertThat(response.getWrittenResponse()).isNotEmpty();
     }
 
+    private void resetResponse() {
+        response = new TestHttpServletResponse();
+        element = new Element("root");
+    }
+
+    private String getResponseString() {
+        return new XMLOutputter().outputString(element);
+    }
+
     private ContainerTestController createController() {
         return new ContainerTestController(new TestDockerClientFactory(), new TestAtmosphereFrameworkFacade(),
                 new TestSBuildServer(), new TestPluginDescriptor(), new TestWebControllerManager(), testMgr);
@@ -179,6 +180,6 @@ public class ContainerTestControllerTest {
 
     private TestContainerStatusMsg createStatusMsg(Phase phase) {
         return new TestContainerStatusMsg(TestUtils.TEST_UUID, phase,
-                TestContainerStatusMsg.Status.PENDING, "status msg",  null);
+                Status.PENDING, "status msg",  null);
     }
 }

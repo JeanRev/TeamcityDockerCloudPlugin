@@ -14,14 +14,13 @@ import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
-import javax.servlet.http.HttpServletResponse;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
-import static run.var.teamcity.cloud.docker.web.ContainerTestManager.Action;
 import static run.var.teamcity.cloud.docker.web.ContainerTestManager.ActionException;
 
 /**
@@ -40,6 +39,7 @@ public class DefaultContainerTestManagerTest {
     private TestBuildAgentManager agentMgr;
     private TestDockerImageResolver imageResolver;
     private URL serverURL;
+    private TestContainerTestStatusListener testListener;
 
     @BeforeMethod
     public void init() throws MalformedURLException {
@@ -63,39 +63,27 @@ public class DefaultContainerTestManagerTest {
         testMaxIdleTime = DefaultContainerTestManager.TEST_DEFAULT_IDLE_TIME_SEC;
         cleanupRateSec = DefaultContainerTestManager.CLEANUP_DEFAULT_TASK_RATE_SEC;
         imageResolver = new TestDockerImageResolver("resolved-image:1.0");
+        testListener = new TestContainerTestStatusListener();
     }
 
     public void fullTest() {
 
         ContainerTestManager mgr = createManager();
 
-        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
-                imageConfig);
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
-        dockerClient.lock();
-
-        UUID testUuid = statusMsg.getTaskUuid();
-        Status status = statusMsg.getStatus();
-
-        assertThat(status).isSameAs(Status.PENDING);
-
-        dockerClient.unlock();
-
-        queryUntilSuccess(mgr, testUuid, Phase.CREATE);
+        queryUntilSuccess(Phase.CREATE);
 
         assertThat(dockerClient.getContainers()).hasSize(1);
         TestDockerClient.Container container = dockerClient.getContainers().iterator().next();
         assertThat(container.getStatus()).isSameAs(ContainerStatus.CREATED);
         assertThat(container.getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(serverURL.toString());
 
-        statusMsg = mgr.doAction(Action.START, testUuid, null, null);
+        mgr.startTestContainer(testUuid);
 
-        assertThat(statusMsg.getPhase()).isSameAs(Phase.START);
-        assertThat(statusMsg.getStatus()).isSameAs(Status.PENDING);
-
-        queryUntilPhase(mgr, testUuid, Phase.WAIT_FOR_AGENT);
+        queryUntilPhase(Phase.WAIT_FOR_AGENT);
 
         assertThat(dockerClient.getContainers()).hasSize(1);
         assertThat(dockerClient.getContainers().iterator().next().getStatus()).isSameAs(ContainerStatus.STARTED);
@@ -105,43 +93,13 @@ public class DefaultContainerTestManagerTest {
 
         agentMgr.registeredAgent(agent);
 
-        queryUntilSuccess(mgr, testUuid, Phase.WAIT_FOR_AGENT);
+        queryUntilSuccess(Phase.WAIT_FOR_AGENT);
 
-        mgr.doAction(Action.DISPOSE, testUuid, null, null);
-
-        queryUntilSuccess(mgr, testUuid, Phase.DISPOSE, Phase.STOP);
+        mgr.dispose(testUuid);
 
         assertThat(dockerClient.getContainers()).isEmpty();
 
         mgr.dispose();
-    }
-
-    public void noAction() {
-        ContainerTestManager mgr = createManager();
-
-        Throwable throwable = catchThrowable(() -> mgr.doAction(null, null, null, null));
-
-        assertThat(throwable).isInstanceOf(ActionException.class);
-        assertThat(((ActionException) throwable).code).isEqualTo(HttpServletResponse.SC_BAD_REQUEST);
-    }
-
-    public void disposalOfTests() {
-
-        setupFastCleanupRate();
-
-        ContainerTestManager mgr = createManager();
-
-        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
-                imageConfig);
-
-        UUID testUuid = statusMsg.getTaskUuid();
-
-        queryUntilSuccess(mgr, testUuid);
-
-        TestUtils.waitSec(5);
-
-        assertThatExceptionOfType(ActionException.class).isThrownBy( () -> mgr.doAction
-                (Action.QUERY, testUuid, null, null));
     }
 
     public void errorHandling() {
@@ -149,45 +107,43 @@ public class DefaultContainerTestManagerTest {
 
         ContainerTestManager mgr = createManager();
 
-        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
-                imageConfig);
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
 
-        UUID testUuid = statusMsg.getTaskUuid();
-
-        queryUntilFailure(mgr, statusMsg.getTaskUuid(), Phase.CREATE);
+        queryUntilFailure(Phase.CREATE);
 
         assertThatExceptionOfType(ActionException.class).isThrownBy(
-                () -> mgr.doAction(Action.DISPOSE, testUuid, null, null));
-
-        assertThatExceptionOfType(ActionException.class).isThrownBy(
-                () -> mgr.doAction(Action.START, testUuid, null, null));
-
-        mgr.doAction(Action.CANCEL, testUuid, null, null);
+                () -> mgr.startTestContainer(testUuid));
     }
 
-    public void cancel() {
+    public void diposeTest() {
         ContainerTestManager mgr = createManager();
 
-        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
-                imageConfig);
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
 
-        UUID testUuid = statusMsg.getTaskUuid();
-        queryUntilSuccess(mgr, statusMsg.getTaskUuid(), Phase.CREATE);
+        queryUntilSuccess(Phase.CREATE);
+
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
         assertThat(dockerClient.getContainers()).hasSize(1);
 
-        mgr.doAction(Action.CANCEL, testUuid, null, null);
+        mgr.dispose(testUuid);
 
         assertThat(dockerClient.getContainers()).isEmpty();
         assertThat(dockerClient.isClosed()).isTrue();
 
         // Cancelling a test related to an already removed container.
-        statusMsg = mgr.doAction(Action.CREATE, null, clientConfig, imageConfig);
+        testListener = new TestContainerTestStatusListener();
+
+        testUuid = mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
+
         dockerClient = dockerClientFactory.getClient();
-        queryUntilSuccess(mgr, statusMsg.getTaskUuid(), Phase.CREATE);
+
+        queryUntilSuccess(Phase.CREATE);
+
         dockerClient.removeContainer(dockerClient.getContainers().iterator().next().getId(), true, true);
-        mgr.doAction(Action.CANCEL, statusMsg.getTaskUuid(), null, null);
+
+        mgr.dispose(testUuid);
+
         assertThat(dockerClient.isClosed()).isTrue();
     }
 
@@ -197,55 +153,21 @@ public class DefaultContainerTestManagerTest {
         setupFastCleanupRate();
 
         ContainerTestManager mgr = createManager();
+        mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
 
-        TestContainerTestStatusListener listener = new TestContainerTestStatusListener();
+        waitUntil(() -> !testListener.getMsgs().isEmpty());
 
-        // Listener for unknown test.
-        assertThatExceptionOfType(IllegalArgumentException.class).
-                isThrownBy(() -> mgr.setStatusListener(TestUtils.TEST_UUID, listener));
-
-        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
-                imageConfig);
-
-
-        UUID testUuid = statusMsg.getTaskUuid();
-
-        mgr.setStatusListener(testUuid, listener);
-
-        assertThat(listener.getMsgs()).isNotEmpty();
-
-        statusMsg = listener.getMsgs().getLast();
+        TestContainerStatusMsg statusMsg = testListener.getMsgs().getLast();
 
         assertThat(statusMsg.getStatus()).isIn(Status.PENDING, Status.SUCCESS);
 
-        waitUntil(() -> listener.getMsgs().getLast().getStatus() == Status.SUCCESS);
+        waitUntil(() -> testListener.getMsgs().getLast().getStatus() == Status.SUCCESS);
 
-        assertThat(listener.isDisposed()).isFalse();
+        assertThat(testListener.isDisposed()).isFalse();
 
         TestUtils.waitSec(5);
 
-        assertThat(listener.isDisposed()).isTrue();
-
-    }
-
-    public void statusListenerAlwaysInvokedAtLeastOnce() {
-        ContainerTestManager mgr = createManager();
-
-        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
-                imageConfig);
-
-        UUID testUuid = statusMsg.getTaskUuid();
-
-        queryUntilSuccess(mgr, testUuid);
-
-        // Test is already successful. However, the listener should always receive the last known status message
-        TestContainerTestStatusListener statusListener = new TestContainerTestStatusListener();
-
-        mgr.setStatusListener(testUuid, statusListener);
-
-        assertThat(statusListener.getMsgs()).hasSize(1);
-
-        assertThat(statusListener.getMsgs().getFirst().getStatus()).isSameAs(Status.SUCCESS);
+        assertThat(testListener.isDisposed()).isTrue();
     }
 
     public void handlingOfDefaultServerUrl() {
@@ -253,12 +175,9 @@ public class DefaultContainerTestManagerTest {
 
         ContainerTestManager mgr = createManager();
 
-        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
-                imageConfig);
+        mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
 
-        UUID testUuid = statusMsg.getTaskUuid();
-
-        queryUntilSuccess(mgr, testUuid);
+        queryUntilSuccess();
 
         assertThat(dockerClientFactory.getClient().getContainers().iterator().next().
                 getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(TestRootUrlHolder.HOLDER_URL);
@@ -270,12 +189,9 @@ public class DefaultContainerTestManagerTest {
 
         ContainerTestManager mgr = createManager();
 
-        TestContainerStatusMsg statusMsg = mgr.doAction(Action.CREATE, null, clientConfig,
-                imageConfig);
+        mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
 
-        UUID testUuid = statusMsg.getTaskUuid();
-
-        queryUntilFailure(mgr, testUuid);
+        queryUntilFailure();
     }
 
     private void setupFastCleanupRate(){
@@ -283,19 +199,20 @@ public class DefaultContainerTestManagerTest {
         testMaxIdleTime = 3;
     }
 
-    private void queryUntilSuccess(ContainerTestManager mgr, UUID testUuid, Phase... allowedPhases) {
-        queryUntilStatus(mgr, testUuid, Status.SUCCESS, allowedPhases);
+    private void queryUntilSuccess(Phase... allowedPhases) {
+        queryUntilStatus(Status.SUCCESS, allowedPhases);
     }
 
-    private void queryUntilFailure(ContainerTestManager mgr, UUID testUuid, Phase... allowedPhases) {
-        queryUntilStatus(mgr, testUuid, Status.FAILURE, allowedPhases);
+    private void queryUntilFailure(Phase... allowedPhases) {
+        queryUntilStatus(Status.FAILURE, allowedPhases);
     }
 
-    private void queryUntilStatus(ContainerTestManager mgr, UUID testUuid, Status targetStatus, Phase...
-            allowedPhases) {
+    private void queryUntilStatus(Status targetStatus, Phase... allowedPhases) {
         waitUntil(() -> {
-            TestContainerStatusMsg queryMsg = mgr.doAction(Action.QUERY, testUuid, null,
-                    null);
+            if (testListener.getMsgs().isEmpty()) {
+                return false;
+            }
+            TestContainerStatusMsg queryMsg = testListener.getMsgs().getLast();
             Status status = queryMsg.getStatus();
             if (targetStatus != Status.PENDING && status != Status.PENDING) {
                 // Terminal state expected, terminal state reached.
@@ -310,10 +227,12 @@ public class DefaultContainerTestManagerTest {
         });
     }
 
-    private void queryUntilPhase(ContainerTestManager mgr, UUID testUuid, Phase targetPhase) {
+    private void queryUntilPhase(Phase targetPhase) {
         waitUntil(() -> {
-            TestContainerStatusMsg queryMsg = mgr.doAction(Action.QUERY, testUuid, null,
-                    null);
+            if (testListener.getMsgs().isEmpty()) {
+                return false;
+            }
+            TestContainerStatusMsg queryMsg = testListener.getMsgs().getLast();
             Status status = queryMsg.getStatus();
             assertThat(status).isNotSameAs(Status.FAILURE);
             return queryMsg.getPhase() == targetPhase;

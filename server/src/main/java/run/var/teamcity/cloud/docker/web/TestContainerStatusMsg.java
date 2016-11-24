@@ -46,14 +46,6 @@ public class TestContainerStatusMsg {
          * Waiting for the agent to connect.
          */
         WAIT_FOR_AGENT,
-        /**
-         * Stopping the container.
-         */
-        STOP,
-        /**
-         * Disposing the container.
-         */
-        DISPOSE
     }
 
     private final String msg;

@@ -1,13 +1,13 @@
 package run.var.teamcity.cloud.docker.client;
 
-import run.var.teamcity.cloud.docker.web.ContainerTestStatusListener;
+import run.var.teamcity.cloud.docker.web.ContainerTestListener;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 
 
-public class TestContainerTestStatusListener implements ContainerTestStatusListener {
+public class TestContainerTestStatusListener implements ContainerTestListener {
 
     private boolean disposed = false;
 
