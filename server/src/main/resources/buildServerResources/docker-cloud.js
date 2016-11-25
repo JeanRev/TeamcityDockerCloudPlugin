@@ -813,23 +813,28 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$newImageBtn.click(self._showImageDialogClickHandler);
 
                 self.$dockerAddress.change(function() {
+                    // Normalize the Docker address and do some auto-correction regarding count of slashes after the
+                    // scheme.
                     var address = self.$dockerAddress.val();
-                    // First, normalize the address, auto-correct the number of slashes and make a rough guess about
-                    // the scheme if none provided.
                     var match = address.match(/([a-zA-Z]+?):\/*(.*)/);
                     var scheme;
+                    var schemeSpecificPart;
                     if (match) {
+                        // Some scheme detected.
                         scheme = match[1].toLowerCase();
-                        address = match[2];
+                        schemeSpecificPart = match[2];
                     } else if (address.match(/[0-9].*/)) {
                         scheme = 'tcp';
+                        schemeSpecificPart = address;
                     } else if (address.startsWith('/')) {
                         scheme = 'unix';
+                        schemeSpecificPart = address
                     } else {
+                        // Most certainly invalid, but let the server complain about it.
                         return;
                     }
 
-                    self.$dockerAddress.val(scheme + ':' + (scheme == 'unix' ? '///' : '//') + address);
+                    self.$dockerAddress.val(scheme + ':' + (scheme == 'unix' ? '///' : '//') + schemeSpecificPart);
                 });
 
                 self.$imageDialogSubmitBtn.click(function() {
