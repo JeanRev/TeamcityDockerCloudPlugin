@@ -46,5 +46,8 @@ public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
         // With query.
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
                 DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1:2375?param=value"), false)));
+        // Invalid hostname
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127..0.0.1:2375"), false)));
     }
 }

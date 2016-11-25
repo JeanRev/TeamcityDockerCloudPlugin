@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker.client;
 
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.util.text.StringUtil;
 import org.apache.http.HttpStatus;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
@@ -293,10 +294,12 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
         switch (scheme) {
             case TCP:
-                if ((dockerURI.getPath() != null && !dockerURI.getPath().isEmpty()) ||
-                        dockerURI.getUserInfo() != null || dockerURI.getQuery() != null ||
-                        dockerURI.getFragment() != null ) {
+                if (StringUtil.isNotEmpty(dockerURI.getPath()) || dockerURI.getUserInfo() != null ||
+                        dockerURI.getQuery() != null || dockerURI.getFragment() != null ) {
                     throw new IllegalArgumentException("Only host ip/name and port can be provided for tcp scheme.");
+                }
+                if (StringUtil.isEmpty(dockerURI.getHost())) {
+                    throw new IllegalArgumentException("Invalid hostname.");
                 }
                 int port = dockerURI.getPort();
                 if (port == -1) {
@@ -306,7 +309,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                     TranslatedScheme translatedScheme = usingTLS ? TranslatedScheme.HTTPS : TranslatedScheme.HTTP;
                     effectiveURI = new URI(translatedScheme.part(), dockerURI.getUserInfo(), dockerURI.getHost(), port, null, null, null);
                 } catch (URISyntaxException e) {
-                    throw new AssertionError("Failed to build effective URI for TCP socket.", e);
+                    throw new IllegalArgumentException("Failed to build effective URI for TCP socket.", e);
                 }
                 break;
             case UNIX:
@@ -320,7 +323,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 try {
                     effectiveURI = new URI(SupportedScheme.UNIX.part(), null, "localhost", 80, null, null, null);
                 } catch (URISyntaxException e) {
-                    throw new AssertionError("Failed to build effective URI for Unix socket.", e);
+                    throw new IllegalArgumentException("Failed to build effective URI for Unix socket.", e);
                 }
                 connectionOperator = new UnixSocketClientConnectionOperator(new File(dockerURI.getPath()));
                 break;

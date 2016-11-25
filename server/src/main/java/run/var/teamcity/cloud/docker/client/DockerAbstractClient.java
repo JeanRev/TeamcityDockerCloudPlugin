@@ -184,7 +184,8 @@ public abstract class DockerAbstractClient implements Closeable {
         try {
             response = invocationBuilder.method(method, entity);
         } catch (ProcessingException e) {
-            throw new DockerClientProcessingException("Method invocation failed.", e);
+            String msg = e.getMessage();
+            throw new DockerClientProcessingException(msg != null ? msg : "Method invocation failed.", e);
         }
 
         validate(getRequestSpec(target, method), response, errorCodeMapper);
