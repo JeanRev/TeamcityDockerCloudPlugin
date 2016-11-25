@@ -14,6 +14,7 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.TextUtils;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.ClientProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.apcon.ApacheConnectorProvider;
@@ -257,22 +258,21 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
      * from the Docker CLI, either <tt>unix://<em>[absolute_path_to_unix_socket]</em> for Unix sockets or
      * <tt>tcp://<em>[ip_address]</em></tt> for TCP connections.
      *
-     *
-     * @param dockerURI the Docker instanec URI
-     * @param connectionPoolSize the connection pool size
+     * @param clientConfig the Docker client configuration
      *
      * @return the new client
      *
-     * @throws NullPointerException if {@code dockerURI} is {@code null}
-     * @throws IllegalArgumentException if the {@code dockerURI} is not recognized
-     * @throws IllegalArgumentException if TLS is requested with the {@code unix} connection scheme
+     * @throws NullPointerException if {@code clientConfig} is {@code null}
+     * @throws IllegalArgumentException if an invalid configuration setting is detected
      */
     @NotNull
-    public static DefaultDockerClient open(@NotNull URI dockerURI, boolean usingTLS, int connectionPoolSize) {
-        DockerCloudUtils.requireNonNull(dockerURI, "Docker URI cannot be null.");
-        if (connectionPoolSize < 1) {
-            throw new IllegalArgumentException("Connection pool size must greater than 0: " + connectionPoolSize);
-        }
+    public static DefaultDockerClient newInstance(DockerClientConfig clientConfig) {
+        DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
+
+        URI dockerURI = clientConfig.getInstanceURI();
+        boolean usingTLS = clientConfig.isUsingTLS();
+        int connectionPoolSize = clientConfig.getThreadPoolSize();
+
         if (dockerURI.isOpaque()) {
             throw new IllegalArgumentException("Non opaque URI expected: " + dockerURI);
         }
@@ -344,6 +344,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         connManager.setMaxTotal(connectionPoolSize);
 
         config.property(ApacheClientProperties.CONNECTION_MANAGER, connManager);
+        config.property(ClientProperties.CONNECT_TIMEOUT, clientConfig.getConnectTimeoutMillis());
         return new DefaultDockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI);
     }
 

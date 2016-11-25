@@ -15,18 +15,19 @@ public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
         if (dockerTcpAddress == null) {
             throw new SkipException("Java system variable docker.test.tcp.address not set. Skipping TCP based tests.");
         }
-        return DefaultDockerClient.open(new URI("tcp://" + dockerTcpAddress), false, threadPoolSize);
+        return DefaultDockerClient.newInstance(createConfig(new URI("tcp://" + dockerTcpAddress), false)
+                .threadPoolSize(threadPoolSize));
     }
 
     public  void openValidInput() {
         // Missing port.
-        DefaultDockerClient.open(URI.create("tcp://127.0.0.1"), false, 1).close();
-        DefaultDockerClient.open(URI.create("tcp://127.0.0.1"), true, 1).close();
-        DefaultDockerClient.open(URI.create("tcp://127.0.0.1:2375"), false, 1).close();
+        DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1"), false)).close();
+        DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1"), true)).close();
+        DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1:2375"), false)).close();
     }
 
     public void networkFailure() {
-        try (DockerClient client = DefaultDockerClient.open(URI.create("tcp://notanrealhost:2375"), false, 1)) {
+        try (DockerClient client = DefaultDockerClient.newInstance(createConfig(URI.create("tcp://notanrealhost:2375"), false))) {
             assertThatExceptionOfType(DockerClientProcessingException.class).
                     isThrownBy(client::getVersion);
         }
@@ -34,18 +35,16 @@ public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
 
     @SuppressWarnings("ConstantConditions")
     public void openInvalidInput() {
-
-
         // Invalid slash count after scheme.
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                DefaultDockerClient.open(URI.create("tcp:/127.0.0.1:2375"), false, 1));
+                DefaultDockerClient.newInstance(createConfig(URI.create("tcp:/127.0.0.1:2375"), false)));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                DefaultDockerClient.open(URI.create("tcp:///127.0.0.1:2375"), false, 1));
+                DefaultDockerClient.newInstance(createConfig(URI.create("tcp:///127.0.0.1:2375"), false)));
         // With path.
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                DefaultDockerClient.open(URI.create("tcp://127.0.0.1:2375/blah"), false, 1));;
+                DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1:2375/blah"), false)));
         // With query.
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                DefaultDockerClient.open(URI.create("tcp://127.0.0.1:2375?param=value"), false, 1));
+                DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1:2375?param=value"), false)));
     }
 }

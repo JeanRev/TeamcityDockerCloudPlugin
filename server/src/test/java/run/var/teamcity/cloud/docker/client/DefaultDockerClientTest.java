@@ -75,20 +75,14 @@ public abstract class DefaultDockerClientTest {
 
     @SuppressWarnings("ConstantConditions")
     public void openAllInvalidInput() {
-        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() ->
-                DefaultDockerClient.open(null, false, 1));
         // Invalid connection pool size.
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                DefaultDockerClient.open(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI, false, 0));
+                DefaultDockerClient.newInstance(createConfig(URI.create("/a/relative/uri"), false)));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                DefaultDockerClient.open(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI, false, -1));
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                DefaultDockerClient.open(URI.create("/a/relative/uri"), false, 1));
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                DefaultDockerClient.open(URI.create("tcp:an.opaque.url"), false, 1));
+                DefaultDockerClient.newInstance(createConfig(URI.create("tcp:an.opaque.url"), false)));
         // Unknown scheme.
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                DefaultDockerClient.open(URI.create("http://127.0.0.1:2375"), false, 1));
+                DefaultDockerClient.newInstance(createConfig(URI.create("http://127.0.0.1:2375"), false)));
     }
 
     @SuppressWarnings("ConstantConditions")
@@ -208,6 +202,10 @@ public abstract class DefaultDockerClientTest {
         if (client != null) {
             client.close();
         }
+    }
+
+    protected DockerClientConfig createConfig(URI uri, boolean usingTls) {
+        return new DockerClientConfig(uri).usingTls(usingTls);
     }
 
     private DefaultDockerClient createClient() throws URISyntaxException {

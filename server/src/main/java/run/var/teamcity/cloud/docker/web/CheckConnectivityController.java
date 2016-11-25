@@ -18,6 +18,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 
 public class CheckConnectivityController extends BaseFormXmlController {
@@ -60,7 +61,10 @@ public class CheckConnectivityController extends BaseFormXmlController {
         Exception error = null;
         try {
 
-            DockerClientConfig dockerConfig = new DockerClientConfig(new URI(uri)).usingTls(useTLS).threadPoolSize(1);
+            DockerClientConfig dockerConfig = new DockerClientConfig(new URI(uri))
+                    .usingTls(useTLS)
+                    .threadPoolSize(1)
+                    .connectTimeoutMillis((int) TimeUnit.SECONDS.toMillis(20));
 
             DockerClient client = dockerClientFactory.createClient(dockerConfig);
 
