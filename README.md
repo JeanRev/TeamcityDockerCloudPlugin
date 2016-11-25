@@ -10,6 +10,7 @@
 </p>
 This TeamCity plugin leverages the TeamCity Cloud API in order to start and dispose TeamCity agent hosted in Docker 
 containers on demand.
+
 ## Requirements
 - TeamCity 10.x or greater.
 - A Docker daemon accessible through either TCP or Unix Socket, supporting the remote API v1.24 (Engine version 
@@ -22,10 +23,12 @@ Unless otherwise specified in their header, all files are distributed under the 
 <table>
 <tr>
 <td style="border: none; vertical-align:middle;">
+<a href="https://www.puzzle.ch" target="_blank">
 <img src="doc/img/puzzle.png"> 
+</a>
 </td>
 <td style="border: none; vertical-align:middle;">
-This software has been build with the unfailing support of my company, <a href="https://www.puzzle.ch">Puzzle 
+This software has been build with the unfailing support of my company, <a href="https://www.puzzle.ch" target="_blank">Puzzle 
 ITC</a>, kudos to them.</div>
 </td>
 </table>
