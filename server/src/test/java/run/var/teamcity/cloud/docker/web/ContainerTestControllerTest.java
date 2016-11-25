@@ -149,7 +149,7 @@ public class ContainerTestControllerTest {
 
         ctrl.doPost(request, response, element);
 
-        assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_BAD_REQUEST);
         assertThat(element.getChildren()).isEmpty();
         assertThat(response.getWrittenResponse()).isNotEmpty();
 
