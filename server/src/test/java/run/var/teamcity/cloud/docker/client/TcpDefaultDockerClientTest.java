@@ -19,6 +19,9 @@ public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
     }
 
     public  void openValidInput() {
+        // Missing port.
+        DefaultDockerClient.open(URI.create("tcp://127.0.0.1"), false, 1).close();
+        DefaultDockerClient.open(URI.create("tcp://127.0.0.1"), true, 1).close();
         DefaultDockerClient.open(URI.create("tcp://127.0.0.1:2375"), false, 1).close();
     }
 
@@ -32,9 +35,6 @@ public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
     @SuppressWarnings("ConstantConditions")
     public void openInvalidInput() {
 
-        // Missing port.
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                DefaultDockerClient.open(URI.create("tcp://127.0.0.1"), false, 1));
 
         // Invalid slash count after scheme.
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->

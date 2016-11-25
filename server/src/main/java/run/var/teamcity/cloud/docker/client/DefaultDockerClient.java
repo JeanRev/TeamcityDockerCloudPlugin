@@ -54,6 +54,9 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
     private final static Charset SUPPORTED_CHARSET = StandardCharsets.UTF_8;
 
+    private final static int DEFAULT_PORT = 2375;
+    private final static int DEFAULT_TLS_PORT = 2376;
+
     private final static Logger LOG = DockerCloudUtils.getLogger(DefaultDockerClient.class);
 
     private final DockerHttpConnectionFactory connectionFactory;
@@ -265,7 +268,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
      * @throws IllegalArgumentException if TLS is requested with the {@code unix} connection scheme
      */
     @NotNull
-    public static DefaultDockerClient open(@NotNull URI dockerURI, boolean useTLS, int connectionPoolSize) {
+    public static DefaultDockerClient open(@NotNull URI dockerURI, boolean usingTLS, int connectionPoolSize) {
         DockerCloudUtils.requireNonNull(dockerURI, "Docker URI cannot be null.");
         if (connectionPoolSize < 1) {
             throw new IllegalArgumentException("Connection pool size must greater than 0: " + connectionPoolSize);
@@ -295,13 +298,13 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                         dockerURI.getFragment() != null ) {
                     throw new IllegalArgumentException("Only host ip/name and port can be provided for tcp scheme.");
                 }
-                if(dockerURI.getPort() == -1) {
-                    throw new IllegalArgumentException("Missing port.");
+                int port = dockerURI.getPort();
+                if (port == -1) {
+                    port = usingTLS ? DEFAULT_TLS_PORT : DEFAULT_PORT;
                 }
                 try {
-                    TranslatedScheme translatedScheme = useTLS ? TranslatedScheme.HTTPS : TranslatedScheme.HTTP;
-                    effectiveURI = new URI(translatedScheme.part(), dockerURI.getUserInfo(), dockerURI.getHost(), dockerURI.getPort
-                            (), null, null, null);
+                    TranslatedScheme translatedScheme = usingTLS ? TranslatedScheme.HTTPS : TranslatedScheme.HTTP;
+                    effectiveURI = new URI(translatedScheme.part(), dockerURI.getUserInfo(), dockerURI.getHost(), port, null, null, null);
                 } catch (URISyntaxException e) {
                     throw new AssertionError("Failed to build effective URI for TCP socket.", e);
                 }
@@ -311,7 +314,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                         dockerURI.getQuery() != null || dockerURI.getFragment() != null ) {
                     throw new IllegalArgumentException("Only path can be provided for unix scheme.");
                 }
-                if (useTLS) {
+                if (usingTLS) {
                     throw new IllegalArgumentException("TLS not available with Unix sockets.");
                 }
                 try {

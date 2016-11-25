@@ -38,7 +38,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.debugEnabled = params.debugEnabled;
 
                 var imagesParam = params.imagesParam;
-                var usingTlsParam = params.usingTlsParam;
 
                 self.hasWebSocketSupport = 'WebSocket' in window;
 
@@ -52,7 +51,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$imagesTable = $j('#dockerCloudImagesTable');
                 self.$images = $j(BS.Util.escapeId(imagesParam));
                 self.$dockerAddress = $j("#dockerCloudDockerAddress");
-                self.$usingTlsParam = $j(BS.Util.escapeId(usingTlsParam));
                 self.$useLocalInstance = $j("#dockerCloudUseLocalInstance");
                 self.$useCustomInstance = $j("#dockerCloudUseCustomInstance");
                 self.$checkConnectionLoader = $j('#dockerCloudCheckConnectionLoader');
@@ -827,21 +825,11 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         scheme = 'tcp';
                     } else if (address.startsWith('/')) {
                         scheme = 'unix';
-                    }
-
-                    var newAddress = scheme + ':';
-                    if (scheme == 'tcp') {
-                        newAddress += '//' + address;
-                        if (!address.match(/.*:[0-9]+/)) {
-                            newAddress += self.$usingTlsParam.is(':checked') ? ':2376' : ':2375';
-                        }
-                    } else if (scheme == 'unix') {
-                        newAddress += '///' + address;
                     } else {
-                        newAddress = address;
+                        return;
                     }
 
-                    self.$dockerAddress.val(newAddress);
+                    self.$dockerAddress.val(scheme + ':' + (scheme == 'unix' ? '///' : '//') + address);
                 });
 
                 self.$imageDialogSubmitBtn.click(function() {
