@@ -1,3 +1,9 @@
-rootProject.name = 'teamcity-docker-cld-plugin'
+def configureGradleScriptKotlinOn(ProjectDescriptor project) {
+    project.buildFileName = 'build.gradle.kts'
+    project.children.each { configureGradleScriptKotlinOn(it) }
+}
+
 include 'server'
+
+configureGradleScriptKotlinOn rootProject
 
