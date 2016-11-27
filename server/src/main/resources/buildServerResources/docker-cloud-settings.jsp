@@ -699,6 +699,7 @@
                     errorIconURL: '<c:url value="/img/attentionCommentRed.png"/>',
                     warnIconURL: '<c:url value="/img/attentionComment.png"/>',
                     testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>',
+                    streamSocketPath: '<c:url value="/app/docker-cloud/streaming/logs"/>',
                     defaultUnixSocketAvailable: ${defaultUnixSocketAvailable},
                     debugEnabled: ${debugEnabled}
                 });

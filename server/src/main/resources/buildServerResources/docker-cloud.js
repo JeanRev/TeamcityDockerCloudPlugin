@@ -33,6 +33,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.checkConnectivityCtrlURL = params.checkConnectivityCtrlURL;
                 self.testContainerCtrlURL = params.testContainerCtrlURL;
                 self.testStatusSocketPath = params.testStatusSocketPath;
+                self.streamSocketPath = params.streamSocketPath;
                 self.errorIconURL = params.errorIconURL;
                 self.warnIconURL = params.warnIconURL;
                 self.debugEnabled = params.debugEnabled;
@@ -1051,9 +1052,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 if (self.hasWebSocketSupport) {
                     if (!self.testStatusSocket) {
                         self.logInfo('Opening test status listener socket.');
-                        var protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
-                        var port =  ((location.port) ? (':' + location.port) : '');
-                        var socketURL = protocol + location.hostname + port + self.testStatusSocketPath + '?testUuid=' + self.testUuid;
+                        var socketURL = self.resolveWebSocketURL(self.testStatusSocketPath + '?testUuid=' + self.testUuid);
                         self.testStatusSocket = new WebSocket(socketURL);
                         self.testStatusSocket.onmessage = function (event) {
                             self._processTestStatusResponse(self._parseTestStatusResponse(event.data));
@@ -1109,8 +1108,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     if (responseMap.phase == "WAIT_FOR_AGENT") {
                         if (self.hasXTermSupport && !self.logStreamingSocket) {
                             console.log('Opening live logs sockt now.');
-                            var url = 'ws://192.168.100.1:8111/tc/app/docker-cloud/streaming/logs?correlationId=' +
-                                self.testUuid;
+
+                            var url =self.resolveWebSocketURL(self.streamSocketPath + '?correlationId=' + self.testUuid);
                             self.$dockerTestContainerOutputTitle.fadeIn(400);
                             self.$dockerTestContainerOutput.slideDown(400, function() {
                                 self.logStreamingSocket = new WebSocket(url);
@@ -1562,6 +1561,11 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
             },
 
+            resolveWebSocketURL: function(path) {
+                var protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
+                var port =  ((location.port) ? (':' + location.port) : '');
+                return protocol + location.hostname + port + path;
+            },
             checkXtermBrowserSupport: function() {
                 try {
                     var parser = new UAParser();
