@@ -1,13 +1,8 @@
 # TeamCity Docker Cloud plugin
-<p>
-<a href="https://tc.var.run/viewType.html?buildTypeId=TeamCityDockerCloudPlugin_Main">
-    <img src="https://tc.var.run/app/rest/builds/buildType:(id:TeamCityDockerCloudPlugin_Main)/statusIcon" alt="Build status"/>
-</a>
-<a href="https://tc.var.run/viewLog.html?buildId=lastSuccessful&buildTypeId=TeamCityDockerCloudPlugin_Main&tab=coverage_jacoco&guest=1">
-    <img src="https://tc.var.run/vr_static/dkcld_plugin_coverage_latest.png" alt="Test coverage"/>
-</a>
+[![status](https://builds.gradle.org/app/rest/builds/buildType:GradleScriptKotlin_Master/statusIcon)](https://tc.var.run/viewType.html?buildTypeId=TeamCityDockerCloudPlugin_Main)
+[![coverage](https://tc.var.run/vr_static/dkcld_plugin_coverage_latest.png)](https://tc.var.run/viewLog.html?buildId=lastSuccessful&buildTypeId=TeamCityDockerCloudPlugin_Main&tab=coverage_idea&guest=1)
+[![license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0)
 
-</p>
 This TeamCity plugin leverages the TeamCity Cloud API in order to start and dispose TeamCity agent hosted in Docker 
 containers on demand.
 
