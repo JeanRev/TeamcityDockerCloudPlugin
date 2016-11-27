@@ -1,11 +1,11 @@
 package run.var.teamcity.cloud.docker.web;
 
-import jetbrains.buildServer.serverSide.BuildAgentManager;
-import jetbrains.buildServer.serverSide.SBuildAgent;
+import com.intellij.openapi.diagnostic.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClient;
+import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
@@ -19,39 +19,44 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class ContainerSpecTest implements ContainerTestTaskHandler{
 
+    private final static Logger LOG = DockerCloudUtils.getLogger(ContainerSpecTest.class);
+
     private final UUID uuid = UUID.randomUUID();
     private final ReentrantLock lock = new ReentrantLock();
     private final DockerClient client;
-    private final BuildAgentManager agentMgr;
+    private final DockerClientConfig clientConfig;
     private final ContainerTestListener statusListener;
+    private final StreamingController streamingController;
 
     private long lastInteraction;
     private String containerId;
+    private boolean buildAgentDetected = false;
 
     private ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTaskFuture = null;
 
-    private ContainerSpecTest(DockerClient client, BuildAgentManager agentMgr,
-                              ContainerTestListener statusListener) {
-        assert client != null && agentMgr != null && statusListener != null;
+    private ContainerSpecTest(DockerClientConfig clientConfig, DockerClient client,
+                              ContainerTestListener statusListener, StreamingController streamingController) {
+        assert client != null  && statusListener != null;
 
+        this.clientConfig = clientConfig;
         this.client = client;
-        this.agentMgr = agentMgr;
         this.statusListener = statusListener;
+        this.streamingController = streamingController;
 
         notifyInteraction();
     }
 
     public static ContainerSpecTest newTestInstance(@NotNull DockerCloudClientConfig clientConfig,
                                                     @NotNull DockerClientFactory dockerClientFactory,
-                                                    @NotNull BuildAgentManager agentMgr,
-                                                    @NotNull ContainerTestListener statusListener) {
+                                                    @NotNull ContainerTestListener statusListener,
+                                                    @Nullable StreamingController streamingController) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
         DockerCloudUtils.requireNonNull(dockerClientFactory, "Docker client factory cannot be null.");
-        DockerCloudUtils.requireNonNull(agentMgr, "Agent manager cannot be null.");
         DockerCloudUtils.requireNonNull(statusListener, "Status listener cannot be null.");
         DockerClient client = dockerClientFactory.createClient(clientConfig.getDockerClientConfig()
                 .threadPoolSize(1));
-        return new ContainerSpecTest(client, agentMgr, statusListener);
+        return new ContainerSpecTest(clientConfig.getDockerClientConfig(), client, statusListener,
+                streamingController);
     }
 
     /**
@@ -146,6 +151,7 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         lock.lock();
         try {
             this.currentTaskFuture = currentTask;
+            statusListener.notifyStatus(null);
             notifyInteraction();
         } finally {
             lock.unlock();
@@ -162,6 +168,9 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
             lock.unlock();
         }
 
+        if (streamingController != null) {
+            streamingController.registerContainer(uuid, new ContainerCoordinates(containerId, clientConfig));
+        }
     }
 
     @Override
@@ -176,13 +185,21 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
 
     @Override
     public boolean isBuildAgentDetected() {
-        for (SBuildAgent agent : agentMgr.getRegisteredAgents(true)) {
-            UUID testInstanceUuid = DockerCloudUtils.tryParseAsUUID(DockerCloudUtils.getEnvParameter(agent,
-                    DockerCloudUtils.ENV_TEST_INSTANCE_ID));
-            if (uuid.equals(testInstanceUuid)) {
-                return true;
-            }
+        lock.lock();
+        try {
+            return buildAgentDetected;
+        } finally {
+            lock.unlock();
         }
-        return false;
+
+    }
+
+    public void setBuildAgentDetected(boolean buildAgentDetected) {
+        lock.lock();
+        try {
+            this.buildAgentDetected = buildAgentDetected;
+        } finally {
+            lock.unlock();
+        }
     }
 }

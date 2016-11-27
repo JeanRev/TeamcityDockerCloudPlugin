@@ -36,6 +36,7 @@ public class DefaultContainerTestManagerTest {
     private DockerClientConfig dockerClientConfig;
     private DockerCloudClientConfig clientConfig;
     private DockerImageConfig imageConfig;
+    private TestSBuildServer buildServer;
     private TestBuildAgentManager agentMgr;
     private TestDockerImageResolver imageResolver;
     private URL serverURL;
@@ -58,7 +59,8 @@ public class DefaultContainerTestManagerTest {
 
         Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
         imageConfig = new DockerImageConfig("test", containerSpec, true, false, 1);
-        agentMgr = new TestBuildAgentManager();
+        buildServer = new TestSBuildServer();
+        agentMgr = buildServer.getBuildAgentManager();
 
         testMaxIdleTime = DefaultContainerTestManager.TEST_DEFAULT_IDLE_TIME_SEC;
         cleanupRateSec = DefaultContainerTestManager.CLEANUP_DEFAULT_TASK_RATE_SEC;
@@ -241,6 +243,6 @@ public class DefaultContainerTestManagerTest {
 
     private ContainerTestManager createManager() {
         return new DefaultContainerTestManager(imageResolver, dockerClientFactory,
-                agentMgr, new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRateSec);
+                buildServer, new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRateSec, null);
     }
 }

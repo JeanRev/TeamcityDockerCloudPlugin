@@ -25,7 +25,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 public class TestSBuildServer implements SBuildServer {
 
-    private final TestBuildAgentManager buildAgentManager = new TestBuildAgentManager();
+    private final TestBuildAgentManager buildAgentManager = new TestBuildAgentManager(this);
 
     private final List<BuildServerListener> buildListeners = new CopyOnWriteArrayList<>();
 

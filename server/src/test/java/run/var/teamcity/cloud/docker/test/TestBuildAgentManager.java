@@ -19,6 +19,16 @@ public class TestBuildAgentManager implements BuildAgentManager {
     private final List<TestSBuildAgent> registeredAgents = new CopyOnWriteArrayList<>();
     private final List<TestSBuildAgent> unregisteredAgents = new CopyOnWriteArrayList<>();
 
+    private final TestSBuildServer buildServer;
+
+    public TestBuildAgentManager() {
+        this(new TestSBuildServer());
+    }
+
+    public TestBuildAgentManager(TestSBuildServer buildServer) {
+        this.buildServer = buildServer;
+    }
+
     @Override
     public List<TestSBuildAgent> getRegisteredAgents() {
         return registeredAgents;
@@ -97,6 +107,7 @@ public class TestBuildAgentManager implements BuildAgentManager {
 
     public TestBuildAgentManager registeredAgent(TestSBuildAgent agent) {
         registeredAgents.add(agent);
+        buildServer.notifyAgentRegistered(agent);
         return this;
     }
 

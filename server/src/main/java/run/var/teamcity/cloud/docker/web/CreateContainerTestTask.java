@@ -9,7 +9,6 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -56,7 +55,7 @@ class CreateContainerTestTask extends ContainerTestTask {
     }
 
     @Override
-    Status work() {
+    void work() {
 
         DockerClient client = testTaskHandler.getDockerClient();
 
@@ -136,14 +135,23 @@ class CreateContainerTestTask extends ContainerTestTask {
         Node containerNode =  client.createContainer(container.saveNode(), null);
         String containerId = containerNode.getAsString("Id");
 
+        boolean withWarning = false;
         Node warnings = containerNode.getArray("Warnings", Node.EMPTY_ARRAY);
         for (Node warning : warnings.getArrayValues()) {
+            withWarning = true;
             warning(warning.getAsString());
         }
 
         testTaskHandler.notifyContainerId(containerId);
 
-        return Status.SUCCESS;
+        String msg;
+        if (withWarning) {
+            msg = "Container " + DockerCloudUtils.toShortId(containerId) + " created with warnings:";
+        } else {
+            msg = "Container " + DockerCloudUtils.toShortId(containerId) + " successfully created.";
+        }
+
+        success(msg);
     }
 
     private boolean validProgress(BigInteger progress) {

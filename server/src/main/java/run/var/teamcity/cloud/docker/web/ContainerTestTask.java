@@ -69,6 +69,15 @@ abstract class ContainerTestTask implements Runnable {
         msg(msg, phase, status);
     }
 
+    void success(String msg){
+        status = Status.SUCCESS;
+        testTaskHandler.notifyStatus(phase, Status.SUCCESS, msg, null, warnings);
+    }
+
+    void fail(String msg) {
+        throw new ContainerTestTaskException(msg);
+    }
+
     void warning(@NotNull String warning) {
         warnings.add(warning);
     }
@@ -116,16 +125,11 @@ abstract class ContainerTestTask implements Runnable {
 
     /**
      * Internal method to perform the test logic.
-     *
-     * @return the task new status
      */
-    abstract Status work();
+    abstract void work();
 
     @Override
     public final void run() {
-
-        Status newStatus;
-        Throwable throwable = null;
 
         try {
             try {
@@ -133,18 +137,12 @@ abstract class ContainerTestTask implements Runnable {
                 if (status != Status.PENDING) {
                     throw new IllegalStateException("Cannot run task in status " + status + ".");
                 }
-                newStatus = work();
+                work();
             }  catch (Exception e) {
+                status = Status.FAILURE;
                 LOG.warn("Processing of task " + this + " failed.", e);
-                newStatus = Status.FAILURE;
-                throwable = e;
+                testTaskHandler.notifyStatus(phase, Status.FAILURE, e.getMessage(), e, warnings);
             }
-
-            if (status != newStatus) {
-                testTaskHandler.notifyStatus(phase, newStatus, throwable != null ? throwable.getMessage() : null,
-                        throwable, warnings);
-            }
-            status = newStatus;
         } finally {
             lock.unlock();
         }

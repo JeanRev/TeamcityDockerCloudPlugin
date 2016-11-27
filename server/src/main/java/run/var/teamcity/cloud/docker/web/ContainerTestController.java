@@ -4,7 +4,6 @@ package run.var.teamcity.cloud.docker.web;
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.controllers.BaseFormXmlController;
 import jetbrains.buildServer.serverSide.BuildServerAdapter;
-import jetbrains.buildServer.serverSide.SBuildAgent;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.WebLinks;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
@@ -50,7 +49,8 @@ public class ContainerTestController extends BaseFormXmlController {
         CREATE,
         START,
         QUERY,
-        CANCEL
+        CANCEL,
+        LOGS,
     }
 
     public static final String PATH = "test-container.html";
@@ -67,10 +67,11 @@ public class ContainerTestController extends BaseFormXmlController {
                                    @NotNull SBuildServer server,
                                    @NotNull PluginDescriptor pluginDescriptor,
                                    @NotNull WebControllerManager manager,
-                                   @NotNull WebLinks webLinks) {
+                                   @NotNull WebLinks webLinks,
+                                   @NotNull StreamingController streamingController) {
         this(DockerClientFactory.getDefault(), atmosphereFramework, server, pluginDescriptor, manager,
                 new DefaultContainerTestManager(OfficialAgentImageResolver.forServer(server),
-                        DockerClientFactory.getDefault(), server.getBuildAgentManager(), webLinks));
+                        DockerClientFactory.getDefault(), server, webLinks, streamingController));
 
     }
 
@@ -189,6 +190,11 @@ public class ContainerTestController extends BaseFormXmlController {
             return;
         }
 
+        if (action == Action.LOGS) {
+            xmlResponse.addContent(new Element("logs").addContent(testMgr.getLogs(testUuid)));
+            return;
+        }
+
         assert action == Action.CANCEL: "Unknown enum member: " + action;
 
         try {
@@ -247,18 +253,6 @@ public class ContainerTestController extends BaseFormXmlController {
             atmosphereFramework.getBroadcasterFactory().remove(statusBroadcaster.getID());
             testMgr.dispose();
             super.serverShutdown();
-        }
-
-        @Override
-        public void agentStatusChanged(@NotNull SBuildAgent agent, boolean wasEnabled, boolean wasAuthorized) {
-
-            // We attempt here to disable the agent as soon as possible to prevent it from starting any job.
-            UUID testInstanceUuid = DockerCloudUtils.tryParseAsUUID(DockerCloudUtils.getEnvParameter(agent,
-                    DockerCloudUtils.ENV_TEST_INSTANCE_ID));
-
-            if (testInstanceUuid != null) {
-                agent.setEnabled(false, null, "Docker cloud test instance: should not accept any task.");
-            }
         }
     }
 

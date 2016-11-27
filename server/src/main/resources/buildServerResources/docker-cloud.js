@@ -40,6 +40,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var imagesParam = params.imagesParam;
 
                 self.hasWebSocketSupport = 'WebSocket' in window;
+                self.hasXTermSupport = self.hasWebSocketSupport && self.checkXtermBrowserSupport();
+                if (self.hasXTermSupport) {
+                    self.logInfo("XTerm support enabled.")
+                }
 
                 self.$image = $j("#dockerCloudImage_Image");
                 self.$checkConnectionBtn = $j("#dockerCloudCheckConnectionBtn");
@@ -75,15 +79,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerLoader = $j('#dockerCloudTestContainerLoader');
                 self.$testContainerLabel = $j('#dockerCloudTestContainerLabel');
                 self.$testContainerOutcome = $j('#dockerCloudTestContainerOutcome');
-                self.$testContainerCancelBtn = $j('#dockerCloudTestContainerCancelBtn');
                 self.$testContainerShellBtn = $j('#dockerCloudTestContainerShellBtn');
-                self.$testContainerCopyLogsBtn = $j('#dockerCloudTestContainerCopyLogsBtn');
+                self.$testContainerContainerLogsBtn = $j('#dockerCloudTestContainerContainerLogsBtn');
                 self.$testContainerDisposeBtn = $j('#dockerCloudTestContainerDisposeBtn');
                 self.$testContainerCloseBtn = $j('#dockerCloudTestContainerCloseBtn');
                 self.$testContainerSuccessIcon = $j('#dockerCloudTestContainerSuccess');
                 self.$testContainerWarningIcon = $j('#dockerCloudTestContainerWarning');
                 self.$testContainerErrorIcon = $j('#dockerCloudTestContainerError');
                 self.$dockerTestContainerOutput = $j("#dockerTestContainerOutput");
+                self.$dockerTestContainerOutputTitle = $j("#dockerTestContainerOutputTitle");
                 self.$testedImage = $j(BS.Util.escapeId("run.var.teamcity.docker.cloud.tested_image"));
 
                 /* Diagnostic dialog */
@@ -174,7 +178,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         $container.text($error.text());
                         var $failureCause = $response.find("failureCause");
                         if ($failureCause.length) {
-                            self.prepareStackTraceDialog($container, "Checking for connectivity failed.", $failureCause.text());
+                            self.prepareDiagnosticDialogWithLink($container, "Checking for connectivity failed.", $failureCause.text());
                         }
                         self.$checkConnectionError.append($container).show();
                     } else {
@@ -995,10 +999,29 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         });
                 });
 
-                self.$testContainerCancelBtn.click(function() {
-                    self._cancelTest();
+                self.$testContainerStartBtn.click(function() {
+                    self.$testContainerLabel.text("Waiting on server...");
+                    self._invokeTestAction('start')
+                        .done(function () {
+                            self._queryTestStatus();
+                        });
                 });
 
+                self.$testContainerCloseBtn.click(function() {
+                    self.cancelTest();
+                });
+
+                self.$testContainerContainerLogsBtn.click(function() {
+                    self._invokeTestAction('logs')
+                        .done(function(response) {
+                            var logs = $j(response.responseXML).find('logs').text();
+                            self.prepareDiagnosticDialog("Container logs:", logs);
+                            self.$testContainerLoader.hide();
+                            BS.DockerDiagnosticDialog.showCentered();
+                        });
+                });
+
+                BS.DockerTestContainerDialog.afterClose(self.cancelTest);
 
                 self.$imageTestContainerBtn.click(function() {
 
@@ -1008,14 +1031,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         return false;
                     }
 
-
                     self._initTestDialog();
                     BS.DockerTestContainerDialog.showCentered();
-                });
-
-                self.$testContainerCloseBtn.click(function() {
-                    self._cancelTest();
-                    BS.DockerTestContainerDialog.close();
                 });
 
                 self.$diagnosticCloseBtn.click(function () {
@@ -1046,18 +1063,23 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self._invokeTestAction('query', BS.Clouds.Admin.CreateProfileForm.serializeParameters())
                         .done(function(response){
                             var responseMap = self._parseTestStatusResponse(response.responseXML);
+                            if (responseMap.status == 'PENDING') {
+                                self.logDebug('Scheduling status retrieval.');
+                                setTimeout(self._queryTestStatus, 5000);
+                            }
                             self._processTestStatusResponse(responseMap);
                         });
-                    self.logDebug('Scheduling status retrieval.');
-                    setTimeout(self._queryTestStatus, 5000);
                 }
             },
 
-            _cancelTest: function() {
+            cancelTest: function() {
+
+                self.logDebug("Cancelling test: " + self.testUuid);
                 self._closeStatusSocket();
 
                 if (self.testUuid) {
                     self._invokeTestAction('cancel', null, true);
+                    delete self.testUuid;
                 }
 
                 BS.DockerTestContainerDialog.close();
@@ -1068,41 +1090,67 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     try { self.testStatusSocket.close() } catch (e) {}
                     delete self.testStatusSocket;
                 }
+                if (self.logStreamingSocket) {
+                    try { self.logStreamingSocket.close() } catch (e) {}
+                    delete self.logStreamingSocket;
+                }
             },
 
             _processTestStatusResponse: function (responseMap) {
                 self._testDialogHideAllBtns();
 
                 self.logDebug('Phase: ' + responseMap.phase + ' Status: ' + responseMap.status + ' Msg: ' +
-                    responseMap.msg + ' Uuid: ' + responseMap.taskUuid + ' Warnings: ' + responseMap.warnings.length);
+                    responseMap.msg + ' Uuid: ' + responseMap.testUuid + ' Warnings: ' + responseMap.warnings.length);
 
                 self.$testContainerLabel.text(responseMap.msg);
 
                 if (responseMap.status == 'PENDING') {
-                    self.$testContainerCancelBtn.show();
+                    self.$testContainerCloseBtn.val("Cancel");
+                    if (responseMap.phase == "WAIT_FOR_AGENT") {
+                        if (self.hasXTermSupport && !self.logStreamingSocket) {
+                            console.log('Opening live logs sockt now.');
+                            var url = 'ws://192.168.100.1:8111/tc/app/docker-cloud/streaming/logs?correlationId=' +
+                                self.testUuid;
+                            self.$dockerTestContainerOutputTitle.fadeIn(400);
+                            self.$dockerTestContainerOutput.slideDown(400, function() {
+                                self.logStreamingSocket = new WebSocket(url);
+                                var logTerm = new Terminal();
+                                logTerm.open(self.$dockerTestContainerOutput[0]);
+                                logTerm.fit();
+                                logTerm.attach(self.logStreamingSocket);
+                                logTerm.convertEol = true;
+                            });
+                        }
+                    }
                 } else {
                     self.$testContainerLoader.hide();
-                    self.$testContainerCancelBtn.hide();
 
                     self._closeStatusSocket();
 
+                    if (responseMap.phase == 'WAIT_FOR_AGENT') {
+                        self.$testContainerContainerLogsBtn.show();
+                    }
+
                     if (responseMap.status == 'FAILURE') {
+                        self.$testContainerCloseBtn.val("Close");
                         self.$testContainerLabel.addClass('containerTestError');
                         self.$testContainerErrorIcon.show();
-                        self.$testContainerCloseBtn.show();
 
                         if (responseMap.failureCause) {
-                            self.prepareStackTraceDialog(self.$testContainerLabel, responseMap.msg,
+                            self.prepareDiagnosticDialogWithLink(self.$testContainerLabel, responseMap.msg,
                                 responseMap.failureCause);
                         }
 
                     } else if (responseMap.status == 'SUCCESS') {
 
+                        if (responseMap.phase == 'CREATE') {
+                            self.$testContainerStartBtn.show();
+                        }
+                        self.$testContainerCloseBtn.val("Dispose");
+
                         if (!responseMap.warnings.length) {
-                            self.$testContainerLabel.text("Test completed successfully.");
                             self.$testContainerSuccessIcon.show();
                         } else {
-                            self.$testContainerLabel.text("Test completed with warnings:");
                             var $list = $j('<ul>');
                             self._safeEach(responseMap.warnings, function(warning) {
                                 $list.append('<li>' + warning + '</li>');
@@ -1110,8 +1158,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             self.$testContainerWarningIcon.show();
                             self.$testContainerLabel.append($list);
                         }
-
-                        self.$testContainerCloseBtn.show();
                     } else {
                         self.logError('Unrecognized status: ' + responseMap.status);
                     }
@@ -1140,7 +1186,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self._testDialogHideAllBtns();
                 self.$testContainerLoader.show();
-                self.$testContainerCancelBtn.show();
+                self.$testContainerCloseBtn.val("Cancel");
+                self.$testContainerSuccessIcon.hide();
+                self.$testContainerWarningIcon.hide();
+                self.$testContainerErrorIcon.hide();
 
                 self.logDebug('Will invoke action ' + action + ' for test UUID ' + self.taskUuid);
 
@@ -1418,18 +1467,19 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _testDialogHideAllBtns: function() {
                 self.$testContainerCreateBtn.hide();
                 self.$testContainerStartBtn.hide();
-                self.$testContainerCancelBtn.hide();
-                self.$testContainerCloseBtn.hide();
-                self.$testContainerCopyLogsBtn.hide();
+                self.$testContainerContainerLogsBtn.hide();
                 self.$testContainerDisposeBtn.hide();
                 self.$testContainerShellBtn.hide();
             },
 
             _initTestDialog: function () {
                 self._testDialogHideAllBtns();
-                self.$testContainerCreateBtn.show()
+                self.$dockerTestContainerOutputTitle.hide();
+                self.$dockerTestContainerOutput.hide();
+                self.$dockerTestContainerOutput.empty();
+                self.$testContainerCreateBtn.show();
                 self.$testContainerOutcome.text();
-                self.$testContainerCloseBtn.show();
+                self.$testContainerCloseBtn.val("Close");
                 self.$testContainerLoader.hide();
                 self.$testContainerSuccessIcon.hide();
                 self.$testContainerWarningIcon.hide();
@@ -1486,27 +1536,68 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                   self._log(msg);
               }
             },
-            prepareStackTraceDialog: function($container, msg, stacktrace) {
-                self.$diagnosticMsg.text(msg);
-                self.$diagnosticLogs.text(stacktrace);
-                var viewDetailsLink = $j('<a href="#/">view details</a>)').click(function () {
-                    BS.DockerDiagnosticDialog.showCentered();
-                });
-                $container.append(' (').append(viewDetailsLink).append(')');
-
-                if (!self.clipboard && typeof Clipboard !== 'undefined') {
-                        self.logInfo("Clipboard operations enabled.");
-                        self.clipboard = new Clipboard('#dockerDiagnosticCopyBtn');
-                        self.clipboard.on('success', function(e) {
-                            e.clearSelection();
-                        });
-                        self.$diagnosticCopyBtn.show();
-                }
-            },
             _log: function(msg) {
                 // Catching all errors instead of simply testing for console existence to prevent issues with IE8.
                 try { console.log(msg) } catch (e) {}
             },
+            prepareDiagnosticDialogWithLink: function($container, msg, details) {
+                self.prepareDiagnosticDialog(msg, details);
+                var viewDetailsLink = $j('<a href="#/">view details</a>)').click(function () {
+                    BS.DockerDiagnosticDialog.showCentered();
+                });
+                $container.append(' (').append(viewDetailsLink).append(')');
+            },
+
+            prepareDiagnosticDialog: function(msg, details) {
+                self.$diagnosticMsg.text(msg);
+                self.$diagnosticLogs.text(details);
+
+                if (!self.clipboard && typeof Clipboard !== 'undefined') {
+                    self.logInfo("Clipboard operations enabled.");
+                    self.clipboard = new Clipboard('#dockerDiagnosticCopyBtn');
+                    self.clipboard.on('success', function(e) {
+                        e.clearSelection();
+                    });
+                    self.$diagnosticCopyBtn.show();
+                }
+            },
+
+            checkXtermBrowserSupport: function() {
+                try {
+                    var parser = new UAParser();
+                    parser.setUA(navigator.userAgent);
+                    var browser = parser.getBrowser();
+                    var name = browser.name;
+                    var versionToken = browser.version.split('.')[0];
+                    if (!versionToken.match(/[0-9]+/)) {
+                        return false;
+                    }
+                    var version = parseInt(versionToken);
+
+                    self.logDebug('Detected browser name: ' + name + ' -- version: ' + version);
+                    if ((name == 'Chrome' || name == 'Chromium') && version >= 48) {
+                        return true;
+                    }
+                    if (name == 'Firefox' && version >= 44) {
+                        return true;
+                    }
+                    if (name == 'IE' && version >= 11) {
+                        return true;
+                    }
+                    if (name == 'Edge' && version >= 13) {
+                        return true;
+                    }
+                    if (name == 'Opera' && version >= 8) {
+                        return true;
+                    }
+                    if (name == 'Safari' && version >= 35) {
+                        return true;
+                    }
+                } catch (e) {
+                    self.logError('Failed to determine browser support: ' + e);
+                }
+            },
+
             _units_multiplier:  {
                 GiB: 134217728,
                 MiB: 131072,

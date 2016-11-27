@@ -16,6 +16,8 @@ abstract class ContainerTestManager {
 
     abstract void startTestContainer(@NotNull UUID testUuid);
 
+    public abstract String getLogs(@NotNull UUID testUuid);
+
     abstract void dispose(@NotNull UUID testUuid);
 
     abstract void notifyInteraction(@NotNull UUID testUUid);

@@ -41,6 +41,11 @@ public class TestContainerTestManager extends ContainerTestManager {
     }
 
     @Override
+    public String getLogs(@NotNull UUID testUuid) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Override
     void dispose(@NotNull UUID testUuid) {
         checkUuid(testUuid);
         this.involvedPhase = null;

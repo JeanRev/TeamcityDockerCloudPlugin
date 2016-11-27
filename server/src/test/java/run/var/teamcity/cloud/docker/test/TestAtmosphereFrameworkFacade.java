@@ -15,6 +15,12 @@ import java.util.List;
 public class TestAtmosphereFrameworkFacade implements AtmosphereFrameworkFacade {
 
     private final TestBroadcasterFactoryFacade broadcasterFactoryFacade = new TestBroadcasterFactoryFacade();
+
+    @Override
+    public void addWebSocketHandler(String path, WebSocketHandler handler) {
+
+    }
+
     @Override
     public void addWebSocketHandler(String path, WebSocketHandler handler, AtmosphereHandler h, List<AtmosphereInterceptor> l) {
 

@@ -2,10 +2,15 @@ package run.var.teamcity.cloud.docker.test;
 
 import jetbrains.buildServer.BuildAgent;
 import jetbrains.buildServer.LicenseNotGrantedException;
+import jetbrains.buildServer.agentServer.AgentBuild;
+import jetbrains.buildServer.agentServer.AgentBuildResult;
 import jetbrains.buildServer.serverSide.*;
+import jetbrains.buildServer.serverSide.agentPools.AgentPool;
+import jetbrains.buildServer.serverSide.agentTypes.SAgentType;
 import jetbrains.buildServer.serverSide.comments.Comment;
 import jetbrains.buildServer.users.SUser;
 import jetbrains.buildServer.users.User;
+import jetbrains.buildServer.util.Action;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,10 +19,11 @@ import java.util.*;
 /**
  * {@link AgentDescription} for testing.
  */
-public class TestSBuildAgent implements SBuildAgent, BuildAgentInit {
+public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
 
     private String name = "";
     private boolean removable = true;
+    private boolean enabled = true;
 
     private final Map<String, String> availableParameters = new HashMap<>();
     @NotNull
@@ -215,12 +221,12 @@ public class TestSBuildAgent implements SBuildAgent, BuildAgentInit {
 
     @Override
     public void setEnabled(boolean enabled, @Nullable SUser user, @NotNull String reason) {
-        throw new UnsupportedOperationException("Not a real agent.");
+        this.enabled = enabled;
     }
 
     @Override
     public void setEnabled(boolean enabled, @Nullable SUser user, @NotNull String reason, long statusRestoringTimestamp) {
-        throw new UnsupportedOperationException("Not a real agent.");
+        this.enabled = enabled;
     }
 
     @Override
@@ -330,5 +336,77 @@ public class TestSBuildAgent implements SBuildAgent, BuildAgentInit {
     public TestSBuildAgent removable(boolean removable) {
         this.removable = removable;
         return this;
+    }
+
+    @Override
+    public void isLocal(Action<Boolean> action) {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @NotNull
+    @Override
+    public SAgentType getAgentType() {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public AgentBuildResult runBuild(@NotNull AgentBuild agentBuild) {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public boolean upgrade(Action<Boolean> action) {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public void setUpgrading(boolean b) {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @NotNull
+    @Override
+    public String getPingCode() {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public void register() {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public void unregister(@NotNull String s) {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public void setCommunicationTimestamp(Date date) {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public void setAgentDescription(@NotNull AgentDescription agentDescription) {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public boolean stopBuild() {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public <T> T getRemoteInterface(@NotNull Class<T> aClass) {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public void updateAgent() {
+        throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    @Override
+    public AgentPool getAgentPool() {
+        throw new UnsupportedOperationException("Not a real agent.");
     }
 }

@@ -46,6 +46,11 @@ public class DefaultAtmosphereFacade implements AtmosphereFrameworkFacade {
     }
 
     @Override
+    public void addWebSocketHandler(String path, WebSocketHandler handler) {
+        atmosphereFramework.addWebSocketHandler(path, handler);
+    }
+
+    @Override
     public void addWebSocketHandler(String path, WebSocketHandler handler, AtmosphereHandler h, List<AtmosphereInterceptor> l) {
         atmosphereFramework.addWebSocketHandler(path, handler, h, l);
     }

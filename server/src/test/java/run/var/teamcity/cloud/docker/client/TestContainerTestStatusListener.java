@@ -14,7 +14,9 @@ public class TestContainerTestStatusListener implements ContainerTestListener {
     private final Deque<TestContainerStatusMsg> msgs = new ArrayDeque<>();
     @Override
     public synchronized void notifyStatus(TestContainerStatusMsg statusMsg) {
-        msgs.add(statusMsg);
+        if (statusMsg != null) {
+            msgs.add(statusMsg);
+        }
     }
 
     @Override

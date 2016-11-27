@@ -635,15 +635,15 @@
 </bs:dialog>
 
 <bs:dialog dialogId="DockerTestContainerDialog" title="Test Container"
-           closeCommand="BS.DockerTestContainerDialog.close()">
+           closeCommand="BS.Clouds.Docker.cancelTest()">
     <div>
         <p>
-            This test will create a container using the provided settings. The container will be discarded on completion.
-
-            <!--
-            <input type="button" class="btn" id="dockerStartImageTest" value="Start container"/>
-            -->
+            This test will create a container using the provided settings, which can then be started in order to ensure
+            that the agent is able to connect to your TeamCity instance.
         </p>
+        <h4 id="dockerTestContainerOutputTitle">Container live logs:</h4>
+        <div id="dockerTestContainerOutput">
+        </div>
         <span class="hidden" id="dockerCloudTestContainerLoader"><i class="icon-refresh icon-spin"></i>
         </span>
         <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerSuccess" src="<c:url value="${resPath}img/checked.png"/>">
@@ -658,8 +658,9 @@
             <input type="button" class="btn" id="dockerCloudTestContainerDisposeBtn" value="Dispose container"/>
             -->
             <input type="button" class="btn" id="dockerCreateImageTest" value="Create container"/>
+            <input type="button" class="btn" id="dockerStartImageTest" value="Start container"/>
+            <input type="button" class="btn" id="dockerCloudTestContainerContainerLogsBtn" value="Container logs"/>
             <input type="button" class="btn" id="dockerCloudTestContainerCloseBtn" value="Close"/>
-            <input type="button" class="btn" id="dockerCloudTestContainerCancelBtn" value="Cancel"/>
         </div>
     </div>
 </bs:dialog>
@@ -678,28 +679,31 @@
     </div>
 </bs:dialog>
 <script type="text/javascript">
-    $j.ajax({
-        url: "<c:url value="${resPath}clipboard.min.js"/>",
-        dataType: "script"
-    });
-    $j.ajax({
-        url: "<c:url value="${resPath}docker-cloud.js"/>",
-        dataType: "script",
-        success: function() {
-            BS.Clouds.Docker.init({
-                defaultLocalSocketURI: '<%=DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI%>',
-                checkConnectivityCtrlURL: '<c:url value="${resPath}checkconnectivity.html"/>',
-                testContainerCtrlURL: '<c:url value="${resPath}test-container.html"/>',
-                imagesParam: '<%=DockerCloudUtils.IMAGES_PARAM%>',
-                errorIconURL: '<c:url value="/img/attentionCommentRed.png"/>',
-                warnIconURL: '<c:url value="/img/attentionComment.png"/>',
-                testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>',
-                defaultUnixSocketAvailable: ${defaultUnixSocketAvailable},
-                debugEnabled: ${debugEnabled}
-            });
-        },
-        cache: true
-    });
+    $j.when(
+        $j.getScript("<c:url value="${resPath}clipboard.min.js"/>"),
+        $j.getScript("<c:url value="${resPath}ua-parser.min.js"/>"),
+        $j.when($j.getScript("<c:url value="${resPath}xterm.js"/>"))
+            .done(function() {
+                $j.getScript("<c:url value="${resPath}attach/attach.js"/>");
+                $j.getScript("<c:url value="${resPath}fit/fit.js"/>");
+            }))
+        .done(function() {$j.ajax({
+            url: "<c:url value="${resPath}docker-cloud.js"/>",
+            dataType: "script",
+            success: function() {
+                BS.Clouds.Docker.init({
+                    defaultLocalSocketURI: '<%=DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI%>',
+                    checkConnectivityCtrlURL: '<c:url value="${resPath}checkconnectivity.html"/>',
+                    testContainerCtrlURL: '<c:url value="${resPath}test-container.html"/>',
+                    imagesParam: '<%=DockerCloudUtils.IMAGES_PARAM%>',
+                    errorIconURL: '<c:url value="/img/attentionCommentRed.png"/>',
+                    warnIconURL: '<c:url value="/img/attentionComment.png"/>',
+                    testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>',
+                    defaultUnixSocketAvailable: ${defaultUnixSocketAvailable},
+                    debugEnabled: ${debugEnabled}
+                });
+            }
+        })});
 </script>
 
 <table class="runnerFormTable">
