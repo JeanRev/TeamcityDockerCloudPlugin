@@ -984,8 +984,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
 
                 self.$testContainerCreateBtn.click(function() {
+                    self._testDialogHideAllBtns();
+                    self.$testContainerCloseBtn.val("Cancel");
 
-                    self._testContainerProgress = null;
+                    self.$testContainerLoader.show();
+                    self.$testContainerSuccessIcon.hide();
+                    self.$testContainerWarningIcon.hide();
+                    self.$testContainerErrorIcon.hide();
 
                     // Pack the current image settings into a hidden field to be submitted.
                     var viewModel = self._restoreViewModel();
@@ -1001,6 +1006,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
 
                 self.$testContainerStartBtn.click(function() {
+                    self._testDialogHideAllBtns();
+                    self.$testContainerCloseBtn.val("Cancel");
+                    self.$testContainerLoader.show();
+                    self.$testContainerSuccessIcon.hide();
+                    self.$testContainerWarningIcon.hide();
+                    self.$testContainerErrorIcon.hide();
+
                     self.$testContainerLabel.text("Waiting on server...");
                     self._invokeTestAction('start')
                         .done(function () {
@@ -1111,6 +1123,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                             var url =self.resolveWebSocketURL(self.streamSocketPath + '?correlationId=' + self.testUuid);
                             self.$dockerTestContainerOutputTitle.fadeIn(400);
+                            // Compensate the appearance of the terminal with a upward shift of the dialog window.
+                            // Should be roughly half of the terminal height include the title.
+                            self.$testImageDialog.animate({top: "-=150px"});
                             self.$dockerTestContainerOutput.slideDown(400, function() {
                                 self.logStreamingSocket = new WebSocket(url);
                                 var logTerm = new Terminal();
@@ -1182,13 +1197,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             _invokeTestAction: function(action, parameters, ignoreFailure) {
-
-                self._testDialogHideAllBtns();
-                self.$testContainerLoader.show();
-                self.$testContainerCloseBtn.val("Cancel");
-                self.$testContainerSuccessIcon.hide();
-                self.$testContainerWarningIcon.hide();
-                self.$testContainerErrorIcon.hide();
 
                 self.logDebug('Will invoke action ' + action + ' for test UUID ' + self.taskUuid);
 
