@@ -85,8 +85,10 @@ public class CheckConnectivityController extends BaseFormXmlController {
         }
 
         if (error != null) {
-            xmlResponse.addContent(new Element("error").setText(error.getMessage()));
-            xmlResponse.addContent(new Element("failureCause").setText(DockerCloudUtils.getStackTrace(error)));
+            String msg = error.getMessage();
+            xmlResponse.addContent(new Element("error").setText(DockerCloudUtils.filterXmlText(msg != null ? msg : "")));
+            xmlResponse.addContent(new Element("failureCause").setText(DockerCloudUtils.filterXmlText(
+                    DockerCloudUtils.getStackTrace(error))));
         }
     }
 

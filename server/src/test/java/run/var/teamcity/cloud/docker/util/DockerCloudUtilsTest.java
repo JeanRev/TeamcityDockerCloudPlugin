@@ -222,7 +222,7 @@ public class DockerCloudUtilsTest {
     }
 
     public void getStackTraceWithNullInput() {
-        assertThat(DockerCloudUtils.getStackTrace(null)).isNull();
+        assertThat(DockerCloudUtils.getStackTrace(null)).isEmpty();
     }
 
     private String bigAsciiText() {

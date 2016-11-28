@@ -160,7 +160,7 @@ public class TestContainerStatusMsg {
 
     private void addChildElement(Element parent, String name, Object value) {
         if (value != null) {
-            parent.addContent(new Element(name).addContent(value.toString()));
+            parent.addContent(new Element(name).setText(DockerCloudUtils.filterXmlText(value.toString())));
         }
     }
 }

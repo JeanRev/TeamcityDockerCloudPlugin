@@ -164,7 +164,7 @@ public class ContainerTestController extends BaseFormXmlController {
                 lock.unlock();
             }
 
-            xmlResponse.addContent(new Element("testUuid").addContent(testUuid.toString()));
+            xmlResponse.addContent(new Element("testUuid").setText(testUuid.toString()));
             return;
         }
 
@@ -191,7 +191,7 @@ public class ContainerTestController extends BaseFormXmlController {
         }
 
         if (action == Action.LOGS) {
-            xmlResponse.addContent(new Element("logs").addContent(testMgr.getLogs(testUuid)));
+            xmlResponse.addContent(new Element("logs").setText(DockerCloudUtils.filterXmlText(testMgr.getLogs(testUuid))));
             return;
         }
 

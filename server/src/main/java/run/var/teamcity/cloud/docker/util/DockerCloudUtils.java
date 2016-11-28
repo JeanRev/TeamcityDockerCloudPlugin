@@ -348,12 +348,12 @@ public final class DockerCloudUtils {
      *
      * @param throwable the exception (may be {@code null})
      *
-     * @return the stacktrace as a string or {@code null} if {@code throwable} is {@code null}
+     * @return the stacktrace as a string
      */
-    @Nullable
+    @NotNull
     public static String getStackTrace(@Nullable Throwable throwable) {
         if (throwable == null) {
-            return null;
+            return "";
         }
         StringWriter sw = new StringWriter();
         try (PrintWriter pw = new PrintWriter(sw)) {
@@ -410,5 +410,46 @@ public final class DockerCloudUtils {
      */
     public static boolean isDefaultDockerSocketAvailable() {
         return Files.exists(Paths.get(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI.getPath()));
+    }
+
+    /**
+     * Filter characters that are forbidden in the XML 1.0 spec. Invalid characters will be replace with the unicode
+     * replacement character.
+     *
+     * @param txt the text to be filtered
+     *
+     * @return the filtered text
+     *
+     * @throws NullPointerException if {@code txt} is {@code null}
+     */
+    @NotNull
+    public static String filterXmlText(@NotNull String txt) {
+        DockerCloudUtils.requireNonNull(txt, "Text cannot be null.");
+
+        StringBuilder sb = new StringBuilder(txt.length());
+
+        final int length = txt.length();
+        for (int offset = 0; offset < length; ) {
+            final int codepoint = txt.codePointAt(offset);
+
+            sb.appendCodePoint(isCodepointValidForXml1_0(codepoint) ? codepoint : 0xFFFD);
+
+            offset += Character.charCount(codepoint);
+        }
+
+        return sb.toString();
+    }
+
+    private static boolean isCodepointValidForXml1_0(int codepoint) {
+        return codepoint == 0x0009 || codepoint == 0x000A || codepoint == 0x000D ||
+                isInRange(0x0020, codepoint, 0xD7FF) ||
+                isInRange(0xE000, codepoint, 0xFFFD) ||
+                isInRange(0x10000, codepoint, 0x10FFFF);
+
+    }
+
+    private static boolean isInRange(int low, int value, int up) {
+        assert low < up;
+        return low <= value && up >= value;
     }
 }
