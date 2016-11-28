@@ -39,7 +39,7 @@ For more information about building and testing please check the [Wiki](https://
 Unless otherwise specified in their header, all files are distributed under the Apache License 2.0.
 
 ## Acknowledgments
-This plugin bundle the following third-party libraries:
+This plugin bundles the following third-party libraries:
 - [Jersey](https://jersey.java.net/), the JAX-RS reference implementation, along with the _Apache HttpClient_ connector
 ([CDDL License](https://glassfish.java.net/public/CDDLv1.0.html)).
 - [Jackson](http://wiki.fasterxml.com/JacksonHome), a fast and lightweight JSON processor ([Apache License](http://www.apache.org/licenses/LICENSE-2.0)).
