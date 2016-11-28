@@ -1,35 +1,14 @@
+import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.bundling.Zip
 
-
-/*
-import org.gradle.api.JavaVersion.VERSION_1_7
-
-        apply<ApplicationPlugin>()
-
-
-configure<ApplicationPluginConvention> {
-    mainClassName = "samples.HelloWorld"
+version = "0.1.0-SNAPSHOT"
+group = "var.run.docker.cloud"
+allprojects {
+    group = project.group
+    version = project.version
 }
-
-configure<JavaPluginConvention> {
-    sourceCompatibility = VERSION_1_7
-    targetCompatibility = VERSION_1_7
-}
-
-repositories {
-    jcenter()
-}
-
-dependencies {
-    testCompile("junit:junit:4.12")
-}
-*/
-
 subprojects {
-
-    group = "var.run.docker.cloud"
-    version = "0.1.0-SNAPSHOT"
 
     apply {
         plugin("java")
@@ -60,7 +39,9 @@ task<Zip>("tcdist") {
     }
     archiveName = "docker-cloud.zip"
     destinationDir = file("build")
-    from("teamcity-plugin.xml")
+    from("teamcity-plugin.xml") {
+        filter<ReplaceTokens>("tokens" to mapOf("version" to project.version))
+    }
 }
 
 task<Delete>("clean") {
