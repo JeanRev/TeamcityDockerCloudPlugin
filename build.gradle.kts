@@ -4,6 +4,7 @@ import org.gradle.api.tasks.bundling.Zip
 
 version = "0.2.0-SNAPSHOT"
 group = "var.run.docker.cloud"
+val commitId = gitCommitId()
 allprojects {
     group = project.group
     version = project.version
@@ -37,13 +38,24 @@ task<Zip>("tcdist") {
         from(tasks.getByPath(":server:jar"))
         from(project(":server").configurations.runtime)
     }
-    archiveName = "docker-cloud.zip"
+
+    var versionSuffix = project.version as String
+    if (project.version.toString().endsWith("-SNAPSHOT")) {
+        versionSuffix += "_${commitId.substring(0,7)}"
+    }
+
+    archiveName = "docker-cloud_$versionSuffix.zip"
     destinationDir = file("build")
     from("teamcity-plugin.xml") {
-        filter<ReplaceTokens>("tokens" to mapOf("version" to project.version))
+        filter<ReplaceTokens>("tokens" to mapOf("version" to "${project.version} (build $commitId)"))
     }
 }
 
 task<Delete>("clean") {
     delete("build")
+}
+
+fun gitCommitId(): String {
+    val ref = "ref: (.*)".toRegex().find(project.file(".git/HEAD").readText())?.groups?.get(1)?.value
+    return project.file(".git/$ref").readText().trim()
 }
