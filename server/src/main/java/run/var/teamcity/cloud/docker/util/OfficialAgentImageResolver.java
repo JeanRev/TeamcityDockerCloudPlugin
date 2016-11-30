@@ -134,8 +134,7 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
      * @throws NullPointerException if {@code registryFty} is {@code null}
      */
     @NotNull
-    public static OfficialAgentImageResolver forCurrentServer(DockerRegistryClientFactory registryFty,
-                                                              DockerClientFactory clientFty) {
+    public static OfficialAgentImageResolver forCurrentServer(DockerRegistryClientFactory registryFty) {
         DockerCloudUtils.requireNonNull(registryFty, "Registry client factory cannot be null.");
         String version = ServerVersionHolder.getVersion().getDisplayVersion();
         Matcher m = TC_DISPLAY_VERSION_PTN.matcher(ServerVersionHolder.getVersion().getDisplayVersion());
