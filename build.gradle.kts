@@ -57,5 +57,9 @@ task<Delete>("clean") {
 
 fun gitCommitId(): String {
     val ref = "ref: (.*)".toRegex().find(project.file(".git/HEAD").readText())?.groups?.get(1)?.value
-    return project.file(".git/$ref").readText().trim()
+    val refFile = project.file(".git/$ref")
+    if (refFile.exists()) {
+        return refFile.readText().trim()
+    }
+    return "(.*) $ref".toRegex().find(project.file(".git/packed-refs").readText())?.groups?.get(1)?.value!!
 }
