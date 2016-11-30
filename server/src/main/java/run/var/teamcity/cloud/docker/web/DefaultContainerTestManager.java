@@ -309,6 +309,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
                         }
                     } else if (t instanceof InterruptedException || t instanceof CancellationException) {
                         // Cancelled task, ignore.
+                        LOG.info(test.getUuid()  + " was interrupted.", t);
                     } else {
                         // We should never end here into normal circumstances: the test tasks base class should handle
                         // itself checked and unchecked exceptions and update its internal state accordingly.

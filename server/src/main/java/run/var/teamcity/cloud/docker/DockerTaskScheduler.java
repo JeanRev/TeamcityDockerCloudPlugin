@@ -97,7 +97,7 @@ class DockerTaskScheduler {
                     lock.lock();
                     DockerTask dockerTask = (DockerTask) task;
 
-                    LOG.info("Task execution completed.");
+                    LOG.debug("Task execution completed.");
 
                     if (dockerTask instanceof DockerClientTask) {
                         assert clientTaskSubmitted;
@@ -111,7 +111,7 @@ class DockerTaskScheduler {
                     }
 
                     if (throwable == null) {
-                        LOG.info("Task " + dockerTask + " completed without error.");
+                        LOG.debug("Task " + dockerTask + " completed without error.");
                     } else {
                         LOG.error("Task " + dockerTask + " execution failed.", throwable);
                         dockerTask.getErrorProvider().notifyFailure(dockerTask.getOperationName(), throwable);
@@ -121,7 +121,7 @@ class DockerTaskScheduler {
                     if (dockerTask.isRepeatable()) {
                         // Repeatable tasks are always rescheduled, even if their last execution failed. This permits
                         // the client to recover from an error status.
-                        LOG.info("Rescheduling task: " + dockerTask);
+                        LOG.debug("Rescheduling task: " + dockerTask);
                         executor.schedule(new ScheduleRepetableTask(dockerTask), dockerTask.getDelay(), dockerTask.getTimeUnit());
                     }
 
@@ -142,7 +142,7 @@ class DockerTaskScheduler {
      */
     void scheduleClientTask(@NotNull DockerClientTask clientTask) {
         DockerCloudUtils.requireNonNull(clientTask, "Client task cannot be null.");
-        LOG.info("Scheduling client: " + clientTask);
+        LOG.debug("Scheduling client: " + clientTask);
         submitTaskWithInitialDelay(clientTask);
     }
 
@@ -155,7 +155,7 @@ class DockerTaskScheduler {
      */
     void scheduleInstanceTask(@NotNull DockerInstanceTask instanceTask) {
         DockerCloudUtils.requireNonNull(instanceTask, "Instance task cannot be null.");
-        LOG.info("Scheduling instance task: " + clientTasks);
+        LOG.debug("Scheduling instance task: " + clientTasks);
         submitTaskWithInitialDelay(instanceTask);
     }
 
@@ -198,7 +198,7 @@ class DockerTaskScheduler {
     private void scheduleNextTasks() {
         assert lock.isHeldByCurrentThread();
 
-        LOG.info("Scheduling status: submitted instance tasks: " +  submittedInstancesUUID.size() + ", client task " +
+        LOG.debug("Scheduling status: submitted instance tasks: " +  submittedInstancesUUID.size() + ", client task " +
                 "submitted: " + clientTaskSubmitted + ", instances tasks scheduled: " + instancesTask.size() + ", " +
         " client tasks scheduled: " + clientTasks.size());
 
@@ -222,7 +222,7 @@ class DockerTaskScheduler {
                     UUID instanceUuid = instance.getUuid();
                     // Only submit one task for a given instance at a time.
                     if (!submittedInstancesUUID.contains(instanceUuid)) {
-                        LOG.info("Submitting instance task " + instanceTask + " for execution.");
+                        LOG.debug("Submitting instance task " + instanceTask + " for execution.");
                         InstanceStatus scheduledStatus = instanceTask.getScheduledStatus();
                         if (scheduledStatus != null) {
                             instance.setStatus(scheduledStatus);
@@ -233,13 +233,13 @@ class DockerTaskScheduler {
                         itr.remove();;
                         executor.submit(instanceTask);
                     } else {
-                        LOG.info("Tasks for instance " + instance.getUuid() + " already submitted, delaying scheduled"
+                        LOG.debug("Tasks for instance " + instance.getUuid() + " already submitted, delaying scheduled"
                                 + " task");
                     }
                 }
             }
         } else {
-            LOG.info("Client task submitted for execution, skipping submitting other tasks.");
+            LOG.debug("Client task submitted for execution, skipping submitting other tasks.");
         }
 
         shutdownCheck();

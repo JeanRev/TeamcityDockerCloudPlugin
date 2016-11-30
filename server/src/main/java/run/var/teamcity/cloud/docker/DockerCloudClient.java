@@ -635,7 +635,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 return;
             }
 
-            LOG.info("Synching with Docker instance now.");
+            LOG.debug("Synching with Docker instance now.");
 
             // Step 1, query the whole list of containers associated with this cloud client.
             Node containers = dockerClient.listContainersWithLabel(DockerCloudUtils.CLIENT_ID_LABEL, uuid.toString());
