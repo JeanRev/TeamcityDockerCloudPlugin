@@ -500,7 +500,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     private boolean terminateContainer(String containerId, boolean rmContainer) {
         try {
             // We always try to stop the container before destroying it independently of our metadata.
-            dockerClient.stopContainer(containerId, TimeUnit.SECONDS.toSeconds(10));
+            dockerClient.stopContainer(containerId, TimeUnit.SECONDS.toSeconds(0));
         } catch (ContainerAlreadyStoppedException e) {
             LOG.debug("Container " + containerId + " was already stopped.");
         } catch (NotFoundException e) {
