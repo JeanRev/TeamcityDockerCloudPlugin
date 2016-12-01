@@ -79,6 +79,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerStartBtn = $j("#dockerStartImageTest");
                 self.$testContainerLoader = $j('#dockerCloudTestContainerLoader');
                 self.$testContainerLabel = $j('#dockerCloudTestContainerLabel');
+                self.$testExecInfo = $j('#dockerTestExecInfo');
                 self.$testContainerOutcome = $j('#dockerCloudTestContainerOutcome');
                 self.$testContainerShellBtn = $j('#dockerCloudTestContainerShellBtn');
                 self.$testContainerContainerLogsBtn = $j('#dockerCloudTestContainerContainerLogsBtn');
@@ -1127,6 +1128,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self.$testContainerLabel.text(responseMap.msg);
 
+
                 if (responseMap.status == 'PENDING') {
                     if (responseMap.phase == "WAIT_FOR_AGENT") {
                         if (self.hasXTermSupport && !self.logStreamingSocket) {
@@ -1195,6 +1197,12 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                                 self.$testContainerLabel.text("Container " + responseMap.containerId + " successfully created.");
                             }
                         } else if (responseMap.phase == 'WAIT_FOR_AGENT') {
+
+                            self.$testExecInfo.append('You can access the running container by using the <code>exec</code> ' +
+                                'command on the the Docker daemon host. For example: ' +
+                                '<p class="mono">docker exec -t -i ' + responseMap.containerId + ' /bin/bash</p>');
+                            self.$testExecInfo.slideDown();
+
                             if (hasWarning) {
                                 self.$testContainerLabel.text("Agent connection detected for container " + responseMap.containerId + ":");
                             } else {
@@ -1538,6 +1546,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerWarningIcon.hide();
                 self.$testContainerErrorIcon.hide();
                 self.$testContainerLabel.empty();
+                self.$testExecInfo.hide();
                 self.$testContainerLabel.removeClass('containerTestError');
                 self.$testContainerCancelBtn.attr('disabled', false)
                 self.testCancelled = false;
