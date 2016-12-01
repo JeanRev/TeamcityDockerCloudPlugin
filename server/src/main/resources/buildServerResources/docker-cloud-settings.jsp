@@ -651,6 +651,8 @@
         <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerError" src="<c:url value="${resPath}img/error.png"/>">
         <span id="dockerCloudTestContainerLabel"></span>
 
+        <p id="dockerTestExecInfo">
+        </p>
         <div class="dockerCloudBtnBlock">
             <!--
             <input type="button" class="btn" id="dockerCloudTestContainerShellBtn" value="Start a shell"/>
@@ -660,6 +662,7 @@
             <input type="button" class="btn" id="dockerCreateImageTest" value="Create container"/>
             <input type="button" class="btn" id="dockerStartImageTest" value="Start container"/>
             <input type="button" class="btn" id="dockerCloudTestContainerContainerLogsBtn" value="Container logs"/>
+            <input type="button" class="btn" id="dockerCloudTestContainerCancelBtn" value="Cancel"/>
             <input type="button" class="btn" id="dockerCloudTestContainerCloseBtn" value="Close"/>
         </div>
     </div>
