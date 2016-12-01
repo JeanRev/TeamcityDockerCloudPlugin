@@ -112,8 +112,17 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _renderImagesTable: function () {
                 self.logDebug("Rendering image table.");
                 self.$imagesTable.empty();
-                $j.each(self.imagesData, function(i, val) {
-                    self._renderImageRow(val);
+
+                var sortedKeys = [];
+
+                self._safeKeyValueEach(self.imagesData, function(key, value) {
+                    sortedKeys.push(key);
+                });
+
+                sortedKeys.sort();
+
+                $j.each(sortedKeys, function(i, val) {
+                    self._renderImageRow(self.imagesData[val]);
                 });
                 self._insertAddButton(self.$imagesTable, 4);
             },
@@ -289,8 +298,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 } else if ($elt.is(':radio')) {
                     $elt.prop('checked', parentObject[key] == $elt.val());
                 } else if (tagName == 'SELECT') {
-                    console.log('setting elt to value: ' + parentObject[key]);
                     $elt.val(parentObject[key]);
+                } else {
+                    self.logError("Unhandled tag type: " + tagName);
                 }
             },
 
@@ -574,6 +584,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Devices');
                 self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Ulimits');
+
+                if (self._filterFromSettings(viewModel.Ulimits)) {
+                    hostConfig.Ulimits = [];
+                    self._safeEach(viewModel.Ulimits, function (ulimit) {
+                        hostConfig.Ulimits.push({ Name: ulimit.Name, Hard: parseInt(ulimit.Hard), Soft: parseInt(ulimit.Soft)});
+                    });
+                }
 
                 if (self._filterFromSettings(viewModel.LogType)) {
                     hostConfig.LogConfig = {

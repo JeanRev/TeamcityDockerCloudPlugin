@@ -3,8 +3,6 @@ package run.var.teamcity.cloud.docker;
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.*;
 import jetbrains.buildServer.serverSide.*;
-import jetbrains.buildServer.serverSide.agentTypes.AgentType;
-import jetbrains.buildServer.serverSide.agentTypes.AgentTypeData;
 import jetbrains.buildServer.serverSide.agentTypes.AgentTypeKey;
 import jetbrains.buildServer.serverSide.agentTypes.AgentTypeStorage;
 import org.jetbrains.annotations.NotNull;
