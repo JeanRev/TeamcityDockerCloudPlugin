@@ -288,6 +288,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     $elt.prop('checked', parentObject[key] === true);
                 } else if ($elt.is(':radio')) {
                     $elt.prop('checked', parentObject[key] == $elt.val());
+                } else if (tagName == 'SELECT') {
+                    console.log('setting elt to value: ' + parentObject[key]);
+                    $elt.val(parentObject[key]);
                 }
             },
 
@@ -563,7 +566,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         hostConfig.NetworkMode = networkMode;
                     } else if (networkMode === 'container') {
                         hostConfig.NetworkMode = 'container:' + viewModel.NetworkContainer;
-                    } else {
+                    } else if (networkMode !== 'default') {
                         hostConfig.NetworkMode = viewModel.NetworkCustom;
                     }
                 }
@@ -699,7 +702,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 viewModel.CapDrop = hostConfig.CapDrop;
 
                 var networkMode = hostConfig.NetworkMode;
-                if (networkMode === "bridge" || networkMode === "host" || networkMode === "none") {
+                if (!networkMode) {
+                    viewModel.NetworkMode = 'default';
+                } else if (networkMode === "bridge" || networkMode === "host" || networkMode === "none") {
                     viewModel.NetworkMode = networkMode;
                 } else if (/^container:/.test(networkMode)) {
                     viewModel.NetworkMode = "container";
