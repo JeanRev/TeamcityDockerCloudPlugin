@@ -79,7 +79,7 @@ public class ContainerTestControllerTest {
         request.parameter("action", Action.CREATE.name());
         ctrl.doPost(request, response, element);
 
-        testMgr.getListener().notifyStatus(new TestContainerStatusMsg(TestUtils.TEST_UUID, Phase.CREATE, Status.PENDING, null, null, Collections.emptyList()));
+        testMgr.getListener().notifyStatus(new TestContainerStatusMsg(TestUtils.TEST_UUID, Phase.CREATE, Status.PENDING, null, null, null, Collections.emptyList()));
 
         request.
                 parameter("action", Action.QUERY.name()).
@@ -182,6 +182,6 @@ public class ContainerTestControllerTest {
 
     private TestContainerStatusMsg createStatusMsg(Phase phase) {
         return new TestContainerStatusMsg(TestUtils.TEST_UUID, phase,
-                Status.PENDING, "status msg",  null, Collections.emptyList());
+                Status.PENDING, "status msg",  null,null, Collections.emptyList());
     }
 }
