@@ -1160,6 +1160,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.$testContainerCloseBtn.show();
                     if (responseMap.phase == 'WAIT_FOR_AGENT') {
                         self.$testContainerContainerLogsBtn.show();
+                        self.$testExecInfo.append('Note: you can access the running container by using the <code>exec</code> ' +
+                            'command on the the Docker daemon host. For example: ' +
+                            '<p class="mono">docker exec -t -i ' + responseMap.containerId + ' /bin/bash</p>');
+                        self.$testExecInfo.slideDown();
                     }
 
                     if (responseMap.status == 'FAILURE') {
@@ -1197,11 +1201,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                                 self.$testContainerLabel.text("Container " + responseMap.containerId + " successfully created.");
                             }
                         } else if (responseMap.phase == 'WAIT_FOR_AGENT') {
-
-                            self.$testExecInfo.append('You can access the running container by using the <code>exec</code> ' +
-                                'command on the the Docker daemon host. For example: ' +
-                                '<p class="mono">docker exec -t -i ' + responseMap.containerId + ' /bin/bash</p>');
-                            self.$testExecInfo.slideDown();
 
                             if (hasWarning) {
                                 self.$testContainerLabel.text("Agent connection detected for container " + responseMap.containerId + ":");
