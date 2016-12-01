@@ -112,6 +112,7 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
         for (Node tag : tags.getArray("tags").getArrayValues()) {
             if (version.equals(tag.getAsString())) {
                 foundMatchingTag = true;
+                break;
             }
         }
 
