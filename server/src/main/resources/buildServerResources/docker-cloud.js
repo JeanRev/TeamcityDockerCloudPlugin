@@ -1126,8 +1126,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             // Compensate the appearance of the terminal with a upward shift of the dialog window.
                             // Should be roughly half of the terminal height include the title.
                             self.$testImageDialog.animate({top: "-=150px"});
+                            self.logStreamingSocket = new WebSocket(url);
+
                             self.$dockerTestContainerOutput.slideDown(400, function() {
-                                self.logStreamingSocket = new WebSocket(url);
                                 var logTerm = new Terminal();
                                 logTerm.open(self.$dockerTestContainerOutput[0]);
                                 logTerm.fit();
@@ -1157,14 +1158,32 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                     } else if (responseMap.status == 'SUCCESS') {
 
+                        var hasWarning = !!responseMap.warnings.length;
+
+                        if (hasWarning) {
+                            self.$testContainerWarningIcon.show();
+                        } else {
+                            self.$testContainerSuccessIcon.show();
+                        }
+
                         if (responseMap.phase == 'CREATE') {
                             self.$testContainerStartBtn.show();
+                            if (hasWarning) {
+                                self.$testContainerLabel.text("Container " + responseMap.containerId + " created with warnings:");
+                            } else {
+                                self.$testContainerLabel.text("Container " + responseMap.containerId + " successfully created.");
+                            }
+                        } else if (responseMap.phase == 'WAIT_FOR_AGENT') {
+                            if (hasWarning) {
+                                self.$testContainerLabel.text("Agent connection detected for container " + responseMap.containerId + ":");
+                            } else {
+                                self.$testContainerLabel.text("Agent connection detected for container " + responseMap.containerId + ".");
+                            }
                         }
+
                         self.$testContainerCloseBtn.val("Dispose");
 
-                        if (!responseMap.warnings.length) {
-                            self.$testContainerSuccessIcon.show();
-                        } else {
+                        if (hasWarning) {
                             var $list = $j('<ul>');
                             self._safeEach(responseMap.warnings, function(warning) {
                                 $list.append('<li>' + warning + '</li>');
@@ -1182,6 +1201,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var $xml = $j(xml);
                 var responseMap = {
                     msg: $xml.find('msg').text(),
+                    containerId: $xml.find('containerId').text(),
                     status: $xml.find('status').text(),
                     phase: $xml.find('phase').text(),
                     taskUuid: $xml.find("taskUuid").text(),

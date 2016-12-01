@@ -180,7 +180,7 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
         DockerCloudUtils.requireNonNull(status, "Warnings list cannot be null.");
 
-        statusListener.notifyStatus(new TestContainerStatusMsg(uuid, phase, status, msg, failure, warnings));
+        statusListener.notifyStatus(new TestContainerStatusMsg(uuid, phase, status, msg, containerId, failure, warnings));
     }
 
     @Override

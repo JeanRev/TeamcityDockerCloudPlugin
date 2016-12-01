@@ -50,6 +50,7 @@ public class TestContainerStatusMsg {
     }
 
     private final String msg;
+    private final String containerId;
     private final Status status;
     private final UUID taskUuid;
     private final Phase phase;
@@ -68,7 +69,7 @@ public class TestContainerStatusMsg {
      * @throws NullPointerException if {@code uuid}, {@code phase}, or {@code status} are {@code null}
      */
     public TestContainerStatusMsg(@NotNull UUID uuid, @NotNull Phase phase, @NotNull Status status, @Nullable String msg,
-                                  @Nullable Throwable failure, List<String> warnings) {
+                                  @Nullable String containerId, @Nullable Throwable failure, List<String> warnings) {
         DockerCloudUtils.requireNonNull(uuid, "Test UUID cannot be null.");
         DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
         DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
@@ -77,6 +78,7 @@ public class TestContainerStatusMsg {
         this.phase = phase;
         this.status = status;
         this.msg = msg;
+        this.containerId = containerId;
         this.throwable = failure;
         this.warnings = warnings;
     }
@@ -139,9 +141,8 @@ public class TestContainerStatusMsg {
     @NotNull
     public Element toExternalForm() {
         Element root = new Element("statusMsg");
-        if (msg != null) {
-            addChildElement(root, "msg", msg);
-        }
+        addChildElement(root, "msg", msg);
+        addChildElement(root, "containerId", containerId != null ? DockerCloudUtils.toShortId(containerId) : null);
         addChildElement(root, "status", status);
         addChildElement(root, "phase", phase);
         addChildElement(root, "taskUuid", taskUuid);

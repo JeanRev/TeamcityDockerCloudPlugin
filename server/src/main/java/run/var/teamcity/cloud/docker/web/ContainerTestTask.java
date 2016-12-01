@@ -32,6 +32,7 @@ abstract class ContainerTestTask implements Runnable {
 
     private final List<String> warnings = new ArrayList<>();
     private Status status = Status.PENDING;
+    private String msg = "";
     private Phase phase;
     ContainerTestTaskHandler testTaskHandler;
 
@@ -69,11 +70,6 @@ abstract class ContainerTestTask implements Runnable {
         msg(msg, phase, status);
     }
 
-    void success(String msg){
-        status = Status.SUCCESS;
-        testTaskHandler.notifyStatus(phase, Status.SUCCESS, msg, null, warnings);
-    }
-
     void fail(String msg) {
         throw new ContainerTestTaskException(msg);
     }
@@ -89,6 +85,7 @@ abstract class ContainerTestTask implements Runnable {
 
         this.phase = phase;
         this.status = status;
+        this.msg = msg;
 
         testTaskHandler.notifyStatus(phase, status, msg, null, warnings);
     }
@@ -126,23 +123,30 @@ abstract class ContainerTestTask implements Runnable {
     /**
      * Internal method to perform the test logic.
      */
-    abstract void work();
+    abstract Status work();
 
     @Override
     public final void run() {
-
+        lock.lock();
         try {
+            Exception error = null;
             try {
-                lock.lock();
                 if (status != Status.PENDING) {
                     throw new IllegalStateException("Cannot run task in status " + status + ".");
                 }
-                work();
+                status = work();
             }  catch (Exception e) {
                 status = Status.FAILURE;
+                error = e;
+                msg = e.getMessage();
                 LOG.warn("Processing of task " + this + " failed.", e);
-                testTaskHandler.notifyStatus(phase, Status.FAILURE, e.getMessage(), e, warnings);
             }
+
+            // IMPORTANT: status notification must occurs at least once per task cycle. The status messages that we are
+            // sending also serves as heartbeats: they are used to detect idle or stalled tests, and will keep the
+            // listener open when WebSockets are in use. The latter case is especially when behind a proxy such as
+            // nginx, since it may allow only.
+            testTaskHandler.notifyStatus(phase, status, msg, error, warnings);
         } finally {
             lock.unlock();
         }
