@@ -68,6 +68,8 @@
             <p>
                 <props:checkboxProperty name="<%=DockerCloudUtils.USE_TLS%>"/>
                 <label for="<%=DockerCloudUtils.USE_TLS%>">Use Transport Layer Security (TLS)</label>
+                <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                <span class="tooltiptext">Activate TLS support when connecting to Docker over TCP socket. Checkout the plugin wiki for additional info on how to configure TLS properly.</span>
             </p>
             <div class="hidden" id="dockerCloudCheckConnectionLoader"><i class="icon-refresh icon-spin"></i>&nbsp;Connecting to Docker instance...</div>
         </td>
@@ -159,6 +161,12 @@
                         <p>
                             <input type="checkbox" id="dockerCloudImage_RmOnExit"/>
                             <label for="dockerCloudImage_RmOnExit">Delete container when cloud agent is stopped</label>
+                            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                            <span class="tooltiptext">You may check this box if you want to remove the container as
+                                soon as the corresponding cloud instance is stopped. This may potentially free some
+                            disk space, and ensure that the next build will start in a totally fresh state. However, it
+                            also means that all the agent meta-data and applied server plugin upgrade so far will be
+                                lost.</span>
                         </p>
                     </td>
                 </tr>
