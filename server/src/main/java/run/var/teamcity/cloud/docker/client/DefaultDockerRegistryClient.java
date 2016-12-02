@@ -3,6 +3,7 @@ package run.var.teamcity.cloud.docker.client;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
 import org.jetbrains.annotations.NotNull;
+import run.var.teamcity.cloud.docker.client.apcon.ApacheConnectorProvider;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
@@ -11,6 +12,7 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
 import java.net.URI;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Basic interface to a Docker registry. Uses exclusively the registry {@code V2} API.
@@ -38,7 +40,8 @@ public class DefaultDockerRegistryClient extends DockerAbstractClient implements
         DockerCloudUtils.requireNonNull(authServiceURI, "Authentication service URI cannot be null.");
         DockerCloudUtils.requireNonNull(service, "Authentication server name cannot be null.");
         ClientConfig config  = new ClientConfig();
-        config.property(ClientProperties.CONNECT_TIMEOUT, CONNECT_TIMEOUT_SEC);
+        config.connectorProvider(new ApacheConnectorProvider());
+        config.property(ClientProperties.CONNECT_TIMEOUT, (int) TimeUnit.SECONDS.toMillis(CONNECT_TIMEOUT_SEC));
         jerseyClient = ClientBuilder.newClient(config);
         target = jerseyClient.target(registryURI);
         authTarget = jerseyClient.target(authServiceURI);

@@ -22,6 +22,7 @@ import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfigException;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
+import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
@@ -70,7 +71,7 @@ public class ContainerTestController extends BaseFormXmlController {
                                    @NotNull WebLinks webLinks,
                                    @NotNull StreamingController streamingController) {
         this(DockerClientFactory.getDefault(), atmosphereFramework, server, pluginDescriptor, manager,
-                new DefaultContainerTestManager(OfficialAgentImageResolver.forServer(server),
+                new DefaultContainerTestManager(OfficialAgentImageResolver.forCurrentServer(DockerRegistryClientFactory.getDefault()),
                         DockerClientFactory.getDefault(), server, webLinks, streamingController));
 
     }

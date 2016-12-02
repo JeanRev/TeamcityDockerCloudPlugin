@@ -8,6 +8,7 @@ import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
+import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.DockerCloudSettingsController;
@@ -60,7 +61,8 @@ public class DockerCloudClientFactory implements CloudClientFactory {
 
 
         return new DockerCloudClient(clientConfig, dockerClientFactory, imageConfigs,
-                OfficialAgentImageResolver.forServer(buildServer), state, buildServer, agentTypeStorage);
+                OfficialAgentImageResolver.forCurrentServer(DockerRegistryClientFactory.getDefault()), state,
+                buildServer, agentTypeStorage);
     }
 
     @NotNull

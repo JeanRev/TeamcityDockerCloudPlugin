@@ -3,8 +3,6 @@ package run.var.teamcity.cloud.docker;
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.*;
 import jetbrains.buildServer.serverSide.*;
-import jetbrains.buildServer.serverSide.agentTypes.AgentType;
-import jetbrains.buildServer.serverSide.agentTypes.AgentTypeData;
 import jetbrains.buildServer.serverSide.agentTypes.AgentTypeKey;
 import jetbrains.buildServer.serverSide.agentTypes.AgentTypeStorage;
 import org.jetbrains.annotations.NotNull;
@@ -500,7 +498,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
     private boolean terminateContainer(String containerId, boolean rmContainer) {
         try {
             // We always try to stop the container before destroying it independently of our metadata.
-            dockerClient.stopContainer(containerId, TimeUnit.SECONDS.toSeconds(10));
+            dockerClient.stopContainer(containerId, TimeUnit.SECONDS.toSeconds(0));
         } catch (ContainerAlreadyStoppedException e) {
             LOG.debug("Container " + containerId + " was already stopped.");
         } catch (NotFoundException e) {
@@ -635,7 +633,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 return;
             }
 
-            LOG.info("Synching with Docker instance now.");
+            LOG.debug("Synching with Docker instance now.");
 
             // Step 1, query the whole list of containers associated with this cloud client.
             Node containers = dockerClient.listContainersWithLabel(DockerCloudUtils.CLIENT_ID_LABEL, uuid.toString());

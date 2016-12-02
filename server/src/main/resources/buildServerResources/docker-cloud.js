@@ -79,10 +79,12 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerStartBtn = $j("#dockerStartImageTest");
                 self.$testContainerLoader = $j('#dockerCloudTestContainerLoader');
                 self.$testContainerLabel = $j('#dockerCloudTestContainerLabel');
+                self.$testExecInfo = $j('#dockerTestExecInfo');
                 self.$testContainerOutcome = $j('#dockerCloudTestContainerOutcome');
                 self.$testContainerShellBtn = $j('#dockerCloudTestContainerShellBtn');
                 self.$testContainerContainerLogsBtn = $j('#dockerCloudTestContainerContainerLogsBtn');
                 self.$testContainerDisposeBtn = $j('#dockerCloudTestContainerDisposeBtn');
+                self.$testContainerCancelBtn = $j('#dockerCloudTestContainerCancelBtn');
                 self.$testContainerCloseBtn = $j('#dockerCloudTestContainerCloseBtn');
                 self.$testContainerSuccessIcon = $j('#dockerCloudTestContainerSuccess');
                 self.$testContainerWarningIcon = $j('#dockerCloudTestContainerWarning');
@@ -110,8 +112,17 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _renderImagesTable: function () {
                 self.logDebug("Rendering image table.");
                 self.$imagesTable.empty();
-                $j.each(self.imagesData, function(i, val) {
-                    self._renderImageRow(val);
+
+                var sortedKeys = [];
+
+                self._safeKeyValueEach(self.imagesData, function(key, value) {
+                    sortedKeys.push(key);
+                });
+
+                sortedKeys.sort();
+
+                $j.each(sortedKeys, function(i, val) {
+                    self._renderImageRow(self.imagesData[val]);
                 });
                 self._insertAddButton(self.$imagesTable, 4);
             },
@@ -286,6 +297,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     $elt.prop('checked', parentObject[key] === true);
                 } else if ($elt.is(':radio')) {
                     $elt.prop('checked', parentObject[key] == $elt.val());
+                } else if (tagName == 'SELECT') {
+                    $elt.val(parentObject[key]);
+                } else {
+                    self.logError("Unhandled tag type: " + tagName);
                 }
             },
 
@@ -561,7 +576,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         hostConfig.NetworkMode = networkMode;
                     } else if (networkMode === 'container') {
                         hostConfig.NetworkMode = 'container:' + viewModel.NetworkContainer;
-                    } else {
+                    } else if (networkMode !== 'default') {
                         hostConfig.NetworkMode = viewModel.NetworkCustom;
                     }
                 }
@@ -569,6 +584,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Devices');
                 self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Ulimits');
+
+                if (self._filterFromSettings(viewModel.Ulimits)) {
+                    hostConfig.Ulimits = [];
+                    self._safeEach(viewModel.Ulimits, function (ulimit) {
+                        hostConfig.Ulimits.push({ Name: ulimit.Name, Hard: parseInt(ulimit.Hard), Soft: parseInt(ulimit.Soft)});
+                    });
+                }
 
                 if (self._filterFromSettings(viewModel.LogType)) {
                     hostConfig.LogConfig = {
@@ -697,7 +719,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 viewModel.CapDrop = hostConfig.CapDrop;
 
                 var networkMode = hostConfig.NetworkMode;
-                if (networkMode === "bridge" || networkMode === "host" || networkMode === "none") {
+                if (!networkMode) {
+                    viewModel.NetworkMode = 'default';
+                } else if (networkMode === "bridge" || networkMode === "host" || networkMode === "none") {
                     viewModel.NetworkMode = networkMode;
                 } else if (/^container:/.test(networkMode)) {
                     viewModel.NetworkMode = "container";
@@ -985,9 +1009,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self.$testContainerCreateBtn.click(function() {
                     self._testDialogHideAllBtns();
-                    self.$testContainerCloseBtn.val("Cancel");
 
-                    self.$testContainerLoader.show();
+                    self.$testContainerCancelBtn.show();
                     self.$testContainerSuccessIcon.hide();
                     self.$testContainerWarningIcon.hide();
                     self.$testContainerErrorIcon.hide();
@@ -1007,8 +1030,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self.$testContainerStartBtn.click(function() {
                     self._testDialogHideAllBtns();
-                    self.$testContainerCloseBtn.val("Cancel");
-                    self.$testContainerLoader.show();
+                    self.$testContainerCancelBtn.show();
                     self.$testContainerSuccessIcon.hide();
                     self.$testContainerWarningIcon.hide();
                     self.$testContainerErrorIcon.hide();
@@ -1018,6 +1040,16 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         .done(function () {
                             self._queryTestStatus();
                         });
+                });
+
+                self.$testContainerCancelBtn.click(function() {
+                    self._closeStatusSocket();
+                    self.testCancelled = true;
+                    self.$testContainerLoader.hide();
+                    self.$testContainerErrorIcon.show();
+                    self.$testContainerLabel.text("Cancelled by user.");
+                    self.$testContainerCancelBtn.hide();
+                    self.$testContainerCloseBtn.show();
                 });
 
                 self.$testContainerCloseBtn.click(function() {
@@ -1056,6 +1088,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             _queryTestStatus: function() {
+                if (self.testCancelled) {
+                    return;
+                }
                 if (!self.testUuid) {
                     self.logError("Test UUID not resolved.");
                     return;
@@ -1108,15 +1143,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             _processTestStatusResponse: function (responseMap) {
-                self._testDialogHideAllBtns();
 
                 self.logDebug('Phase: ' + responseMap.phase + ' Status: ' + responseMap.status + ' Msg: ' +
-                    responseMap.msg + ' Uuid: ' + responseMap.testUuid + ' Warnings: ' + responseMap.warnings.length);
+                    responseMap.msg + ' Container ID: ' + responseMap.containerId + ' Uuid: ' + responseMap.testUuid +
+                    ' Warnings: ' + responseMap.warnings.length);
 
                 self.$testContainerLabel.text(responseMap.msg);
 
+
                 if (responseMap.status == 'PENDING') {
-                    self.$testContainerCloseBtn.val("Cancel");
                     if (responseMap.phase == "WAIT_FOR_AGENT") {
                         if (self.hasXTermSupport && !self.logStreamingSocket) {
                             console.log('Opening live logs sockt now.');
@@ -1125,9 +1160,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             self.$dockerTestContainerOutputTitle.fadeIn(400);
                             // Compensate the appearance of the terminal with a upward shift of the dialog window.
                             // Should be roughly half of the terminal height include the title.
-                            self.$testImageDialog.animate({top: "-=150px"});
+                            self.$testImageDialog.animate({top: "-=150px", left: "-=75px", width: "+=150px"});
+                            self.logStreamingSocket = new WebSocket(url);
+
                             self.$dockerTestContainerOutput.slideDown(400, function() {
-                                self.logStreamingSocket = new WebSocket(url);
                                 var logTerm = new Terminal();
                                 logTerm.open(self.$dockerTestContainerOutput[0]);
                                 logTerm.fit();
@@ -1137,16 +1173,28 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         }
                     }
                 } else {
-                    self.$testContainerLoader.hide();
 
+                    self._testDialogHideAllBtns();
                     self._closeStatusSocket();
 
+                    self.$testContainerCancelBtn.hide();
+                    self.$testContainerLoader.hide();
+                    self.$testContainerCloseBtn.show();
                     if (responseMap.phase == 'WAIT_FOR_AGENT') {
                         self.$testContainerContainerLogsBtn.show();
+                        self.$testExecInfo.append('Note: you can access the running container by using the <code>exec</code> ' +
+                            'command on the the Docker daemon host. For example: ' +
+                            '<p class="mono">docker exec -t -i ' + responseMap.containerId + ' /bin/bash</p>');
+                        self.$testExecInfo.slideDown();
                     }
 
                     if (responseMap.status == 'FAILURE') {
-                        self.$testContainerCloseBtn.val("Close");
+                        if (responseMap.phase == 'CREATE') {
+                            self.$testContainerCloseBtn.val("Close");
+                        } else {
+                            self.$testContainerCloseBtn.val("Dispose container");
+                        }
+
                         self.$testContainerLabel.addClass('containerTestError');
                         self.$testContainerErrorIcon.show();
 
@@ -1157,14 +1205,33 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                     } else if (responseMap.status == 'SUCCESS') {
 
+                        self.$testContainerCloseBtn.val("Dispose container");
+
+                        var hasWarning = !!responseMap.warnings.length;
+
+                        if (hasWarning) {
+                            self.$testContainerWarningIcon.show();
+                        } else {
+                            self.$testContainerSuccessIcon.show();
+                        }
+
                         if (responseMap.phase == 'CREATE') {
                             self.$testContainerStartBtn.show();
-                        }
-                        self.$testContainerCloseBtn.val("Dispose");
+                            if (hasWarning) {
+                                self.$testContainerLabel.text("Container " + responseMap.containerId + " created with warnings:");
+                            } else {
+                                self.$testContainerLabel.text("Container " + responseMap.containerId + " successfully created.");
+                            }
+                        } else if (responseMap.phase == 'WAIT_FOR_AGENT') {
 
-                        if (!responseMap.warnings.length) {
-                            self.$testContainerSuccessIcon.show();
-                        } else {
+                            if (hasWarning) {
+                                self.$testContainerLabel.text("Agent connection detected for container " + responseMap.containerId + ":");
+                            } else {
+                                self.$testContainerLabel.text("Agent connection detected for container " + responseMap.containerId + ".");
+                            }
+                        }
+
+                        if (hasWarning) {
                             var $list = $j('<ul>');
                             self._safeEach(responseMap.warnings, function(warning) {
                                 $list.append('<li>' + warning + '</li>');
@@ -1182,6 +1249,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var $xml = $j(xml);
                 var responseMap = {
                     msg: $xml.find('msg').text(),
+                    containerId: $xml.find('containerId').text(),
                     status: $xml.find('status').text(),
                     phase: $xml.find('phase').text(),
                     taskUuid: $xml.find("taskUuid").text(),
@@ -1196,7 +1264,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 return responseMap;
             },
 
-            _invokeTestAction: function(action, parameters, ignoreFailure) {
+            _invokeTestAction: function(action, parameters, immediate) {
 
                 self.logDebug('Will invoke action ' + action + ' for test UUID ' + self.taskUuid);
 
@@ -1206,6 +1274,12 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var url = self.testContainerCtrlURL + '?action=' + action;
                 if (self.testUuid) {
                     url += '&testUuid=' + self.testUuid;
+                }
+
+                if (!immediate) {
+                    self.$testContainerLoader.show();
+                    self.$testContainerCancelBtn.show();
+                    self.$testContainerCloseBtn.hide();
                 }
 
                 BS.ajaxRequest(url, {
@@ -1224,7 +1298,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 });
 
-                if (!ignoreFailure) {
+                if (!immediate) {
                     deferred.fail(function(errorMsg) {
                         self._testDialogHideAllBtns();
                         self.$testContainerCloseBtn.show();
@@ -1486,13 +1560,17 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$dockerTestContainerOutput.empty();
                 self.$testContainerCreateBtn.show();
                 self.$testContainerOutcome.text();
+                self.$testContainerCancelBtn.hide();
                 self.$testContainerCloseBtn.val("Close");
                 self.$testContainerLoader.hide();
                 self.$testContainerSuccessIcon.hide();
                 self.$testContainerWarningIcon.hide();
                 self.$testContainerErrorIcon.hide();
                 self.$testContainerLabel.empty();
+                self.$testExecInfo.hide();
                 self.$testContainerLabel.removeClass('containerTestError');
+                self.$testContainerCancelBtn.attr('disabled', false)
+                self.testCancelled = false;
             },
 
             validate: function () {

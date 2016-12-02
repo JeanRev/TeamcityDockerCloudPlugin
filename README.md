@@ -1,9 +1,9 @@
 # TeamCity Docker Cloud plugin
 [![status](https://builds.gradle.org/app/rest/builds/buildType:GradleScriptKotlin_Master/statusIcon)](https://tc.var.run/viewType.html?buildTypeId=TeamCityDockerCloudPlugin_Main)
-[![coverage](https://tc.var.run/vr_static/dkcld_plugin_coverage_latest.png)](https://tc.var.run/viewLog.html?buildId=lastSuccessful&buildTypeId=TeamCityDockerCloudPlugin_Main&tab=coverage_idea&guest=1)
+[![coverage](https://tc.var.run/vr_static/dkcld_plugin_coverage_latest.svg)](https://tc.var.run/viewLog.html?buildId=lastSuccessful&buildTypeId=TeamCityDockerCloudPlugin_Main&tab=coverage_idea&guest=1)
 [![license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0)
 
-This TeamCity plugin leverages the TeamCity Cloud API in order to start and dispose TeamCity agent hosted in Docker 
+This TeamCity plugin leverages the TeamCity Cloud API in order to start and dispose TeamCity agents hosted in Docker 
 containers on demand.
 
 ## Requirements
@@ -11,7 +11,7 @@ containers on demand.
 - A Docker daemon accessible through either TCP or Unix Sockets, supporting the remote API v1.24 (Engine version 
 1.12.x).
 
-Browser requirements are the same than TeamCity itself (IE9+ or modern Browser).
+Browser requirements are the same than TeamCity itself (IE9+ or recent version of Firefox/Chrome/Safari/Opera/Edge).
 
 ## Quick start
 1. Upload the plugin archive using the "_Administration_ | _Plugin List_" section of your TeamCity instance, or copy it
@@ -56,7 +56,7 @@ Lot of thanks to the respective authors of these software.
 <tr>
 <td style="border: none; vertical-align:middle;">
 <a href="https://www.puzzle.ch" target="_blank">
-<img src="doc/img/puzzle.png"> 
+<img src="https://tc.var.run/vr_static/puzzle.png"> 
 </a>
 </td>
 <td style="border: none; vertical-align:middle;">

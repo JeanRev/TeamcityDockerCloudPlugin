@@ -320,6 +320,12 @@ aligned on the RHS of the screen. */
     font-weight: normal;
     text-indent: 0;
 }
+#dockerTestExecInfo p {
+    padding: 5px;
+    background: #eeeeee;
+    border-radius: 5px;
+    margin: 0;
+}
 #dockerCloudTestContainerLabel ul {
     margin: 0;
     list-style-type: square;

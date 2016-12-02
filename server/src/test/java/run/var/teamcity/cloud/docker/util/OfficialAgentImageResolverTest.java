@@ -15,24 +15,22 @@ public class OfficialAgentImageResolverTest {
     private TestDockerClientRegistryFactory clientFty;
     private DockerImageConfig imageConfig;
 
-    private int majorVersion;
-    private int minorVersion;
+    private String version;
 
     @BeforeMethod
     public void init() {
         clientFty = new TestDockerClientRegistryFactory();
         imageConfig = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, true, 1);
-        majorVersion = 5;
-        minorVersion = 2;
+        version = "10.0.3";
     }
 
     public void normalResolution() {
         clientFty.configureClient((clt) -> clt.knownImage(OfficialAgentImageResolver.REPO, "4.0", "5.2", "5.2.1",
-                "5.2.1.1", "6.0"));
+                "5.2.1.1", "6.0", version));
 
         OfficialAgentImageResolver resolver = createResolver();
 
-        assertThat(resolver.resolve(imageConfig)).isEqualTo(OfficialAgentImageResolver.REPO + ":5.2.1.1");
+        assertThat(resolver.resolve(imageConfig)).isEqualTo(OfficialAgentImageResolver.REPO + ":" + version);
 
         assertThat(clientFty.getClient().isClosed()).isTrue();
     }
@@ -48,22 +46,20 @@ public class OfficialAgentImageResolverTest {
         assertThat(resolver.resolve(imageConfig)).isNull();
     }
 
-    public void usingDefaultWhenNoMatchingVersion() {
+    public void usingLatestWhenNoMatchingVersion() {
         clientFty.configureClient((clt) -> clt.knownImage(OfficialAgentImageResolver.REPO, "4.0", "6.0"));
 
         OfficialAgentImageResolver resolver = createResolver();
 
-        assertThat(resolver.resolve(imageConfig)).isEqualTo(OfficialAgentImageResolver.DEFAULT);
+        assertThat(resolver.resolve(imageConfig)).isEqualTo(OfficialAgentImageResolver.LATEST);
     }
 
     public void usingDefaultWhenRepoLookupFail() {
         clientFty.configureClient(clt -> clt.failOnAccess(new DockerClientProcessingException("Test failure.")));
 
-        clientFty.configureClient(clt -> clt.knownImage(OfficialAgentImageResolver.REPO, "5.2"));
-
         OfficialAgentImageResolver resolver = createResolver();
 
-        assertThat(resolver.resolve(imageConfig)).isEqualTo(OfficialAgentImageResolver.DEFAULT);
+        assertThat(resolver.resolve(imageConfig)).isEqualTo(OfficialAgentImageResolver.REPO + ":" + version);
     }
 
     public void mustCacheResult() {
@@ -81,21 +77,24 @@ public class OfficialAgentImageResolverTest {
     public void constructor() {
         // No error expected.
         createResolver();
-        majorVersion = 0;
-        minorVersion = 0;
-        createResolver();
-        majorVersion = -1;
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(this::createResolver);
-        majorVersion = 0;
-        minorVersion = -1;
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(this::createResolver);
-        minorVersion = 0;
+        version = null;
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(this::createResolver);
+        version = "1.0";
         clientFty = null;
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(this::createResolver);
     }
 
+    public void usingAPIStaticVersion() {
+        OfficialAgentImageResolver resolver = OfficialAgentImageResolver.forCurrentServer(clientFty);
+
+        // Check that the resolution process complete without error.
+        // We also assert that the version tag will always the latest since the no image is available in our test
+        // registry.
+        assertThat(resolver.resolve(imageConfig)).isEqualTo(OfficialAgentImageResolver.LATEST);
+    }
+
     public OfficialAgentImageResolver createResolver() {
-        return new OfficialAgentImageResolver(majorVersion, minorVersion, clientFty);
+        return new OfficialAgentImageResolver(version, clientFty);
     }
 
 }

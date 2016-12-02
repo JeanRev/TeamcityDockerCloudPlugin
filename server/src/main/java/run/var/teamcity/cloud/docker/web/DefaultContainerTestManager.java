@@ -309,6 +309,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
                         }
                     } else if (t instanceof InterruptedException || t instanceof CancellationException) {
                         // Cancelled task, ignore.
+                        LOG.info(test.getUuid()  + " was interrupted.", t);
                     } else {
                         // We should never end here into normal circumstances: the test tasks base class should handle
                         // itself checked and unchecked exceptions and update its internal state accordingly.
@@ -375,12 +376,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
     private void cleanUpTestAgents() {
 
         BuildAgentManager agentMgr = buildServer.getBuildAgentManager();
-        if (!(agentMgr instanceof  BuildAgentManagerEx)) {
-            // We currently end here using our mocked build agent manager used for testing.
-            // BuildAgentManagerEx rely on unpublished APIs, and we cannot provide an implementation for it easily.
-            return;
-        }
-        for (SBuildAgent agent : ((BuildAgentManagerEx) agentMgr).getAllAgents(true)) {
+        for (SBuildAgent agent : agentMgr.getUnregisteredAgents()) {
             String uuidStr = DockerCloudUtils.getEnvParameter(agent, DockerCloudUtils.ENV_TEST_INSTANCE_ID);
             UUID instanceUuid = DockerCloudUtils.tryParseAsUUID(uuidStr);
             if (instanceUuid != null) {

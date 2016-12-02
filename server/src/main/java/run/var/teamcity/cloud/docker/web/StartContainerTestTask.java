@@ -5,10 +5,14 @@ import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
+import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status.PENDING;
+import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status.SUCCESS;
 
 /**
  * {@link ContainerTestTask} to start the test container.
@@ -38,7 +42,7 @@ class StartContainerTestTask extends ContainerTestTask {
     }
 
     @Override
-    void work() {
+    Status work() {
         DockerClient client = testTaskHandler.getDockerClient();
 
         if (containerStartTime == -1) {
@@ -49,10 +53,10 @@ class StartContainerTestTask extends ContainerTestTask {
             client.startContainer(containerId);
 
             msg("Waiting for agent to connect", Phase.WAIT_FOR_AGENT);
-            return;
+
+            return PENDING;
         } else if (testTaskHandler.isBuildAgentDetected()) {
-            success("Agent connection detected.");
-            return;
+            return SUCCESS;
         }
 
         List<Node> containers = client.listContainersWithLabel(DockerCloudUtils.TEST_INSTANCE_ID_LABEL, instanceUuid
@@ -73,5 +77,7 @@ class StartContainerTestTask extends ContainerTestTask {
         } else {
             assert false: "Multiple containers found for the test instance UUID: " + instanceUuid;
         }
+
+        return PENDING;
     }
 }
