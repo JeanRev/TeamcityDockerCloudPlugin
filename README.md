@@ -56,7 +56,7 @@ Lot of thanks to the respective authors of these software.
 <tr>
 <td style="border: none; vertical-align:middle;">
 <a href="https://www.puzzle.ch" target="_blank">
-<img src="doc/img/puzzle.png"> 
+<img src="https://tc.var.run/vr_static/puzzle.png"> 
 </a>
 </td>
 <td style="border: none; vertical-align:middle;">
