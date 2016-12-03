@@ -60,7 +60,7 @@ public class DockerCloudClientFactory implements CloudClientFactory {
         clientConfig.getDockerClientConfig().threadPoolSize(threadPoolSize);
 
 
-        return new DockerCloudClient(clientConfig, dockerClientFactory, imageConfigs,
+        return new DefaultDockerCloudClient(clientConfig, dockerClientFactory, imageConfigs,
                 OfficialAgentImageResolver.forCurrentServer(DockerRegistryClientFactory.getDefault()), state,
                 buildServer, agentTypeStorage);
     }

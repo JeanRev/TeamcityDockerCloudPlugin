@@ -13,7 +13,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Task scheduler for a {@link DockerCloudClient}. The scheduler ensure the sequential execution of tasks that may
+ * Task scheduler for a {@link DefaultDockerCloudClient}. The scheduler ensure the sequential execution of tasks that may
  * otherwise lead to conflicting interactions with the Docker daemon for a given container (eg. starting and
  * destroying a container concurrently) when processing {@link DockerInstanceTask}s. In addition, the scheduler
  * ensure that {@link DockerClientTask}s, related to the general lifecycle of the cloud client, to be executed

@@ -30,12 +30,12 @@ import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
 
 
 /**
- * {@link DockerCloudClient} test suite.
+ * {@link DefaultDockerCloudClient} test suite.
  */
 @Test(groups = "longRunning")
 public class DockerCloudClientTest {
 
-    private DockerCloudClient client;
+    private DefaultDockerCloudClient client;
     private TestDockerClientFactory dockerClientFactory;
     private DockerCloudClientConfig clientConfig;
     private Node containerSpec;
@@ -160,7 +160,7 @@ public class DockerCloudClientTest {
 
     public void restartInstance() {
 
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         DockerImage dockerImage = extractImage(client);
 
@@ -192,7 +192,7 @@ public class DockerCloudClientTest {
     public void reuseContainers() {
         rmOnExit = false;
 
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         DockerImage dockerImage = extractImage(client);
 
@@ -242,7 +242,7 @@ public class DockerCloudClientTest {
                 unregisteredAgent(agentWithCloudAndInstanceIdsNotRemovable).
                 unregisteredAgent(otherAgent);
 
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         waitUntil(() -> client.getLastDockerSyncTimeMillis() != -1);
 
@@ -257,7 +257,7 @@ public class DockerCloudClientTest {
         String agentName = "the_agent_name";
 
 
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         DockerImage image = extractImage(client);
 
@@ -291,7 +291,7 @@ public class DockerCloudClientTest {
     }
 
     public void findInstanceByAgent() {
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         DockerImage dockerImage = extractImage(client);
 
@@ -314,7 +314,7 @@ public class DockerCloudClientTest {
     }
 
     public void findImageById() {
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         DockerImage dockerImage = extractImage(client);
 
@@ -322,7 +322,7 @@ public class DockerCloudClientTest {
     }
 
     public void orphanedContainers() {
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         DockerImage dockerImage = extractImage(client);
 
@@ -357,7 +357,7 @@ public class DockerCloudClientTest {
 
     @SuppressWarnings("ConstantConditions")
     public void clientErrorHandling() {
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         DockerImage image = extractImage(client);
 
@@ -386,7 +386,7 @@ public class DockerCloudClientTest {
     public void handlingOfDefaultServerURL() {
 
         serverURL = null;
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         DockerImage image = extractImage(client);
 
@@ -400,7 +400,7 @@ public class DockerCloudClientTest {
     public void maxInstanceCount() {
         maxInstanceCount = 2;
 
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         DockerImage image = extractImage(client);
 
@@ -420,7 +420,7 @@ public class DockerCloudClientTest {
         // Image cannot be resolved.
         dockerImageResolver.image(null);
 
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         DockerImage image = extractImage(client);
 
@@ -454,7 +454,7 @@ public class DockerCloudClientTest {
     public void instanceErrorHandling() {
         maxInstanceCount = 2;
 
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         DockerImage image = extractImage(client);
 
@@ -480,7 +480,7 @@ public class DockerCloudClientTest {
 
     @SuppressWarnings("ConstantConditions")
     public void instanceErrorHandlingContainerExternallyStopped() {
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         DockerImage image = extractImage(client);
 
@@ -504,7 +504,7 @@ public class DockerCloudClientTest {
 
         rmOnExit = false;
 
-        DockerCloudClient client = createClient();
+        DefaultDockerCloudClient client = createClient();
 
         DockerImage image = extractImage(client);
 
@@ -535,20 +535,20 @@ public class DockerCloudClientTest {
         return instances.iterator().next();
     }
 
-    private DockerImage extractImage(DockerCloudClient client) {
+    private DockerImage extractImage(DefaultDockerCloudClient client) {
         Collection<DockerImage> images = client.getImages();
         assertThat(images).hasSize(1);
 
         return images.iterator().next();
     }
 
-    private DockerCloudClient createClient() {
+    private DefaultDockerCloudClient createClient() {
 
         DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI);
         DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2, serverURL);
         DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, rmOnExit, false,
                 maxInstanceCount);
-        return client = new DockerCloudClient(clientConfig, dockerClientFactory,
+        return client = new DefaultDockerCloudClient(clientConfig, dockerClientFactory,
                 Collections.singletonList(imageConfig), dockerImageResolver,
                 cloudState, buildServer, null);
     }

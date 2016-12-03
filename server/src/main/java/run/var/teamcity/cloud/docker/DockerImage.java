@@ -22,7 +22,7 @@ public class DockerImage implements CloudImage {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(DockerImage.class);
 
-    private final DockerCloudClient cloudClient;
+    private final DefaultDockerCloudClient cloudClient;
     private final UUID uuid = UUID.randomUUID();
     private final DockerImageConfig config;
 
@@ -34,13 +34,13 @@ public class DockerImage implements CloudImage {
     @Nullable
     private String imageName;
 
-    DockerImage(DockerCloudClient cloudClient, DockerImageConfig config) {
+    DockerImage(DefaultDockerCloudClient cloudClient, DockerImageConfig config) {
         this.cloudClient = cloudClient;
         this.config = config;
         imageName = config.getContainerSpec().getAsString("Image", null);
     }
 
-    public DockerCloudClient getCloudClient() {
+    public DefaultDockerCloudClient getCloudClient() {
         return cloudClient;
     }
 

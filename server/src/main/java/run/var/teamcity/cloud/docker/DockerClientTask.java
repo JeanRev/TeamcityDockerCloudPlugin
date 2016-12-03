@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A {@link DockerTask} associated with a {@link DockerCloudClient}.
+ * A {@link DockerTask} associated with a {@link DefaultDockerCloudClient}.
  */
 abstract class DockerClientTask extends DockerTask {
 
