@@ -1,4 +1,4 @@
-# TeamCity Docker Cloud plugin
+# TeamCity Docker Cloud Plugin
 [![status](https://builds.gradle.org/app/rest/builds/buildType:GradleScriptKotlin_Master/statusIcon)](https://tc.var.run/viewType.html?buildTypeId=TeamCityDockerCloudPlugin_Main)
 [![coverage](https://tc.var.run/vr_static/dkcld_plugin_coverage_latest.svg)](https://tc.var.run/viewLog.html?buildId=lastSuccessful&buildTypeId=TeamCityDockerCloudPlugin_Main&tab=coverage_idea&guest=1)
 [![license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0)
@@ -60,7 +60,7 @@ Lot of thanks to the respective authors of these software.
 </a>
 </td>
 <td style="border: none; vertical-align:middle;">
-This software has been build thanks to the unfailing support of my company
+This software has been built thanks to the unfailing support of my company
 (<a href="https://www.puzzle.ch">Puzzle ITC</a>) to OpenSource projects. Kudos to them.</div>
 </td>
 </table>
