@@ -33,7 +33,7 @@ abstract class DockerTask implements Callable<Void> {
      * Creates a one-shot task.
      *
      * @param operationName the operation name
-     * @param errorHandler the error handler
+     * @param errorHandler  the error handler
      *
      * @throws NullPointerException if any argument is {@code null}
      */
@@ -45,12 +45,12 @@ abstract class DockerTask implements Callable<Void> {
      * Creates a repeatable task.
      *
      * @param operationName the operation name
-     * @param errorHandler the error handler
-     * @param initialDelay the delay preceding the initial scheduling of the task
-     * @param delay the delay preceding the subsequent scheduling of the task
-     * @param timeUnit the time unit for the delays
+     * @param errorHandler  the error handler
+     * @param initialDelay  the delay preceding the initial scheduling of the task
+     * @param delay         the delay preceding the subsequent scheduling of the task
+     * @param timeUnit      the time unit for the delays
      *
-     * @throws NullPointerException if any argument is {@code null}
+     * @throws NullPointerException     if any argument is {@code null}
      * @throws IllegalArgumentException if a delay is negative
      */
     DockerTask(@NotNull String operationName, @NotNull DockerCloudErrorHandler errorHandler, long initialDelay, long delay, @NotNull TimeUnit timeUnit) {
@@ -145,6 +145,7 @@ abstract class DockerTask implements Callable<Void> {
 
     /**
      * Delegates the task execution to {@link #callInternal()}.
+     *
      * @return {@code null}, always
      *
      * @throws Exception if any

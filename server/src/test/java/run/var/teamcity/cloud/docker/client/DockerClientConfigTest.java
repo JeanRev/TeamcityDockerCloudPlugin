@@ -3,10 +3,10 @@ package run.var.teamcity.cloud.docker.client;
 import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 @Test
 public class DockerClientConfigTest {
@@ -45,7 +45,7 @@ public class DockerClientConfigTest {
 
     @SuppressWarnings("ConstantConditions")
     public void invalidConstructorInput() {
-        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() ->  new DockerClientConfig(null));
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> new DockerClientConfig(null));
     }
 
 }

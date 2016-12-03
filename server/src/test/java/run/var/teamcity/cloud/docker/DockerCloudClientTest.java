@@ -274,7 +274,6 @@ public class DockerCloudClientTest {
         assertThat(agent.getName()).isEqualTo(agentName);
 
 
-
         waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
 
         waitUntil(() -> instance.getContainerName() != null);
@@ -371,7 +370,7 @@ public class DockerCloudClientTest {
         DockerClientProcessingException exception = new DockerClientProcessingException("Test failure");
         dockerClient.setFailOnAccessException(exception);
 
-        waitUntil(() ->  (errorInfo = client.getErrorInfo()) != null);
+        waitUntil(() -> (errorInfo = client.getErrorInfo()) != null);
 
         assertThat(errorInfo.getDetailedMessage().contains(exception.getMessage()));
         assertThat(client.canStartNewInstance(image)).isFalse();

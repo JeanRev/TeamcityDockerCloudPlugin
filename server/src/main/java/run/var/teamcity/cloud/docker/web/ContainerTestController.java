@@ -196,7 +196,7 @@ public class ContainerTestController extends BaseFormXmlController {
             return;
         }
 
-        assert action == Action.CANCEL: "Unknown enum member: " + action;
+        assert action == Action.CANCEL : "Unknown enum member: " + action;
 
         try {
             testMgr.dispose(testUuid);

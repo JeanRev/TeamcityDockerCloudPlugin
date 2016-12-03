@@ -17,8 +17,8 @@ import java.util.stream.Collectors;
 /**
  * A {@link DockerClient} made for testing. Will simulate a Docker daemon using in-memory structures.
  * <p>
- *     Note about synchronization: this client is thread-safe. Locking is currently done in such a way to minimize
- *     thread contention and increase parallelism.
+ * Note about synchronization: this client is thread-safe. Locking is currently done in such a way to minimize
+ * thread contention and increase parallelism.
  * </p>
  */
 public class TestDockerClient implements DockerClient {
@@ -27,6 +27,7 @@ public class TestDockerClient implements DockerClient {
         CREATED,
         STARTED
     }
+
     private final Map<String, Container> containers = new HashMap<>();
     private final Set<TestImage> knownRepoImages = new HashSet<>();
     private final Set<TestImage> knownLocalImages = new HashSet<>();
@@ -82,11 +83,11 @@ public class TestDockerClient implements DockerClient {
                     entrySet().forEach(entry -> labels.put(entry.getKey(), entry.getValue().getAsString()));
             Map<String, String> env = new HashMap<>();
             containerSpec.getArray("Env", Node.EMPTY_ARRAY).getArrayValues().
-                forEach(val -> {
-                  String entry = val.getAsString();
-                  int sepIndex = entry.indexOf('=');
-                  env.put(entry.substring(0, sepIndex), entry.substring(sepIndex + 1));
-                });
+                    forEach(val -> {
+                        String entry = val.getAsString();
+                        int sepIndex = entry.indexOf('=');
+                        env.put(entry.substring(0, sepIndex), entry.substring(sepIndex + 1));
+                    });
 
             Container container = new Container(labels, env);
             containerId = container.getId();
@@ -385,7 +386,7 @@ public class TestDockerClient implements DockerClient {
         }
 
         public Container(Map<String, String> labels, Map<String, String> env) {
-           this(labels, env, ContainerStatus.CREATED);
+            this(labels, env, ContainerStatus.CREATED);
         }
 
         public Container(Map<String, String> labels, Map<String, String> env, ContainerStatus status) {

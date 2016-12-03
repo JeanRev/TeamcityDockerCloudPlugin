@@ -205,7 +205,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         return invoke(target.path("/containers/json").
                 queryParam("all", true).
                 queryParam("filters", "%7B\"label\": " +
-                "[\"" + key + "=" + value + "\"]%7D"), HttpMethod.GET, null, null, null);
+                        "[\"" + key + "=" + value + "\"]%7D"), HttpMethod.GET, null, null, null);
     }
 
     private boolean hasTty(String containerId) {
@@ -216,7 +216,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         assert target != null && stdioTypes != null;
 
         for (StdioType type : stdioTypes) {
-           target = target.queryParam(type.name().toLowerCase(), 1);
+            target = target.queryParam(type.name().toLowerCase(), 1);
         }
 
         return target;
@@ -263,7 +263,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
      *
      * @return the new client
      *
-     * @throws NullPointerException if {@code clientConfig} is {@code null}
+     * @throws NullPointerException     if {@code clientConfig} is {@code null}
      * @throws IllegalArgumentException if an invalid configuration setting is detected
      */
     @NotNull
@@ -281,7 +281,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
             throw new IllegalArgumentException("Absolute URI expected: " + dockerURI);
         }
 
-        ClientConfig config  = new ClientConfig();
+        ClientConfig config = new ClientConfig();
         config.connectorProvider(new ApacheConnectorProvider());
 
         SupportedScheme scheme = SupportedScheme.valueOf(dockerURI.getScheme().toUpperCase());
@@ -295,7 +295,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         switch (scheme) {
             case TCP:
                 if (StringUtil.isNotEmpty(dockerURI.getPath()) || dockerURI.getUserInfo() != null ||
-                        dockerURI.getQuery() != null || dockerURI.getFragment() != null ) {
+                        dockerURI.getQuery() != null || dockerURI.getFragment() != null) {
                     throw new IllegalArgumentException("Only host ip/name and port can be provided for tcp scheme.");
                 }
                 if (StringUtil.isEmpty(dockerURI.getHost())) {
@@ -314,7 +314,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 break;
             case UNIX:
                 if (dockerURI.getHost() != null || dockerURI.getPort() != -1 || dockerURI.getUserInfo() != null ||
-                        dockerURI.getQuery() != null || dockerURI.getFragment() != null ) {
+                        dockerURI.getQuery() != null || dockerURI.getFragment() != null) {
                     throw new IllegalArgumentException("Only path can be provided for unix scheme.");
                 }
                 if (usingTLS) {
@@ -338,7 +338,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
             connManager = new PoolingHttpClientConnectionManager(connectionOperator,
                     connectionFactory, -1, TimeUnit.SECONDS);
         } else {
-           connManager = new PoolingHttpClientConnectionManager(getDefaultRegistry(), connectionFactory, null);
+            connManager = new PoolingHttpClientConnectionManager(getDefaultRegistry(), connectionFactory, null);
         }
 
 

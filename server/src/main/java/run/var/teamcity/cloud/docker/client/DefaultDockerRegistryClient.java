@@ -30,16 +30,16 @@ public class DefaultDockerRegistryClient extends DockerAbstractClient implements
     /**
      * Creates a new registry client.
      *
-     * @param registryURI the registry URI
+     * @param registryURI    the registry URI
      * @param authServiceURI the authentication service URI
-     * @param service the authentication service name
+     * @param service        the authentication service name
      */
     public DefaultDockerRegistryClient(@NotNull URI registryURI, @NotNull URI authServiceURI, @NotNull String service) {
         super(ClientBuilder.newClient());
         DockerCloudUtils.requireNonNull(registryURI, "Resgistry URI cannot be null.");
         DockerCloudUtils.requireNonNull(authServiceURI, "Authentication service URI cannot be null.");
         DockerCloudUtils.requireNonNull(service, "Authentication server name cannot be null.");
-        ClientConfig config  = new ClientConfig();
+        ClientConfig config = new ClientConfig();
         config.connectorProvider(new ApacheConnectorProvider());
         config.property(ClientProperties.CONNECT_TIMEOUT, (int) TimeUnit.SECONDS.toMillis(CONNECT_TIMEOUT_SEC));
         jerseyClient = ClientBuilder.newClient(config);
@@ -69,7 +69,7 @@ public class DefaultDockerRegistryClient extends DockerAbstractClient implements
      * List tags available for a repo.
      *
      * @param loginToken the authentication token
-     * @param repo the repo to query
+     * @param repo       the repo to query
      *
      * @return the fetched tag list
      */

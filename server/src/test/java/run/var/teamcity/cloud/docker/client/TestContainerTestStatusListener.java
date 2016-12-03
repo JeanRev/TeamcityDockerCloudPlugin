@@ -12,6 +12,7 @@ public class TestContainerTestStatusListener implements ContainerTestListener {
     private boolean disposed = false;
 
     private final Deque<TestContainerStatusMsg> msgs = new ArrayDeque<>();
+
     @Override
     public synchronized void notifyStatus(TestContainerStatusMsg statusMsg) {
         if (statusMsg != null) {

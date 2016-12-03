@@ -79,6 +79,7 @@ public final class DockerCloudUtils {
      * The Docker socket default location on Unix systems.
      */
     public static final URI DOCKER_DEFAULT_SOCKET_URI;
+
     static {
         try {
             DOCKER_DEFAULT_SOCKET_URI = new URI("unix:///var/run/docker.sock");
@@ -86,6 +87,7 @@ public final class DockerCloudUtils {
             throw new AssertionError(e);
         }
     }
+
     /**
      * Debug flag system property.
      */
@@ -95,7 +97,9 @@ public final class DockerCloudUtils {
      */
     public static final String CLOUD_CODE = "VRDC";
 
-    static { assert CLOUD_CODE.length() == 4: "Per spec, the cloud code must be 4 chars long."; }
+    static {
+        assert CLOUD_CODE.length() == 4 : "Per spec, the cloud code must be 4 chars long.";
+    }
 
     /**
      * Prefix for environment variables to be published.
@@ -196,7 +200,7 @@ public final class DockerCloudUtils {
     public static UUID tryParseAsUUID(@Nullable String value) {
         try {
             return value != null ? UUID.fromString(value) : null;
-        }catch (IllegalArgumentException e ){
+        } catch (IllegalArgumentException e) {
             // Ignore.
         }
         return null;
@@ -239,7 +243,7 @@ public final class DockerCloudUtils {
      * Retrieves an environment variable value from an agent description.
      *
      * @param agentDescription the agent description
-     * @param name the variable name
+     * @param name             the variable name
      *
      * @return the variable value (may be {@code null})
      *
@@ -261,7 +265,7 @@ public final class DockerCloudUtils {
      * @return the string
      *
      * @throws NullPointerException if {@code inputStream} is {@code null}
-     * @throws IOException if an error occurred while reading the stream
+     * @throws IOException          if an error occurred while reading the stream
      */
     @NotNull
     public static String readUTF8String(@NotNull InputStream inputStream) throws IOException {
@@ -273,15 +277,15 @@ public final class DockerCloudUtils {
      * commonly occurs while truncating the string) will be ignored (replacement character will be used when
      * applicable). The provided stream will NOT be closed on completion.
      *
-     * @param inputStream the input stream to read from
+     * @param inputStream   the input stream to read from
      * @param maxByteLength the maximum count of bytes to be read or {@code -1} to read the whole stream.
      *
      * @return the string
      *
-     * @throws NullPointerException if {@code inputStream} is {@code null}
+     * @throws NullPointerException     if {@code inputStream} is {@code null}
      * @throws IllegalArgumentException if {@code maxByteLength} is smaller than {@code 1} but not equals to
-     * {@code -1}.
-     * @throws IOException if an error occurred while reading the stream
+     *                                  {@code -1}.
+     * @throws IOException              if an error occurred while reading the stream
      */
     @NotNull
     public static String readUTF8String(@NotNull InputStream inputStream, int maxByteLength) throws IOException {
@@ -332,7 +336,7 @@ public final class DockerCloudUtils {
     /**
      * Simple method to widen an signed {@code int} to a unsigned long.
      * <p>
-     *     Java-8: uses Integer.toUnsignedLong() instead.
+     * Java-8: uses Integer.toUnsignedLong() instead.
      * </p>
      *
      * @param value the signed {@code int}

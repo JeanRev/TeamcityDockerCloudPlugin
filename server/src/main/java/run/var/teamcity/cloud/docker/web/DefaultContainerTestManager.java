@@ -44,7 +44,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
     private boolean disposed = false;
 
     DefaultContainerTestManager(DockerImageNameResolver imageNameResolver,
-                         DockerClientFactory dockerClientFactory, SBuildServer buildServer, WebLinks webLinks,
+                                DockerClientFactory dockerClientFactory, SBuildServer buildServer, WebLinks webLinks,
                                 StreamingController streamingController) {
         this(imageNameResolver, dockerClientFactory, buildServer, webLinks, TEST_DEFAULT_IDLE_TIME_SEC,
                 CLEANUP_DEFAULT_TASK_RATE_SEC, streamingController);
@@ -166,7 +166,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
             throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Bad or expired token: " + testUuid);
         }
 
-        return  test;
+        return test;
     }
 
     private void activate() {
@@ -232,7 +232,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
             try {
                 try {
                     client.stopContainer(containerId, 10);
-                } catch (ContainerAlreadyStoppedException e)  {
+                } catch (ContainerAlreadyStoppedException e) {
                     // Ignore.
                 }
                 try {
@@ -309,7 +309,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
                         }
                     } else if (t instanceof InterruptedException || t instanceof CancellationException) {
                         // Cancelled task, ignore.
-                        LOG.info(test.getUuid()  + " was interrupted.", t);
+                        LOG.info(test.getUuid() + " was interrupted.", t);
                     } else {
                         // We should never end here into normal circumstances: the test tasks base class should handle
                         // itself checked and unchecked exceptions and update its internal state accordingly.

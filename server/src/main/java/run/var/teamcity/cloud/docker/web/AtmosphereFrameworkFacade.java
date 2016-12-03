@@ -15,6 +15,8 @@ public interface AtmosphereFrameworkFacade {
     void addWebSocketHandler(String path, WebSocketHandler handler);
 
     void addWebSocketHandler(String path, WebSocketHandler handler, AtmosphereHandler h, List<AtmosphereInterceptor> l);
+
     void doCometSupport(AtmosphereRequest req, AtmosphereResponse res) throws IOException, ServletException;
+
     BroadcasterFactoryFacade getBroadcasterFactory();
 }

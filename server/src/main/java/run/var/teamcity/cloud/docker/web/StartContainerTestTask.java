@@ -29,8 +29,8 @@ class StartContainerTestTask extends ContainerTestTask {
      * Creates a new task instance.
      *
      * @param testTaskHandler the test task handler
-     * @param containerId the ID of the container to be started
-     * @param instanceUuid the container test instance UUID
+     * @param containerId     the ID of the container to be started
+     * @param instanceUuid    the container test instance UUID
      */
     StartContainerTestTask(@NotNull ContainerTestTaskHandler testTaskHandler, @NotNull String containerId,
                            @NotNull UUID instanceUuid) {
@@ -75,7 +75,7 @@ class StartContainerTestTask extends ContainerTestTask {
                 throw new ContainerTestTaskException("Container exited prematurely (" + state + ")");
             }
         } else {
-            assert false: "Multiple containers found for the test instance UUID: " + instanceUuid;
+            assert false : "Multiple containers found for the test instance UUID: " + instanceUuid;
         }
 
         return PENDING;

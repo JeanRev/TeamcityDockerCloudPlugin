@@ -12,7 +12,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * An input stream filter with a fixed capacity. Invoking {@code close()} on this filter will not close the
  * underlying input stream.
  * <p>
- *     This stream filter is thread-safe to use, as long as the underlying stream is thread-safe as well.
+ * This stream filter is thread-safe to use, as long as the underlying stream is thread-safe as well.
  * </p>
  */
 class CappedInputStream extends FilterInputStream {
@@ -26,10 +26,10 @@ class CappedInputStream extends FilterInputStream {
     /**
      * Creates a new stream filter.
      *
-     * @param in the stream to wrap
+     * @param in       the stream to wrap
      * @param capacity the stream capacity
      *
-     * @throws NullPointerException if {@code in} is {@code null}
+     * @throws NullPointerException     if {@code in} is {@code null}
      * @throws IllegalArgumentException if {@code capacity} is smaller than 0
      */
     CappedInputStream(@NotNull InputStream in, long capacity) {

@@ -39,9 +39,9 @@ class JaxWsResponseFilterInputStream extends FilterInputStream {
      *
      * @return the created filter
      *
-     * @throws NullPointerException if {@code response} is {@code null}
+     * @throws NullPointerException     if {@code response} is {@code null}
      * @throws IllegalArgumentException if the response entity cannot be processed (for example, because it has already
-     * been consumed).
+     *                                  been consumed).
      */
     static JaxWsResponseFilterInputStream wrap(@NotNull Response response) {
         DockerCloudUtils.requireNonNull(response, "Response cannot be null.");

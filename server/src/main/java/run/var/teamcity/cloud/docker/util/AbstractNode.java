@@ -66,7 +66,7 @@ abstract class AbstractNode<N extends AbstractNode> {
         checkObject();
         Map<String, N> objectValues = new LinkedHashMap<>(node.size());
         Iterator<String> fieldNames = node.fieldNames();
-        while(fieldNames.hasNext()) {
+        while (fieldNames.hasNext()) {
             String fieldName = fieldNames.next();
             objectValues.put(fieldName, newNode(node.get(fieldName)));
         }
@@ -107,9 +107,9 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @return the child node
      *
-     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists or is
-     * not an object
+     *                                       not an object
      */
     @NotNull
     public N getObject(@NotNull String fieldName) {
@@ -127,17 +127,17 @@ abstract class AbstractNode<N extends AbstractNode> {
      * Gets the child object node with the specified name.
      *
      * @param fieldName the child field name
-     * @param def the default value to be used if the child node does not exists
+     * @param def       the default value to be used if the child node does not exists
      *
      * @return the child node or the provided default value
      *
-     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node or the child node is not an object
      */
     public N getObject(@NotNull String fieldName, @Nullable N def) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
-        if (def != null && ! ((AbstractNode) def).isObject()) {
+        if (def != null && !((AbstractNode) def).isObject()) {
             throw new IllegalArgumentException("Default node value is not an object.");
         }
         JsonNode object = node.get(fieldName);
@@ -154,9 +154,9 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @return the child node
      *
-     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists or is
-     * not an array
+     *                                       not an array
      */
     public N getArray(@NotNull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
@@ -173,11 +173,11 @@ abstract class AbstractNode<N extends AbstractNode> {
      * Gets the child array node with the specified name.
      *
      * @param fieldName the child field name
-     * @param def the default value to be used if the child node does not exists
+     * @param def       the default value to be used if the child node does not exists
      *
      * @return the child node or the provided default value
      *
-     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node is not an object, or if the child node is not an array
      */
     public N getArray(@NotNull String fieldName, @Nullable N def) {
@@ -201,9 +201,9 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @return the integer value
      *
-     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
-     * or is not an integer value node
+     *                                       or is not an integer value node
      */
     public int getAsInt(@NotNull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
@@ -211,7 +211,7 @@ abstract class AbstractNode<N extends AbstractNode> {
         JsonNode value = node.get(fieldName);
         if (value == null || !value.canConvertToInt()) {
             throw new UnsupportedOperationException("Child field not found or is not an integer value node: " +
-                    node + " / " +  fieldName);
+                    node + " / " + fieldName);
         }
         return value.asInt();
     }
@@ -220,13 +220,13 @@ abstract class AbstractNode<N extends AbstractNode> {
      * Gets the child integer node with the specified name.
      *
      * @param fieldName the child field name
-     * @param def the default value to be used if the child value node does not exists
+     * @param def       the default value to be used if the child value node does not exists
      *
      * @return the child node or the provided default value
      *
-     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node is not an object, or if the child node is not an integer
-     * value node
+     *                                       value node
      */
     public int getAsInt(@NotNull String fieldName, int def) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
@@ -246,9 +246,9 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @return the integer value
      *
-     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
-     * or is not an integer value node
+     *                                       or is not an integer value node
      */
     public BigInteger getAsBigInt(@NotNull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
@@ -262,7 +262,7 @@ abstract class AbstractNode<N extends AbstractNode> {
         }
         if (bigInt == null) {
             throw new UnsupportedOperationException("Child field not found or is not an integer value node: " +
-                    node + " / " +  fieldName);
+                    node + " / " + fieldName);
         }
         return bigInt;
     }
@@ -271,13 +271,13 @@ abstract class AbstractNode<N extends AbstractNode> {
      * Gets the child integer node with the specified name.
      *
      * @param fieldName the child field name
-     * @param def the default value to be used if the child value node does not exists
+     * @param def       the default value to be used if the child value node does not exists
      *
      * @return the child node or the provided default value
      *
-     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node is not an object, or if the child node is not an integer
-     * value node
+     *                                       value node
      */
     public BigInteger getAsBigInt(@NotNull String fieldName, BigInteger def) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
@@ -297,9 +297,9 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @return the integer value
      *
-     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
-     * or is not an integer value node
+     *                                       or is not an integer value node
      */
     public long getAsLong(@NotNull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
@@ -307,7 +307,7 @@ abstract class AbstractNode<N extends AbstractNode> {
         JsonNode value = node.get(fieldName);
         if (value == null || !value.canConvertToLong()) {
             throw new UnsupportedOperationException("Child field not found or is not an long value node: " +
-                    node + " / " +  fieldName);
+                    node + " / " + fieldName);
         }
         return value.asLong();
     }
@@ -319,9 +319,9 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @return the boolean value
      *
-     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
-     * or is not an boolean value node
+     *                                       or is not an boolean value node
      */
     public boolean getAsBoolean(@NotNull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
@@ -329,7 +329,7 @@ abstract class AbstractNode<N extends AbstractNode> {
         JsonNode value = node.get(fieldName);
         if (value == null || !value.isBoolean()) {
             throw new UnsupportedOperationException("Child field not found or is not an boolean value node: " +
-                    node + " / " +  fieldName);
+                    node + " / " + fieldName);
         }
 
         return value.asBoolean();
@@ -340,13 +340,13 @@ abstract class AbstractNode<N extends AbstractNode> {
      * Gets the child boolean node with the specified name.
      *
      * @param fieldName the child field name
-     * @param def the default value to be used if the child value node does not exists
+     * @param def       the default value to be used if the child value node does not exists
      *
      * @return the child node or the provided default value
      *
-     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node is not an object, or if the child node is not a boolean
-     * value node
+     *                                       value node
      */
     @Nullable
     public Boolean getAsBoolean(@NotNull String fieldName, @Nullable Boolean def) {
@@ -367,9 +367,9 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @return the boolean value
      *
-     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
-     * or is not a string value node
+     *                                       or is not a string value node
      */
     @NotNull
     public String getAsString(@NotNull String fieldName) {
@@ -378,7 +378,7 @@ abstract class AbstractNode<N extends AbstractNode> {
         JsonNode value = node.get(fieldName);
         if (value == null || !value.isTextual()) {
             throw new UnsupportedOperationException("Child field not found or is not a string value node: " +
-                    node + " / " +  fieldName);
+                    node + " / " + fieldName);
         }
         return value.asText();
     }
@@ -387,13 +387,13 @@ abstract class AbstractNode<N extends AbstractNode> {
      * Gets the child text node with the specified name.
      *
      * @param fieldName the child field name
-     * @param def the default value to be used if the child value node does not exists
+     * @param def       the default value to be used if the child value node does not exists
      *
      * @return the child node or the provided default value
      *
-     * @throws NullPointerException if {@code fieldName} is {@code null}
+     * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node is not an object, or if the child node is not a text
-     * value node
+     *                                       value node
      */
     @Nullable
     public String getAsString(@NotNull String fieldName, @Nullable String def) {

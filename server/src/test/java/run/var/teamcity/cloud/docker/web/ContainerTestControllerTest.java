@@ -1,6 +1,5 @@
 package run.var.teamcity.cloud.docker.web;
 
-import org.assertj.core.api.AssertProvider;
 import org.jdom.Element;
 import org.jdom.output.XMLOutputter;
 import org.testng.annotations.BeforeMethod;
@@ -11,7 +10,6 @@ import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.servlet.http.HttpServletResponse;
-
 import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -182,6 +180,6 @@ public class ContainerTestControllerTest {
 
     private TestContainerStatusMsg createStatusMsg(Phase phase) {
         return new TestContainerStatusMsg(TestUtils.TEST_UUID, phase,
-                Status.PENDING, "status msg",  null,null, Collections.emptyList());
+                Status.PENDING, "status msg", null, null, Collections.emptyList());
     }
 }

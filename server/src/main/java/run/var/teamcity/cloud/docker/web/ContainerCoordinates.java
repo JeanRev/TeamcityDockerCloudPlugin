@@ -1,7 +1,6 @@
 package run.var.teamcity.cloud.docker.web;
 
 import org.jetbrains.annotations.NotNull;
-import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 

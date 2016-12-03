@@ -11,7 +11,7 @@ interface DockerCloudErrorHandler {
     /**
      * Notify a failure to the handler
      *
-     * @param msg the error message
+     * @param msg       the error message
      * @param throwable the failure cause if any
      */
     void notifyFailure(@NotNull String msg, @Nullable Throwable throwable);

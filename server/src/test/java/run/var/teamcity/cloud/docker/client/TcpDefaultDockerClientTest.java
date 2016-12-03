@@ -19,7 +19,7 @@ public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
                 .threadPoolSize(threadPoolSize));
     }
 
-    public  void openValidInput() {
+    public void openValidInput() {
         // Missing port.
         DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1"), false)).close();
         DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1"), true)).close();

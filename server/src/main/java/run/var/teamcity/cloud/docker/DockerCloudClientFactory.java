@@ -27,7 +27,7 @@ public class DockerCloudClientFactory implements CloudClientFactory {
 
     public DockerCloudClientFactory(@NotNull final SBuildServer buildServer,
                                     @NotNull final CloudRegistrar cloudRegistrar,
-                                   @NotNull final PluginDescriptor pluginDescriptor,
+                                    @NotNull final PluginDescriptor pluginDescriptor,
                                     @Nullable final AgentTypeStorage agentTypeStorage) {
         this(buildServer, cloudRegistrar, pluginDescriptor, DockerClientFactory.getDefault(), agentTypeStorage);
     }

@@ -12,7 +12,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Instances of this class are not thread safe.</p>
  */
-public class EditableNode extends AbstractNode<EditableNode>{
+public class EditableNode extends AbstractNode<EditableNode> {
 
     EditableNode(JsonNode node) {
         super(node);
@@ -61,7 +61,7 @@ public class EditableNode extends AbstractNode<EditableNode>{
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         ObjectNode objectNode = getObjectNode();
         JsonNode childNode = objectNode.get(fieldName);
-        if (childNode != null && !(childNode instanceof ArrayNode) ) {
+        if (childNode != null && !(childNode instanceof ArrayNode)) {
             throw new UnsupportedOperationException("Child node exists but is not an array: " + node + " / " + fieldName);
         }
         return newNode(node.withArray(fieldName));

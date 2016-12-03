@@ -7,11 +7,11 @@ import org.jetbrains.annotations.Nullable;
  */
 public class ContainerAlreadyStoppedException extends InvocationFailedException {
 
-        /**
-         * Creates a new exception with the specified message.
-         *
-         * @param msg the message (may be null)
-         */
+    /**
+     * Creates a new exception with the specified message.
+     *
+     * @param msg the message (may be null)
+     */
     public ContainerAlreadyStoppedException(@Nullable String msg) {
         super(msg);
     }

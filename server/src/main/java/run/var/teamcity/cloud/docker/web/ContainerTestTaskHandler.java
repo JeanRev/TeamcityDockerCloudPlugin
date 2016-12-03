@@ -2,7 +2,6 @@ package run.var.teamcity.cloud.docker.web;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
@@ -33,11 +32,11 @@ public interface ContainerTestTaskHandler {
     /**
      * Notify the test status back to the user.
      *
-     * @param phase the test phase
-     * @param status the test status
-     * @param msg the status message (may be {@code null})
+     * @param phase        the test phase
+     * @param status       the test status
+     * @param msg          the status message (may be {@code null})
      * @param failureCause the failure cause (may be {@code null})
-     * @param warnings a list of encountered warnings
+     * @param warnings     a list of encountered warnings
      *
      * @throws NullPointerException if {@code phase}, {@code status} or {@code warnings} is {@code null}
      */

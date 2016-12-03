@@ -20,7 +20,7 @@ import java.net.Socket;
  * because the default one does not work wells with the third-party lib we are using to access unix sockets. More,
  * specifically, our unix socket instances do not allow to reconfigure some socket properties once opened.
  */
-class UnixSocketClientConnectionOperator  implements HttpClientConnectionOperator {
+class UnixSocketClientConnectionOperator implements HttpClientConnectionOperator {
 
     private static final ThreadLocal<ManagedHttpClientConnection> localConnection = new ThreadLocal<>();
 

@@ -13,7 +13,7 @@ public class ScheduledFutureWithRunnable<R extends Runnable> extends WrappedRunn
     /**
      * Creates a new wrapper instance.
      *
-     * @param task the task to be referenced
+     * @param task    the task to be referenced
      * @param wrapped the future to be wrapped
      *
      * @throws NullPointerException if any argument is {@code null}

@@ -33,11 +33,11 @@ class CreateContainerTestTask extends ContainerTestTask {
      * Creates a new task instance.
      *
      * @param testTaskHandler the test task handler
-     * @param imageConfig the cloud image configuration to use for creating the container
-     * @param serverUrl the TeamCity server URL for the agent to connect
-     * @param instanceUuid the container test instance UUID to be published (will be used to detect connection from
-     * the test agent latter)
-     * @param imageResolver resolver for agent images
+     * @param imageConfig     the cloud image configuration to use for creating the container
+     * @param serverUrl       the TeamCity server URL for the agent to connect
+     * @param instanceUuid    the container test instance UUID to be published (will be used to detect connection from
+     *                        the test agent latter)
+     * @param imageResolver   resolver for agent images
      *
      * @throws NullPointerException if any argument is {@code null}
      */
@@ -100,7 +100,7 @@ class CreateContainerTestTask extends ContainerTestTask {
                     }
                     if (trackedLayer == null) {
                         trackedLayer = id;
-                    } else  if (!trackedLayer.equals(id)) {
+                    } else if (!trackedLayer.equals(id)) {
                         continue;
                     }
                     if (!inProgress) {
@@ -133,7 +133,7 @@ class CreateContainerTestTask extends ContainerTestTask {
         }
 
         msg("Creating container");
-        Node containerNode =  client.createContainer(container.saveNode(), null);
+        Node containerNode = client.createContainer(container.saveNode(), null);
         String containerId = containerNode.getAsString("Id");
 
         Node warnings = containerNode.getArray("Warnings", Node.EMPTY_ARRAY);

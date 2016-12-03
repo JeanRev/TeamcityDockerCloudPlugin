@@ -59,7 +59,7 @@ public class DockerCloudClientConfigTest {
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> new DockerCloudClientConfig(TestUtils.TEST_UUID,
                 dockerConfig, true, 1, serverURL));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> new DockerCloudClientConfig(TestUtils.TEST_UUID,
-                dockerConfig, true, 0,serverURL));
+                dockerConfig, true, 0, serverURL));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> new DockerCloudClientConfig(TestUtils.TEST_UUID,
                 dockerConfig, true, -1, serverURL));
     }

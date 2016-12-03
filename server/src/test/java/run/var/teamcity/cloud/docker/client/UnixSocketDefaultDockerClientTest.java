@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class UnixSocketDefaultDockerClientTest extends DefaultDockerClientTest {
 
-    public  void openValidInput() {
+    public void openValidInput() {
         DefaultDockerClient.newInstance(createConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI, false)).close();
         // Minimal valid url: scheme an absolute path.
         DefaultDockerClient.newInstance(createConfig(URI.create("unix:/some/non/sandard/location.sock"), false)).close();
@@ -42,7 +42,7 @@ public class UnixSocketDefaultDockerClientTest extends DefaultDockerClientTest {
         if (dockerUnixSocket == null) {
             throw new SkipException("Java system variable docker.test.unix.socket not set. Skipping Unix socket based tests.");
         }
-        return  DefaultDockerClient.newInstance(createConfig(new URI("unix://" + dockerUnixSocket), false)
+        return DefaultDockerClient.newInstance(createConfig(new URI("unix://" + dockerUnixSocket), false)
                 .threadPoolSize(threadPoolSize));
     }
 }

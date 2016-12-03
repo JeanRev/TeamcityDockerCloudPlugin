@@ -20,7 +20,7 @@ public class DockerCloudClientConfigException extends RuntimeException {
      *
      * @param invalidProperties the properties list
      *
-     * @throws NullPointerException if {@code invalidProperties} is {@code null}
+     * @throws NullPointerException     if {@code invalidProperties} is {@code null}
      * @throws IllegalArgumentException if {@code invalidProperties} is empty
      */
     public DockerCloudClientConfigException(@NotNull List<InvalidProperty> invalidProperties) {

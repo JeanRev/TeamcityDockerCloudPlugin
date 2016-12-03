@@ -106,7 +106,7 @@ public abstract class DefaultDockerClientTest {
         final String stderrMsg = STDERR_MSG_PREFIX + "print something on stderr";
 
         try (StreamHandler attachHandler = client.attach(containerId)) {
-            try(StreamHandler logHandler = client.streamLogs(containerId, 3, StdioType.all(), true)) {
+            try (StreamHandler logHandler = client.streamLogs(containerId, 3, StdioType.all(), true)) {
                 try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(attachHandler.getOutputStream(),
                         StandardCharsets.UTF_8))) {
 

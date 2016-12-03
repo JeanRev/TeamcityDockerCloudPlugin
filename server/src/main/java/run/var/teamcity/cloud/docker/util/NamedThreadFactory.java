@@ -22,13 +22,13 @@ public class NamedThreadFactory implements ThreadFactory {
      * @throws NullPointerException if {@code name} is {@code null}
      */
     public NamedThreadFactory(@NotNull String name) {
-       this(name, false);
+        this(name, false);
     }
 
     /**
      * Creates a new factory instance with usingDaemonThreads threads support.
      *
-     * @param name the name to be used for new threads
+     * @param name               the name to be used for new threads
      * @param usingDaemonThreads {@code true} if usingDaemonThreads thread must be created
      *
      * @throws NullPointerException if {@code name} is {@code null}

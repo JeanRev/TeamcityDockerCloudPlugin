@@ -17,9 +17,12 @@ public class DockerCloudSettingsController extends BaseController {
 
     public final static String EDIT_PATH = "docker-cloud-settings.html";
 
-    @NotNull private final PluginDescriptor pluginDescriptor;
-    @NotNull private final String jspPath;
-    @NotNull private final String htmlPath;
+    @NotNull
+    private final PluginDescriptor pluginDescriptor;
+    @NotNull
+    private final String jspPath;
+    @NotNull
+    private final String htmlPath;
 
     public DockerCloudSettingsController(@NotNull SBuildServer server,
                                          @NotNull PluginDescriptor pluginDescriptor,

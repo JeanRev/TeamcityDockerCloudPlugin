@@ -60,10 +60,10 @@ public class TestContainerStatusMsg {
     /**
      * Creates a new status message instance.
      *
-     * @param uuid the test UUID
-     * @param phase the test phase
-     * @param status the test status
-     * @param msg the status message (may be {@code null})
+     * @param uuid    the test UUID
+     * @param phase   the test phase
+     * @param status  the test status
+     * @param msg     the status message (may be {@code null})
      * @param failure a failure cause (may be {@code null})
      *
      * @throws NullPointerException if {@code uuid}, {@code phase}, or {@code status} are {@code null}

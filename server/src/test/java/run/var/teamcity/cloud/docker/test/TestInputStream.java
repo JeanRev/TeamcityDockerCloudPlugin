@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * Simple input stream filter tracking various interactions.
  * <p>
- *     For test purpose only.
+ * For test purpose only.
  * </p>
  */
 public class TestInputStream extends FilterInputStream {

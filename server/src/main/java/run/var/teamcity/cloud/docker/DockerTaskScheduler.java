@@ -23,12 +23,10 @@ import java.util.concurrent.locks.ReentrantLock;
  * {@link ThreadPoolExecutor}) where tasks are considered <i>scheduled</i> but not yet <i>submitted</i>. Submission
  * is only performed when all the required conditions are met:
  * <ul>
- *     <li>Client tasks: require that no other task to be to be submitted for execution. They will always be
- *     processed before instance tasks independently of their submission order.
- *     </li>
- *     <li>Instance tasks: require that no client task, or task for the same cloud instance, to be submitted for
- *     execution.
- *     </li>
+ * <li>Client tasks: require that no other task to be to be submitted for execution. They will always be
+ * processed before instance tasks independently of their submission order.</li>
+ * <li>Instance tasks: require that no client task, or task for the same cloud instance, to be submitted for
+ * execution.</li>
  * </ul>
  * </p>
  *
@@ -55,7 +53,7 @@ class DockerTaskScheduler {
     /**
      * Creates a new scheduler instance.
      *
-     * @param threadPoolSize the size of the thread pool
+     * @param threadPoolSize    the size of the thread pool
      * @param usingDaemonThread {@code true} to use daemon threads
      *
      * @throws IllegalArgumentException if {@code threadPoolSize} is smaller than 1
@@ -64,8 +62,8 @@ class DockerTaskScheduler {
         if (threadPoolSize < 1) {
             throw new IllegalArgumentException("Thread pool size must be strictly greater than 1.");
         }
-         executor = new ScheduledThreadPoolExecutor(threadPoolSize,
-                 new NamedThreadFactory("DockerTaskScheduler", usingDaemonThread)) {
+        executor = new ScheduledThreadPoolExecutor(threadPoolSize,
+                new NamedThreadFactory("DockerTaskScheduler", usingDaemonThread)) {
             @Override
             protected <V> RunnableScheduledFuture<V> decorateTask(Callable<V> callable, RunnableScheduledFuture<V> task) {
                 return new WrappedRunnableScheduledFuture<>(callable, task);
@@ -107,7 +105,7 @@ class DockerTaskScheduler {
                         DockerInstanceTask instanceTask = (DockerInstanceTask) task;
                         DockerInstance instance = instanceTask.getInstance();
                         boolean unmarked = submittedInstancesUUID.remove(instance.getUuid());
-                        assert unmarked: "Task " + instanceTask + " was not marked as being processed.";
+                        assert unmarked : "Task " + instanceTask + " was not marked as being processed.";
                     }
 
                     if (throwable == null) {
@@ -198,9 +196,9 @@ class DockerTaskScheduler {
     private void scheduleNextTasks() {
         assert lock.isHeldByCurrentThread();
 
-        LOG.debug("Scheduling status: submitted instance tasks: " +  submittedInstancesUUID.size() + ", client task " +
+        LOG.debug("Scheduling status: submitted instance tasks: " + submittedInstancesUUID.size() + ", client task " +
                 "submitted: " + clientTaskSubmitted + ", instances tasks scheduled: " + instancesTask.size() + ", " +
-        " client tasks scheduled: " + clientTasks.size());
+                " client tasks scheduled: " + clientTasks.size());
 
         if (!clientTaskSubmitted) {
             if (!clientTasks.isEmpty()) {
@@ -216,7 +214,7 @@ class DockerTaskScheduler {
             } else {
                 // No client tasks are waiting or is being processed, we may execute instance tasks.
                 Iterator<DockerInstanceTask> itr = instancesTask.iterator();
-                while(itr.hasNext()) {
+                while (itr.hasNext()) {
                     DockerInstanceTask instanceTask = itr.next();
                     DockerInstance instance = instanceTask.getInstance();
                     UUID instanceUuid = instance.getUuid();
@@ -230,7 +228,7 @@ class DockerTaskScheduler {
 
                         // Mark the instance tasks as being submitted.
                         submittedInstancesUUID.add(instanceUuid);
-                        itr.remove();;
+                        itr.remove();
                         executor.submit(instanceTask);
                     } else {
                         LOG.debug("Tasks for instance " + instance.getUuid() + " already submitted, delaying scheduled"
@@ -245,7 +243,7 @@ class DockerTaskScheduler {
         shutdownCheck();
     }
 
-    private class ScheduleRepetableTask implements Callable<Void>{
+    private class ScheduleRepetableTask implements Callable<Void> {
         final DockerTask task;
 
         ScheduleRepetableTask(DockerTask task) {

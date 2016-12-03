@@ -16,12 +16,12 @@ import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
  * {@link TestContainerStatusMsg.Status status} and provide helper methods to interact with the
  * {@link ContainerTestTaskHandler test task handler}.
  * <p>
- *     A test task can covers multiple test {@link TestContainerStatusMsg.Phase phases}, and has one initial phase
- *     which can be queried before the test has started running.
+ * A test task can covers multiple test {@link TestContainerStatusMsg.Phase phases}, and has one initial phase
+ * which can be queried before the test has started running.
  * </p>
  * <p>
- *     The {@link #run()} method of this task is never expected to throw an exception. Instead, it will manage its
- *     status accordingly and notify the test handler.
+ * The {@link #run()} method of this task is never expected to throw an exception. Instead, it will manage its
+ * status accordingly and notify the test handler.
  * </p>
  */
 abstract class ContainerTestTask implements Runnable {
@@ -40,7 +40,7 @@ abstract class ContainerTestTask implements Runnable {
      * Creates a new task instance.
      *
      * @param testTaskHandler the test task handler
-     * @param initialPhase the initial phase of the test
+     * @param initialPhase    the initial phase of the test
      *
      * @throws NullPointerException if any argument is {@code null}
      */
@@ -63,7 +63,7 @@ abstract class ContainerTestTask implements Runnable {
     /**
      * Notify a user message and new phase.
      *
-     * @param msg the message to be notified
+     * @param msg   the message to be notified
      * @param phase the new phase to be notified
      */
     void msg(@NotNull String msg, @NotNull Phase phase) {
@@ -135,7 +135,7 @@ abstract class ContainerTestTask implements Runnable {
                     throw new IllegalStateException("Cannot run task in status " + status + ".");
                 }
                 status = work();
-            }  catch (Exception e) {
+            } catch (Exception e) {
                 status = Status.FAILURE;
                 error = e;
                 msg = e.getMessage();

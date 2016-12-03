@@ -16,7 +16,7 @@ public class TestDockerClientFactory extends DockerClientFactory {
         return client;
     }
 
-    public TestDockerClient  getClient() {
+    public TestDockerClient getClient() {
         return client;
     }
 

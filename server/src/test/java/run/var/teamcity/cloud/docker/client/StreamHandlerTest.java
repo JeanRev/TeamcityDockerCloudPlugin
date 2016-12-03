@@ -41,6 +41,7 @@ public abstract class StreamHandlerTest {
     protected StreamHandler createHandler() {
         return createHandler(closeHandle, inputStream, outputStream);
     }
+
     protected abstract StreamHandler createHandler(TestInputStream closeHandle, TestInputStream inputStream,
                                                    TestOutputStream outputStream);
 }

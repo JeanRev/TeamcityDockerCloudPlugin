@@ -32,11 +32,10 @@ public class DockerCloudClientConfig {
     /**
      * Creates a new configuration instance.
      *
-     * @param uuid the cloud client UUID
+     * @param uuid               the cloud client UUID
      * @param dockerClientConfig the Docker client configuration
      * @param usingDaemonThreads {@code true} if the client must use daemon threads to manage containers
-     * @param serverURL the server URL to be configured on the agents
-     *
+     * @param serverURL          the server URL to be configured on the agents
      * @throws NullPointerException if any argument is {@code null}
      */
     public DockerCloudClientConfig(@NotNull UUID uuid, @NotNull DockerClientConfig dockerClientConfig,
@@ -47,13 +46,12 @@ public class DockerCloudClientConfig {
     /**
      * Creates a new configuration instance.
      *
-     * @param uuid the cloud client UUID
+     * @param uuid               the cloud client UUID
      * @param dockerClientConfig the Docker client configuration
      * @param usingDaemonThreads {@code true} if the client must use daemon threads to manage containers
-     * @param dockerSyncRateSec the rate at which the client is synchronized with the Docker daemon, in seconds
-     * @param serverURL the server URL to be configured on the agents
-     *
-     * @throws NullPointerException if any argument is {@code null}
+     * @param dockerSyncRateSec  the rate at which the client is synchronized with the Docker daemon, in seconds
+     * @param serverURL          the server URL to be configured on the agents
+     * @throws NullPointerException     if any argument is {@code null}
      * @throws IllegalArgumentException if the Docker sync rate is below 2 seconds
      */
     public DockerCloudClientConfig(@NotNull UUID uuid, @NotNull DockerClientConfig dockerClientConfig,
@@ -116,9 +114,7 @@ public class DockerCloudClientConfig {
      * Load the configuration from the Teamcity properties map.
      *
      * @param properties the properties map
-     *
      * @return the loaded configuration
-     *
      * @throws DockerCloudClientConfigException if no valid configuration could be build from the properties map
      */
     @NotNull
@@ -191,11 +187,10 @@ public class DockerCloudClientConfig {
     /**
      * Generic validation method for a required field.
      *
-     * @param msg the error message to be used if the condition is not met
-     * @param key the property key
-     * @param properties the properties map
+     * @param msg               the error message to be used if the condition is not met
+     * @param key               the property key
+     * @param properties        the properties map
      * @param invalidProperties the collection of invalid properties to be used
-     *
      * @return the property value or {@code null} if missing
      */
     @Nullable

@@ -16,8 +16,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 /**
  * All purpose utility class for tests.
  */
@@ -31,7 +29,7 @@ public final class TestUtils {
     private final static int WAIT_DEFAULT_MAX_WAIT_TIME_SEC = 20;
 
     public static void waitSec(long sec) {
-       waitMillis(TimeUnit.SECONDS.toMillis(sec));
+        waitMillis(TimeUnit.SECONDS.toMillis(sec));
     }
 
     public static void waitMillis(long ms) {
@@ -48,7 +46,7 @@ public final class TestUtils {
 
     public static void waitUntil(Supplier<Boolean> condition, long maxWaitSec) {
         long waitSince = System.nanoTime();
-        while(!condition.get()) {
+        while (!condition.get()) {
             if (Math.abs(System.nanoTime() - waitSince) > TimeUnit.SECONDS.toNanos(maxWaitSec)) {
                 throw new RuntimeException("Time out.");
             }
@@ -76,12 +74,12 @@ public final class TestUtils {
     }
 
     public static Map<String, String> getSampleDockerConfigParams() {
-       return getSampleDockerConfigParams(true);
+        return getSampleDockerConfigParams(true);
     }
 
     public static Map<String, String> getSampleDockerConfigParams(boolean withPrefix) {
         String prefix = withPrefix ? DockerCloudUtils.TC_PROPERTY_PREFIX : "";
-        
+
         Map<String, String> params = new HashMap<>();
         params.put(prefix + DockerCloudUtils.CLIENT_UUID, TEST_UUID.toString());
         params.put(prefix + DockerCloudUtils.INSTANCE_URI, TestDockerClient.TEST_CLIENT_URI.toString());

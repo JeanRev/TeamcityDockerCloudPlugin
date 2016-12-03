@@ -17,7 +17,7 @@ import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
 
-public class ContainerSpecTest implements ContainerTestTaskHandler{
+public class ContainerSpecTest implements ContainerTestTaskHandler {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(ContainerSpecTest.class);
 
@@ -36,7 +36,7 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
 
     private ContainerSpecTest(DockerClientConfig clientConfig, DockerClient client,
                               ContainerTestListener statusListener, StreamingController streamingController) {
-        assert client != null  && statusListener != null;
+        assert client != null && statusListener != null;
 
         this.clientConfig = clientConfig;
         this.client = client;
@@ -63,7 +63,6 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
      * Gets the test UUID.
      *
      * @return the test UUID
-     *
      */
     @NotNull
     public UUID getUuid() {
@@ -111,7 +110,7 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         lock.lock();
         try {
             return currentTaskFuture;
-        }finally {
+        } finally {
             lock.unlock();
         }
     }
@@ -146,7 +145,7 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
      * @throws NullPointerException if {@code currentTask} is {@code null}
      */
     public void setCurrentTask(@NotNull ScheduledFutureWithRunnable<? extends ContainerTestTask>
-            currentTask) {
+                                       currentTask) {
         DockerCloudUtils.requireNonNull(currentTask, "Current task cannot be null.");
         lock.lock();
         try {

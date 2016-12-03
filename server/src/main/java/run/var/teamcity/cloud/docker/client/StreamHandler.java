@@ -13,8 +13,8 @@ import java.io.OutputStream;
  * Gives access to a process streams. The {@code STDIN} to the process is available as an {@code OutputStream}. The
  * process output may then be read as a sequence of one or several {@link StdioInputStream}.
  * <p>
- *     Closing a stream does not necessarily close the others, but closing this handlers will close all of the wrapped
- *     streams.
+ * Closing a stream does not necessarily close the others, but closing this handlers will close all of the wrapped
+ * streams.
  * </p>
  */
 public abstract class StreamHandler implements AutoCloseable {
@@ -26,8 +26,8 @@ public abstract class StreamHandler implements AutoCloseable {
     /**
      * Creates a new handler instance.
      *
-     * @param closeHandle the source entity that will need to be closed along the wrapped streams
-     * @param inputStream the process input that will be demultiplexed
+     * @param closeHandle  the source entity that will need to be closed along the wrapped streams
+     * @param inputStream  the process input that will be demultiplexed
      * @param outputStream the process output stream
      *
      * @throws NullPointerException if any argument is {@code null}
@@ -68,4 +68,3 @@ public abstract class StreamHandler implements AutoCloseable {
         closeHandle.close();
     }
 }
-;

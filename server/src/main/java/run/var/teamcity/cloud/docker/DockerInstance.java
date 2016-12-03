@@ -77,7 +77,8 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      * Sets the Docker container ID.
      *
      * @param containerId the container ID
-     *S
+     *                    S
+     *
      * @throws NullPointerException if {@code containerId} is {@code null}
      */
     void setContainerId(@NotNull String containerId) {

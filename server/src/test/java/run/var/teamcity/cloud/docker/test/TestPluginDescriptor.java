@@ -22,7 +22,7 @@ public class TestPluginDescriptor implements PluginDescriptor {
     @NotNull
     @Override
     public String getPluginResourcesPath(@NotNull String relativePath) {
-        return  "/test/not/a/real/plugin/resources/path";
+        return "/test/not/a/real/plugin/resources/path";
     }
 
     @Nullable

@@ -15,8 +15,7 @@ abstract class DockerClientTask extends DockerTask {
      * Creates a one-shot task.
      *
      * @param operationName the operation name
-     * @param client the cloud client
-     *
+     * @param client        the cloud client
      * @throws NullPointerException if any argument is {@code null}
      */
     DockerClientTask(@NotNull String operationName, @NotNull DockerCloudClient client) {
@@ -28,17 +27,16 @@ abstract class DockerClientTask extends DockerTask {
      * Creates a repeatable task.
      *
      * @param operationName the operation name
-     * @param client the cloud client
-     * @param initialDelay the delay preceding the initial scheduling of the task
-     * @param delay the delay preceding the subsequent scheduling of the task
-     * @param timeUnit the time unit used with
-     *
-     * @throws NullPointerException if any argument is {@code null}
+     * @param client        the cloud client
+     * @param initialDelay  the delay preceding the initial scheduling of the task
+     * @param delay         the delay preceding the subsequent scheduling of the task
+     * @param timeUnit      the time unit used with
+     * @throws NullPointerException     if any argument is {@code null}
      * @throws IllegalArgumentException if a delay is negative
      */
     DockerClientTask(@NotNull String operationName, @NotNull DockerCloudClient client, long initialDelay, long delay,
                      @NotNull TimeUnit
-            timeUnit) {
+                             timeUnit) {
         super(operationName, client, initialDelay, delay, timeUnit);
         this.client = client;
     }

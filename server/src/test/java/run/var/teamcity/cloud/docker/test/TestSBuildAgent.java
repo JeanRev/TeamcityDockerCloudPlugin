@@ -26,6 +26,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     private boolean enabled = true;
 
     private final Map<String, String> availableParameters = new HashMap<>();
+
     @NotNull
     @Override
     public List<RunType> getAvailableRunTypes() {

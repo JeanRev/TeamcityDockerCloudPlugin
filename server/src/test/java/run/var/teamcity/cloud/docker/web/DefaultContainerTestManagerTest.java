@@ -196,7 +196,7 @@ public class DefaultContainerTestManagerTest {
         queryUntilFailure();
     }
 
-    private void setupFastCleanupRate(){
+    private void setupFastCleanupRate() {
         cleanupRateSec = 2;
         testMaxIdleTime = 3;
     }

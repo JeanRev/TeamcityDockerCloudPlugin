@@ -22,10 +22,11 @@ public class WrappedRunnableScheduledFuture<T, V> implements RunnableScheduledFu
     private final T task;
     private final RunnableScheduledFuture<V> wrapped;
 
-    /**s
+    /**
+     * s
      * Creates a new wrapper instance.
      *
-     * @param task the source task
+     * @param task    the source task
      * @param wrapped the object to which all invocations will be delegated
      */
     public WrappedRunnableScheduledFuture(@NotNull T task, @NotNull RunnableScheduledFuture<V> wrapped) {

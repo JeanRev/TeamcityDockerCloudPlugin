@@ -92,7 +92,7 @@ public class DockerImageConfig {
      *
      * @return the loaded list of images
      *
-     * @throws NullPointerException if the properties map is {@code null}
+     * @throws NullPointerException             if the properties map is {@code null}
      * @throws DockerCloudClientConfigException if the image configuration is not valid
      */
     @NotNull
@@ -133,7 +133,7 @@ public class DockerImageConfig {
      *
      * @return the loaded configuration
      *
-     * @throws NullPointerException if {@code node} is {@code null}
+     * @throws NullPointerException     if {@code node} is {@code null}
      * @throws IllegalArgumentException if no valid configuration could be build from the provided JSON node
      */
     @NotNull

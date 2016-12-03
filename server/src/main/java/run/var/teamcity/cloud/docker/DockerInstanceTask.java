@@ -17,10 +17,10 @@ abstract class DockerInstanceTask extends DockerTask {
     /**
      * Creates a one-shot task.
      *
-     * @param operationName the operation name
-     * @param instance the cloud instance
+     * @param operationName   the operation name
+     * @param instance        the cloud instance
      * @param scheduledStatus the instance status to be set when the task is scheduled for execution or {@code null} if
-     * none
+     *                        none
      *
      * @throws NullPointerException if {@code operationName} or {@code instance} is {@code null}
      */

@@ -6,15 +6,9 @@ import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 public class TestContainerTestManager extends ContainerTestManager {
-
-    public enum TestStatus {
-
-    }
 
     private DockerCloudClientConfig clientConfig;
     private DockerImageConfig imageConfig;

@@ -350,7 +350,7 @@ class ApacheConnector implements Connector {
             @Override
             protected boolean canResponseHaveBody(HttpRequest request, HttpResponse response) {
                 boolean canResponseHaveBody = super.canResponseHaveBody(request, response);
-                return  canResponseHaveBody || response.getStatusLine().getStatusCode() == HttpStatus
+                return canResponseHaveBody || response.getStatusLine().getStatusCode() == HttpStatus
                         .SC_SWITCHING_PROTOCOLS;
             }
         });

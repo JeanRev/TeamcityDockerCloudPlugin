@@ -245,7 +245,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     @Nullable
     @Override
     public CloudErrorInfo getErrorInfo() {
-            return errorInfo;
+        return errorInfo;
     }
 
     @Override
@@ -351,7 +351,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                     try (NodeStream nodeStream = dockerClient.createImage(image, null)) {
                         Node status;
-                        while((status = nodeStream.next()) != null) {
+                        while ((status = nodeStream.next()) != null) {
                             String error = status.getAsString("error", null);
                             if (error != null) {
                                 Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
@@ -365,7 +365,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                         LOG.warn("Failed to pull image " + image + " for instance " + instance.getUuid() +
                                 ", proceeding anyway.", e);
                     }
-                    Node createNode =  dockerClient.createContainer(containerSpec, null);
+                    Node createNode = dockerClient.createContainer(containerSpec, null);
                     containerId = createNode.getAsString("Id");
                     LOG.info("New container " + containerId + " created.");
                 } else {
@@ -449,7 +449,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         buildServer.removeListener(serverListener);
 
         LOG.info("Starting disposal of client.");
-        for(DockerImage image : getImages()) {
+        for (DockerImage image : getImages()) {
             for (DockerInstance instance : image.getInstances()) {
                 // Terminate the instance but do not bother notify server. If the cloud client is disposed as part of
                 // the shutdown process, it would raise an exception anyway.
@@ -479,7 +479,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                     containerAvailable = terminateContainer(containerId, rmContainer);
                 }
 
-                try  {
+                try {
                     lock.lock();
                     dockerInstance.setStatus(InstanceStatus.STOPPED);
                     if (!containerAvailable) {
@@ -550,10 +550,9 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
      * currently done by publishing the corresponding UUIDs as container label and as environment variables (such
      * variables can then be queried through the TC agent API).
      *
-     * @param instance the docker instance for which the container will be created
+     * @param instance      the docker instance for which the container will be created
      * @param resolvedImage the exact image name that was resolved
-     * @param serverUrl the TC server URL
-     *
+     * @param serverUrl     the TC server URL
      * @return the authored JSON node
      */
     private Node authorContainerSpec(DockerInstance instance, String resolvedImage, String serverUrl) {
@@ -618,7 +617,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 if (remainingDelay > 0) {
                     nextDelay = remainingDelay;
                     return true;
-                }  else {
+                } else {
                     nextDelay = delay;
                     return false;
                 }
@@ -650,7 +649,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 for (DockerImage image : images.values()) {
                     for (DockerInstance instance : image.getInstances()) {
                         boolean unique = instances.put(instance.getUuid(), instance) == null;
-                        assert unique: "Found instance " + instance.getUuid() + " across several images.";
+                        assert unique : "Found instance " + instance.getUuid() + " across several images.";
                     }
                 }
 

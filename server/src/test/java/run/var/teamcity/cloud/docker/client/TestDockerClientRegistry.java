@@ -5,11 +5,7 @@ import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 
@@ -48,7 +44,7 @@ public class TestDockerClientRegistry implements DockerRegistryClient {
         lock.lock();
         try {
             String scope = loginTokenToScopes.get(UUID.fromString(loginToken));
-            if (scope == null || !scope.equals("repository:" + repo+ ":pull")) {
+            if (scope == null || !scope.equals("repository:" + repo + ":pull")) {
                 throw new InvocationFailedException("Test authorization failed. Not in scope: " + repo);
             }
 

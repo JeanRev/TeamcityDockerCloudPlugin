@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -39,7 +38,7 @@ public class Node extends AbstractNode<Node> {
     /**
      * Parse an input stream of node as a stream of nodes.
      * <p>
-     *     The implementation must be able to handle at least whitespace characters between the node themselves.
+     * The implementation must be able to handle at least whitespace characters between the node themselves.
      * </p>
      *
      * @param jsonStream the input stream
