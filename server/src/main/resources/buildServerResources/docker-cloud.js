@@ -879,6 +879,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                     var currentProfile = self.$imageDialogSubmitBtn.data('profile');
                     var newProfile = settings.Administration.Profile;
+                    self.logDebug("Saving profile: " + newProfile + "(was: " + currentProfile + ")");
                     delete self.imagesData[currentProfile];
                     self.imagesData[newProfile] = settings;
                     var tmp = [];
