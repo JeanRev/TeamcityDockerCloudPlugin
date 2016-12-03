@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker.web;
 
 import com.intellij.openapi.diagnostic.Logger;
+import jetbrains.buildServer.BuildAgent;
 import jetbrains.buildServer.serverSide.*;
 import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
@@ -376,7 +377,13 @@ class DefaultContainerTestManager extends ContainerTestManager {
     private void cleanUpTestAgents() {
 
         BuildAgentManager agentMgr = buildServer.getBuildAgentManager();
-        for (SBuildAgent agent : agentMgr.getUnregisteredAgents()) {
+        List<? extends SBuildAgent> agents;
+        if (agentMgr instanceof BuildAgentManagerEx) {
+            agents = ((BuildAgentManagerEx) agentMgr).getUnregisteredAgents(true);
+        } else {
+            agents = agentMgr.getUnregisteredAgents();
+        }
+        for (SBuildAgent agent : agents) {
             String uuidStr = DockerCloudUtils.getEnvParameter(agent, DockerCloudUtils.ENV_TEST_INSTANCE_ID);
             UUID instanceUuid = DockerCloudUtils.tryParseAsUUID(uuidStr);
             if (instanceUuid != null) {

@@ -577,9 +577,10 @@
             </tr>
             <tr>
                 <th>
-                    <label for="dockerCloudImage_LogType">Logging drivers:</label>
-                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
-                    <span class="tooltiptext">Log configuration for the container.</span>
+                    <label for="dockerCloudImage_LogType">Logging
+                    <span style="white-space: nowrap"> drivers:<i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">Log configuration for the container.</span></span>
+                    </label>
                 </th>
                 <td>
                     <input id="dockerCloudImage_LogType" type="text">
