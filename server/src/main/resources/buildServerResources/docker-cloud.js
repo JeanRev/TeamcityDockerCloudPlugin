@@ -1057,7 +1057,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
 
                 self.$testContainerContainerLogsBtn.click(function() {
-                    self._invokeTestAction('logs')
+                    self._invokeTestAction('logs', null, true)
                         .done(function(response) {
                             var logs = $j(response.responseXML).find('logs').text();
                             self.prepareDiagnosticDialog("Container logs:", logs);
