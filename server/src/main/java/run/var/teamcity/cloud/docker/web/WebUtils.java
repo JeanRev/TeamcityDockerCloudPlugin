@@ -11,6 +11,10 @@ import javax.servlet.http.HttpServletRequest;
  */
 class WebUtils {
 
+    private WebUtils() {
+        // Static access only.
+    }
+
     /**
      * Pre-processing of HTTP requests to be handled with the Atmosphere framework.
      *
