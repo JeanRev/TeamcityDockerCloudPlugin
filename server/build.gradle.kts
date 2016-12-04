@@ -1,5 +1,6 @@
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.testng.TestNGOptions
 
 apply {
     plugin("java")
@@ -49,5 +50,12 @@ test.apply {
     }
     if (project.hasProperty("docker.test.unix.socket")) {
         jvmArgs("-Ddocker.test.unix.socket=${project.properties.get("docker.test.unix.socket")}")
+    }
+}
+
+task<Test>("quickTest") {
+    useTestNG()
+    (options as TestNGOptions).apply {
+        excludeGroups("integration", "longRunning")
     }
 }
