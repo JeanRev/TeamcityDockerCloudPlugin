@@ -16,13 +16,13 @@ import org.apache.http.util.TextUtils;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.apcon.ApacheConnectorProvider;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
 import javax.ws.rs.HttpMethod;
@@ -88,14 +88,14 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         this.target = jerseyClient.target(target);
     }
 
-    @NotNull
+    @Nonnull
     public Node getVersion() {
         return invoke(target.path("/version"), HttpMethod.GET, null, null, null);
     }
 
 
-    @NotNull
-    public Node createContainer(@NotNull Node containerSpec, @Nullable String name) {
+    @Nonnull
+    public Node createContainer(@Nonnull Node containerSpec, @Nullable String name) {
         DockerCloudUtils.requireNonNull(containerSpec, "Container JSON specification cannot be null.");
         WebTarget target = this.target.path("/containers/create");
         if (name != null) {
@@ -105,27 +105,27 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         return invoke(target, HttpMethod.POST, containerSpec, null, null);
     }
 
-    public void startContainer(@NotNull final String containerId) {
+    public void startContainer(@Nonnull final String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         invokeVoid(target.path("/containers/{id}/start").resolveTemplate("id", containerId), HttpMethod.POST, null,
                 null);
     }
 
-    public void restartContainer(@NotNull String containerId) {
+    public void restartContainer(@Nonnull String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         invokeVoid(target.path("/containers/{id}/restart").resolveTemplate("id", containerId), HttpMethod.POST, null,
                 null);
     }
 
-    @NotNull
-    public Node inspectContainer(@NotNull String containerId) {
+    @Nonnull
+    public Node inspectContainer(@Nonnull String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         return invoke(target.path("/containers/{id}/json").resolveTemplate("id", containerId), HttpMethod.GET, null,
                 null, null);
     }
 
-    @NotNull
-    public NodeStream createImage(@NotNull String from, @Nullable String tag) {
+    @Nonnull
+    public NodeStream createImage(@Nonnull String from, @Nullable String tag) {
         DockerCloudUtils.requireNonNull(from, "Source image cannot be null.");
 
         WebTarget target = this.target.path("/images/create").
@@ -136,7 +136,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         return invokeNodeStream(target, HttpMethod.POST, null, null, null);
     }
 
-    public StreamHandler attach(@NotNull String containerId) {
+    public StreamHandler attach(@Nonnull String containerId) {
 
         return invokeStream(target.path("/containers/{id}/attach").resolveTemplate("id", containerId)
                         .queryParam
@@ -145,7 +145,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 null, hasTty(containerId));
     }
 
-    public StreamHandler streamLogs(@NotNull String containerId, int lineCount, Set<StdioType> stdioTypes, boolean
+    public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, Set<StdioType> stdioTypes, boolean
             follow) {
 
         return invokeStream(prepareLogsTarget(target, containerId, lineCount, stdioTypes).queryParam("follow",
@@ -173,7 +173,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 .queryParam("tail", tail);
     }
 
-    public void stopContainer(@NotNull String containerId, long timeoutSec) {
+    public void stopContainer(@Nonnull String containerId, long timeoutSec) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         if (timeoutSec < 0) {
             throw new IllegalArgumentException("Timeout must be a positive integer.");
@@ -192,14 +192,14 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 });
     }
 
-    public void removeContainer(@NotNull String containerId, boolean removeVolumes, boolean force) {
+    public void removeContainer(@Nonnull String containerId, boolean removeVolumes, boolean force) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         invokeVoid(target.path("/containers/{id}").resolveTemplate("id", containerId).queryParam("v", removeVolumes)
                 .queryParam("force", force), HttpMethod.DELETE, null, null);
     }
 
-    @NotNull
-    public Node listContainersWithLabel(@NotNull String key, @NotNull String value) {
+    @Nonnull
+    public Node listContainersWithLabel(@Nonnull String key, @Nonnull String value) {
         DockerCloudUtils.requireNonNull(key, "Label key cannot be null.");
         DockerCloudUtils.requireNonNull(value, "Label value cannot be null.");
         return invoke(target.path("/containers/json").
@@ -266,7 +266,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
      * @throws NullPointerException     if {@code clientConfig} is {@code null}
      * @throws IllegalArgumentException if an invalid configuration setting is detected
      */
-    @NotNull
+    @Nonnull
     public static DefaultDockerClient newInstance(DockerClientConfig clientConfig) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
 

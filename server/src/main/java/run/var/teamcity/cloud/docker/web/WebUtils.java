@@ -1,9 +1,9 @@
 package run.var.teamcity.cloud.docker.web;
 
 import org.atmosphere.client.TrackMessageSizeInterceptor;
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -18,7 +18,7 @@ class WebUtils {
      *
      * @throws NullPointerException if {@code request} is {@code null}
      */
-    static void configureRequestForAtmosphere(@NotNull HttpServletRequest request) {
+    static void configureRequestForAtmosphere(@Nonnull HttpServletRequest request) {
         DockerCloudUtils.requireNonNull(request, "Request cannot be null.");
 
         // Enable support for asynchronous requests in Tomcat.

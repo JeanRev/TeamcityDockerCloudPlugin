@@ -1,8 +1,8 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
@@ -15,7 +15,7 @@ public class DockerClientConfig {
     private int threadPoolSize = 1;
     private int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT_MILLIS;
 
-    public DockerClientConfig(@NotNull URI instanceURI) {
+    public DockerClientConfig(@Nonnull URI instanceURI) {
         DockerCloudUtils.requireNonNull(instanceURI, "Docker instance URI cannot be null.");
         this.instanceURI = instanceURI;
     }
@@ -43,7 +43,7 @@ public class DockerClientConfig {
         return this;
     }
 
-    @NotNull
+    @Nonnull
     public URI getInstanceURI() {
         return instanceURI;
     }

@@ -1,17 +1,16 @@
 package run.var.teamcity.cloud.docker;
 
 import jetbrains.buildServer.clouds.InstanceStatus;
-import org.jetbrains.annotations.NotNull;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import javax.annotation.Nonnull;
 import java.util.concurrent.locks.ReentrantLock;
 
-
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Test
 public class DockerTaskSchedulerTest {
@@ -166,7 +165,7 @@ public class DockerTaskSchedulerTest {
 
         volatile boolean running;
 
-        TestDockerInstanceTask(@NotNull DockerInstance instance) {
+        TestDockerInstanceTask(@Nonnull DockerInstance instance) {
             super("test", instance, InstanceStatus.SCHEDULED_TO_START);
         }
 

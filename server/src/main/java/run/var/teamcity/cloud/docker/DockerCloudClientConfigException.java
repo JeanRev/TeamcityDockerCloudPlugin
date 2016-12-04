@@ -1,9 +1,9 @@
 package run.var.teamcity.cloud.docker;
 
 import jetbrains.buildServer.serverSide.InvalidProperty;
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -23,7 +23,7 @@ public class DockerCloudClientConfigException extends RuntimeException {
      * @throws NullPointerException     if {@code invalidProperties} is {@code null}
      * @throws IllegalArgumentException if {@code invalidProperties} is empty
      */
-    public DockerCloudClientConfigException(@NotNull List<InvalidProperty> invalidProperties) {
+    public DockerCloudClientConfigException(@Nonnull List<InvalidProperty> invalidProperties) {
         super(invalidProperties != null ? invalidProperties.toString() : null);
         DockerCloudUtils.requireNonNull(invalidProperties, "List of invalid properties must be non-null.");
         if (invalidProperties.isEmpty()) {
@@ -37,7 +37,7 @@ public class DockerCloudClientConfigException extends RuntimeException {
      *
      * @return the list of invalid properties, guaranteed to be non null and non empty.
      */
-    @NotNull
+    @Nonnull
     public List<InvalidProperty> getInvalidProperties() {
         return invalidProperties;
     }

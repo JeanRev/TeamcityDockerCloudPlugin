@@ -2,8 +2,6 @@ package run.var.teamcity.cloud.docker.util;
 
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.version.ServerVersionHolder;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageDefaultResolver;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
@@ -11,6 +9,8 @@ import run.var.teamcity.cloud.docker.client.DockerClientException;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClient;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -137,7 +137,7 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
      *
      * @throws NullPointerException if {@code registryFty} is {@code null}
      */
-    @NotNull
+    @Nonnull
     public static OfficialAgentImageResolver forCurrentServer(DockerRegistryClientFactory registryFty) {
         DockerCloudUtils.requireNonNull(registryFty, "Registry client factory cannot be null.");
         String version = ServerVersionHolder.getVersion().getDisplayVersion();

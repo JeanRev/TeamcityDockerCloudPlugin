@@ -1,6 +1,6 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.jetbrains.annotations.Nullable;
+import javax.annotation.Nullable;
 
 /**
  * Base class for all exceptions related to the {@link DefaultDockerClient}.

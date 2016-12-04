@@ -1,8 +1,8 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +32,7 @@ class CappedInputStream extends FilterInputStream {
      * @throws NullPointerException     if {@code in} is {@code null}
      * @throws IllegalArgumentException if {@code capacity} is smaller than 0
      */
-    CappedInputStream(@NotNull InputStream in, long capacity) {
+    CappedInputStream(@Nonnull InputStream in, long capacity) {
         super(in);
         DockerCloudUtils.requireNonNull(in, "Input stream cannot be null.");
         if (capacity < 0) {
@@ -76,7 +76,7 @@ class CappedInputStream extends FilterInputStream {
     }
 
     @Override
-    public int read(@NotNull byte[] b, int off, int len) throws IOException {
+    public int read(@Nonnull byte[] b, int off, int len) throws IOException {
         lock.lock();
         try {
             checkNotClosed();

@@ -5,14 +5,14 @@ import jetbrains.buildServer.serverSide.AgentDescription;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.agentTypes.AgentTypeStorage;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.DockerCloudSettingsController;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.*;
 
 /**
@@ -25,17 +25,17 @@ public class DockerCloudClientFactory implements CloudClientFactory {
     private final DockerClientFactory dockerClientFactory;
     private final AgentTypeStorage agentTypeStorage;
 
-    public DockerCloudClientFactory(@NotNull final SBuildServer buildServer,
-                                    @NotNull final CloudRegistrar cloudRegistrar,
-                                    @NotNull final PluginDescriptor pluginDescriptor,
+    public DockerCloudClientFactory(@Nonnull final SBuildServer buildServer,
+                                    @Nonnull final CloudRegistrar cloudRegistrar,
+                                    @Nonnull final PluginDescriptor pluginDescriptor,
                                     @Nullable final AgentTypeStorage agentTypeStorage) {
         this(buildServer, cloudRegistrar, pluginDescriptor, DockerClientFactory.getDefault(), agentTypeStorage);
     }
 
-    DockerCloudClientFactory(@NotNull final SBuildServer buildServer,
-                             @NotNull final CloudRegistrar cloudRegistrar,
-                             @NotNull final PluginDescriptor pluginDescriptor,
-                             @NotNull final DockerClientFactory dockerClientFactory,
+    DockerCloudClientFactory(@Nonnull final SBuildServer buildServer,
+                             @Nonnull final CloudRegistrar cloudRegistrar,
+                             @Nonnull final PluginDescriptor pluginDescriptor,
+                             @Nonnull final DockerClientFactory dockerClientFactory,
                              @Nullable final AgentTypeStorage agentTypeStorage) {
         this.editProfileUrl = pluginDescriptor.getPluginResourcesPath(DockerCloudSettingsController.EDIT_PATH);
         cloudRegistrar.registerCloudFactory(this);
@@ -45,9 +45,9 @@ public class DockerCloudClientFactory implements CloudClientFactory {
     }
 
 
-    @NotNull
+    @Nonnull
     @Override
-    public CloudClientEx createNewClient(@NotNull CloudState state, @NotNull CloudClientParameters params) {
+    public CloudClientEx createNewClient(@Nonnull CloudState state, @Nonnull CloudClientParameters params) {
         Collection<String> paramNames = params.listParameterNames();
         Map<String, String> properties = new HashMap<>(paramNames.size());
         for (String paramName : paramNames) {
@@ -65,25 +65,25 @@ public class DockerCloudClientFactory implements CloudClientFactory {
                 buildServer, agentTypeStorage);
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getCloudCode() {
         return DockerCloudUtils.CLOUD_CODE;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getDisplayName() {
         return "Docker";
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getEditProfileUrl() {
         return editProfileUrl;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Map<String, String> getInitialParameterValues() {
         HashMap<String, String> params = new HashMap<>();
@@ -95,14 +95,14 @@ public class DockerCloudClientFactory implements CloudClientFactory {
         return params;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public jetbrains.buildServer.serverSide.PropertiesProcessor getPropertiesProcessor() {
         return new DockerCloudPropertiesProcessor();
     }
 
     @Override
-    public boolean canBeAgentOfType(@NotNull AgentDescription description) {
+    public boolean canBeAgentOfType(@Nonnull AgentDescription description) {
         return DockerCloudUtils.getClientId(description) != null;
     }
 }

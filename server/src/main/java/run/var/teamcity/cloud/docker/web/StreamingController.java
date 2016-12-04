@@ -8,7 +8,6 @@ import org.atmosphere.util.SimpleBroadcaster;
 import org.atmosphere.websocket.WebSocket;
 import org.atmosphere.websocket.WebSocketHandler;
 import org.atmosphere.websocket.WebSocketProcessor;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
@@ -19,6 +18,7 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
 import run.var.teamcity.cloud.docker.web.atmo.DefaultAtmosphereFacade;
 
+import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -42,8 +42,8 @@ public class StreamingController extends AbstractController {
     private final ExecutorService executorService = Executors.newFixedThreadPool(3, new NamedThreadFactory
             ("DockerStreaming"));
 
-    public StreamingController(@NotNull DefaultAtmosphereFacade atmosphereFramework,
-                               @NotNull WebControllerManager mgr) {
+    public StreamingController(@Nonnull DefaultAtmosphereFacade atmosphereFramework,
+                               @Nonnull WebControllerManager mgr) {
         this.atmosphereFramework = atmosphereFramework;
         mgr.registerController("/app/docker-cloud/streaming/**", this);
 
@@ -53,7 +53,7 @@ public class StreamingController extends AbstractController {
                 .randomUUID());
     }
 
-    public void registerContainer(@NotNull UUID correlationId, @NotNull ContainerCoordinates containerCoordinates) {
+    public void registerContainer(@Nonnull UUID correlationId, @Nonnull ContainerCoordinates containerCoordinates) {
         DockerCloudUtils.requireNonNull(correlationId, "ID cannot be null.");
         DockerCloudUtils.requireNonNull(containerCoordinates, "Container coordinates cannot be null.");
         try {
@@ -64,7 +64,7 @@ public class StreamingController extends AbstractController {
         }
     }
 
-    public void clearConfiguration(@NotNull UUID correlationId) {
+    public void clearConfiguration(@Nonnull UUID correlationId) {
         DockerCloudUtils.requireNonNull(correlationId, "ID cannot be null.");
         try {
             lock.lock();

@@ -2,11 +2,11 @@ package run.var.teamcity.cloud.docker.client;
 
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.client.apcon.ApacheConnectorProvider;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import javax.annotation.Nonnull;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -34,7 +34,7 @@ public class DefaultDockerRegistryClient extends DockerAbstractClient implements
      * @param authServiceURI the authentication service URI
      * @param service        the authentication service name
      */
-    public DefaultDockerRegistryClient(@NotNull URI registryURI, @NotNull URI authServiceURI, @NotNull String service) {
+    public DefaultDockerRegistryClient(@Nonnull URI registryURI, @Nonnull URI authServiceURI, @Nonnull String service) {
         super(ClientBuilder.newClient());
         DockerCloudUtils.requireNonNull(registryURI, "Resgistry URI cannot be null.");
         DockerCloudUtils.requireNonNull(authServiceURI, "Authentication service URI cannot be null.");
@@ -56,8 +56,8 @@ public class DefaultDockerRegistryClient extends DockerAbstractClient implements
      *
      * @return the authentication outcome
      */
-    @NotNull
-    public Node anonymousLogin(@NotNull String scope) {
+    @Nonnull
+    public Node anonymousLogin(@Nonnull String scope) {
         DockerCloudUtils.requireNonNull(scope, "Authentication scope cannot be null.");
         return invoke(authTarget.
                 path("token").
@@ -73,8 +73,8 @@ public class DefaultDockerRegistryClient extends DockerAbstractClient implements
      *
      * @return the fetched tag list
      */
-    @NotNull
-    public Node listTags(@NotNull String loginToken, @NotNull String repo) {
+    @Nonnull
+    public Node listTags(@Nonnull String loginToken, @Nonnull String repo) {
         DockerCloudUtils.requireNonNull(loginToken, "Login token cannot be null.");
         DockerCloudUtils.requireNonNull(repo, "Repository cannot be null.");
         return invoke(target.

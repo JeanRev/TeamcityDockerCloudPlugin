@@ -1,7 +1,6 @@
 package run.var.teamcity.cloud.docker.util;
 
-import org.jetbrains.annotations.NotNull;
-
+import javax.annotation.Nonnull;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
@@ -21,7 +20,7 @@ public class NamedThreadFactory implements ThreadFactory {
      *
      * @throws NullPointerException if {@code name} is {@code null}
      */
-    public NamedThreadFactory(@NotNull String name) {
+    public NamedThreadFactory(@Nonnull String name) {
         this(name, false);
     }
 
@@ -33,14 +32,14 @@ public class NamedThreadFactory implements ThreadFactory {
      *
      * @throws NullPointerException if {@code name} is {@code null}
      */
-    public NamedThreadFactory(@NotNull String name, boolean usingDaemonThreads) {
+    public NamedThreadFactory(@Nonnull String name, boolean usingDaemonThreads) {
         DockerCloudUtils.requireNonNull("Name cannot be null.", name);
         this.name = name;
         this.usingDaemonThreads = usingDaemonThreads;
     }
 
     @Override
-    public Thread newThread(@NotNull Runnable r) {
+    public Thread newThread(@Nonnull Runnable r) {
 
         Thread t = defaultThreadFactory.newThread(r);
         t.setName(name);

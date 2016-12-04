@@ -2,8 +2,8 @@ package run.var.teamcity.cloud.docker.util;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
-import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -47,7 +47,7 @@ public class Node extends AbstractNode<Node> {
      *
      * @throws IOException if an error occurred while processing the stream
      */
-    @NotNull
+    @Nonnull
     public static NodeStream parseMany(final InputStream jsonStream) throws IOException {
         final JsonParser parser = JSON_FACTORY.createParser(jsonStream);
         return new NodeStream() {

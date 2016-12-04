@@ -5,11 +5,11 @@ import org.apache.http.config.SocketConfig;
 import org.apache.http.conn.HttpClientConnectionOperator;
 import org.apache.http.conn.ManagedHttpClientConnection;
 import org.apache.http.protocol.HttpContext;
-import org.jetbrains.annotations.NotNull;
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -31,7 +31,7 @@ class UnixSocketClientConnectionOperator implements HttpClientConnectionOperator
      *
      * @param socketFile the Unix socket file
      */
-    UnixSocketClientConnectionOperator(@NotNull File socketFile) {
+    UnixSocketClientConnectionOperator(@Nonnull File socketFile) {
         DockerCloudUtils.requireNonNull(socketFile, "Socket file cannot be null.");
         this.socketFile = socketFile;
     }

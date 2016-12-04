@@ -1,7 +1,6 @@
 package run.var.teamcity.cloud.docker;
 
-import org.jetbrains.annotations.NotNull;
-
+import javax.annotation.Nonnull;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -18,7 +17,7 @@ abstract class DockerClientTask extends DockerTask {
      * @param client        the cloud client
      * @throws NullPointerException if any argument is {@code null}
      */
-    DockerClientTask(@NotNull String operationName, @NotNull DockerCloudClient client) {
+    DockerClientTask(@Nonnull String operationName, @Nonnull DockerCloudClient client) {
         super(operationName, client);
         this.client = client;
     }
@@ -34,8 +33,8 @@ abstract class DockerClientTask extends DockerTask {
      * @throws NullPointerException     if any argument is {@code null}
      * @throws IllegalArgumentException if a delay is negative
      */
-    DockerClientTask(@NotNull String operationName, @NotNull DockerCloudClient client, long initialDelay, long delay,
-                     @NotNull TimeUnit
+    DockerClientTask(@Nonnull String operationName, @Nonnull DockerCloudClient client, long initialDelay, long delay,
+                     @Nonnull TimeUnit
                              timeUnit) {
         super(operationName, client, initialDelay, delay, timeUnit);
         this.client = client;

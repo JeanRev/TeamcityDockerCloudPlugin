@@ -1,10 +1,10 @@
 package run.var.teamcity.cloud.docker.web;
 
 import com.intellij.openapi.diagnostic.Logger;
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
@@ -44,7 +44,7 @@ abstract class ContainerTestTask implements Runnable {
      *
      * @throws NullPointerException if any argument is {@code null}
      */
-    ContainerTestTask(@NotNull ContainerTestTaskHandler testTaskHandler, @NotNull Phase initialPhase) {
+    ContainerTestTask(@Nonnull ContainerTestTaskHandler testTaskHandler, @Nonnull Phase initialPhase) {
         DockerCloudUtils.requireNonNull(testTaskHandler, "Test task handler cannot be null.");
         DockerCloudUtils.requireNonNull(initialPhase, "Initial phase cannot be null.");
         this.testTaskHandler = testTaskHandler;
@@ -56,7 +56,7 @@ abstract class ContainerTestTask implements Runnable {
      *
      * @param msg the message to be notified
      */
-    void msg(@NotNull String msg) {
+    void msg(@Nonnull String msg) {
         msg(msg, phase);
     }
 
@@ -66,7 +66,7 @@ abstract class ContainerTestTask implements Runnable {
      * @param msg   the message to be notified
      * @param phase the new phase to be notified
      */
-    void msg(@NotNull String msg, @NotNull Phase phase) {
+    void msg(@Nonnull String msg, @Nonnull Phase phase) {
         msg(msg, phase, status);
     }
 
@@ -74,7 +74,7 @@ abstract class ContainerTestTask implements Runnable {
         throw new ContainerTestTaskException(msg);
     }
 
-    void warning(@NotNull String warning) {
+    void warning(@Nonnull String warning) {
         warnings.add(warning);
     }
 
@@ -95,7 +95,7 @@ abstract class ContainerTestTask implements Runnable {
      *
      * @return the handler
      */
-    @NotNull
+    @Nonnull
     public ContainerTestTaskHandler getTestTaskHandler() {
         return testTaskHandler;
     }
@@ -105,7 +105,7 @@ abstract class ContainerTestTask implements Runnable {
      *
      * @return the task status
      */
-    @NotNull
+    @Nonnull
     public Status getStatus() {
         return status;
     }
@@ -115,7 +115,7 @@ abstract class ContainerTestTask implements Runnable {
      *
      * @return the task phase
      */
-    @NotNull
+    @Nonnull
     public Phase getPhase() {
         return phase;
     }

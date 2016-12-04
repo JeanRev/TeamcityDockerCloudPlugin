@@ -1,8 +1,8 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.core.Response;
 import java.io.FilterInputStream;
@@ -43,7 +43,7 @@ class JaxWsResponseFilterInputStream extends FilterInputStream {
      * @throws IllegalArgumentException if the response entity cannot be processed (for example, because it has already
      *                                  been consumed).
      */
-    static JaxWsResponseFilterInputStream wrap(@NotNull Response response) {
+    static JaxWsResponseFilterInputStream wrap(@Nonnull Response response) {
         DockerCloudUtils.requireNonNull(response, "Response cannot be null.");
         Object entity = response.getEntity();
         if (!(entity instanceof InputStream)) {

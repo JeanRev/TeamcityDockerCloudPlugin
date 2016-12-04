@@ -1,13 +1,13 @@
 package run.var.teamcity.cloud.docker.test;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.*;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
 import java.util.*;
@@ -47,7 +47,7 @@ public class TestDockerClient implements DockerClient {
         }
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Node getVersion() {
         return Node.EMPTY_OBJECT.editNode().
@@ -62,9 +62,9 @@ public class TestDockerClient implements DockerClient {
                 put("experimental", false).saveNode();
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public Node createContainer(@NotNull Node containerSpec, @Nullable String name) {
+    public Node createContainer(@Nonnull Node containerSpec, @Nullable String name) {
 
         TestUtils.waitMillis(300);
 
@@ -100,7 +100,7 @@ public class TestDockerClient implements DockerClient {
     }
 
     @Override
-    public void startContainer(@NotNull String containerId) {
+    public void startContainer(@Nonnull String containerId) {
         TestUtils.waitMillis(300);
         lock.lock();
         try {
@@ -119,7 +119,7 @@ public class TestDockerClient implements DockerClient {
     }
 
     @Override
-    public void restartContainer(@NotNull String containerId) {
+    public void restartContainer(@Nonnull String containerId) {
         // Virtually no difference with a simple start from a test perspective.
         try {
             stopContainer(containerId, 0);
@@ -129,15 +129,15 @@ public class TestDockerClient implements DockerClient {
         startContainer(containerId);
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public Node inspectContainer(@NotNull String containerId) {
+    public Node inspectContainer(@Nonnull String containerId) {
         throw new UnsupportedOperationException();
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public NodeStream createImage(@NotNull String from, @Nullable String tag) {
+    public NodeStream createImage(@Nonnull String from, @Nullable String tag) {
         if (DockerCloudUtils.hasImageTag(from)) {
             if (tag != null) {
                 throw new InvocationFailedException("Duplicate tag specification.");
@@ -235,7 +235,7 @@ public class TestDockerClient implements DockerClient {
     }
 
     @Override
-    public void stopContainer(@NotNull String containerId, long timeoutSec) {
+    public void stopContainer(@Nonnull String containerId, long timeoutSec) {
         TestUtils.waitMillis(300);
         lock.lock();
         try {
@@ -254,7 +254,7 @@ public class TestDockerClient implements DockerClient {
     }
 
     @Override
-    public void removeContainer(@NotNull String containerId, boolean removeVolumes, boolean force) {
+    public void removeContainer(@Nonnull String containerId, boolean removeVolumes, boolean force) {
         lock.lock();
 
         TestUtils.waitMillis(300);
@@ -272,9 +272,9 @@ public class TestDockerClient implements DockerClient {
         }
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public Node listContainersWithLabel(@NotNull String key, @NotNull String value) {
+    public Node listContainersWithLabel(@Nonnull String key, @Nonnull String value) {
 
         EditableNode result;
 

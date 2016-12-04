@@ -1,6 +1,6 @@
 package run.var.teamcity.cloud.docker;
 
-import org.jetbrains.annotations.Nullable;
+import javax.annotation.Nullable;
 
 public abstract class DockerImageNameResolver {
 

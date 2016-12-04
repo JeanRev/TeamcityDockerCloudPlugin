@@ -1,9 +1,9 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.FilterInputStream;
 import java.io.InputStream;
 
@@ -28,7 +28,7 @@ public class StdioInputStream extends FilterInputStream {
      * @param stream the source input stream
      * @param type   the type of stream, or {@code null} if unknown
      */
-    StdioInputStream(@NotNull InputStream stream, @Nullable StdioType type) {
+    StdioInputStream(@Nonnull InputStream stream, @Nullable StdioType type) {
         super(stream);
         DockerCloudUtils.requireNonNull(stream, "Input stream cannot be null.");
         this.type = type;

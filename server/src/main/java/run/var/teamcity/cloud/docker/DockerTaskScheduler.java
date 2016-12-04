@@ -3,11 +3,11 @@ package run.var.teamcity.cloud.docker;
 
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.InstanceStatus;
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
 import run.var.teamcity.cloud.docker.util.WrappedRunnableScheduledFuture;
 
+import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
@@ -138,7 +138,7 @@ class DockerTaskScheduler {
      *
      * @throws NullPointerException if {@code clientTask} is {@code null}
      */
-    void scheduleClientTask(@NotNull DockerClientTask clientTask) {
+    void scheduleClientTask(@Nonnull DockerClientTask clientTask) {
         DockerCloudUtils.requireNonNull(clientTask, "Client task cannot be null.");
         LOG.debug("Scheduling client: " + clientTask);
         submitTaskWithInitialDelay(clientTask);
@@ -151,7 +151,7 @@ class DockerTaskScheduler {
      *
      * @throws NullPointerException if {@code instanceTask} is {@code null}
      */
-    void scheduleInstanceTask(@NotNull DockerInstanceTask instanceTask) {
+    void scheduleInstanceTask(@Nonnull DockerInstanceTask instanceTask) {
         DockerCloudUtils.requireNonNull(instanceTask, "Instance task cannot be null.");
         LOG.debug("Scheduling instance task: " + clientTasks);
         submitTaskWithInitialDelay(instanceTask);

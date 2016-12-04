@@ -1,26 +1,26 @@
 package run.var.teamcity.cloud.docker.web;
 
 
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 
+import javax.annotation.Nonnull;
 import java.util.UUID;
 
 abstract class ContainerTestManager {
 
-    abstract UUID createNewTestContainer(@NotNull DockerCloudClientConfig clientConfig,
-                                         @NotNull DockerImageConfig imageConfig,
-                                         @NotNull ContainerTestListener listener);
+    abstract UUID createNewTestContainer(@Nonnull DockerCloudClientConfig clientConfig,
+                                         @Nonnull DockerImageConfig imageConfig,
+                                         @Nonnull ContainerTestListener listener);
 
 
-    abstract void startTestContainer(@NotNull UUID testUuid);
+    abstract void startTestContainer(@Nonnull UUID testUuid);
 
-    public abstract String getLogs(@NotNull UUID testUuid);
+    public abstract String getLogs(@Nonnull UUID testUuid);
 
-    abstract void dispose(@NotNull UUID testUuid);
+    abstract void dispose(@Nonnull UUID testUuid);
 
-    abstract void notifyInteraction(@NotNull UUID testUUid);
+    abstract void notifyInteraction(@Nonnull UUID testUUid);
 
     abstract void dispose();
 

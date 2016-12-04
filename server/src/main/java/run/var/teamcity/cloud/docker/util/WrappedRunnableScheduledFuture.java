@@ -1,13 +1,7 @@
 package run.var.teamcity.cloud.docker.util;
 
-import org.jetbrains.annotations.NotNull;
-
-import java.util.concurrent.Callable;
-import java.util.concurrent.Delayed;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.RunnableScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import javax.annotation.Nonnull;
+import java.util.concurrent.*;
 
 /**
  * A {@link RunnableScheduledFuture} wrapper with a reference to a source task.
@@ -29,14 +23,14 @@ public class WrappedRunnableScheduledFuture<T, V> implements RunnableScheduledFu
      * @param task    the source task
      * @param wrapped the object to which all invocations will be delegated
      */
-    public WrappedRunnableScheduledFuture(@NotNull T task, @NotNull RunnableScheduledFuture<V> wrapped) {
+    public WrappedRunnableScheduledFuture(@Nonnull T task, @Nonnull RunnableScheduledFuture<V> wrapped) {
         DockerCloudUtils.requireNonNull(task, "Source task cannot be null.");
         DockerCloudUtils.requireNonNull(wrapped, "Wrapped runnable cannot be null.");
         this.task = task;
         this.wrapped = wrapped;
     }
 
-    @NotNull
+    @Nonnull
     public T getTask() {
         return task;
     }
@@ -47,12 +41,12 @@ public class WrappedRunnableScheduledFuture<T, V> implements RunnableScheduledFu
     }
 
     @Override
-    public long getDelay(@NotNull TimeUnit unit) {
+    public long getDelay(@Nonnull TimeUnit unit) {
         return wrapped.getDelay(unit);
     }
 
     @Override
-    public int compareTo(@NotNull Delayed o) {
+    public int compareTo(@Nonnull Delayed o) {
         return wrapped.compareTo(o);
     }
 
@@ -82,7 +76,7 @@ public class WrappedRunnableScheduledFuture<T, V> implements RunnableScheduledFu
     }
 
     @Override
-    public V get(long timeout, @NotNull TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+    public V get(long timeout, @Nonnull TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         return wrapped.get(timeout, unit);
     }
 }

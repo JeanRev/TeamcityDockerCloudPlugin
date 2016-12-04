@@ -1,11 +1,11 @@
 package run.var.teamcity.cloud.docker.web;
 
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 
+import javax.annotation.Nonnull;
 import java.util.UUID;
 
 public class TestContainerTestManager extends ContainerTestManager {
@@ -18,8 +18,8 @@ public class TestContainerTestManager extends ContainerTestManager {
     private boolean disposed = false;
 
     @Override
-    UUID createNewTestContainer(@NotNull DockerCloudClientConfig clientConfig, @NotNull DockerImageConfig imageConfig,
-                                @NotNull ContainerTestListener listener) {
+    UUID createNewTestContainer(@Nonnull DockerCloudClientConfig clientConfig, @Nonnull DockerImageConfig imageConfig,
+                                @Nonnull ContainerTestListener listener) {
         this.clientConfig = clientConfig;
         this.imageConfig = imageConfig;
         this.listener = listener;
@@ -29,24 +29,24 @@ public class TestContainerTestManager extends ContainerTestManager {
     }
 
     @Override
-    void startTestContainer(@NotNull UUID testUuid) {
+    void startTestContainer(@Nonnull UUID testUuid) {
         checkUuid(testUuid);
         this.involvedPhase = Phase.START;
     }
 
     @Override
-    public String getLogs(@NotNull UUID testUuid) {
+    public String getLogs(@Nonnull UUID testUuid) {
         throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
-    void dispose(@NotNull UUID testUuid) {
+    void dispose(@Nonnull UUID testUuid) {
         checkUuid(testUuid);
         this.involvedPhase = null;
     }
 
     @Override
-    void notifyInteraction(@NotNull UUID testUuid) {
+    void notifyInteraction(@Nonnull UUID testUuid) {
         checkUuid(testUuid);
     }
 

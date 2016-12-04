@@ -1,9 +1,9 @@
 package run.var.teamcity.cloud.docker;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -53,11 +53,11 @@ abstract class DockerTask implements Callable<Void> {
      * @throws NullPointerException     if any argument is {@code null}
      * @throws IllegalArgumentException if a delay is negative
      */
-    DockerTask(@NotNull String operationName, @NotNull DockerCloudErrorHandler errorHandler, long initialDelay, long delay, @NotNull TimeUnit timeUnit) {
+    DockerTask(@Nonnull String operationName, @Nonnull DockerCloudErrorHandler errorHandler, long initialDelay, long delay, @Nonnull TimeUnit timeUnit) {
         this(operationName, errorHandler, initialDelay, delay, timeUnit, true);
     }
 
-    private DockerTask(@NotNull String operationName, @NotNull DockerCloudErrorHandler errorHandler, long initialDelay, long delay, TimeUnit timeUnit, boolean repeatable) {
+    private DockerTask(@Nonnull String operationName, @Nonnull DockerCloudErrorHandler errorHandler, long initialDelay, long delay, TimeUnit timeUnit, boolean repeatable) {
         DockerCloudUtils.requireNonNull(operationName, "Operation name cannot be null.");
         DockerCloudUtils.requireNonNull(operationName, "Error handler cannot be null.");
         if (repeatable) {
@@ -122,7 +122,7 @@ abstract class DockerTask implements Callable<Void> {
      *
      * @return the operation name.
      */
-    @NotNull
+    @Nonnull
     String getOperationName() {
         return operationName;
     }
@@ -138,7 +138,7 @@ abstract class DockerTask implements Callable<Void> {
      *
      * @return the error provider
      */
-    @NotNull
+    @Nonnull
     DockerCloudErrorHandler getErrorProvider() {
         return errorProvider;
     }

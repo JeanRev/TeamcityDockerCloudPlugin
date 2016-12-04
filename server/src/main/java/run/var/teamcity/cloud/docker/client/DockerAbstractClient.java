@@ -1,12 +1,12 @@
 package run.var.teamcity.cloud.docker.client;
 
 import com.intellij.openapi.diagnostic.Logger;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
@@ -61,7 +61,7 @@ public abstract class DockerAbstractClient implements Closeable {
      *
      * @param jerseyClient the Jersey client
      */
-    protected DockerAbstractClient(@NotNull Client jerseyClient) {
+    protected DockerAbstractClient(@Nonnull Client jerseyClient) {
         this.jerseyClient = jerseyClient;
     }
 
@@ -78,7 +78,7 @@ public abstract class DockerAbstractClient implements Closeable {
      *
      * @throws DockerClientException if invoking the operation failed
      */
-    @NotNull
+    @Nonnull
     protected Node invoke(WebTarget target, String method, Node entity, String authToken, ErrorCodeMapper
             errorCodeMapper) {
 
@@ -115,7 +115,7 @@ public abstract class DockerAbstractClient implements Closeable {
      *
      * @throws DockerClientException if invoking the operation failed
      */
-    @NotNull
+    @Nonnull
     protected NodeStream invokeNodeStream(WebTarget target, String method, Node entity, String authToken,
                                           ErrorCodeMapper errorCodeMapper) {
 
@@ -201,7 +201,7 @@ public abstract class DockerAbstractClient implements Closeable {
      *
      * @return the request specification
      */
-    @NotNull
+    @Nonnull
     protected String getRequestSpec(WebTarget target, String method) {
         return method + " " + target.getUri().getPath();
     }
@@ -213,7 +213,7 @@ public abstract class DockerAbstractClient implements Closeable {
      * @param response        the reponse from the server
      * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
      */
-    protected void validate(@NotNull String requestSpec, @NotNull Response response, @Nullable ErrorCodeMapper
+    protected void validate(@Nonnull String requestSpec, @Nonnull Response response, @Nullable ErrorCodeMapper
             errorCodeMapper) {
         assert requestSpec != null && response != null;
 

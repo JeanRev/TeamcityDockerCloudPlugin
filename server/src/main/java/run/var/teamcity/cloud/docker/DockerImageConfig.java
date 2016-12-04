@@ -2,10 +2,10 @@ package run.var.teamcity.cloud.docker;
 
 
 import jetbrains.buildServer.serverSide.InvalidProperty;
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +23,7 @@ public class DockerImageConfig {
     private final boolean useOfficialTCAgentImage;
     private final int maxInstanceCount;
 
-    public DockerImageConfig(@NotNull String profileName, @NotNull Node containerSpec, boolean rmOnExit,
+    public DockerImageConfig(@Nonnull String profileName, @Nonnull Node containerSpec, boolean rmOnExit,
                              boolean useOfficialTCAgentImage, int maxInstanceCount) {
         DockerCloudUtils.requireNonNull(profileName, "Profile name cannot be null.");
         DockerCloudUtils.requireNonNull(containerSpec, "Container specification cannot be null.");
@@ -42,7 +42,7 @@ public class DockerImageConfig {
      *
      * @return the profile name
      */
-    @NotNull
+    @Nonnull
     public String getProfileName() {
         return profileName;
     }
@@ -52,7 +52,7 @@ public class DockerImageConfig {
      *
      * @return the container specification
      */
-    @NotNull
+    @Nonnull
     public Node getContainerSpec() {
         return containerSpec;
     }
@@ -95,8 +95,8 @@ public class DockerImageConfig {
      * @throws NullPointerException             if the properties map is {@code null}
      * @throws DockerCloudClientConfigException if the image configuration is not valid
      */
-    @NotNull
-    public static List<DockerImageConfig> processParams(@NotNull Map<String, String> properties) {
+    @Nonnull
+    public static List<DockerImageConfig> processParams(@Nonnull Map<String, String> properties) {
         DockerCloudUtils.requireNonNull(properties, "Properties map cannot be null.");
 
         List<InvalidProperty> invalidProperties = new ArrayList<>();
@@ -136,8 +136,8 @@ public class DockerImageConfig {
      * @throws NullPointerException     if {@code node} is {@code null}
      * @throws IllegalArgumentException if no valid configuration could be build from the provided JSON node
      */
-    @NotNull
-    public static DockerImageConfig fromJSon(@NotNull Node node) {
+    @Nonnull
+    public static DockerImageConfig fromJSon(@Nonnull Node node) {
         DockerCloudUtils.requireNonNull(node, "JSON node cannot be null.");
         try {
             Node admin = node.getObject("Administration");

@@ -15,7 +15,6 @@ import org.atmosphere.websocket.WebSocketHandlerAdapter;
 import org.atmosphere.websocket.WebSocketProcessor;
 import org.jdom.Element;
 import org.jdom.output.XMLOutputter;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.ModelAndView;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
@@ -28,6 +27,7 @@ import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.atmo.DefaultAtmosphereFacade;
 
+import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -64,24 +64,24 @@ public class ContainerTestController extends BaseFormXmlController {
     private final DockerClientFactory dockerClientFactory;
 
     @Autowired
-    public ContainerTestController(@NotNull DefaultAtmosphereFacade atmosphereFramework,
-                                   @NotNull SBuildServer server,
-                                   @NotNull PluginDescriptor pluginDescriptor,
-                                   @NotNull WebControllerManager manager,
-                                   @NotNull WebLinks webLinks,
-                                   @NotNull StreamingController streamingController) {
+    public ContainerTestController(@Nonnull DefaultAtmosphereFacade atmosphereFramework,
+                                   @Nonnull SBuildServer server,
+                                   @Nonnull PluginDescriptor pluginDescriptor,
+                                   @Nonnull WebControllerManager manager,
+                                   @Nonnull WebLinks webLinks,
+                                   @Nonnull StreamingController streamingController) {
         this(DockerClientFactory.getDefault(), atmosphereFramework, server, pluginDescriptor, manager,
                 new DefaultContainerTestManager(OfficialAgentImageResolver.forCurrentServer(DockerRegistryClientFactory.getDefault()),
                         DockerClientFactory.getDefault(), server, webLinks, streamingController));
 
     }
 
-    ContainerTestController(@NotNull DockerClientFactory dockerClientFactory,
-                            @NotNull AtmosphereFrameworkFacade atmosphereFramework,
-                            @NotNull SBuildServer buildServer,
-                            @NotNull PluginDescriptor pluginDescriptor,
-                            @NotNull WebControllerManager manager,
-                            @NotNull ContainerTestManager testMgr) {
+    ContainerTestController(@Nonnull DockerClientFactory dockerClientFactory,
+                            @Nonnull AtmosphereFrameworkFacade atmosphereFramework,
+                            @Nonnull SBuildServer buildServer,
+                            @Nonnull PluginDescriptor pluginDescriptor,
+                            @Nonnull WebControllerManager manager,
+                            @Nonnull ContainerTestManager testMgr) {
 
 
         this.dockerClientFactory = dockerClientFactory;
@@ -101,7 +101,7 @@ public class ContainerTestController extends BaseFormXmlController {
 
 
     @Override
-    protected ModelAndView doGet(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response) {
+    protected ModelAndView doGet(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response) {
 
         WebUtils.configureRequestForAtmosphere(request);
 
@@ -120,7 +120,7 @@ public class ContainerTestController extends BaseFormXmlController {
     }
 
     @Override
-    protected void doPost(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Element xmlResponse) {
+    protected void doPost(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Element xmlResponse) {
 
         String actionParam = request.getParameter("action");
 

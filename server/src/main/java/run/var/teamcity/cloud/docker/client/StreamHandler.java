@@ -1,9 +1,9 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +32,7 @@ public abstract class StreamHandler implements AutoCloseable {
      *
      * @throws NullPointerException if any argument is {@code null}
      */
-    StreamHandler(@NotNull Closeable closeHandle, @NotNull InputStream inputStream, @NotNull OutputStream outputStream) {
+    StreamHandler(@Nonnull Closeable closeHandle, @Nonnull InputStream inputStream, @Nonnull OutputStream outputStream) {
         DockerCloudUtils.requireNonNull(closeHandle, "Close handle cannot be null.");
         DockerCloudUtils.requireNonNull(inputStream, "Source input stream cannot be null.");
         DockerCloudUtils.requireNonNull(outputStream, "Source output stream cannot be null.");
@@ -56,7 +56,7 @@ public abstract class StreamHandler implements AutoCloseable {
      *
      * @return the output stream
      */
-    @NotNull
+    @Nonnull
     public OutputStream getOutputStream() {
         return outputStream;
     }

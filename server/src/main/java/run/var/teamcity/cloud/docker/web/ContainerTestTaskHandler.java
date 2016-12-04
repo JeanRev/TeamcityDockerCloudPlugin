@@ -1,11 +1,11 @@
 package run.var.teamcity.cloud.docker.web;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -18,7 +18,7 @@ public interface ContainerTestTaskHandler {
      *
      * @return the client instance
      */
-    @NotNull
+    @Nonnull
     DockerClient getDockerClient();
 
     /**
@@ -27,7 +27,7 @@ public interface ContainerTestTaskHandler {
      *
      * @param containerId the container test ID
      */
-    void notifyContainerId(@NotNull String containerId);
+    void notifyContainerId(@Nonnull String containerId);
 
     /**
      * Notify the test status back to the user.
@@ -40,8 +40,8 @@ public interface ContainerTestTaskHandler {
      *
      * @throws NullPointerException if {@code phase}, {@code status} or {@code warnings} is {@code null}
      */
-    void notifyStatus(@NotNull Phase phase, @NotNull Status status, @Nullable String msg,
-                      @Nullable Throwable failureCause, @NotNull List<String> warnings);
+    void notifyStatus(@Nonnull Phase phase, @Nonnull Status status, @Nullable String msg,
+                      @Nullable Throwable failureCause, @Nonnull List<String> warnings);
 
     /**
      * Query the handler to check if the build agent has been detected yet.

@@ -4,11 +4,11 @@ import jetbrains.buildServer.controllers.BaseController;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.springframework.web.servlet.ModelAndView;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
@@ -17,16 +17,16 @@ public class DockerCloudSettingsController extends BaseController {
 
     public final static String EDIT_PATH = "docker-cloud-settings.html";
 
-    @NotNull
+    @Nonnull
     private final PluginDescriptor pluginDescriptor;
-    @NotNull
+    @Nonnull
     private final String jspPath;
-    @NotNull
+    @Nonnull
     private final String htmlPath;
 
-    public DockerCloudSettingsController(@NotNull SBuildServer server,
-                                         @NotNull PluginDescriptor pluginDescriptor,
-                                         @NotNull WebControllerManager manager) {
+    public DockerCloudSettingsController(@Nonnull SBuildServer server,
+                                         @Nonnull PluginDescriptor pluginDescriptor,
+                                         @Nonnull WebControllerManager manager) {
         super(server);
 
         this.pluginDescriptor = pluginDescriptor;
@@ -39,7 +39,7 @@ public class DockerCloudSettingsController extends BaseController {
 
     @Nullable
     @Override
-    protected ModelAndView doHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response) throws Exception {
+    protected ModelAndView doHandle(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response) throws Exception {
         ModelAndView mv = new ModelAndView(jspPath);
         Map<String, Object> model = mv.getModel();
         model.put("resPath", pluginDescriptor.getPluginResourcesPath());

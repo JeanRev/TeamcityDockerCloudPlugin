@@ -1,9 +1,7 @@
 package run.var.teamcity.cloud.docker.web;
 
 import com.intellij.openapi.diagnostic.Logger;
-import jetbrains.buildServer.BuildAgent;
 import jetbrains.buildServer.serverSide.*;
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
@@ -13,6 +11,7 @@ import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
 import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
 import run.var.teamcity.cloud.docker.util.WrappedRunnableScheduledFuture;
 
+import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URL;
@@ -70,9 +69,9 @@ class DefaultContainerTestManager extends ContainerTestManager {
     }
 
     @Override
-    @NotNull
-    UUID createNewTestContainer(@NotNull DockerCloudClientConfig clientConfig, @NotNull DockerImageConfig imageConfig,
-                                @NotNull ContainerTestListener listener) {
+    @Nonnull
+    UUID createNewTestContainer(@Nonnull DockerCloudClientConfig clientConfig, @Nonnull DockerImageConfig imageConfig,
+                                @Nonnull ContainerTestListener listener) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client configuration cannot be null.");
         DockerCloudUtils.requireNonNull(imageConfig, "Image configuration cannot be null.");
         DockerCloudUtils.requireNonNull(listener, "Test listener cannot be null.");
@@ -90,7 +89,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
     }
 
     @Override
-    void startTestContainer(@NotNull UUID testUuid) {
+    void startTestContainer(@Nonnull UUID testUuid) {
         DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
 
         ContainerSpecTest test = retrieveTestInstance(testUuid);
@@ -110,7 +109,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
     private static final Pattern VT100_ESCAPE_PTN = Pattern.compile("\u001B\\[[\\d;]*[^\\d;]");
 
     @Override
-    public String getLogs(@NotNull UUID testUuid) {
+    public String getLogs(@Nonnull UUID testUuid) {
         DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
 
         ContainerSpecTest test = retrieveTestInstance(testUuid);
@@ -137,7 +136,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
     }
 
     @Override
-    void dispose(@NotNull UUID testUuid) {
+    void dispose(@Nonnull UUID testUuid) {
         DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
 
         ContainerSpecTest test = retrieveTestInstance(testUuid);
@@ -146,7 +145,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
     }
 
     @Override
-    void notifyInteraction(@NotNull UUID testUUid) {
+    void notifyInteraction(@Nonnull UUID testUUid) {
         ContainerSpecTest test = retrieveTestInstance(testUUid);
         test.notifyInteraction();
     }
@@ -448,7 +447,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
     private class ServerListener extends BuildServerAdapter {
 
         @Override
-        public void agentRegistered(@NotNull SBuildAgent agent, long currentlyRunningBuildId) {
+        public void agentRegistered(@Nonnull SBuildAgent agent, long currentlyRunningBuildId) {
             // We attempt here to disable the agent as soon as possible to prevent it from starting any job.
             UUID testInstanceUuid = DockerCloudUtils.tryParseAsUUID(DockerCloudUtils.getEnvParameter(agent,
                     DockerCloudUtils.ENV_TEST_INSTANCE_ID));

@@ -5,8 +5,6 @@ import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jdom.Element;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.springframework.web.servlet.ModelAndView;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
@@ -14,6 +12,8 @@ import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.net.URI;
@@ -28,29 +28,29 @@ public class CheckConnectivityController extends BaseFormXmlController {
     private final DockerClientFactory dockerClientFactory;
 
 
-    public CheckConnectivityController(@NotNull SBuildServer server,
-                                       @NotNull PluginDescriptor pluginDescriptor,
-                                       @NotNull WebControllerManager manager) {
+    public CheckConnectivityController(@Nonnull SBuildServer server,
+                                       @Nonnull PluginDescriptor pluginDescriptor,
+                                       @Nonnull WebControllerManager manager) {
         this(server, pluginDescriptor, manager, DockerClientFactory.getDefault());
     }
 
-    CheckConnectivityController(@NotNull SBuildServer server,
-                                @NotNull PluginDescriptor pluginDescriptor,
-                                @NotNull WebControllerManager manager,
-                                @NotNull DockerClientFactory dockerClientFactory) {
+    CheckConnectivityController(@Nonnull SBuildServer server,
+                                @Nonnull PluginDescriptor pluginDescriptor,
+                                @Nonnull WebControllerManager manager,
+                                @Nonnull DockerClientFactory dockerClientFactory) {
         super(server);
         this.dockerClientFactory = dockerClientFactory;
         manager.registerController(pluginDescriptor.getPluginResourcesPath(PATH), this);
     }
 
     @Override
-    protected ModelAndView doGet(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response) {
+    protected ModelAndView doGet(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response) {
         // Nothing to do.
         return null;
     }
 
     @Override
-        protected void doPost(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Element xmlResponse) {
+    protected void doPost(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Element xmlResponse) {
 
 
         Map<String, String> properties = DockerCloudUtils.extractTCPluginParams(request);
@@ -92,7 +92,7 @@ public class CheckConnectivityController extends BaseFormXmlController {
         }
     }
 
-    private static void setAttr(@NotNull Element elt, @NotNull String name, @Nullable Object value) {
+    private static void setAttr(@Nonnull Element elt, @Nonnull String name, @Nullable Object value) {
         if (value != null) {
             elt.setAttribute(name, value.toString());
         }

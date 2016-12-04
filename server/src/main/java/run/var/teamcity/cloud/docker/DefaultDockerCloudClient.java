@@ -5,8 +5,6 @@ import jetbrains.buildServer.clouds.*;
 import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.serverSide.agentTypes.AgentTypeKey;
 import jetbrains.buildServer.serverSide.agentTypes.AgentTypeStorage;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
@@ -16,6 +14,8 @@ import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -102,7 +102,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
     private final BuildServerListener serverListener = new BuildServerAdapter() {
         @Override
-        public void agentRegistered(@NotNull SBuildAgent agent, long currentlyRunningBuildId) {
+        public void agentRegistered(@Nonnull SBuildAgent agent, long currentlyRunningBuildId) {
             if (agent instanceof BuildAgentInit) {
                 DockerInstance instance = findInstanceByAgent(agent);
                 if (instance != null) {
@@ -118,12 +118,12 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         }
     };
 
-    DefaultDockerCloudClient(@NotNull DockerCloudClientConfig clientConfig,
-                             @NotNull final DockerClientFactory dockerClientFactory,
-                             @NotNull final List<DockerImageConfig> imageConfigs,
-                             @NotNull final DockerImageNameResolver resolver,
-                             @NotNull CloudState cloudState,
-                             @NotNull final SBuildServer buildServer,
+    DefaultDockerCloudClient(@Nonnull DockerCloudClientConfig clientConfig,
+                             @Nonnull final DockerClientFactory dockerClientFactory,
+                             @Nonnull final List<DockerImageConfig> imageConfigs,
+                             @Nonnull final DockerImageNameResolver resolver,
+                             @Nonnull CloudState cloudState,
+                             @Nonnull final SBuildServer buildServer,
                              @Nullable AgentTypeStorage agentTypeStorage) {
         DockerCloudUtils.requireNonNull(clientConfig, "Docker client configuration cannot be null.");
         DockerCloudUtils.requireNonNull(imageConfigs, "List of images cannot be null.");
@@ -178,7 +178,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
      *
      * @return the client UUID
      */
-    @NotNull
+    @Nonnull
     public UUID getUuid() {
         return uuid;
     }
@@ -200,7 +200,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
     @Nullable
     @Override
-    public DockerImage findImageById(@NotNull String id) throws CloudException {
+    public DockerImage findImageById(@Nonnull String id) throws CloudException {
         UUID uuid = DockerCloudUtils.tryParseAsUUID(id);
         lock.lock();
         try {
@@ -212,7 +212,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
     @Nullable
     @Override
-    public DockerInstance findInstanceByAgent(@NotNull AgentDescription agent) {
+    public DockerInstance findInstanceByAgent(@Nonnull AgentDescription agent) {
         UUID instanceId = DockerCloudUtils.getInstanceId(agent);
 
         if (instanceId != null) {
@@ -231,7 +231,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         return null;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Collection<DockerImage> getImages() throws CloudException {
         lock.lock();
@@ -249,7 +249,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     }
 
     @Override
-    public boolean canStartNewInstance(@NotNull CloudImage image) {
+    public boolean canStartNewInstance(@Nonnull CloudImage image) {
         lock.lock();
         try {
             if (errorInfo != null) {
@@ -265,7 +265,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
     @Nullable
     @Override
-    public String generateAgentName(@NotNull AgentDescription agent) {
+    public String generateAgentName(@Nonnull AgentDescription agent) {
         DockerInstance instance = findInstanceByAgent(agent);
         if (instance == null) {
             return null;
@@ -274,9 +274,9 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         return instance.getName();
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public DockerInstance startNewInstance(@NotNull final CloudImage image, @NotNull final CloudInstanceUserData tag) throws
+    public DockerInstance startNewInstance(@Nonnull final CloudImage image, @Nonnull final CloudInstanceUserData tag) throws
             QuotaException {
 
         LOG.info("Creating new instance from image: " + image);
@@ -392,7 +392,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     }
 
     @Override
-    public void restartInstance(@NotNull final CloudInstance instance) {
+    public void restartInstance(@Nonnull final CloudInstance instance) {
         // This operation seems seems to be never called from the TC server. It also unclear if it should be doing
         // anything more than a combined stop and start. We try to honor it by simply restarting the docker container.
         LOG.info("Restarting container:" + instance);
@@ -427,7 +427,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     }
 
     @Override
-    public void terminateInstance(@NotNull final CloudInstance instance) {
+    public void terminateInstance(@Nonnull final CloudInstance instance) {
         LOG.info("Request for terminating instance: " + instance);
         terminateInstance(instance, false);
     }
@@ -459,7 +459,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         taskScheduler.shutdown();
     }
 
-    private void terminateInstance(@NotNull final CloudInstance instance, final boolean clientDisposed) {
+    private void terminateInstance(@Nonnull final CloudInstance instance, final boolean clientDisposed) {
         LOG.info("Scheduling cloud instance termination: " + instance + " (client disposed: " + clientDisposed + ").");
         final DockerInstance dockerInstance = ((DockerInstance) instance);
         taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Terminate container", dockerInstance, InstanceStatus.SCHEDULED_TO_STOP) {
@@ -576,7 +576,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     }
 
     @Override
-    public void notifyFailure(@NotNull String msg, @Nullable Throwable throwable) {
+    public void notifyFailure(@Nonnull String msg, @Nullable Throwable throwable) {
         lock.lock();
         try {
             if (throwable != null) {

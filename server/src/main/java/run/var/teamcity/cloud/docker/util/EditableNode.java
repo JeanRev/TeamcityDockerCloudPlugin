@@ -3,8 +3,9 @@ package run.var.teamcity.cloud.docker.util;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * An editable JSON node. Each editable node has a reference to the root of the edition tree, which is the place where
@@ -18,46 +19,46 @@ public class EditableNode extends AbstractNode<EditableNode> {
         super(node);
     }
 
-    @NotNull
+    @Nonnull
     public EditableNode add(@Nullable String value) {
         getArrayNode().add(value);
         return this;
     }
 
-    @NotNull
+    @Nonnull
     public EditableNode addObject() {
         return newNode(getArrayNode().addObject());
     }
 
-    @NotNull
-    public EditableNode put(@NotNull String key, Boolean value) {
+    @Nonnull
+    public EditableNode put(@Nonnull String key, Boolean value) {
         DockerCloudUtils.requireNonNull(key, "Key cannot be null.");
         getObjectNode().put(key, value);
         return this;
     }
 
-    @NotNull
-    public EditableNode put(@NotNull String key, Integer value) {
+    @Nonnull
+    public EditableNode put(@Nonnull String key, Integer value) {
         DockerCloudUtils.requireNonNull(key, "Key cannot be null.");
         getObjectNode().put(key, value);
         return this;
     }
 
-    @NotNull
-    public EditableNode put(@NotNull String key, @Nullable Object value) {
+    @Nonnull
+    public EditableNode put(@Nonnull String key, @Nullable Object value) {
         DockerCloudUtils.requireNonNull(key, "Key cannot be null.");
         getObjectNode().put(key, value != null ? value.toString() : null);
         return this;
     }
 
-    @NotNull
-    public EditableNode getOrCreateObject(@NotNull String fieldName) {
+    @Nonnull
+    public EditableNode getOrCreateObject(@Nonnull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         return newNode(getObjectNode().with(fieldName));
     }
 
-    @NotNull
-    public EditableNode getOrCreateArray(@NotNull String fieldName) {
+    @Nonnull
+    public EditableNode getOrCreateArray(@Nonnull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         ObjectNode objectNode = getObjectNode();
         JsonNode childNode = objectNode.get(fieldName);

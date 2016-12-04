@@ -1,7 +1,7 @@
 package run.var.teamcity.cloud.docker;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * An error handler for cloud-related exceptions.
@@ -14,5 +14,5 @@ interface DockerCloudErrorHandler {
      * @param msg       the error message
      * @param throwable the failure cause if any
      */
-    void notifyFailure(@NotNull String msg, @Nullable Throwable throwable);
+    void notifyFailure(@Nonnull String msg, @Nullable Throwable throwable);
 }

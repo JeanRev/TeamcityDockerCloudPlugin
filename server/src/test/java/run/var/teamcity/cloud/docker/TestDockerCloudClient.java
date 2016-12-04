@@ -1,8 +1,7 @@
 package run.var.teamcity.cloud.docker;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.UUID;
 
 public class TestDockerCloudClient implements DockerCloudClient {
@@ -15,7 +14,7 @@ public class TestDockerCloudClient implements DockerCloudClient {
     }
 
     @Override
-    public void notifyFailure(@NotNull String msg, @Nullable Throwable throwable) {
+    public void notifyFailure(@Nonnull String msg, @Nullable Throwable throwable) {
 
     }
 }

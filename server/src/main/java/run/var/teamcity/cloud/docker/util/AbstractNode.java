@@ -7,15 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * A JSON node abstraction. This is just an overlay to a JSON backend. It provides a relatively strict validation, and
@@ -43,7 +39,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @throws UnsupportedOperationException if this node is not an array
      */
-    @NotNull
+    @Nonnull
     public List<N> getArrayValues() {
         checkArray();
         List<N> arrayValues = new ArrayList<>(node.size());
@@ -61,7 +57,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @throws UnsupportedOperationException if this node is not an object
      */
-    @NotNull
+    @Nonnull
     public Map<String, N> getObjectValues() {
         checkObject();
         Map<String, N> objectValues = new LinkedHashMap<>(node.size());
@@ -82,7 +78,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @throws UnsupportedOperationException if this node is not an object
      */
-    @NotNull
+    @Nonnull
     final ObjectNode getObjectNode() {
         checkObject();
         return (ObjectNode) node;
@@ -111,8 +107,8 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists or is
      *                                       not an object
      */
-    @NotNull
-    public N getObject(@NotNull String fieldName) {
+    @Nonnull
+    public N getObject(@Nonnull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
         JsonNode object = node.get(fieldName);
@@ -134,7 +130,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node or the child node is not an object
      */
-    public N getObject(@NotNull String fieldName, @Nullable N def) {
+    public N getObject(@Nonnull String fieldName, @Nullable N def) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
         if (def != null && !((AbstractNode) def).isObject()) {
@@ -158,7 +154,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists or is
      *                                       not an array
      */
-    public N getArray(@NotNull String fieldName) {
+    public N getArray(@Nonnull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
         JsonNode object = node.get(fieldName);
@@ -180,7 +176,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @throws NullPointerException          if {@code fieldName} is {@code null}
      * @throws UnsupportedOperationException if this node is not an object, or if the child node is not an array
      */
-    public N getArray(@NotNull String fieldName, @Nullable N def) {
+    public N getArray(@Nonnull String fieldName, @Nullable N def) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
         if (def != null && !((AbstractNode) def).isArray()) {
@@ -205,7 +201,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
      *                                       or is not an integer value node
      */
-    public int getAsInt(@NotNull String fieldName) {
+    public int getAsInt(@Nonnull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
         JsonNode value = node.get(fieldName);
@@ -228,7 +224,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @throws UnsupportedOperationException if this node is not an object, or if the child node is not an integer
      *                                       value node
      */
-    public int getAsInt(@NotNull String fieldName, int def) {
+    public int getAsInt(@Nonnull String fieldName, int def) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
         JsonNode value = node.get(fieldName);
@@ -250,7 +246,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
      *                                       or is not an integer value node
      */
-    public BigInteger getAsBigInt(@NotNull String fieldName) {
+    public BigInteger getAsBigInt(@Nonnull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
 
@@ -279,7 +275,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @throws UnsupportedOperationException if this node is not an object, or if the child node is not an integer
      *                                       value node
      */
-    public BigInteger getAsBigInt(@NotNull String fieldName, BigInteger def) {
+    public BigInteger getAsBigInt(@Nonnull String fieldName, BigInteger def) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
         JsonNode value = node.get(fieldName);
@@ -301,7 +297,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
      *                                       or is not an integer value node
      */
-    public long getAsLong(@NotNull String fieldName) {
+    public long getAsLong(@Nonnull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
         JsonNode value = node.get(fieldName);
@@ -323,7 +319,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
      *                                       or is not an boolean value node
      */
-    public boolean getAsBoolean(@NotNull String fieldName) {
+    public boolean getAsBoolean(@Nonnull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
         JsonNode value = node.get(fieldName);
@@ -349,7 +345,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      *                                       value node
      */
     @Nullable
-    public Boolean getAsBoolean(@NotNull String fieldName, @Nullable Boolean def) {
+    public Boolean getAsBoolean(@Nonnull String fieldName, @Nullable Boolean def) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
         JsonNode value = node.get(fieldName);
@@ -371,8 +367,8 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
      *                                       or is not a string value node
      */
-    @NotNull
-    public String getAsString(@NotNull String fieldName) {
+    @Nonnull
+    public String getAsString(@Nonnull String fieldName) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
         JsonNode value = node.get(fieldName);
@@ -396,7 +392,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      *                                       value node
      */
     @Nullable
-    public String getAsString(@NotNull String fieldName, @Nullable String def) {
+    public String getAsString(@Nonnull String fieldName, @Nullable String def) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();
         JsonNode value = node.get(fieldName);
@@ -412,7 +408,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @return the string value
      */
-    @NotNull
+    @Nonnull
     public String getAsString() {
         if (!node.isTextual()) {
             throw new UnsupportedOperationException("Not a text node: " + node);
