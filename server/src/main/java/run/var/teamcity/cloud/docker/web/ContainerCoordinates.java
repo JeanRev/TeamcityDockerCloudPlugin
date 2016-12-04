@@ -4,6 +4,9 @@ import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+/**
+ * Coordinate to access container. Composed of the required Docker client configuration and a container ID.
+ */
 public class ContainerCoordinates {
 
     private final String containerId;
