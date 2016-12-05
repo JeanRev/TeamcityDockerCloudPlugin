@@ -61,6 +61,6 @@ Lot of thanks to the respective authors of these software.
 </td>
 <td style="border: none; vertical-align:middle;">
 This software has been built thanks to the unfailing support of my company
-(<a href="https://www.puzzle.ch">Puzzle ITC</a>) to OpenSource projects. Kudos to them.</div>
+(<a href="https://www.puzzle.ch">Puzzle ITC</a>) to Open Source projects. Kudos to them.</div>
 </td>
 </table>
