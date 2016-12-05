@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.math.BigInteger;
 import java.util.Arrays;
@@ -16,9 +16,9 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.*;
 
 @SuppressWarnings("unchecked")
-@Test
 public abstract class AbstractNodeTest<N extends AbstractNode> {
 
+    @Test
     public void getArrayValues() {
         AbstractNode<N> node = stringArrayNode("A", "B", "C");
         List<String> values = node.getArrayValues().stream().
@@ -27,6 +27,7 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
         assertThat(values).containsExactly("A", "B", "C");
     }
 
+    @Test
     public void getArrayValuesNotAnArray() {
         assertThatExceptionOfType(UnsupportedOperationException.class).
                 isThrownBy(() -> emptyNode().getArrayValues());
@@ -36,6 +37,7 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
                 isThrownBy(() -> stringNode("A").getArrayValues());
     }
 
+    @Test
     public void getObjectValues() {
         AbstractNode<N> node = objectNode(pair("A", "1"), pair("B", "2"), pair("C", "3"));
         Map<String, String> values = node.getObjectValues().entrySet().stream().
@@ -45,6 +47,7 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
         assertThat(emptyNode().getObjectValues()).isEmpty();
     }
 
+    @Test
     public void getObjectValuesNotAnObject() {
         assertThatExceptionOfType(UnsupportedOperationException.class).
                 isThrownBy(() -> stringArrayNode("A", "B", "C").getObjectValues());
@@ -52,7 +55,7 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
                 isThrownBy(() -> stringNode("A").getObjectValues());
     }
 
-
+    @Test
     public void getObject() {
         AbstractNode<N> node = parentWithChildObject(pair("A", "1"));
 
@@ -62,6 +65,7 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
         assertThat(node.getObject("unknownChild", def)).isSameAs(def);
     }
 
+    @Test
     public void getObjectNotAnObject() {
         assertThatExceptionOfType(UnsupportedOperationException.class).
                 isThrownBy(() -> parentWithChildArray("A", "B", "C").getObject("child"));
@@ -70,6 +74,7 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
 
     }
 
+    @Test
     public void getArray() {
 
         AbstractNode<N> node = parentWithChildArray("A", "B", "C");
@@ -83,6 +88,7 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
         assertThat(node.getArray("unknownChild", def)).isSameAs(def);
     }
 
+    @Test
     public void getArrayNotAnArray() {
         assertThatExceptionOfType(UnsupportedOperationException.class).
                 isThrownBy(() -> parentWithChildObject(pair("A", "1")).getArray("child"));
@@ -90,12 +96,14 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
                 isThrownBy(() -> stringNode("A").getArray("child"));
     }
 
+    @Test
     public void getAsInt() {
         AbstractNode<N> node = parentWithChildInt(42);
         assertThat(node.getAsInt("child")).isEqualTo(42);
         assertThat(node.getAsInt("unknownChild", 0)).isEqualTo(0);
     }
 
+    @Test
     public void getAsIntNotAnInt() {
         assertThatExceptionOfType(UnsupportedOperationException.class).
                 isThrownBy(() -> parentWithChildString("A").getAsInt("child"));
@@ -103,17 +111,20 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
                 isThrownBy(() -> stringNode("A").getAsInt("child"));
     }
 
+    @Test
     public void getAsLong() {
         AbstractNode<N> node = parentWithChildInt(42);
         assertThat(node.getAsLong("child")).isEqualTo(42);
     }
 
+    @Test
     public void getAsBoolean() {
         AbstractNode<N> node = parentWithChildBoolean(Boolean.TRUE);
         assertThat(node.getAsBoolean("child")).isTrue();
         assertThat(node.getAsBoolean("unknownChild", Boolean.FALSE)).isFalse();
     }
 
+    @Test
     public void getAsBooleanNotABoolean() {
         assertThatExceptionOfType(UnsupportedOperationException.class).
                 isThrownBy(() -> parentWithChildString("A").getAsBoolean("child"));
@@ -121,12 +132,14 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
                 isThrownBy(() -> stringNode("A").getAsBoolean("child"));
     }
 
+    @Test
     public void getAsString() {
         AbstractNode<N> node = parentWithChildString("A");
         assertThat(node.getAsString("child")).isEqualTo("A");
         assertThat(node.getAsString("unknownChild", "B")).isEqualTo("B");
     }
 
+    @Test
     public void getAsStringNotAString() {
         assertThatExceptionOfType(UnsupportedOperationException.class).
                 isThrownBy(() -> parentWithChildInt(42).getAsString("child"));
@@ -134,6 +147,7 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
                 isThrownBy(() -> intNode(42).getAsInt("child"));
     }
 
+    @Test
     public void getAsBigInt() {
         AbstractNode<N> node = parentWithChildInt(42);
         assertThat(node.getAsBigInt("child")).isEqualTo(BigInteger.valueOf(42));

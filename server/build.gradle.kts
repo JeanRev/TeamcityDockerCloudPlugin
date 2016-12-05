@@ -1,6 +1,5 @@
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
-import org.gradle.api.tasks.testing.testng.TestNGOptions
 
 apply {
     plugin("java")
@@ -38,24 +37,30 @@ dependencies {
     add("provided", "org.atmosphere:atmosphere-runtime:2.2.4")
     add("provided", "org.jetbrains.teamcity:cloud-interface:10.0")
     add("provided", "org.jetbrains.teamcity:server-api:10.0")
-    testCompile("org.testng:testng:6.9.13.6")
+    testCompile("junit:junit:4.12")
     testCompile("org.assertj:assertj-core:3.5.2")
+    testCompile("io.takari.junit:takari-cpsuite:1.2.7")
 }
+
+val cpuCountForTest = Math.max(1, Runtime.getRuntime().availableProcessors() / 2)
 
 val test = tasks.getByName("test") as Test
 test.apply {
-    useTestNG()
+    useJUnit()
     if (project.hasProperty("docker.test.tcp.address")) {
         jvmArgs("-Ddocker.test.tcp.address=${project.properties.get("docker.test.tcp.address")}")
     }
     if (project.hasProperty("docker.test.unix.socket")) {
         jvmArgs("-Ddocker.test.unix.socket=${project.properties.get("docker.test.unix.socket")}")
     }
+
+    maxParallelForks = cpuCountForTest
+
+    exclude("run/var/teamcity/cloud/docker/test/**")
 }
 
 task<Test>("quickTest") {
-    useTestNG()
-    (options as TestNGOptions).apply {
-        excludeGroups("integration", "longRunning")
-    }
+    useJUnit()
+    include("run/var/teamcity/cloud/docker/test/QuickTestSuite.class")
+    maxParallelForks = cpuCountForTest
 }

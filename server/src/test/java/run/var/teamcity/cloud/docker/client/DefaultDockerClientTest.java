@@ -1,8 +1,10 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import run.var.teamcity.cloud.docker.test.Integration;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -25,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * {@link DefaultDockerClient} test suite.
  */
-@Test(groups = "integration")
+@Category(Integration.class)
 public abstract class DefaultDockerClientTest {
 
     private final static String TEST_LABEL_KEY = DefaultDockerClientTest.class.getName();
@@ -35,11 +37,12 @@ public abstract class DefaultDockerClientTest {
     private DefaultDockerClient client;
     private String containerId;
 
-    @BeforeMethod
+    @Before
     public void init() {
         containerId = null;
     }
 
+    @Test
     public void fullTest() throws URISyntaxException {
         DefaultDockerClient client = createClient();
 
@@ -73,6 +76,7 @@ public abstract class DefaultDockerClientTest {
         client.removeContainer(containerId, true, true);
     }
 
+    @Test
     @SuppressWarnings("ConstantConditions")
     public void openAllInvalidInput() {
         // Invalid connection pool size.
@@ -85,6 +89,7 @@ public abstract class DefaultDockerClientTest {
                 DefaultDockerClient.newInstance(createConfig(URI.create("http://127.0.0.1:2375"), false)));
     }
 
+    @Test
     @SuppressWarnings("ConstantConditions")
     public void attachAndLogs() throws URISyntaxException, IOException {
         DefaultDockerClient client = createClient(3);
@@ -156,6 +161,7 @@ public abstract class DefaultDockerClientTest {
         assertThat(fragment.getType()).isSameAs(type);
     }
 
+    @Test
     public void createImage() throws URISyntaxException, IOException {
         DockerClient client = createClient();
 
@@ -174,6 +180,7 @@ public abstract class DefaultDockerClientTest {
         assertThat(nodeStream.next()).isNull();
     }
 
+    @Test
     public void closeClient() throws URISyntaxException {
         DockerClient client = createClient();
 
@@ -190,7 +197,7 @@ public abstract class DefaultDockerClientTest {
         assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.listContainersWithLabel("", ""));
     }
 
-    @AfterMethod
+    @After
     public void tearDown() throws URISyntaxException {
         if (containerId != null) {
             try {

@@ -1,7 +1,7 @@
 package run.var.teamcity.cloud.docker.web;
 
 import org.jdom.Element;
-import org.testng.annotations.Test;
+import org.junit.Test;
 import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
 import run.var.teamcity.cloud.docker.test.TestHttpServletRequest;
 import run.var.teamcity.cloud.docker.test.TestHttpServletResponse;
@@ -12,10 +12,10 @@ import run.var.teamcity.cloud.docker.test.TestWebControllerManager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Test
 @SuppressWarnings("unchecked")
 public class CheckConnectivityControllerTest {
 
+    @Test
     @SuppressWarnings("ConstantConditions")
     public void doGet() {
         CheckConnectivityController ctrl = createController();
@@ -23,6 +23,7 @@ public class CheckConnectivityControllerTest {
         assertThat(ctrl.doGet(null, null)).isNull();
     }
 
+    @Test
     public void doPost() {
         CheckConnectivityController ctrl = createController();
 

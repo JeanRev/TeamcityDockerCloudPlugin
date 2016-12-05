@@ -1,7 +1,7 @@
 package run.var.teamcity.cloud.docker;
 
 import jetbrains.buildServer.clouds.CloudClientParameters;
-import org.testng.annotations.Test;
+import org.junit.Test;
 import run.var.teamcity.cloud.docker.test.TestCloudRegistrar;
 import run.var.teamcity.cloud.docker.test.TestCloudState;
 import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
@@ -13,9 +13,9 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Test
 public class DockerCloudClientFactoryTest {
 
+    @Test
     public void getters() {
         DockerCloudClientFactory fty = createFactory();
 
@@ -26,7 +26,7 @@ public class DockerCloudClientFactoryTest {
         assertThat(fty.getPropertiesProcessor()).isNotNull();
     }
 
-
+    @Test
     public void createClient() {
         DockerCloudClientFactory fty = createFactory();
 
@@ -44,6 +44,7 @@ public class DockerCloudClientFactoryTest {
         fty.createNewClient(new TestCloudState(), params);
     }
 
+    @Test
     public void canBeAgentOfType() {
         DockerCloudClientFactory fty = createFactory();
 

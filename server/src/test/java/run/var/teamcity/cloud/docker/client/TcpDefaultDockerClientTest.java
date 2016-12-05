@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.testng.SkipException;
+import org.junit.Assume;
+import org.junit.Test;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -8,17 +9,18 @@ import java.net.URISyntaxException;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
+
     @Override
     protected DefaultDockerClient createClientInternal(int threadPoolSize) throws URISyntaxException {
 
         String dockerTcpAddress = System.getProperty("docker.test.tcp.address");
-        if (dockerTcpAddress == null) {
-            throw new SkipException("Java system variable docker.test.tcp.address not set. Skipping TCP based tests.");
-        }
+        Assume.assumeNotNull(dockerTcpAddress);
+
         return DefaultDockerClient.newInstance(createConfig(new URI("tcp://" + dockerTcpAddress), false)
                 .threadPoolSize(threadPoolSize));
     }
 
+    @Test
     public void openValidInput() {
         // Missing port.
         DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1"), false)).close();
@@ -26,6 +28,7 @@ public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
         DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1:2375"), false)).close();
     }
 
+    @Test
     public void networkFailure() {
         try (DockerClient client = DefaultDockerClient.newInstance(createConfig(URI.create("tcp://notanrealhost:2375"), false))) {
             assertThatExceptionOfType(DockerClientProcessingException.class).
@@ -33,6 +36,7 @@ public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
         }
     }
 
+    @Test
     @SuppressWarnings("ConstantConditions")
     public void openInvalidInput() {
         // Invalid slash count after scheme.

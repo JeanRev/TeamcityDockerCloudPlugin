@@ -1,7 +1,8 @@
 package run.var.teamcity.cloud.docker.client;
 
 
-import org.testng.SkipException;
+import org.junit.Assume;
+import org.junit.Test;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import java.net.URI;
@@ -11,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class UnixSocketDefaultDockerClientTest extends DefaultDockerClientTest {
 
+    @Test
     public void openValidInput() {
         DefaultDockerClient.newInstance(createConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI, false)).close();
         // Minimal valid url: scheme an absolute path.
@@ -19,6 +21,7 @@ public class UnixSocketDefaultDockerClientTest extends DefaultDockerClientTest {
         DefaultDockerClient.newInstance(createConfig(URI.create("unix:///some/non/sandard/location.sock"), false)).close();
     }
 
+    @Test
     @SuppressWarnings("ConstantConditions")
     public void openInvalidInput() {
 
@@ -39,9 +42,7 @@ public class UnixSocketDefaultDockerClientTest extends DefaultDockerClientTest {
     protected DefaultDockerClient createClientInternal(int threadPoolSize) throws URISyntaxException {
 
         String dockerUnixSocket = System.getProperty("docker.test.unix.socket");
-        if (dockerUnixSocket == null) {
-            throw new SkipException("Java system variable docker.test.unix.socket not set. Skipping Unix socket based tests.");
-        }
+        Assume.assumeNotNull(dockerUnixSocket);
         return DefaultDockerClient.newInstance(createConfig(new URI("unix://" + dockerUnixSocket), false)
                 .threadPoolSize(threadPoolSize));
     }

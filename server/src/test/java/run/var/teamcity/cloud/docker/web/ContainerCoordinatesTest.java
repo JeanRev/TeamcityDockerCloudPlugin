@@ -1,15 +1,15 @@
 package run.var.teamcity.cloud.docker.web;
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-@Test
 public class ContainerCoordinatesTest {
 
+    @Test
     public void getters() {
 
         DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
@@ -20,6 +20,7 @@ public class ContainerCoordinatesTest {
         assertThat(coordinates.getContainerId()).isEqualTo("test");
     }
 
+    @Test
     public void invalidInput() {
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() ->
                 new ContainerCoordinates("test", null));

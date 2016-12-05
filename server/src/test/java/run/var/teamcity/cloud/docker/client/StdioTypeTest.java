@@ -1,6 +1,6 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -12,9 +12,9 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * {@link StdioType} test suite.
  */
-@Test
 public class StdioTypeTest {
 
+    @Test
     public void streamTypeLookup() {
         List<StdioType> types = Arrays.stream(StdioType.values()).
                 map(StdioType::streamType).
@@ -25,6 +25,7 @@ public class StdioTypeTest {
 
     }
 
+    @Test
     public void noDuplicateStreamType() {
         List<Long> types = Arrays.stream(StdioType.values()).
                 map(StdioType::streamType).
@@ -33,6 +34,7 @@ public class StdioTypeTest {
         assertThat(types).doesNotHaveDuplicates();
     }
 
+    @Test
     public void unknownStreamType() {
         long unknownType = -42;
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->

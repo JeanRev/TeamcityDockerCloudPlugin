@@ -1,9 +1,9 @@
 package run.var.teamcity.cloud.docker;
 
 import jetbrains.buildServer.clouds.InstanceStatus;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
@@ -12,7 +12,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Test
 public class DockerTaskSchedulerTest {
 
     private DockerTaskScheduler scheduler;
@@ -24,7 +23,7 @@ public class DockerTaskSchedulerTest {
     private DockerInstance instance2;
     private DockerInstance instance3;
 
-    @BeforeMethod
+    @Before
     public void init() {
         instance1 = new DockerInstance(testImage());
         instance2 = new DockerInstance(testImage());
@@ -34,6 +33,7 @@ public class DockerTaskSchedulerTest {
         clientLock = new ReentrantLock();
     }
 
+    @Test
     public void differentInstanceTasksMayExecuteConcurrently() {
         scheduler = new DockerTaskScheduler(3, false);
 
@@ -54,6 +54,7 @@ public class DockerTaskSchedulerTest {
         assertThat(task3.running).isTrue();
     }
 
+    @Test
     public void sameInstanceTasksMayNotExecuteConcurrently() {
         scheduler = new DockerTaskScheduler(3, false);
 
@@ -80,6 +81,7 @@ public class DockerTaskSchedulerTest {
         assertThat(task2b.running).isTrue();
     }
 
+    @Test
     public void clientInstanceTaskPreventInstanceTaskExecution() {
         scheduler = new DockerTaskScheduler(3, false);
 
@@ -103,6 +105,7 @@ public class DockerTaskSchedulerTest {
         assertThat(instanceTask.running).isTrue();
     }
 
+    @Test
     public void multipleClientTaskAreExecutedSynchronously() {
         scheduler = new DockerTaskScheduler(3, false);
 
@@ -126,7 +129,7 @@ public class DockerTaskSchedulerTest {
         assertThat(clientTask2.running).isTrue();
     }
 
-    @AfterMethod
+    @After
     public void tearDown() {
         if (instanceLock.isHeldByCurrentThread()) {
             instanceLock.unlock();

@@ -4,9 +4,10 @@ import jetbrains.buildServer.clouds.CloudErrorInfo;
 import jetbrains.buildServer.clouds.CloudInstanceUserData;
 import jetbrains.buildServer.clouds.InstanceStatus;
 import jetbrains.buildServer.clouds.QuotaException;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
 import run.var.teamcity.cloud.docker.test.*;
@@ -32,12 +33,11 @@ import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
 /**
  * {@link DefaultDockerCloudClient} test suite.
  */
-@Test(groups = "longRunning")
+@Category(LongRunning.class)
 public class DockerCloudClientTest {
 
     private DefaultDockerCloudClient client;
     private TestDockerClientFactory dockerClientFactory;
-    private DockerCloudClientConfig clientConfig;
     private Node containerSpec;
     private boolean rmOnExit;
     private int maxInstanceCount;
@@ -49,7 +49,7 @@ public class DockerCloudClientTest {
     private URL serverURL;
     private URL defaultServerURL;
 
-    @BeforeMethod
+    @Before
     public void init() throws MalformedURLException {
         dockerClientFactory = new TestDockerClientFactory() {
             @Override
@@ -70,6 +70,7 @@ public class DockerCloudClientTest {
         rmOnExit = true;
     }
 
+    @Test
     public void generalLifecycle() {
 
         client = createClient();
@@ -141,6 +142,7 @@ public class DockerCloudClientTest {
         assertThat(instance.getErrorInfo()).isNull();
     }
 
+    @Test
     public void dispose() {
         rmOnExit = false;
 
@@ -158,6 +160,7 @@ public class DockerCloudClientTest {
         assertThat(dockerClientFactory.getClient().getContainers().isEmpty());
     }
 
+    @Test
     public void restartInstance() {
 
         DefaultDockerCloudClient client = createClient();
@@ -189,6 +192,7 @@ public class DockerCloudClientTest {
         assertThat(instance.getErrorInfo()).isNull();
     }
 
+    @Test
     public void reuseContainers() {
         rmOnExit = false;
 
@@ -224,6 +228,7 @@ public class DockerCloudClientTest {
         assertThat(dockerClient.getContainers()).containsOnly(container);
     }
 
+    @Test
     public void discardUnregisteredAgents() {
         TestSBuildAgent agentWithCloudAndInstanceIds = new TestSBuildAgent().
                 environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString()).
@@ -252,6 +257,7 @@ public class DockerCloudClientTest {
         assertThat(client.getErrorInfo()).isNull();
     }
 
+    @Test
     public void setupAgentName() {
 
         String agentName = "the_agent_name";
@@ -289,6 +295,7 @@ public class DockerCloudClientTest {
         assertThat(agentName).isEqualTo(agentName);
     }
 
+    @Test
     public void findInstanceByAgent() {
         DefaultDockerCloudClient client = createClient();
 
@@ -312,6 +319,7 @@ public class DockerCloudClientTest {
         assertThat(client.findInstanceByAgent(anotherAgent)).isNull();
     }
 
+    @Test
     public void findImageById() {
         DefaultDockerCloudClient client = createClient();
 
@@ -320,6 +328,7 @@ public class DockerCloudClientTest {
         assertThat(client.findImageById(dockerImage.getId())).isSameAs(dockerImage);
     }
 
+    @Test
     public void orphanedContainers() {
         DefaultDockerCloudClient client = createClient();
 
@@ -354,6 +363,7 @@ public class DockerCloudClientTest {
         assertThat(dockerClient.getContainers()).containsOnly(nonRelevantContainer);
     }
 
+    @Test
     @SuppressWarnings("ConstantConditions")
     public void clientErrorHandling() {
         DefaultDockerCloudClient client = createClient();
@@ -382,6 +392,7 @@ public class DockerCloudClientTest {
         assertThat(client.canStartNewInstance(image)).isTrue();
     }
 
+    @Test
     public void handlingOfDefaultServerURL() {
 
         serverURL = null;
@@ -396,6 +407,7 @@ public class DockerCloudClientTest {
                 getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(defaultServerURL.toString());
     }
 
+    @Test
     public void maxInstanceCount() {
         maxInstanceCount = 2;
 
@@ -414,6 +426,7 @@ public class DockerCloudClientTest {
         assertThat(client.canStartNewInstance(image)).isFalse();
     }
 
+    @Test
     public void startNewInstanceErrorHandling() {
 
         // Image cannot be resolved.
@@ -449,6 +462,7 @@ public class DockerCloudClientTest {
         assertThatExceptionOfType(QuotaException.class).isThrownBy(() -> client.startNewInstance(image, userData));
     }
 
+    @Test
     @SuppressWarnings("ConstantConditions")
     public void instanceErrorHandling() {
         maxInstanceCount = 2;
@@ -477,6 +491,7 @@ public class DockerCloudClientTest {
         assertThat(client.canStartNewInstance(image)).isTrue();
     }
 
+    @Test
     @SuppressWarnings("ConstantConditions")
     public void instanceErrorHandlingContainerExternallyStopped() {
         DefaultDockerCloudClient client = createClient();
@@ -498,6 +513,7 @@ public class DockerCloudClientTest {
         waitUntil(() -> dockerClient.getContainers().isEmpty());
     }
 
+    @Test
     @SuppressWarnings("ConstantConditions")
     public void instanceErrorHandlingContainerExternallyStarted() {
 
@@ -553,7 +569,7 @@ public class DockerCloudClientTest {
     }
 
 
-    @AfterMethod
+    @After
     public void tearDown() {
         if (client != null) {
             try {

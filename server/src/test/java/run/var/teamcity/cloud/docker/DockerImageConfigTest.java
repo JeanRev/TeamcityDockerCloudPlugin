@@ -1,7 +1,7 @@
 package run.var.teamcity.cloud.docker;
 
 import jetbrains.buildServer.serverSide.InvalidProperty;
-import org.testng.annotations.Test;
+import org.junit.Test;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
@@ -15,9 +15,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
-@Test
 public class DockerImageConfigTest {
 
+    @Test
     public void getters() {
         DockerImageConfig config = new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, 42);
 
@@ -33,6 +33,7 @@ public class DockerImageConfigTest {
         assertThat(config.isUseOfficialTCAgentImage()).isTrue();
     }
 
+    @Test
     @SuppressWarnings("ConstantConditions")
     public void invalidConstructorsInput() {
         new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, 1);
@@ -50,6 +51,7 @@ public class DockerImageConfigTest {
                 new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, -1));
     }
 
+    @Test
     public void fromValidConfigMap() {
         Map<String, String> params = new HashMap<>();
 
@@ -78,6 +80,7 @@ public class DockerImageConfigTest {
         assertThat(images).hasSize(2);
     }
 
+    @Test
     public void fromInvalidConfigMap() {
         Map<String, String> params = new HashMap<>();
 

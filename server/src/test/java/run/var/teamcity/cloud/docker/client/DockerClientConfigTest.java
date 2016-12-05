@@ -1,6 +1,6 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import java.net.URISyntaxException;
@@ -8,9 +8,9 @@ import java.net.URISyntaxException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-@Test
 public class DockerClientConfigTest {
 
+    @Test
     public void normalOperation() throws URISyntaxException {
         DockerClientConfig config = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI)
                 .usingTls(true)
@@ -32,17 +32,20 @@ public class DockerClientConfigTest {
         assertThat(config.getThreadPoolSize()).isEqualTo(1);
     }
 
+    @Test
     public void invalidTimeout() {
         DockerClientConfig config = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> config.connectTimeoutMillis(-1));
     }
 
+    @Test
     public void invalidThreadPoolSize() {
         DockerClientConfig config = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> config.threadPoolSize(0));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> config.threadPoolSize(-1));
     }
 
+    @Test
     @SuppressWarnings("ConstantConditions")
     public void invalidConstructorInput() {
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> new DockerClientConfig(null));

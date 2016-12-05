@@ -1,8 +1,9 @@
 package run.var.teamcity.cloud.docker.web;
 
 import jetbrains.buildServer.serverSide.WebLinks;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
@@ -26,7 +27,7 @@ import static run.var.teamcity.cloud.docker.web.ContainerTestManager.ActionExcep
 /**
  * {@link ContainerTestController} test suite.
  */
-@Test(groups = "longRunning")
+@Category(LongRunning.class)
 public class DefaultContainerTestManagerTest {
 
     private long testMaxIdleTime;
@@ -42,7 +43,7 @@ public class DefaultContainerTestManagerTest {
     private URL serverURL;
     private TestContainerTestStatusListener testListener;
 
-    @BeforeMethod
+    @Before
     public void init() throws MalformedURLException {
         dockerClientFactory = new TestDockerClientFactory() {
             @Override
@@ -68,6 +69,7 @@ public class DefaultContainerTestManagerTest {
         testListener = new TestContainerTestStatusListener();
     }
 
+    @Test
     public void fullTest() {
 
         ContainerTestManager mgr = createManager();
@@ -104,6 +106,7 @@ public class DefaultContainerTestManagerTest {
         mgr.dispose();
     }
 
+    @Test
     public void errorHandling() {
         dockerClientFactory = new TestDockerClientFactory();
 
@@ -117,6 +120,7 @@ public class DefaultContainerTestManagerTest {
                 () -> mgr.startTestContainer(testUuid));
     }
 
+    @Test
     public void diposeTest() {
         ContainerTestManager mgr = createManager();
 
@@ -149,6 +153,7 @@ public class DefaultContainerTestManagerTest {
         assertThat(dockerClient.isClosed()).isTrue();
     }
 
+    @Test
     public void statusListenerBaseFunction() {
 
         // To test listener disposal.
@@ -172,6 +177,7 @@ public class DefaultContainerTestManagerTest {
         assertThat(testListener.isDisposed()).isTrue();
     }
 
+    @Test
     public void handlingOfDefaultServerUrl() {
         clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, null);
 
@@ -186,6 +192,7 @@ public class DefaultContainerTestManagerTest {
 
     }
 
+    @Test
     public void failedToResolveImageMakesTestFail() {
         imageResolver.image(null);
 
