@@ -4,7 +4,9 @@
 [![license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0)
 
 This TeamCity plugin leverages the TeamCity Cloud API in order to start and dispose TeamCity agents hosted in Docker 
-containers on demand.
+containers on demand. Containers can be configured, and tested, directly from the TeamCity configuration interface.
+This cloud provider also has built-in support for Official TeamCity agent images, and resolve them automatically
+according to your TeamCity version.
 
 ## Requirements
 - TeamCity 10.x or greater.
