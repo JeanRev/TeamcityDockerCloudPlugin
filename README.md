@@ -3,7 +3,7 @@
 [![coverage](https://tc.var.run/vr_static/dkcld_plugin_coverage_latest.svg)](https://tc.var.run/viewLog.html?buildId=lastSuccessful&buildTypeId=TeamCityDockerCloudPlugin_Main&tab=coverage_idea&guest=1)
 [![license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0)
 
-This TeamCity plugin leverages the TeamCity Cloud API in order to start and dispose TeamCity agents hosted in Docker 
+This plugin leverages the TeamCity Cloud API in order to start and dispose TeamCity agents hosted in Docker 
 containers on demand. Containers can be configured, and tested, directly from the TeamCity configuration interface.
 This cloud provider also has built-in support for Official TeamCity agent images, and resolve them automatically
 according to your TeamCity version.
