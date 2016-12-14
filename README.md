@@ -1,5 +1,5 @@
 # TeamCity Docker Cloud Plugin
-[![status](https://builds.gradle.org/app/rest/builds/buildType:GradleScriptKotlin_Master/statusIcon)](https://tc.var.run/viewType.html?buildTypeId=TeamCityDockerCloudPlugin_Main)
+[![status](https://builds.gradle.org/app/rest/builds/buildType:GradleScriptKotlin_Master/statusIcon)](https://tc.var.run/viewType.html?buildTypeId=TeamCityDockerCloudPlugin_Main&guest=1)
 [![coverage](https://tc.var.run/vr_static/dkcld_plugin_coverage_latest.svg)](https://tc.var.run/viewLog.html?buildId=lastSuccessful&buildTypeId=TeamCityDockerCloudPlugin_Main&tab=coverage_idea&guest=1)
 [![license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0)
 
@@ -23,8 +23,7 @@ to the _plugins_ subfolder in the TeamCity Data Directory.
 4. Register and configure a Docker image hosting the build agent. You can test the image directly from the same configuration page.
 
 By default, the [official TeamCity agent images](https://hub.docker.com/r/jetbrains/teamcity-agent/) will be used. These
-images are usable without any additional configuration, but you may need to tune the container settings a little if you
-have specific build requirements, such as accessing resources on the host filesystem.
+images are usable without any additional configuration, but you may need to tune the container settings a little depending on your build requirements.
 
 ## Build
 This project uses Gradle [Kotlin](https://kotlinlang.org/) scripts to build and package the plugin. To create the plugin archive simple run the
