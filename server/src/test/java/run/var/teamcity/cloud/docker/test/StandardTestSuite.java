@@ -5,10 +5,10 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 @RunWith(Categories.class)
-@Categories.ExcludeCategory({ Integration.class, LongRunning.class })
+@Categories.ExcludeCategory({ Integration.class })
 @Suite.SuiteClasses(FullTestsSuite.class)
-public class QuickTestSuite {
-    private QuickTestSuite(){
+public class StandardTestSuite {
+    private StandardTestSuite(){
         // Not instantiable.
     }
 }

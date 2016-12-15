@@ -12,6 +12,7 @@ public class DockerClientConfig {
 
     private final URI instanceURI;
     private boolean usingTLS = false;
+    private boolean verifyingHostname = true;
     private int threadPoolSize = 1;
     private int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT_MILLIS;
 
@@ -22,6 +23,11 @@ public class DockerClientConfig {
 
     public DockerClientConfig usingTls(boolean usingTls) {
         this.usingTLS = usingTls;
+        return this;
+    }
+
+    public DockerClientConfig verifyingHostname(boolean verifyingHostname) {
+        this.verifyingHostname = verifyingHostname;
         return this;
     }
 
@@ -46,6 +52,10 @@ public class DockerClientConfig {
     @Nonnull
     public URI getInstanceURI() {
         return instanceURI;
+    }
+
+    public boolean isVerifyingHostname() {
+        return verifyingHostname;
     }
 
     public boolean isUsingTLS() {

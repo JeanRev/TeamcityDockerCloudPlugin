@@ -50,6 +50,7 @@ public abstract class DefaultDockerClientTest {
                 put("Image", TEST_IMAGE);
 
         UUID test = UUID.randomUUID();
+        containerSpec.put("OpenStdin", true);
         containerSpec.getOrCreateObject("Labels").
                 put(TEST_LABEL_KEY, test.toString());
         Node createNode = client.createContainer(containerSpec.saveNode(), null);

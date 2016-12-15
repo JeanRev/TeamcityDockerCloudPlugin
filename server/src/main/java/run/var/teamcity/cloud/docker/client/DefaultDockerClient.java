@@ -9,6 +9,7 @@ import org.apache.http.conn.HttpClientConnectionOperator;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.DefaultHostnameVerifier;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.util.PublicSuffixMatcherLoader;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
@@ -92,7 +93,6 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     public Node getVersion() {
         return invoke(target.path("/version"), HttpMethod.GET, null, null, null);
     }
-
 
     @Nonnull
     public Node createContainer(@Nonnull Node containerSpec, @Nullable String name) {
@@ -338,7 +338,8 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
             connManager = new PoolingHttpClientConnectionManager(connectionOperator,
                     connectionFactory, -1, TimeUnit.SECONDS);
         } else {
-            connManager = new PoolingHttpClientConnectionManager(getDefaultRegistry(), connectionFactory, null);
+            connManager = new PoolingHttpClientConnectionManager(
+                    getDefaultRegistry(clientConfig.isVerifyingHostname()), connectionFactory, null);
         }
 
 
@@ -351,7 +352,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         return new DefaultDockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI);
     }
 
-    private static Registry<ConnectionSocketFactory> getDefaultRegistry() {
+    private static Registry<ConnectionSocketFactory> getDefaultRegistry(boolean verifyHostname) {
 
         // Gets a custom registry leveraging standard JSE system properties to create the client SSL context.
         // This allows for example to configure externally the trusted CA as well as the client certificate and key to
@@ -364,12 +365,16 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 System.getProperty("https.protocols"));
         final String[] supportedCipherSuites = split(
                 System.getProperty("https.cipherSuites"));
-        HostnameVerifier hostnameVerifierCopy = new DefaultHostnameVerifier
-                (PublicSuffixMatcherLoader.getDefault());
+        HostnameVerifier hostnameVerifier;
+        if (verifyHostname) {
+            hostnameVerifier = new DefaultHostnameVerifier(PublicSuffixMatcherLoader.getDefault());
+        } else {
+            hostnameVerifier = new NoopHostnameVerifier();
+        }
 
         SSLConnectionSocketFactory sslCF = new SSLConnectionSocketFactory(
                 (SSLSocketFactory) SSLSocketFactory.getDefault(),
-                supportedProtocols, supportedCipherSuites, hostnameVerifierCopy);
+                supportedProtocols, supportedCipherSuites, hostnameVerifier);
 
         return RegistryBuilder.<ConnectionSocketFactory>create()
                 .register("http", PlainConnectionSocketFactory.getSocketFactory())
