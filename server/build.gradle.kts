@@ -192,18 +192,24 @@ val setupDindTestBed = task("setupDindTestBed") {
         // Configure and start the "plain" Docker container (without TLS).
         val plainDockerConfig = prepareDinDConfig(runFolder, pkiDir)
         plainDockerConfig.cmd("-G", gid, "-H", "unix:///var/tmp/docker.sock")
+        val socketFile = runFolder.resolve("docker.sock")
+        socketFile.delete()
         val container = testContainerMgr.startContainer(plainDockerConfig)
-        buildTestImage("unix://$runFolder/docker.sock")
+        waitUntil { socketFile.exists() }
+        buildTestImage("unix://$socketFile")
         // The plain Docker container is used both for TCP tests and tests through the Unix domain socket.
-        dockerTestInstances[unixSocketInstanceProp] = "$runFolder/docker.sock"
+        dockerTestInstances[unixSocketInstanceProp] = "$socketFile"
         dockerTestInstances[tcpInstanceProp] = "${container.networkSettings().ipAddress()}:2375"
 
         // Configure and start the TLS Docker container.
         val tlsDockerConfig = prepareDinDConfig(runFolder, pkiDir)
         tlsDockerConfig.cmd("-G", gid, "-H", "unix:///var/tmp/tlsDocker.sock", "-H", "tcp://0.0.0.0:2376", "--tlsverify",
                 "--tlscacert=/root/pki/ca.pem", "--tlscert=/root/pki/server-cert.pem", "--tlskey=/root/pki/server-key.pem")
+        val tlsSocketFile = runFolder.resolve("tlsDocker.sock")
+        tlsSocketFile.delete()
         val tlsContainer = testContainerMgr.startContainer(tlsDockerConfig)
-        buildTestImage("unix://$runFolder/tlsDocker.sock")
+        waitUntil { tlsSocketFile.exists() }
+        buildTestImage("unix://$tlsSocketFile")
         dockerTestInstances[tcpTlsInstanceProp] = "${tlsContainer.networkSettings().ipAddress()}:2376"
 
         // Register the TLS settings as java system properties.
@@ -235,5 +241,16 @@ fun buildTestImage(dockerURI: String) {
     println()
     client.use {
         it.build(project.file("client_test_image").toPath(), DockerClient.BuildParam.name("tc_dk_cld_plugin_test_img:1.0"))
+    }
+}
+
+val maxWait = 10000
+fun waitUntil(condition: () -> Boolean) {
+    val waitSince = System.currentTimeMillis()
+    while(!condition()) {
+        if (System.currentTimeMillis() - waitSince > maxWait) {
+            throw GradleException("Operation timed out.")
+        }
+        Thread.sleep(300)
     }
 }
