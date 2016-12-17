@@ -14,7 +14,7 @@ import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 /**
  * {@link Runnable} base class for container test tasks. This class is responsible for managing the test
  * {@link TestContainerStatusMsg.Status status} and provide helper methods to interact with the
- * {@link ContainerTestTaskHandler test task handler}.
+ * {@link ContainerTestHandler test task handler}.
  * <p>
  * A test task can covers multiple test {@link TestContainerStatusMsg.Phase phases}, and has one initial phase
  * which can be queried before the test has started running.
@@ -34,7 +34,7 @@ abstract class ContainerTestTask implements Runnable {
     private Status status = Status.PENDING;
     private String msg = "";
     private Phase phase;
-    ContainerTestTaskHandler testTaskHandler;
+    ContainerTestHandler testTaskHandler;
 
     /**
      * Creates a new task instance.
@@ -44,7 +44,7 @@ abstract class ContainerTestTask implements Runnable {
      *
      * @throws NullPointerException if any argument is {@code null}
      */
-    ContainerTestTask(@Nonnull ContainerTestTaskHandler testTaskHandler, @Nonnull Phase initialPhase) {
+    ContainerTestTask(@Nonnull ContainerTestHandler testTaskHandler, @Nonnull Phase initialPhase) {
         DockerCloudUtils.requireNonNull(testTaskHandler, "Test task handler cannot be null.");
         DockerCloudUtils.requireNonNull(initialPhase, "Initial phase cannot be null.");
         this.testTaskHandler = testTaskHandler;
@@ -96,7 +96,7 @@ abstract class ContainerTestTask implements Runnable {
      * @return the handler
      */
     @Nonnull
-    public ContainerTestTaskHandler getTestTaskHandler() {
+    public ContainerTestHandler getTestTaskHandler() {
         return testTaskHandler;
     }
 

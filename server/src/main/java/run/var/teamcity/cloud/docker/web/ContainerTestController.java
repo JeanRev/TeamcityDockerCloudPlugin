@@ -28,6 +28,7 @@ import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.atmo.DefaultAtmosphereFacade;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -263,7 +264,7 @@ public class ContainerTestController extends BaseFormXmlController {
         volatile AtmosphereResource atmosphereResource;
 
         @Override
-        public void notifyStatus(TestContainerStatusMsg statusMsg) {
+        public void notifyStatus(@Nullable TestContainerStatusMsg statusMsg) {
             lastStatus = statusMsg;
             broadcast(statusMsg);
         }

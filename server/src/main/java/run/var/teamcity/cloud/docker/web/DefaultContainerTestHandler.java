@@ -16,10 +16,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * Default {@link ContainerTestHandler} implementation.
+ */
+public class DefaultContainerTestHandler implements ContainerTestHandler {
 
-public class ContainerSpecTest implements ContainerTestTaskHandler {
-
-    private final static Logger LOG = DockerCloudUtils.getLogger(ContainerSpecTest.class);
+    private final static Logger LOG = DockerCloudUtils.getLogger(DefaultContainerTestHandler.class);
 
     private final UUID uuid = UUID.randomUUID();
     private final ReentrantLock lock = new ReentrantLock();
@@ -34,8 +36,8 @@ public class ContainerSpecTest implements ContainerTestTaskHandler {
 
     private ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTaskFuture = null;
 
-    private ContainerSpecTest(DockerClientConfig clientConfig, DockerClient client,
-                              ContainerTestListener statusListener, StreamingController streamingController) {
+    private DefaultContainerTestHandler(DockerClientConfig clientConfig, DockerClient client,
+                                        ContainerTestListener statusListener, StreamingController streamingController) {
         assert client != null && statusListener != null;
 
         this.clientConfig = clientConfig;
@@ -46,16 +48,16 @@ public class ContainerSpecTest implements ContainerTestTaskHandler {
         notifyInteraction();
     }
 
-    public static ContainerSpecTest newTestInstance(@Nonnull DockerCloudClientConfig clientConfig,
-                                                    @Nonnull DockerClientFactory dockerClientFactory,
-                                                    @Nonnull ContainerTestListener statusListener,
-                                                    @Nullable StreamingController streamingController) {
+    public static DefaultContainerTestHandler newTestInstance(@Nonnull DockerCloudClientConfig clientConfig,
+                                                              @Nonnull DockerClientFactory dockerClientFactory,
+                                                              @Nonnull ContainerTestListener statusListener,
+                                                              @Nullable StreamingController streamingController) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
         DockerCloudUtils.requireNonNull(dockerClientFactory, "Docker client factory cannot be null.");
         DockerCloudUtils.requireNonNull(statusListener, "Status listener cannot be null.");
         DockerClient client = dockerClientFactory.createClient(clientConfig.getDockerClientConfig()
                 .threadPoolSize(1));
-        return new ContainerSpecTest(clientConfig.getDockerClientConfig(), client, statusListener,
+        return new DefaultContainerTestHandler(clientConfig.getDockerClientConfig(), client, statusListener,
                 streamingController);
     }
 

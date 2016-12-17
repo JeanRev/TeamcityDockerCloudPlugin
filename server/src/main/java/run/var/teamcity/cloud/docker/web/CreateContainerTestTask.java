@@ -41,7 +41,7 @@ class CreateContainerTestTask extends ContainerTestTask {
      *
      * @throws NullPointerException if any argument is {@code null}
      */
-    CreateContainerTestTask(@Nonnull ContainerTestTaskHandler testTaskHandler, @Nonnull DockerImageConfig imageConfig,
+    CreateContainerTestTask(@Nonnull ContainerTestHandler testTaskHandler, @Nonnull DockerImageConfig imageConfig,
                             @Nonnull String serverUrl, @Nonnull UUID instanceUuid,
                             @Nonnull DockerImageNameResolver imageResolver) {
         super(testTaskHandler, TestContainerStatusMsg.Phase.CREATE);

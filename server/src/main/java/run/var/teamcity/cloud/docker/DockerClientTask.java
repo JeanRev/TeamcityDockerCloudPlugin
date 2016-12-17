@@ -4,7 +4,7 @@ import javax.annotation.Nonnull;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A {@link DockerTask} associated with a {@link DefaultDockerCloudClient}.
+ * A {@link DockerTask} associated with a {@link DockerCloudClient}.
  */
 abstract class DockerClientTask extends DockerTask {
 

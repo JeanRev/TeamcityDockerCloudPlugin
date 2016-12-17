@@ -30,7 +30,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
     final static long TEST_DEFAULT_IDLE_TIME_SEC = TimeUnit.MINUTES.toSeconds(10);
 
     private final ReentrantLock lock = new ReentrantLock();
-    private final Map<UUID, ContainerSpecTest> tests = new HashMap<>();
+    private final Map<UUID, DefaultContainerTestHandler> tests = new HashMap<>();
     private final DockerImageNameResolver imageNameResolver;
     private final DockerClientFactory dockerClientFactory;
     private final long testMaxIdleTimeSec;
@@ -76,7 +76,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
         DockerCloudUtils.requireNonNull(imageConfig, "Image configuration cannot be null.");
         DockerCloudUtils.requireNonNull(listener, "Test listener cannot be null.");
 
-        ContainerSpecTest test = newTestInstance(clientConfig, listener);
+        DefaultContainerTestHandler test = newTestInstance(clientConfig, listener);
 
         URL serverURL = clientConfig.getServerURL();
         String serverURLStr = serverURL != null ? serverURL.toString() : webLinks.getRootUrl();
@@ -92,7 +92,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
     void startTestContainer(@Nonnull UUID testUuid) {
         DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
 
-        ContainerSpecTest test = retrieveTestInstance(testUuid);
+        DefaultContainerTestHandler test = retrieveTestInstance(testUuid);
 
         String containerId = test.getContainerId();
 
@@ -112,7 +112,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
     public String getLogs(@Nonnull UUID testUuid) {
         DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
 
-        ContainerSpecTest test = retrieveTestInstance(testUuid);
+        DefaultContainerTestHandler test = retrieveTestInstance(testUuid);
 
         String containerId = test.getContainerId();
 
@@ -139,20 +139,20 @@ class DefaultContainerTestManager extends ContainerTestManager {
     void dispose(@Nonnull UUID testUuid) {
         DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
 
-        ContainerSpecTest test = retrieveTestInstance(testUuid);
+        DefaultContainerTestHandler test = retrieveTestInstance(testUuid);
 
         dispose(test);
     }
 
     @Override
     void notifyInteraction(@Nonnull UUID testUUid) {
-        ContainerSpecTest test = retrieveTestInstance(testUUid);
+        DefaultContainerTestHandler test = retrieveTestInstance(testUUid);
         test.notifyInteraction();
     }
 
-    private ContainerSpecTest retrieveTestInstance(UUID testUuid) {
+    private DefaultContainerTestHandler retrieveTestInstance(UUID testUuid) {
 
-        ContainerSpecTest test = null;
+        DefaultContainerTestHandler test = null;
         if (testUuid != null) {
             try {
                 lock.lock();
@@ -194,7 +194,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
         }
     }
 
-    private void dispose(ContainerSpecTest test) {
+    private void dispose(DefaultContainerTestHandler test) {
 
         LOG.info("Disposing test task: " + test.getUuid());
 
@@ -257,12 +257,12 @@ class DefaultContainerTestManager extends ContainerTestManager {
         }
     }
 
-    private ContainerSpecTest newTestInstance(DockerCloudClientConfig clientConfig,
-                                              ContainerTestListener listener) {
+    private DefaultContainerTestHandler newTestInstance(DockerCloudClientConfig clientConfig,
+                                                        ContainerTestListener listener) {
         try {
             lock.lock();
 
-            ContainerSpecTest test = ContainerSpecTest.newTestInstance(clientConfig, dockerClientFactory, listener,
+            DefaultContainerTestHandler test = DefaultContainerTestHandler.newTestInstance(clientConfig, dockerClientFactory, listener,
                     streamingController);
 
             boolean duplicate = tests.put(test.getUuid(), test) != null;
@@ -294,7 +294,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
                 if (task instanceof ContainerTestTask) {
 
                     ContainerTestTask containerTestTask = (ContainerTestTask) task;
-                    ContainerSpecTest test = (ContainerSpecTest) containerTestTask.getTestTaskHandler();
+                    DefaultContainerTestHandler test = (DefaultContainerTestHandler) containerTestTask.getTestTaskHandler();
 
                     if (t == null && future.isDone()) {
                         try {
@@ -348,12 +348,12 @@ class DefaultContainerTestManager extends ContainerTestManager {
         @Override
         public void run() {
 
-            List<ContainerSpecTest> tests = new ArrayList<>();
+            List<DefaultContainerTestHandler> tests = new ArrayList<>();
 
             try {
                 lock.lock();
 
-                for (ContainerSpecTest test : DefaultContainerTestManager.this.tests.values()) {
+                for (DefaultContainerTestHandler test : DefaultContainerTestManager.this.tests.values()) {
                     if (test.getCurrentTaskFuture() != null) {
                         if (Math.abs(System.nanoTime() - test.getLastInteraction()) > TimeUnit.SECONDS.toNanos
                                 (testMaxIdleTimeSec)) {
@@ -365,7 +365,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
                 lock.unlock();
             }
 
-            for (ContainerSpecTest test : tests) {
+            for (DefaultContainerTestHandler test : tests) {
                 dispose(test);
             }
 
@@ -432,7 +432,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
                 return;
             }
 
-            for (ContainerSpecTest test : new ArrayList<>(tests.values())) {
+            for (DefaultContainerTestHandler test : new ArrayList<>(tests.values())) {
                 dispose(test);
             }
 
@@ -458,7 +458,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
                 try {
                     agentToRemove.add(testInstanceUuid);
                     activate();
-                    ContainerSpecTest test = tests.get(testInstanceUuid);
+                    DefaultContainerTestHandler test = tests.get(testInstanceUuid);
                     if (test != null) {
                         test.setBuildAgentDetected(true);
                     }

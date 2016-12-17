@@ -3,6 +3,7 @@ package run.var.teamcity.cloud.docker.client;
 import run.var.teamcity.cloud.docker.web.ContainerTestListener;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg;
 
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -14,7 +15,7 @@ public class TestContainerTestStatusListener implements ContainerTestListener {
     private final Deque<TestContainerStatusMsg> msgs = new ArrayDeque<>();
 
     @Override
-    public synchronized void notifyStatus(TestContainerStatusMsg statusMsg) {
+    public synchronized void notifyStatus(@Nullable TestContainerStatusMsg statusMsg) {
         if (statusMsg != null) {
             msgs.add(statusMsg);
         }

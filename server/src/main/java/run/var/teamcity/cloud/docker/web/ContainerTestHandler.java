@@ -9,9 +9,9 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * An container test task handler. Provides callback function to the test lifecycle.
+ * A container test task handler. Provides callback function to the test lifecycle.
  */
-public interface ContainerTestTaskHandler {
+public interface ContainerTestHandler {
 
     /**
      * Retrieves the Docker client instance to be used for the test.

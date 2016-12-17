@@ -24,8 +24,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * A Docker {@link CloudClient}.
  */
-public class DefaultDockerCloudClient extends BuildServerAdapter implements DockerCloudClient, CloudClientEx,
-        DockerCloudErrorHandler {
+public class DefaultDockerCloudClient extends BuildServerAdapter implements DockerCloudClient {
 
     private final Logger LOG = DockerCloudUtils.getLogger(DefaultDockerCloudClient.class);
 
@@ -179,6 +178,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
      * @return the client UUID
      */
     @Nonnull
+    @Override
     public UUID getUuid() {
         return uuid;
     }

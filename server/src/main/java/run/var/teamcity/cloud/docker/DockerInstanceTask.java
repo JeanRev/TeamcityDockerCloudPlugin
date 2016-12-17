@@ -7,8 +7,6 @@ import javax.annotation.Nullable;
 
 /**
  * A {@link DockerTask} associated with a {@link DockerInstance}.
- *
- * <p>This </p>
  */
 abstract class DockerInstanceTask extends DockerTask {
 

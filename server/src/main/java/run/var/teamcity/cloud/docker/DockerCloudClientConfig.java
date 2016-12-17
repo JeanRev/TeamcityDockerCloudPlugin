@@ -15,7 +15,7 @@ import java.net.URL;
 import java.util.*;
 
 /**
- * Configuration of a {@link DefaultDockerCloudClient}.
+ * Configuration of a {@link DockerCloudClient}.
  *
  * <p>Instances of this class are immutable.</p>
  */

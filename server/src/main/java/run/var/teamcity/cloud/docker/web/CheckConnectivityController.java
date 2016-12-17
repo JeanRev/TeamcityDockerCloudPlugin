@@ -20,7 +20,9 @@ import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-
+/**
+ * Spring controller to handle Docker connectivity tests.
+ */
 public class CheckConnectivityController extends BaseFormXmlController {
 
     public static final String PATH = "checkconnectivity.html";
@@ -51,7 +53,6 @@ public class CheckConnectivityController extends BaseFormXmlController {
 
     @Override
     protected void doPost(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Element xmlResponse) {
-
 
         Map<String, String> properties = DockerCloudUtils.extractTCPluginParams(request);
 

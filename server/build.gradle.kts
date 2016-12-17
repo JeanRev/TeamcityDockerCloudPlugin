@@ -22,7 +22,6 @@ buildscript {
 
     dependencies {
         classpath("com.spotify:docker-client:6.1.1")
-        classpath("org.bouncycastle:bcprov-jdk15on:1.55")
     }
 }
 
@@ -44,7 +43,6 @@ gradle.addListener(object : BuildAdapter() {
         testContainerMgr.dispose()
     }
 })
-
 
 apply {
     plugin("java")
@@ -200,7 +198,7 @@ val setupDindTestBed = task("setupDindTestBed") {
         dockerTestInstances[unixSocketInstanceProp] = "$runFolder/docker.sock"
         dockerTestInstances[tcpInstanceProp] = "${container.networkSettings().ipAddress()}:2375"
 
-        // Configure and start the "plain" Docker container (without TLS).
+        // Configure and start the TLS Docker container.
         val tlsDockerConfig = prepareDinDConfig(runFolder, pkiDir)
         tlsDockerConfig.cmd("-G", gid, "-H", "unix:///var/tmp/tlsDocker.sock", "-H", "tcp://0.0.0.0:2376", "--tlsverify",
                 "--tlscacert=/root/pki/ca.pem", "--tlscert=/root/pki/server-cert.pem", "--tlskey=/root/pki/server-key.pem")
