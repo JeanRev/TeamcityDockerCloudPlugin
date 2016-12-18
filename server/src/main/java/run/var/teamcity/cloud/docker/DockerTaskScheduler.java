@@ -56,7 +56,7 @@ class DockerTaskScheduler {
      * @param threadPoolSize    the size of the thread pool
      * @param usingDaemonThread {@code true} to use daemon threads
      *
-     * @throws IllegalArgumentException if {@code threadPoolSize} is smaller than 1
+     * @throws IllegalArgumentException if {@code connectionPoolSize} is smaller than 1
      */
     DockerTaskScheduler(int threadPoolSize, boolean usingDaemonThread) {
         if (threadPoolSize < 1) {

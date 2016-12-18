@@ -140,7 +140,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         this.serverURL = clientConfig.getServerURL();
         this.buildServer = buildServer;
 
-        taskScheduler = new DockerTaskScheduler(clientConfig.getDockerClientConfig().getThreadPoolSize(),
+        taskScheduler = new DockerTaskScheduler(clientConfig.getDockerClientConfig().getConnectionPoolSize(),
                 clientConfig.isUsingDaemonThreads());
 
         for (DockerImageConfig imageConfig : imageConfigs) {
@@ -153,7 +153,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 // "Unable to find agent type by key".
                 // Possible causes:
                 // - our use of non-persistent image ids ?
-                // - images not being attached to a thread pool ?
+                // - images not being attached to an agent pool ?
                 // - ...
                 // To clarify: are the agent types possibly never discarded ?
                 // TODO: report this.

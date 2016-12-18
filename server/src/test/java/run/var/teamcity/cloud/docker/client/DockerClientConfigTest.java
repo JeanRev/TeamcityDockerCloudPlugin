@@ -15,21 +15,21 @@ public class DockerClientConfigTest {
         DockerClientConfig config = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI)
                 .usingTls(true)
                 .connectTimeoutMillis(42)
-                .threadPoolSize(43);
+                .connectionPoolSize(43);
 
         assertThat(config.getInstanceURI()).isEqualTo(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
         assertThat(config.isUsingTLS()).isTrue();
         assertThat(config.getConnectTimeoutMillis()).isEqualTo(42);
-        assertThat(config.getThreadPoolSize()).isEqualTo(43);
+        assertThat(config.getConnectionPoolSize()).isEqualTo(43);
 
         config.usingTls(false)
                 .connectTimeoutMillis(0)
-                .threadPoolSize(1);
+                .connectionPoolSize(1);
 
         assertThat(config.getInstanceURI()).isEqualTo(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
         assertThat(config.isUsingTLS()).isFalse();
         assertThat(config.getConnectTimeoutMillis()).isEqualTo(0);
-        assertThat(config.getThreadPoolSize()).isEqualTo(1);
+        assertThat(config.getConnectionPoolSize()).isEqualTo(1);
     }
 
     @Test
@@ -39,10 +39,10 @@ public class DockerClientConfigTest {
     }
 
     @Test
-    public void invalidThreadPoolSize() {
+    public void invalidConnectionPoolSize() {
         DockerClientConfig config = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> config.threadPoolSize(0));
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> config.threadPoolSize(-1));
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> config.connectionPoolSize(0));
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> config.connectionPoolSize(-1));
     }
 
     @Test

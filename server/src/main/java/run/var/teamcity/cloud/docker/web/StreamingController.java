@@ -131,7 +131,7 @@ public class StreamingController extends AbstractController {
 
 
         public void onTextMessage(String data) throws IOException {
-            /*
+            /* Temporarily disabled.
             if (streamHandler != null) {
                 OutputStream outputStream = streamHandler.getOutputStream();
                 outputStream.write(data.getBytes(StandardCharsets.UTF_8));

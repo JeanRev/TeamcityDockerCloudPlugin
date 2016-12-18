@@ -64,7 +64,7 @@ public class CheckConnectivityController extends BaseFormXmlController {
 
             DockerClientConfig dockerConfig = new DockerClientConfig(new URI(uri))
                     .usingTls(useTLS)
-                    .threadPoolSize(1)
+                    .connectionPoolSize(1)
                     .connectTimeoutMillis((int) TimeUnit.SECONDS.toMillis(20));
 
             DockerClient client = dockerClientFactory.createClient(dockerConfig);

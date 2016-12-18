@@ -39,11 +39,11 @@ public class UnixSocketDefaultDockerClientTest extends DefaultDockerClientTest {
     }
 
     @Override
-    protected DefaultDockerClient createClientInternal(int threadPoolSize) throws URISyntaxException {
+    protected DefaultDockerClient createClientInternal(int connectionPoolSize) throws URISyntaxException {
 
         String dockerUnixSocket = System.getProperty("docker.test.unix.socket");
         Assume.assumeNotNull(dockerUnixSocket);
         return DefaultDockerClient.newInstance(createConfig(new URI("unix://" + dockerUnixSocket), false)
-                .threadPoolSize(threadPoolSize));
+                .connectionPoolSize(connectionPoolSize));
     }
 }

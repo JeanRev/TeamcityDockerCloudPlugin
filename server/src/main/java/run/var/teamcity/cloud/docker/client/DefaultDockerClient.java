@@ -50,9 +50,9 @@ import java.util.concurrent.TimeUnit;
 // Implementation note:
 /* This class uses the same concept than docker-java (https://github.com/docker-java) to connect to the Docker
 daemon: a Jersey client using an HTTP client connector from Apache. This connector is specially configured to allow
-connecting to a Unix socket. One significant difference from docker-java is that we do not leverage full ORM
-framework, but we deal instead directly with JSON structures since we are only interested only
-in a handful of attributes. */
+connecting to an Unix socket. One significant difference from docker-java is that we do not leverage a full ORM
+framework, but we deal instead directly with JSON structures since we are only interested in a handful of
+attributes. */
 public class DefaultDockerClient extends DockerAbstractClient implements DockerClient {
 
     private final static Charset SUPPORTED_CHARSET = StandardCharsets.UTF_8;
@@ -65,7 +65,10 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     private final DockerHttpConnectionFactory connectionFactory;
     private final WebTarget target;
 
-    public enum SupportedScheme {
+    /**
+     * Supported scheme for the configured Docker URI.
+     */
+    private enum SupportedScheme {
         UNIX,
         TCP;
 
@@ -74,6 +77,9 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         }
     }
 
+    /**
+     * Effective that will be used to connect using Jersey.
+     */
     private enum TranslatedScheme {
         HTTP,
         HTTPS;
@@ -255,7 +261,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
 
     /**
-     * Open a new client targeting the specified instance. The provided Docker URI must use one of the supported scheme
+     * Open a new client using the provided configuration. The Docker URI must use one of the supported scheme
      * from the Docker CLI, either <tt>unix://<em>[absolute_path_to_unix_socket]</em> for Unix sockets or
      * <tt>tcp://<em>[ip_address]</em></tt> for TCP connections.
      *
@@ -272,7 +278,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
         URI dockerURI = clientConfig.getInstanceURI();
         boolean usingTLS = clientConfig.isUsingTLS();
-        int connectionPoolSize = clientConfig.getThreadPoolSize();
+        int connectionPoolSize = clientConfig.getConnectionPoolSize();
 
         if (dockerURI.isOpaque()) {
             throw new IllegalArgumentException("Non opaque URI expected: " + dockerURI);

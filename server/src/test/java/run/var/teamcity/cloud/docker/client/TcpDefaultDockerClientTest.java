@@ -11,13 +11,13 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 public class TcpDefaultDockerClientTest extends DefaultDockerClientTest {
 
     @Override
-    protected DefaultDockerClient createClientInternal(int threadPoolSize) throws URISyntaxException {
+    protected DefaultDockerClient createClientInternal(int connectionPoolSize) throws URISyntaxException {
 
         String dockerTcpAddress = System.getProperty("docker.test.tcp.address");
         Assume.assumeNotNull(dockerTcpAddress);
 
         return DefaultDockerClient.newInstance(createConfig(new URI("tcp://" + dockerTcpAddress), false)
-                .threadPoolSize(threadPoolSize));
+                .connectionPoolSize(connectionPoolSize));
     }
 
     @Test
