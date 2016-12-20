@@ -196,7 +196,6 @@ val setupDindTestBed = task("setupDindTestBed") {
         socketFile.delete()
         val container = testContainerMgr.startContainer(plainDockerConfig)
         waitUntil { socketFile.exists() }
-        Thread.sleep(2000)
         buildTestImage("unix://$socketFile")
         // The plain Docker container is used both for TCP tests and tests through the Unix domain socket.
         dockerTestInstances[unixSocketInstanceProp] = "$socketFile"
@@ -210,7 +209,6 @@ val setupDindTestBed = task("setupDindTestBed") {
         tlsSocketFile.delete()
         val tlsContainer = testContainerMgr.startContainer(tlsDockerConfig)
         waitUntil { tlsSocketFile.exists() }
-        Thread.sleep(2000)
         buildTestImage("unix://$tlsSocketFile")
         dockerTestInstances[tcpTlsInstanceProp] = "${tlsContainer.networkSettings().ipAddress()}:2376"
 
