@@ -208,7 +208,7 @@ class DockerTaskScheduler {
                 // tasks are processed.
                 if (submittedInstancesUUID.isEmpty()) {
                     DockerClientTask clientTask = clientTasks.pollFirst();
-                    LOG.info("Submitting client task " + clientTask + " for execution.");
+                    LOG.debug("Submitting client task " + clientTask + " for execution.");
                     executor.submit(clientTask);
                     // Mark the client task as being submitted.
                     clientTaskSubmitted = true;
