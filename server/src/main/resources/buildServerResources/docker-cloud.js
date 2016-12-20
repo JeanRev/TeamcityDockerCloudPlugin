@@ -1567,6 +1567,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerWarningIcon.hide();
                 self.$testContainerErrorIcon.hide();
                 self.$testContainerLabel.empty();
+                self.$testExecInfo.empty();
                 self.$testExecInfo.hide();
                 self.$testContainerLabel.removeClass('containerTestError');
                 self.$testContainerCancelBtn.attr('disabled', false)

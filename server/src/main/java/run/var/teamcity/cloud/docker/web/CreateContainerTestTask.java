@@ -58,6 +58,8 @@ class CreateContainerTestTask extends ContainerTestTask {
     @Override
     Status work() {
 
+        LOG.info("Creating test container for instance: " + instanceUuid + ". Server URL: " + serverUrl);
+
         DockerClient client = testTaskHandler.getDockerClient();
 
         EditableNode container = imageConfig.getContainerSpec().editNode();
@@ -70,6 +72,9 @@ class CreateContainerTestTask extends ContainerTestTask {
             // Illegal configuration, should not happen.
             throw new ContainerTestTaskException("Failed to resolve image name.");
         }
+
+        LOG.debug("Resolved image name: " + image);
+
         container.put("Image", image);
 
         msg("Pulling image");

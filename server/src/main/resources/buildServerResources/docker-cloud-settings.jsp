@@ -133,7 +133,13 @@
                     </td>
                 </tr>
                 <tr>
-                    <th><label for="dockerCloudImage_Image">Docker image:&nbsp;<l:star/></label></th>
+                    <th><label for="dockerCloudImage_Image">Docker image:&nbsp;<l:star/></label>
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">Docker image name to be started, using the usual syntax: <code>[registry[:registry_port]/]name[:tag]</code>. If
+        no tag is specified, <code>latest</code> will be used as a default. The image name may also be prefixed with a
+        registry hostname and port from which the image must be pulled. If you do not specify a registry hostname, the
+        default Docker public registry will be used instead.</span>
+                    </th>
                     <td>
                         <p>
                             <input type="checkbox" id="dockerCloudImage_UseOfficialTCAgentImage"/>
