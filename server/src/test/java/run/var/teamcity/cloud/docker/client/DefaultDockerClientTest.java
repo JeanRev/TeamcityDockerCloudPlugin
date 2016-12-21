@@ -2,6 +2,7 @@ package run.var.teamcity.cloud.docker.client;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.test.Integration;
@@ -91,6 +92,7 @@ public abstract class DefaultDockerClientTest {
     }
 
     @Test
+    @Ignore
     @SuppressWarnings("ConstantConditions")
     public void attachAndLogs() throws URISyntaxException, IOException {
         DefaultDockerClient client = createClient(10);
