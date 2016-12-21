@@ -93,7 +93,7 @@ public abstract class DefaultDockerClientTest {
     @Test
     @SuppressWarnings("ConstantConditions")
     public void attachAndLogs() throws URISyntaxException, IOException {
-        DefaultDockerClient client = createClient(3);
+        DefaultDockerClient client = createClient(10);
 
         Node containerSpec = Node.EMPTY_OBJECT.editNode().
                 put("Image", TEST_IMAGE).
