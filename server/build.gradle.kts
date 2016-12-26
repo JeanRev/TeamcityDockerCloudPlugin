@@ -140,6 +140,7 @@ inner class TestContainerManager {
         val container = client.value.createContainer(config.build())
         val containerId = container.id()
         client.value.startContainer(containerId)
+        Thread.sleep(1000)
         return client.value.inspectContainer(containerId)
     }
 
