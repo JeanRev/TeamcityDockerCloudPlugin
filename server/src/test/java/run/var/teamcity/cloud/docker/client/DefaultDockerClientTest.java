@@ -92,7 +92,6 @@ public abstract class DefaultDockerClientTest {
     }
 
     @Test
-    @Ignore
     @SuppressWarnings("ConstantConditions")
     public void attachAndLogs() throws URISyntaxException, IOException {
         DefaultDockerClient client = createClient(10);
