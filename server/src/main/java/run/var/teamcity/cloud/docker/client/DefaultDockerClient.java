@@ -89,10 +89,15 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         }
     }
 
-    private DefaultDockerClient(DockerHttpConnectionFactory connectionFactory, Client jerseyClient, URI target) {
+    private DefaultDockerClient(DockerHttpConnectionFactory connectionFactory, Client jerseyClient, URI targetUri,
+                                String apiVersion) {
         super(jerseyClient);
         this.connectionFactory = connectionFactory;
-        this.target = jerseyClient.target(target);
+        WebTarget target = jerseyClient.target(targetUri);
+        if (apiVersion != null) {
+            target = target.path("v" + apiVersion);
+        }
+        this.target = target;
     }
 
     @Nonnull
@@ -355,7 +360,8 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
         config.property(ApacheClientProperties.CONNECTION_MANAGER, connManager);
         config.property(ClientProperties.CONNECT_TIMEOUT, clientConfig.getConnectTimeoutMillis());
-        return new DefaultDockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI);
+        return new DefaultDockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI,
+                clientConfig.getApiVersion());
     }
 
     private static Registry<ConnectionSocketFactory> getDefaultRegistry(boolean verifyHostname) {

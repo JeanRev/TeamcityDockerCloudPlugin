@@ -1,9 +1,6 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.test.Integration;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
@@ -29,18 +26,49 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * {@link DefaultDockerClient} test suite.
  */
 @Category(Integration.class)
-public abstract class DefaultDockerClientTest {
+public class DefaultDockerClientTest {
 
     private final static String TEST_LABEL_KEY = DefaultDockerClientTest.class.getName();
     private final static String TEST_IMAGE = "tc_dk_cld_plugin_test_img:1.0";
     private final static String STDERR_MSG_PREFIX = "ERR";
 
-    private DefaultDockerClient client;
     private String containerId;
 
-    @Before
-    public void init() {
-        containerId = null;
+    private DefaultDockerClient client;
+
+    @Test
+    public void openValidInput() {
+        // Missing port.
+        DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1"), false)).close();
+        DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1"), true)).close();
+        DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1:2375"), false)).close();
+    }
+
+    @Test
+    public void networkFailure() {
+        try (DockerClient client = DefaultDockerClient.newInstance(createConfig(URI.create("tcp://notanrealhost:2375"), false))) {
+            assertThatExceptionOfType(DockerClientProcessingException.class).
+                    isThrownBy(client::getVersion);
+        }
+    }
+
+    @Test
+    @SuppressWarnings("ConstantConditions")
+    public void openInvalidInput() {
+        // Invalid slash count after scheme.
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.newInstance(createConfig(URI.create("tcp:/127.0.0.1:2375"), false)));
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.newInstance(createConfig(URI.create("tcp:///127.0.0.1:2375"), false)));
+        // With path.
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1:2375/blah"), false)));
+        // With query.
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127.0.0.1:2375?param=value"), false)));
+        // Invalid hostname
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.newInstance(createConfig(URI.create("tcp://127..0.0.1:2375"), false)));
     }
 
     @Test
@@ -187,6 +215,7 @@ public abstract class DefaultDockerClientTest {
         DockerClient client = createClient();
 
         client.close();
+        // Closing againg is a no-op.
         client.close();
 
         final String containerId = "not an existing container";
@@ -197,6 +226,55 @@ public abstract class DefaultDockerClientTest {
         assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.removeContainer(containerId,
                 true, true));
         assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.listContainersWithLabel("", ""));
+    }
+
+    @Test
+    public void connectWithSpecificAPIVersion() throws URISyntaxException {
+        DockerClientConfig config = createTcpClientConfig();
+
+        config.apiVersion("1.24");
+
+        DefaultDockerClient client = createClient(config);
+
+        client.getVersion();
+
+    }
+
+    @Test(expected = BadRequestException.class)
+    public void connectWithUnsupportedAPIVersion() throws URISyntaxException {
+        DockerClientConfig config = createTcpClientConfig();
+
+        config.apiVersion("9.99");
+
+        DefaultDockerClient client = createClient(config);
+
+        client.getVersion();
+    }
+
+    private DefaultDockerClient createClient() throws URISyntaxException {
+        return createClient(1);
+    }
+
+
+    private DefaultDockerClient createClient(int connectionPoolSize) throws URISyntaxException {
+
+       DockerClientConfig config = createTcpClientConfig();
+
+       config.connectionPoolSize(connectionPoolSize);
+
+        return client = DefaultDockerClient.newInstance(config);
+    }
+
+    private DockerClientConfig createTcpClientConfig() throws URISyntaxException {
+        String dockerTcpAddress = System.getProperty("docker.test.tcp.address");
+        Assume.assumeNotNull(dockerTcpAddress);
+
+        return createConfig(new URI("tcp://" + dockerTcpAddress), false);
+    }
+
+    private DefaultDockerClient createClient(DockerClientConfig clientConfig) throws URISyntaxException {
+
+        return client = DefaultDockerClient.newInstance(clientConfig);
     }
 
     @After
@@ -213,17 +291,54 @@ public abstract class DefaultDockerClientTest {
         }
     }
 
-    protected DockerClientConfig createConfig(URI uri, boolean usingTls) {
+    @Test
+    public void connectOverTls() throws URISyntaxException {
+        String dockerTcpAddress = System.getProperty("docker.test.tcp.ssl.address");
+        Assume.assumeNotNull(dockerTcpAddress);
+
+        DefaultDockerClient client = DefaultDockerClient.newInstance(createConfig(new URI("tcp://" + dockerTcpAddress), true).
+                verifyingHostname(false));
+
+        client.getVersion();
+    }
+
+    @Test
+    public void connectWithUnixSocket() throws URISyntaxException {
+        String dockerUnixSocket = System.getProperty("docker.test.unix.socket");
+        Assume.assumeNotNull(dockerUnixSocket);
+        DefaultDockerClient client = DefaultDockerClient.newInstance(createConfig(new URI("unix://" + dockerUnixSocket), false)
+                .connectionPoolSize(1));
+
+        client.getVersion();
+    }
+
+    @Test
+    public void validUnixSocketSettings() {
+        DefaultDockerClient.newInstance(createConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI, false)).close();
+        // Minimal valid url: scheme an absolute path.
+        DefaultDockerClient.newInstance(createConfig(URI.create("unix:/some/non/sandard/location.sock"), false)).close();
+        // Also accepted: empty authority and absolute path.
+        DefaultDockerClient.newInstance(createConfig(URI.create("unix:///some/non/sandard/location.sock"), false)).close();
+    }
+
+    @Test
+    @SuppressWarnings("ConstantConditions")
+    public void invalidUnixSocketSettings() {
+
+        // Using TLS with a unix socket.
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.newInstance(createConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI, true)));
+
+        // Invalid slash count after scheme.
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.newInstance(createConfig(URI.create("unix://some/non/standard/location.sock"), false)));
+        // With query.
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.newInstance(createConfig(URI.create("unix:///var/run/docker.sock?param=value"), false)));
+
+    }
+
+    private DockerClientConfig createConfig(URI uri, boolean usingTls) {
         return new DockerClientConfig(uri).usingTls(usingTls);
     }
-
-    private DefaultDockerClient createClient() throws URISyntaxException {
-        return createClient(1);
-    }
-
-    private DefaultDockerClient createClient(int threadPoolSize) throws URISyntaxException {
-        return client = createClientInternal(threadPoolSize);
-    }
-
-    protected abstract DefaultDockerClient createClientInternal(int threadPoolSize) throws URISyntaxException;
 }

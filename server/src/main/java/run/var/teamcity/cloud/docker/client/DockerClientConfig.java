@@ -1,5 +1,6 @@
 package run.var.teamcity.cloud.docker.client;
 
+import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import javax.annotation.Nonnull;
@@ -23,6 +24,7 @@ public class DockerClientConfig {
     private boolean verifyingHostname = true;
     private int connectionPoolSize = 1;
     private int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT_MILLIS;
+    private String apiVersion;
 
     /**
      * Creates a new configuration targeting the specified Docker URI.
@@ -59,6 +61,18 @@ public class DockerClientConfig {
      */
     public DockerClientConfig verifyingHostname(boolean verifyingHostname) {
         this.verifyingHostname = verifyingHostname;
+        return this;
+    }
+
+    /**
+     * Set the target Docker API version. If not specified the default API endpoint will be used.
+     *
+     * @param apiVersion the API version to be used (without the {@code v} prefix)
+     *
+     * @return this configuration instance for chained invocation
+     */
+    public DockerClientConfig apiVersion(String apiVersion) {
+        this.apiVersion = apiVersion;
         return this;
     }
 
@@ -135,6 +149,16 @@ public class DockerClientConfig {
      */
     public int getConnectionPoolSize() {
         return connectionPoolSize;
+    }
+
+    /**
+     * Gets the target API version. May be {@code null} to use the default API endpoint.
+     *
+     * @return the target API version or {@code null}
+     */
+    @Nullable
+    public String getApiVersion() {
+        return apiVersion;
     }
 
     /**

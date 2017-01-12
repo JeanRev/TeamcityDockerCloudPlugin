@@ -45,6 +45,8 @@ public abstract class DockerAbstractClient implements Closeable {
         @Override
         public InvocationFailedException mapToException(int errorCode, String msg) {
             switch (errorCode) {
+                case 400:
+                    return new BadRequestException(msg);
                 case 404:
                     return new NotFoundException(msg);
             }

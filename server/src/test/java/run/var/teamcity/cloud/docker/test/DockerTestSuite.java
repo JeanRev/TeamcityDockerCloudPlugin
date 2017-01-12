@@ -3,13 +3,10 @@ package run.var.teamcity.cloud.docker.test;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
-import run.var.teamcity.cloud.docker.client.TcpDefaultDockerClientTest;
-import run.var.teamcity.cloud.docker.client.TlsDefaultDockerClientTest;
-import run.var.teamcity.cloud.docker.client.UnixSocketDefaultDockerClientTest;
+import run.var.teamcity.cloud.docker.client.DefaultDockerClientTest;
 
 @RunWith(Suite.class)
-@Suite.SuiteClasses({UnixSocketDefaultDockerClientTest.class, TcpDefaultDockerClientTest.class,
-        TlsDefaultDockerClientTest.class})
+@Suite.SuiteClasses({DefaultDockerClientTest.class})
 public class DockerTestSuite {
     private DockerTestSuite() {
         // Not instantiable.
