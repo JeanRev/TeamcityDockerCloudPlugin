@@ -39,9 +39,16 @@ public class TestDockerClient implements DockerClient {
      */
     public static URI TEST_CLIENT_URI = URI.create("tcp://not.a.real.docker.client:0000");
     private boolean closed = false;
-    private DockerClientProcessingException failOnAccessException = null;
+    private DockerClientException failOnAccessException = null;
+    private final DockerClientConfig config;
+    private String supportedAPIVersion = null;
+
+    public ReentrantLock getLock() {
+        return lock;
+    }
 
     public TestDockerClient(DockerClientConfig config) {
+        this.config = config;
         if (!TEST_CLIENT_URI.equals(config.getInstanceURI())) {
             throw new IllegalArgumentException("Unsupported URI: " + config.getInstanceURI());
         }
@@ -50,6 +57,7 @@ public class TestDockerClient implements DockerClient {
     @Nonnull
     @Override
     public Node getVersion() {
+        checkForFailure();
         return Node.EMPTY_OBJECT.editNode().
                 put("Version", "1.0").
                 put("ApiVersion", "1.0").
@@ -336,7 +344,7 @@ public class TestDockerClient implements DockerClient {
         }
     }
 
-    public void setFailOnAccessException(DockerClientProcessingException exception) {
+    public void setFailOnAccessException(DockerClientException exception) {
         lock.lock();
         try {
             failOnAccessException = exception;
@@ -361,6 +369,14 @@ public class TestDockerClient implements DockerClient {
         return closed;
     }
 
+    public DockerClientConfig getConfig() {
+        return config;
+    }
+
+    public void setSupportedAPIVersion(String supportedAPIVersion) {
+        this.supportedAPIVersion = supportedAPIVersion;
+    }
+
     private void checkForFailure() {
         lock.lock();
         try {
@@ -369,6 +385,10 @@ public class TestDockerClient implements DockerClient {
             }
             if (failOnAccessException != null) {
                 throw failOnAccessException;
+            }
+            String apiVersion = config.getApiVersion();
+            if (apiVersion != null && !apiVersion.equals(supportedAPIVersion)) {
+                throw new BadRequestException("Bad version.");
             }
         } finally {
             lock.unlock();
