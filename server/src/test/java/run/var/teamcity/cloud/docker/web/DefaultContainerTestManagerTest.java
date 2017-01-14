@@ -45,12 +45,8 @@ public class DefaultContainerTestManagerTest {
 
     @Before
     public void init() throws MalformedURLException {
-        dockerClientFactory = new TestDockerClientFactory() {
-            @Override
-            public void configureClient(TestDockerClient dockerClient) {
-                dockerClient.knownImage("resolved-image", "1.0");
-            }
-        };
+        dockerClientFactory = new TestDockerClientFactory();
+        dockerClientFactory.addConfigurator(dockerClient -> dockerClient.knownImage("resolved-image", "1.0"));
 
         serverURL = new URL("http://not.a.real.server");
 
@@ -108,6 +104,7 @@ public class DefaultContainerTestManagerTest {
 
     @Test
     public void errorHandling() {
+        // Client factory with no known image.
         dockerClientFactory = new TestDockerClientFactory();
 
         ContainerTestManager mgr = createManager();

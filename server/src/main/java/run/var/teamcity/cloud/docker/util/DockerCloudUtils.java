@@ -79,6 +79,10 @@ public final class DockerCloudUtils {
      * The Docker socket default location on Unix systems.
      */
     public static final URI DOCKER_DEFAULT_SOCKET_URI;
+    /**
+     * Supported Docker API version.
+     */
+    public static final String DOCKER_API_TARGET_VERSION = "1.24";
 
     static {
         try {

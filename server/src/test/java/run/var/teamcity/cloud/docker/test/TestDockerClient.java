@@ -57,17 +57,22 @@ public class TestDockerClient implements DockerClient {
     @Nonnull
     @Override
     public Node getVersion() {
-        checkForFailure();
-        return Node.EMPTY_OBJECT.editNode().
-                put("Version", "1.0").
-                put("ApiVersion", "1.0").
-                put("Os", "NotARealOS").
-                put("Arch", "NotARealArch").
-                put("Kernel", "1.0").
-                put("build", "00000000").
-                put("buildtime", "0000-00-00T00:00:00.000000000+00:00").
-                put("GoVersion", "go1.0").
-                put("experimental", false).saveNode();
+        lock.lock();
+        try {
+            checkForFailure();
+            return Node.EMPTY_OBJECT.editNode().
+                    put("Version", "1.0").
+                    put("ApiVersion", "1.0").
+                    put("Os", "NotARealOS").
+                    put("Arch", "NotARealArch").
+                    put("Kernel", "1.0").
+                    put("build", "00000000").
+                    put("buildtime", "0000-00-00T00:00:00.000000000+00:00").
+                    put("GoVersion", "go1.0").
+                    put("experimental", false).saveNode();
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Nonnull

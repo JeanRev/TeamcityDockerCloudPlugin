@@ -38,14 +38,18 @@ public abstract class DockerClientFactory {
 
         DockerClient client = createClient(config);
 
-        if (config.getApiVersion() != null) {
+        String apiVersion = config.getApiVersion();
+        if (apiVersion != null) {
             try {
                 client.getVersion();
+                LOG.info("Negotiation successful for API version " + apiVersion + ".");
             } catch (BadRequestException e) {
                 LOG.info("API version " + config.getApiVersion() +
                         " seems unsupported by the Daemon. Fallback to default endpoint.", e);
                 client = createClient(config.apiVersion(null));
             }
+        } else {
+            LOG.info("No API version specified, no negotiation performed.");
         }
 
         return client;

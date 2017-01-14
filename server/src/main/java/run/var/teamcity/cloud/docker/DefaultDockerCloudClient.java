@@ -5,10 +5,7 @@ import jetbrains.buildServer.clouds.*;
 import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.serverSide.agentTypes.AgentTypeKey;
 import jetbrains.buildServer.serverSide.agentTypes.AgentTypeStorage;
-import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
-import run.var.teamcity.cloud.docker.client.DockerClient;
-import run.var.teamcity.cloud.docker.client.DockerClientFactory;
-import run.var.teamcity.cloud.docker.client.NotFoundException;
+import run.var.teamcity.cloud.docker.client.*;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -91,10 +88,13 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     private final SBuildServer buildServer;
     private final BuildAgentManager agentMgr;
 
+    private final DockerClientFactory dockerClientFactory;
+    private final DockerClientConfig dockerClientConfig;
+
     /**
      * The Docker client.
      */
-    private DockerClient dockerClient;
+    private volatile DockerClient dockerClient;
 
     private final URL serverURL;
     private final DockerImageNameResolver resolver;
@@ -163,7 +163,8 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         }
         LOG.info(images.size() + " image definitions loaded: " + images);
 
-        dockerClient = dockerClientFactory.createClient(clientConfig.getDockerClientConfig());
+        this.dockerClientFactory = dockerClientFactory;
+        this.dockerClientConfig = clientConfig.getDockerClientConfig();
 
         taskScheduler.scheduleClientTask(new SyncWithDockerTask(clientConfig.getDockerSyncRateSec(), TimeUnit.SECONDS));
 
@@ -257,7 +258,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 // The cloud client is currently in an error status. Wait for it to be cleared.
                 return false;
             }
-            return state == State.READY && ((DockerImage) image).canStartNewInstance();
+            return dockerClient != null && state == State.READY && ((DockerImage) image).canStartNewInstance();
         } finally {
             lock.unlock();
         }
@@ -634,6 +635,13 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
             }
 
             LOG.debug("Synching with Docker instance now.");
+
+            // Creates the Docker client upon first sync. We do this here to benefit from the retry mechanism if
+            // the API negotiation fails.
+            if (dockerClient == null) {
+                dockerClient = dockerClientFactory.createClientWithAPINegotiation(dockerClientConfig);
+                LOG.info("Docker client instantiated.");
+            }
 
             // Step 1, query the whole list of containers associated with this cloud client.
             Node containers = dockerClient.listContainersWithLabel(DockerCloudUtils.CLIENT_ID_LABEL, uuid.toString());
