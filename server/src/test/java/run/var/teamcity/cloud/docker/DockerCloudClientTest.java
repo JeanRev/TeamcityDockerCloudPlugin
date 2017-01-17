@@ -175,23 +175,14 @@ public class DockerCloudClientTest {
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
-        dockerClient.lock();
-
         client.restartInstance(instance);
 
         waitUntil(() -> {
             assertThat(instance.getErrorInfo()).isNull();
-            return instance.getStatus() == InstanceStatus.RESTARTING;
-        });
-
-        dockerClient.unlock();
-
-        waitUntil(() -> {
-            assertThat(instance.getErrorInfo()).isNull();
+            assertThat(instance.getStatus()).isIn(InstanceStatus.UNKNOWN, InstanceStatus.RESTARTING,
+                    InstanceStatus.RUNNING);
             return instance.getStatus() == InstanceStatus.RUNNING;
         });
-
-        assertThat(instance.getErrorInfo()).isNull();
     }
 
     @Test
