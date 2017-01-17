@@ -316,7 +316,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         // under some circumstances to have orphaned build agents displayed in the TC UI for some time.
         tag.setAgentRemovePolicy(CloudConstants.AgentRemovePolicyValue.RemoveAgent);
 
-        taskScheduler.scheduleInstanceTask(new DockerInstanceTask("starting container", instance, InstanceStatus.SCHEDULED_TO_START) {
+        taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Start of container", instance, InstanceStatus.SCHEDULED_TO_START) {
             @Override
             protected void callInternal() throws Exception {
 
@@ -398,7 +398,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         // anything more than a combined stop and start. We try to honor it by simply restarting the docker container.
         LOG.info("Restarting container:" + instance);
         final DockerInstance dockerInstance = (DockerInstance) instance;
-        taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Restarting container", dockerInstance, null) {
+        taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Restart of container", dockerInstance, null) {
             @Override
             protected void callInternal() throws Exception {
                 lock.lock();
@@ -463,7 +463,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     private void terminateInstance(@Nonnull final CloudInstance instance, final boolean clientDisposed) {
         LOG.info("Scheduling cloud instance termination: " + instance + " (client disposed: " + clientDisposed + ").");
         final DockerInstance dockerInstance = ((DockerInstance) instance);
-        taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Terminate container", dockerInstance, InstanceStatus.SCHEDULED_TO_STOP) {
+        taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Disposal of container", dockerInstance, InstanceStatus.SCHEDULED_TO_STOP) {
             @Override
             protected void callInternal() throws Exception {
                 try {
@@ -596,11 +596,11 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         private long nextDelay;
 
         SyncWithDockerTask() {
-            super("Retrieve container status.", DefaultDockerCloudClient.this);
+            super("Synchronization with Docker daemon", DefaultDockerCloudClient.this);
         }
 
         SyncWithDockerTask(long delaySec, TimeUnit timeUnit) {
-            super("Retrieve container status.", DefaultDockerCloudClient.this, 0, delaySec, timeUnit);
+            super("Synchronization with Docker daemon", DefaultDockerCloudClient.this, 0, delaySec, timeUnit);
         }
 
         @Override

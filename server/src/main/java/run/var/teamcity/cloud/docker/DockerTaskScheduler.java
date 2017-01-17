@@ -112,7 +112,7 @@ class DockerTaskScheduler {
                         LOG.debug("Task " + dockerTask + " completed without error.");
                     } else {
                         LOG.error("Task " + dockerTask + " execution failed.", throwable);
-                        dockerTask.getErrorProvider().notifyFailure(dockerTask.getOperationName(), throwable);
+                        dockerTask.getErrorProvider().notifyFailure(dockerTask.getOperationName() + " failed.", throwable);
 
                     }
 
