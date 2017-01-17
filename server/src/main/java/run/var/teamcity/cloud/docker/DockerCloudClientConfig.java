@@ -15,9 +15,8 @@ import java.net.URL;
 import java.util.*;
 
 /**
- * Configuration of a {@link DockerCloudClient}.
- *
- * <p>Instances of this class are immutable.</p>
+ * Configuration of a {@link DockerCloudClient}. Could be instantiated directly, or from a cloud parameter map.
+ * The wrapped Docker client config will use the currently supported API version.
  */
 public class DockerCloudClientConfig {
 
@@ -66,6 +65,8 @@ public class DockerCloudClientConfig {
         this.usingDaemonThreads = usingDaemonThreads;
         this.dockerSyncRateSec = dockerSyncRateSec;
         this.serverURL = serverURL;
+
+        dockerClientConfig.apiVersion(DockerCloudUtils.DOCKER_API_TARGET_VERSION);
     }
 
     /**

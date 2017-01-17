@@ -49,6 +49,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$image = $j("#dockerCloudImage_Image");
                 self.$checkConnectionBtn = $j("#dockerCloudCheckConnectionBtn");
                 self.$checkConnectionSuccess = $j('#dockerCloudCheckConnectionSuccess');
+                self.$checkConnectionWarning = $j('#dockerCloudCheckConnectionWarning');
                 self.$checkConnectionError = $j('#dockerCloudCheckConnectionError');
                 self.$newImageBtn = $j('#dockerShowDialogButton');
                 self.$imageDialogSubmitBtn = $j('#dockerAddImageButton');
@@ -164,6 +165,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self._toggleCheckConnectionBtn();
                 self.$checkConnectionLoader.show();
                 self.$checkConnectionSuccess.hide().empty();
+                self.$checkConnectionWarning.hide().empty();
                 self.$checkConnectionError.hide().empty();
 
                 var deferred = $j.Deferred();
@@ -198,6 +200,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         self.$checkConnectionSuccess.text('Connection successful to Docker version ' + $version.attr('docker') +
                             ' (API: ' + $version.attr('api') + ') on ' +
                             $version.attr('os') + '/' + $version.attr('arch')).show();
+                        var warning = $response.find("warning").text();
+                        if (warning) {
+                            self.$checkConnectionWarning.text(warning).show();
+                        }
                     }
                 }).
                 always(function () {

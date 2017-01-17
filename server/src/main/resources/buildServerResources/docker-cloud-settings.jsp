@@ -80,6 +80,7 @@
     </table>
     <div id="dockerCloudCheckConnectionSuccess" class="successMessage hidden"></div>
     <div id="dockerCloudCheckConnectionError" class="errorMessage hidden"></div>
+    <div id="dockerCloudCheckConnectionWarning" class="warningMessage hidden"></div>
 
     <h2 class="noBorder section-header">Agent Images <span class="error"
                                                            id="error_<%=DockerCloudUtils.IMAGES_PARAM%>"></span></h2>

@@ -392,7 +392,7 @@ public class TestDockerClient implements DockerClient {
                 throw failOnAccessException;
             }
             String apiVersion = config.getApiVersion();
-            if (apiVersion != null && !apiVersion.equals(supportedAPIVersion)) {
+            if (supportedAPIVersion != null && apiVersion != null && !apiVersion.equals(supportedAPIVersion)) {
                 throw new BadRequestException("Bad version.");
             }
         } finally {

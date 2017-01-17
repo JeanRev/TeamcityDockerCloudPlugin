@@ -44,7 +44,7 @@ public abstract class DockerClientFactory {
                 client.getVersion();
                 LOG.info("Negotiation successful for API version " + apiVersion + ".");
             } catch (BadRequestException e) {
-                LOG.info("API version " + config.getApiVersion() +
+                LOG.warn("API version " + config.getApiVersion() +
                         " seems unsupported by the Daemon. Fallback to default endpoint.", e);
                 client = createClient(config.apiVersion(null));
             }

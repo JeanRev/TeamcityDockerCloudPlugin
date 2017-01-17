@@ -64,10 +64,11 @@ public class CheckConnectivityController extends BaseFormXmlController {
 
             DockerClientConfig dockerConfig = new DockerClientConfig(new URI(uri))
                     .usingTls(useTLS)
+                    .apiVersion(DockerCloudUtils.DOCKER_API_TARGET_VERSION)
                     .connectionPoolSize(1)
                     .connectTimeoutMillis((int) TimeUnit.SECONDS.toMillis(20));
 
-            DockerClient client = dockerClientFactory.createClient(dockerConfig);
+            DockerClient client = dockerClientFactory.createClientWithAPINegotiation(dockerConfig);
 
             Node version = client.getVersion();
             Element versionElt = new Element("version");
@@ -81,6 +82,14 @@ public class CheckConnectivityController extends BaseFormXmlController {
             setAttr(versionElt, "go", version.getAsString("GoVersion", null));
             setAttr(versionElt, "experimental", version.getAsBoolean("experimental", false));
             xmlResponse.addContent(versionElt);
+
+            if (!DockerCloudUtils.DOCKER_API_TARGET_VERSION.equals(dockerConfig.getApiVersion())) {
+                Element warning = new Element("warning").
+                        addContent(DockerCloudUtils.filterXmlText("Warning: the daemon does not seems to support " +
+                                "API v" + DockerCloudUtils.DOCKER_API_TARGET_VERSION + ". You may encounter issues."));
+                xmlResponse.addContent(warning);
+            }
+
         } catch (Exception e) {
             error = e;
         }

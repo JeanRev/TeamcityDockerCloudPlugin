@@ -34,6 +34,7 @@ public class DockerCloudClientConfigTest {
         DockerClientConfig dockerConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
         DockerCloudClientConfig config = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 42, serverURL);
 
+        assertThat(config.getDockerClientConfig().getApiVersion()).isEqualTo(DockerCloudUtils.DOCKER_API_TARGET_VERSION);
         assertThat(config.getUuid()).isEqualTo(TestUtils.TEST_UUID);
         assertThat(config.getDockerClientConfig()).isSameAs(dockerConfig);
         assertThat(config.isUsingDaemonThreads()).isTrue();
@@ -75,6 +76,7 @@ public class DockerCloudClientConfigTest {
 
         DockerCloudClientConfig config = DockerCloudClientConfig.processParams(params, dockerClientFactory);
 
+        assertThat(config.getDockerClientConfig().getApiVersion()).isEqualTo(DockerCloudUtils.DOCKER_API_TARGET_VERSION);
         assertThat(config.getUuid()).isEqualTo(TestUtils.TEST_UUID);
         assertThat(config.getServerURL()).isNull();
 
