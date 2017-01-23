@@ -48,18 +48,7 @@ apply {
     plugin("java")
 }
 
-val javaCompile = tasks.getByName("compileJava") as JavaCompile
-javaCompile.apply {
-    sourceCompatibility = "1.7"
-    targetCompatibility = "1.7"
-    if (project.hasProperty("rt7jar")) {
-        options.compilerArgs.add("-Xbootclasspath:${project.properties.get("rt7jar")}")
-    }
-    options.encoding = "UTF-8"
-}
-
-val javaCompileTest = tasks.getByName("compileTestJava") as JavaCompile
-javaCompileTest.apply {
+tasks.withType<JavaCompile> {
     sourceCompatibility = "1.8"
     targetCompatibility = "1.8"
     if (project.hasProperty("rt8jar")) {
