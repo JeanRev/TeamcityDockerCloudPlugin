@@ -22,7 +22,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     private final UUID uuid = UUID.randomUUID();
     private final DockerImage img;
 
-    private final long startedTimeMillis = System.currentTimeMillis();
+    private long startedTimeMillis;
 
     // This lock ensure a thread-safe usage of all the variables below.
     private final Lock lock = new ReentrantLock();
@@ -44,6 +44,10 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
         DockerCloudUtils.requireNonNull(img, "Docker image cannot be null.");
 
         this.img = img;
+
+        // The instance is expected to be started immediately (we must do this to ensure that getStartedTime() always
+        // return some meaningful value).
+        updateStartedTime();
     }
 
     /**
@@ -178,6 +182,15 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
             lock.unlock();
         }
 
+    }
+
+    void updateStartedTime() {
+        lock.lock();
+        try {
+            startedTimeMillis = System.currentTimeMillis();
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Nullable

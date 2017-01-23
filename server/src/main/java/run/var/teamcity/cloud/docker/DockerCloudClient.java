@@ -327,6 +327,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                 try {
                     lock.lock();
                     checkReady();
+                    instance.updateStartedTime();
                     instance.setStatus(InstanceStatus.STARTING);
                     containerId = instance.getContainerId();
                 } finally {
@@ -404,6 +405,7 @@ public class DockerCloudClient extends BuildServerAdapter implements CloudClient
                     checkReady();
                     // We currently don't do extensive status check before restarting. Docker itself will not complain
                     // if we try to restart a stopped instance.
+                    dockerInstance.updateStartedTime();
                     dockerInstance.setStatus(InstanceStatus.RESTARTING);
                 } finally {
                     lock.unlock();
