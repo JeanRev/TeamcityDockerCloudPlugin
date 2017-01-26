@@ -57,7 +57,7 @@ public class DockerImage implements CloudImage {
     @Nonnull
     @Override
     public String getId() {
-        return uuid.toString();
+        return config.getProfileName();
     }
 
     @Nonnull

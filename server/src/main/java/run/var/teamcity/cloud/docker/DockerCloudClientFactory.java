@@ -3,7 +3,6 @@ package run.var.teamcity.cloud.docker;
 import jetbrains.buildServer.clouds.*;
 import jetbrains.buildServer.serverSide.AgentDescription;
 import jetbrains.buildServer.serverSide.SBuildServer;
-import jetbrains.buildServer.serverSide.agentTypes.AgentTypeStorage;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
@@ -12,7 +11,6 @@ import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.DockerCloudSettingsController;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.*;
 
 /**
@@ -23,25 +21,21 @@ public class DockerCloudClientFactory implements CloudClientFactory {
     private final String editProfileUrl;
     private final SBuildServer buildServer;
     private final DockerClientFactory dockerClientFactory;
-    private final AgentTypeStorage agentTypeStorage;
 
     public DockerCloudClientFactory(@Nonnull final SBuildServer buildServer,
                                     @Nonnull final CloudRegistrar cloudRegistrar,
-                                    @Nonnull final PluginDescriptor pluginDescriptor,
-                                    @Nullable final AgentTypeStorage agentTypeStorage) {
-        this(buildServer, cloudRegistrar, pluginDescriptor, DockerClientFactory.getDefault(), agentTypeStorage);
+                                    @Nonnull final PluginDescriptor pluginDescriptor) {
+        this(buildServer, cloudRegistrar, pluginDescriptor, DockerClientFactory.getDefault());
     }
 
     DockerCloudClientFactory(@Nonnull final SBuildServer buildServer,
                              @Nonnull final CloudRegistrar cloudRegistrar,
                              @Nonnull final PluginDescriptor pluginDescriptor,
-                             @Nonnull final DockerClientFactory dockerClientFactory,
-                             @Nullable final AgentTypeStorage agentTypeStorage) {
+                             @Nonnull final DockerClientFactory dockerClientFactory) {
         this.editProfileUrl = pluginDescriptor.getPluginResourcesPath(DockerCloudSettingsController.EDIT_PATH);
         cloudRegistrar.registerCloudFactory(this);
         this.buildServer = buildServer;
         this.dockerClientFactory = dockerClientFactory;
-        this.agentTypeStorage = agentTypeStorage;
     }
 
 
@@ -62,7 +56,7 @@ public class DockerCloudClientFactory implements CloudClientFactory {
 
         return new DefaultDockerCloudClient(clientConfig, dockerClientFactory, imageConfigs,
                 OfficialAgentImageResolver.forCurrentServer(DockerRegistryClientFactory.getDefault()), state,
-                buildServer, agentTypeStorage);
+                buildServer);
     }
 
     @Nonnull

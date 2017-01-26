@@ -55,6 +55,6 @@ public class DockerCloudClientFactoryTest {
 
     private DockerCloudClientFactory createFactory() {
         return new DockerCloudClientFactory(new TestSBuildServer(), new TestCloudRegistrar(),
-                new TestPluginDescriptor(), new TestDockerClientFactory(), null);
+                new TestPluginDescriptor(), new TestDockerClientFactory());
     }
 }

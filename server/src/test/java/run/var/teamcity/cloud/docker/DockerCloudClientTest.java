@@ -269,7 +269,7 @@ public class DockerCloudClientTest {
         TestSBuildAgent agent = new TestSBuildAgent().
                 environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString()).
                 environmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, instance.getInstanceId()).
-                environmentVariable(DockerCloudUtils.ENV_IMAGE_ID, image.getId()).
+                environmentVariable(DockerCloudUtils.ENV_IMAGE_ID, image.getUuid().toString()).
                 name(agentName);
 
         buildServer.notifyAgentRegistered(agent);
@@ -599,7 +599,7 @@ public class DockerCloudClientTest {
                 maxInstanceCount);
         return client = new DefaultDockerCloudClient(clientConfig, dockerClientFactory,
                 Collections.singletonList(imageConfig), dockerImageResolver,
-                cloudState, buildServer, null);
+                cloudState, buildServer);
     }
 
 
