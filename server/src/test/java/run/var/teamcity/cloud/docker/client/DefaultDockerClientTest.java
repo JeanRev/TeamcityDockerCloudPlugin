@@ -1,6 +1,8 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assume;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.test.Integration;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
@@ -14,6 +16,7 @@ import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -301,6 +304,7 @@ public class DefaultDockerClientTest {
 
         client.getVersion();
     }
+   
 
     @Test
     public void connectWithUnixSocket() throws URISyntaxException {

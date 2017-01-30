@@ -2,18 +2,12 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
 
 import com.spotify.docker.client.DefaultDockerClient
+import com.spotify.docker.client.DockerCertificates
 import com.spotify.docker.client.DockerClient
-import com.spotify.docker.client.exceptions.DockerException
-import com.spotify.docker.client.messages.Container
-import com.spotify.docker.client.messages.ContainerConfig
-import com.spotify.docker.client.messages.ContainerCreation
-import com.spotify.docker.client.messages.ContainerInfo
-import com.spotify.docker.client.messages.HostConfig
-import org.gradle.BuildAdapter
-import org.gradle.BuildResult
 
-import org.gradle.api.GradleException
-import java.io.File
+import java.nio.file.Paths
+import com.spotify.docker.client.messages.AuthConfig
+import org.apache.http.ssl.SSLContextBuilder
 
 buildscript {
     repositories {
@@ -28,21 +22,12 @@ buildscript {
 val unixSocketInstanceProp = "docker.test.unix.socket"
 val tcpInstanceProp = "docker.test.tcp.address"
 val tcpTlsInstanceProp = "docker.test.tcp.ssl.address"
+val dockerCertPath = "docker.test.tcp.ssl.certpath"
 
-val dockerTestImage = "docker:1.12.3-dind"
-val testContainerMgr = TestContainerManager()
-
-val dockerTestInstances = mutableMapOf<String, String>()
-listOf(unixSocketInstanceProp, tcpInstanceProp, tcpTlsInstanceProp)
+val dockerTestInstancesProps = mutableMapOf<String, String>()
+listOf(unixSocketInstanceProp, tcpInstanceProp, tcpTlsInstanceProp, dockerCertPath)
         .filter { project.hasProperty(it) }
-        .forEach { dockerTestInstances.put(it, project.properties[it] as String) }
-
-
-gradle.addListener(object : BuildAdapter() {
-    override fun buildFinished(result: BuildResult) {
-        testContainerMgr.dispose()
-    }
-})
+        .forEach { dockerTestInstancesProps.put(it, project.properties[it] as String) }
 
 apply {
     plugin("java")
@@ -104,143 +89,56 @@ task<Test>("dockerIT") {
     description = "Docker integration tests."
 
     useJUnit()
-    mustRunAfter(":server:setupDindTestBed")
+    mustRunAfter(":server:setupTestImages")
 
     maxParallelForks = cpuCountForTest
 
-    dockerTestInstances.forEach { k, v -> systemProperty(k, v) }
+    dockerTestInstancesProps.forEach { k, v -> systemProperty(k, v) }
+
+    val certPath = dockerTestInstancesProps[dockerCertPath];
+    if (certPath != null) {
+        systemProperty("javax.net.ssl.keyStore", Paths.get(certPath, "client.jks").toString())
+        systemProperty("javax.net.ssl.trustStore", Paths.get(certPath, "trustStore.jks").toString())
+        systemProperty("javax.net.ssl.keyStorePassword", "fortestonly")
+        systemProperty("javax.net.ssl.trustStorePassword", "fortestonly")
+    }
+
 
     include("run/var/teamcity/cloud/docker/test/DockerTestSuite.class")
 }
 
-inner class TestContainerManager {
-
-    private val UUID_LABEL: String = "run.var.teamcity.cloud.docker.build_container_uuid"
-    private val CREATE_TS_LABEL: String = "run.var.teamcity.cloud.docker.build_container_ts"
-    private val UUID: java.util.UUID = java.util.UUID.randomUUID()
-
-    val client: Lazy<DefaultDockerClient> = lazy({
-        val dockerHost = System.getenv()["DOCKER_HOST"] ?: throw GradleException("DOCKER_HOST env. variable not set.")
-        DefaultDockerClient.builder().uri(dockerHost).build()
-    })
-
-    fun startContainer(config: ContainerConfig.Builder) : ContainerInfo {
-        config.labels(mapOf(UUID_LABEL to UUID.toString(), CREATE_TS_LABEL to System.currentTimeMillis().toString()))
-        val container = client.value.createContainer(config.build())
-        val containerId = container.id()
-        client.value.startContainer(containerId)
-        Thread.sleep(1000)
-        return client.value.inspectContainer(containerId)
-    }
-
-    fun pullImage(image: String) {
-        client.value.pull(image)
-    }
-
-    fun dispose() {
-        if (!client.isInitialized()) {
-            return
-        }
-
-        try {
-            val containers = client.value.listContainers(DockerClient.ListContainersParam.withLabel(UUID_LABEL))
-            for (container in containers) {
-                val labels = container.labels()
-                if (UUID.toString() == labels.get(UUID_LABEL) || (System.currentTimeMillis() -
-                        labels.get(CREATE_TS_LABEL)!!.toLong()) > java.util.concurrent.TimeUnit.MINUTES.toMillis(30)) {
-                    client.value.removeContainer(container.id(), DockerClient.RemoveContainerParam.removeVolumes(),
-                            DockerClient.RemoveContainerParam.forceKill())
-                }
-            }
-        } finally {
-            client.value.close()
-        }
-    }
-}
-
-val setupDindTestBed = task("setupDindTestBed") {
+val setupTestImages = task("setupTestImages") {
 
     description = "Setup the Docker-In-Docker testbed."
 
     doLast {
-        // The directory where the Docker sockets will be bound.
-        val runFolder = project.buildDir.resolve("dockerIT")
-        // Create any missing parent. Note that Docker will create missing host directories when binding folders, but
-        // with root as owner instead of the current user.
-        runFolder.mkdirs()
+        val unixInstance = dockerTestInstancesProps[unixSocketInstanceProp]
+        if (unixInstance != null) {
+            buildTestImage("unix://$unixInstance")
+        }
 
-        // The folder containing the certificates and keys to test Docker over TLS.
-        val pkiDir = project.file("test_pki")
+        val tcpInstance = dockerTestInstancesProps[tcpInstanceProp];
+        if (tcpInstance != null) {
+            buildTestImage("http://$tcpInstance")
+        }
 
-        // Retrieve the current user GID to pass it to the containerized Docker daemon in order to create the socket
-        // with the right group ownership.
-        val p = ProcessBuilder("id", "-g").redirectErrorStream(true).start()
-        val gid = p.inputStream.reader(java.nio.charset.StandardCharsets.UTF_8).readText().trim()
-
-        testContainerMgr.pullImage(dockerTestImage)
-
-        // Configure and start the "plain" Docker container (without TLS).
-        val plainDockerConfig = prepareDinDConfig(runFolder, pkiDir)
-        plainDockerConfig.cmd("-G", gid, "-H", "unix:///var/tmp/docker.sock")
-        val socketFile = runFolder.resolve("docker.sock")
-        socketFile.delete()
-        val container = testContainerMgr.startContainer(plainDockerConfig)
-        waitUntil { socketFile.exists() }
-        buildTestImage("unix://$socketFile")
-        // The plain Docker container is used both for TCP tests and tests through the Unix domain socket.
-        dockerTestInstances[unixSocketInstanceProp] = "$socketFile"
-        dockerTestInstances[tcpInstanceProp] = "${container.networkSettings().ipAddress()}:2375"
-
-        // Configure and start the TLS Docker container.
-        val tlsDockerConfig = prepareDinDConfig(runFolder, pkiDir)
-        tlsDockerConfig.cmd("-G", gid, "-H", "unix:///var/tmp/tlsDocker.sock", "-H", "tcp://0.0.0.0:2376", "--tlsverify",
-                "--tlscacert=/root/pki/ca.pem", "--tlscert=/root/pki/server-cert.pem", "--tlskey=/root/pki/server-key.pem")
-        val tlsSocketFile = runFolder.resolve("tlsDocker.sock")
-        tlsSocketFile.delete()
-        val tlsContainer = testContainerMgr.startContainer(tlsDockerConfig)
-        waitUntil { tlsSocketFile.exists() }
-        buildTestImage("unix://$tlsSocketFile")
-        dockerTestInstances[tcpTlsInstanceProp] = "${tlsContainer.networkSettings().ipAddress()}:2376"
-
-        // Register the TLS settings as java system properties.
-        val trustStoreFile = pkiDir.resolve("trustStore.jks")
-        val clientStoreFile = pkiDir.resolve("client.jks")
-        val pwd = "fortestonly"
-
-        val dockerITTask = tasks.findByName("dockerIT") as Test
-        dockerITTask.systemProperties.putAll(mapOf("javax.net.ssl.trustStore" to trustStoreFile.toString(),
-                "javax.net.ssl.keyStore" to clientStoreFile.toString(),
-                "javax.net.ssl.trustStorePassword" to pwd,
-                "javax.net.ssl.keyStorePassword" to pwd))
-
-        dockerITTask.systemProperties.putAll(dockerTestInstances)
+        val tcpTlsInstance = dockerTestInstancesProps[tcpTlsInstanceProp]
+        if (tcpTlsInstance != null) {
+            buildTestImage("https://$tcpTlsInstance", true)
+        }
     }
 }
 
+fun buildTestImage(dockerURI: String, tls: Boolean = false) {
+    val clientBuilder = DefaultDockerClient.builder().uri(dockerURI)
 
-fun prepareDinDConfig(runFolder: File, pkiDir: File) : ContainerConfig.Builder {
-    return ContainerConfig.builder()
-            .image(dockerTestImage)
-            .hostConfig(HostConfig.builder().privileged(true).binds("$runFolder:/var/tmp", "$pkiDir:/root/pki").build())
-            .openStdin(true)
-            .tty(true)
-}
+    if (tls) {
+        clientBuilder.dockerCertificates(DockerCertificates(Paths.get(dockerTestInstancesProps[dockerCertPath])))
+    }
 
-fun buildTestImage(dockerURI: String) {
-    val client: DefaultDockerClient = DefaultDockerClient.builder().uri(dockerURI).build()
-    println()
+    val client = clientBuilder.build()
+
     client.use {
         it.build(project.file("client_test_image").toPath(), DockerClient.BuildParam.name("tc_dk_cld_plugin_test_img:1.0"))
-    }
-}
-
-val maxWait = 10000
-fun waitUntil(condition: () -> Boolean) {
-    val waitSince = System.currentTimeMillis()
-    while(!condition()) {
-        if (System.currentTimeMillis() - waitSince > maxWait) {
-            throw GradleException("Operation timed out.")
-        }
-        Thread.sleep(300)
     }
 }
