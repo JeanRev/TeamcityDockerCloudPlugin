@@ -33,7 +33,6 @@ This project uses Gradle [Kotlin](https://kotlinlang.org/) scripts to build and 
 ./gradlew tcDist
 ```
 
-Due to the cutting edge nature of Kotlin support in Gradle, using a local Gradle distribution is currently discouraged.
 For more information about building and testing please check the [Wiki](https://github.com/JeanRev/TeamcityDockerCloudPlugin/wiki).
 
 ## License
