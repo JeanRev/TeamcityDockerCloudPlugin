@@ -111,7 +111,11 @@ public final class TestUtils {
     }
 
     public static Node getSampleImageConfigSpec() {
-        return getSampleImageConfigSpec(Node.EMPTY_OBJECT.editNode(), "Test");
+        return getSampleImageConfigSpec("Test");
+    }
+
+    public static Node getSampleImageConfigSpec(String profileName) {
+        return getSampleImageConfigSpec(Node.EMPTY_OBJECT.editNode(), profileName);
     }
 
     public static Node getSampleImageConfigSpec(EditableNode parent, String profileName) {

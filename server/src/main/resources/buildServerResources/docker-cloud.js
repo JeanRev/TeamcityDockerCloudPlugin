@@ -234,7 +234,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self._updateTCImageDetails();
             },
 
-            _updateTCImageDetails: function() {
+            _updateTCImageDetails: function(oldSourceId, newSourceId) {
+
+                self.logDebug("Updating cloud image details (oldSourceId=" + oldSourceId + ", newSourceId=" +
+                    newSourceId + ").");
                 var newTCImagesDetails = [];
                 var json = self.$tcImagesDetails.val();
                 var oldTCImagesDetails = [];
@@ -245,12 +248,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
 
                 self._safeKeyValueEach(self.imagesData, function(name) {
+                    // If the profile name changed, then the source-id parameter in the image details must be
+                    // translated as well.
+                    var sourceImageName = name === newSourceId ? oldSourceId : name;
                     var oldImageDetails = $j.grep(oldTCImagesDetails, function (imageDetails) {
-                        return imageDetails['source-id'] === name;
+                        return imageDetails['source-id'] === sourceImageName;
                     });
-
-                    var newImageDetails = oldImageDetails.length ? oldImageDetails[0] : { 'source-id': name};
-                    newTCImagesDetails.push(newImageDetails)
+                    var newImageDetails = oldImageDetails.length ? oldImageDetails[0] : {};
+                    newImageDetails['source-id'] = name;
+                    newTCImagesDetails.push(newImageDetails);
                 });
 
                 json = JSON.stringify(newTCImagesDetails);
@@ -923,6 +929,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                        tmp.push(value);
                     });
                     self.$images.val(JSON.stringify(tmp));
+                    self._updateTCImageDetails(currentProfile, newProfile);
                     BS.DockerImageDialog.close();
                     self._renderImagesTable();
                 });
@@ -987,6 +994,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         return;
                     }
                     delete self.imagesData[$j(this).closest('tr').data('profile')];
+                    self._updateTCImageDetails();
                     self._renderImagesTable();
                 });
 
@@ -1448,7 +1456,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         if (newProfile != currentProfile && self.imagesData[newProfile]) {
                             return {msg: 'An image profile with this name already exists.'}
                         }
-
                     }],
                     dockerCloudImage_Image: [requiredValidator],
                     dockerCloudImage_MaxInstanceCount: [positiveIntegerValidator, function($elt) {

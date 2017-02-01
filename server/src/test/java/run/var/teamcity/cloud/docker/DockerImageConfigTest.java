@@ -100,10 +100,22 @@ public class DockerImageConfigTest {
     public void fromInvalidConfigMap() {
         Map<String, String> params = new HashMap<>();
 
+        // Empty list of images.
         assertInvalidProperty(params, DockerCloudUtils.IMAGES_PARAM);
 
+        // Empty image definition.
         params.put(DockerCloudUtils.IMAGES_PARAM, Node.EMPTY_OBJECT.toString());
 
+        EditableNode imagesNode = Node.EMPTY_ARRAY.editNode();
+
+        // Duplicate profile name.
+        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(),"TestProfile");
+        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
+        DockerImageConfig.processParams(params);
+
+        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(),"TestProfile");
+
+        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
         assertInvalidProperty(params, DockerCloudUtils.IMAGES_PARAM);
     }
 

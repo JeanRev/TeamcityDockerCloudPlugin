@@ -9,10 +9,7 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * A {@link DockerImage} configuration.
@@ -129,13 +126,22 @@ public class DockerImageConfig {
                 LOG.error("Failed to parse cloud image parameters.", e);
             }
         }
+
+        Set<String> profileNames = new HashSet<>();
+
         List<DockerImageConfig> images = null;
         if (imagesJSon != null && !imagesJSon.isEmpty()) {
             try {
                 Node imagesNode = Node.parse(imagesJSon);
                 images = new ArrayList<>(imagesNode.getArrayValues().size());
                 for (Node imageNode : imagesNode.getArrayValues()) {
-                    images.add(DockerImageConfig.fromJSon(imageNode, imagesParameters));
+                    DockerImageConfig imageConfig = DockerImageConfig.fromJSon(imageNode, imagesParameters);
+                    boolean duplicateProfileName = !profileNames.add(imageConfig.getProfileName());
+                    if (duplicateProfileName) {
+                        invalidProperties.add(new InvalidProperty(DockerCloudUtils.IMAGES_PARAM, "Duplicate profile name: " + imageConfig.getProfileName()));
+                    } else {
+                        images.add(imageConfig);
+                    }
                 }
             } catch (Exception e) {
                 invalidProperties.add(new InvalidProperty(DockerCloudUtils.IMAGES_PARAM, "Cannot parse image data."));
