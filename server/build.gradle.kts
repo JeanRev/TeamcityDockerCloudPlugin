@@ -57,6 +57,8 @@ dependencies {
     testCompile("junit:junit:4.12")
     testCompile("org.assertj:assertj-core:3.5.2")
     testCompile("io.takari.junit:takari-cpsuite:1.2.7")
+    // Required for tests using the cloud API to process JSON structures.
+    testCompile("com.google.code.gson:gson:2.8.0")
 }
 
 val cpuCountForTest = Math.max(1, Runtime.getRuntime().availableProcessors() / 2)

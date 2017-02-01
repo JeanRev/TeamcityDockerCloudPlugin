@@ -1,4 +1,5 @@
 <%@ page import="run.var.teamcity.cloud.docker.util.DockerCloudUtils" %>
+<%@ page import="jetbrains.buildServer.clouds.CloudImageParameters" %>
 <%@ taglib prefix="props" tagdir="/WEB-INF/tags/props" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="l" tagdir="/WEB-INF/tags/layout" %>
@@ -87,9 +88,9 @@
 
     <props:hiddenProperty name="<%=DockerCloudUtils.TEST_IMAGE_PARAM%>"/>
     <props:hiddenProperty name="<%=DockerCloudUtils.CLIENT_UUID%>"/>
-
-    <%--<props:hiddenProperty name="run.var.teamcity.docker.cloud.img_param"/>--%>
     <jsp:useBean id="propertiesBean" scope="request" type="jetbrains.buildServer.controllers.BasePropertiesBean"/>
+    <c:set var="sourceImagesJson" value="${propertiesBean.properties['source_images_json']}"/>
+    <input type="hidden" class="jsonParam" name="prop:source_images_json" id="source_images_json" value="<c:out value='${sourceImagesJson}'/>" data-err-id="source_images_json"/>
     <c:set var="imagesData" value="${propertiesBean.properties['run.var.teamcity.docker.cloud.img_param']}"/>
     <input type="hidden" name="prop:run.var.teamcity.docker.cloud.img_param"
            id="run.var.teamcity.docker.cloud.img_param" value="<c:out value="${imagesData}"/>"/>
@@ -787,6 +788,7 @@
                             checkConnectivityCtrlURL: '<c:url value="${resPath}checkconnectivity.html"/>',
                             testContainerCtrlURL: '<c:url value="${resPath}test-container.html"/>',
                             imagesParam: '<%=DockerCloudUtils.IMAGES_PARAM%>',
+                            tcImagesDetails: '<%= CloudImageParameters.SOURCE_IMAGES_JSON %>',
                             errorIconURL: '<c:url value="/img/attentionCommentRed.png"/>',
                             warnIconURL: '<c:url value="/img/attentionComment.png"/>',
                             testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>',

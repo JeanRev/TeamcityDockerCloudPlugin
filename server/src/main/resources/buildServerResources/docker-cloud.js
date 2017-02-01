@@ -39,6 +39,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.debugEnabled = params.debugEnabled;
 
                 var imagesParam = params.imagesParam;
+                var tcImagesDetailsParam = params.tcImagesDetails;
 
                 self.hasWebSocketSupport = 'WebSocket' in window;
                 self.hasXTermSupport = self.hasWebSocketSupport && self.checkXtermBrowserSupport();
@@ -56,6 +57,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$imageDialogCancelBtn = $j('#dockerCancelAddImageButton');
                 self.$imagesTable = $j('#dockerCloudImagesTable');
                 self.$images = $j(BS.Util.escapeId(imagesParam));
+                self.$tcImagesDetails = $j(BS.Util.escapeId(tcImagesDetailsParam));
                 self.$dockerAddress = $j("#dockerCloudDockerAddress");
                 self.$useLocalInstance = $j("#dockerCloudUseLocalInstance");
                 self.$useCustomInstance = $j("#dockerCloudUseCustomInstance");
@@ -221,13 +223,41 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 var json = self.$images.val();
 
-                images = json ? JSON.parse(self.$images.val()) : [];
+                var images = json ? JSON.parse(json) : [];
                 self.imagesData = {};
                 self.logDebug(images.length + " images to be loaded.");
                 $j.each(images, function(i, image) {
                     self.imagesData[image.Administration.Profile] = image;
                 });
 
+                // Update the image details when the configuration is initially loaded.
+                self._updateTCImageDetails();
+            },
+
+            _updateTCImageDetails: function() {
+                var newTCImagesDetails = [];
+                var json = self.$tcImagesDetails.val();
+                var oldTCImagesDetails = [];
+                if (json) {
+                    try { oldTCImagesDetails = JSON.parse(json) } catch (e) {
+                        self.logError("Failed to parse image details: " + json);
+                    }
+                }
+
+                self._safeKeyValueEach(self.imagesData, function(name) {
+                    var oldImageDetails = $j.grep(oldTCImagesDetails, function (imageDetails) {
+                        return imageDetails['source-id'] === name;
+                    });
+
+                    var newImageDetails = oldImageDetails.length ? oldImageDetails[0] : { 'source-id': name};
+                    newTCImagesDetails.push(newImageDetails)
+                });
+
+                json = JSON.stringify(newTCImagesDetails);
+
+                self.logDebug("Updated cloud image details: " + json);
+
+                self.$tcImagesDetails.val(json);
             },
 
             _updateAllTablesMandoryStarsVisibility: function() {

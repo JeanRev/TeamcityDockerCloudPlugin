@@ -93,7 +93,7 @@ public class ContainerTestController extends BaseFormXmlController {
         manager.registerController("/app/docker-cloud/test-container/**", this);
 
         atmosphereFramework.addWebSocketHandler("/app/docker-cloud/test-container/getStatus", new WSHandler(),
-                AtmosphereFramework.REFLECTOR_ATMOSPHEREHANDLER, Collections.<AtmosphereInterceptor>emptyList());
+                AtmosphereFramework.REFLECTOR_ATMOSPHEREHANDLER, Collections.emptyList());
 
         statusBroadcaster = atmosphereFramework.getBroadcasterFactory().get(SimpleBroadcaster.class, UUID.randomUUID());
 
@@ -147,7 +147,9 @@ public class ContainerTestController extends BaseFormXmlController {
 
             try {
                 clientConfig = DockerCloudClientConfig.processParams(params, dockerClientFactory);
-                imageConfig = DockerImageConfig.fromJSon(Node.parse(params.get(DockerCloudUtils.TEST_IMAGE_PARAM)));
+                // Note: we let the cloud image parameters here to "null" because the test container will actually not
+                // be started through the cloud API.
+                imageConfig = DockerImageConfig.fromJSon(Node.parse(params.get(DockerCloudUtils.TEST_IMAGE_PARAM)), null);
             } catch (DockerCloudClientConfigException e) {
                 sendErrorQuietly(response, HttpServletResponse.SC_BAD_REQUEST, "Invalid configuration. Please check your connection settings.");
                 return;

@@ -55,7 +55,7 @@ public class DefaultContainerTestManagerTest {
                 serverURL);
 
         Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
-        imageConfig = new DockerImageConfig("test", containerSpec, true, false, 1);
+        imageConfig = new DockerImageConfig("test", containerSpec, true, false, 1, null);
         buildServer = new TestSBuildServer();
         agentMgr = buildServer.getBuildAgentManager();
 

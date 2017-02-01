@@ -150,7 +150,7 @@ public class DockerImage implements CloudImage {
     @Nullable
     @Override
     public Integer getAgentPoolId() {
-        return null;
+        return getConfig().getAgentPoolId();
     }
 
     @Nullable

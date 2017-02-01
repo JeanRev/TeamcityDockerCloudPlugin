@@ -19,7 +19,7 @@ public class OfficialAgentImageResolverTest {
     @Before
     public void init() {
         clientFty = new TestDockerClientRegistryFactory();
-        imageConfig = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, true, 1);
+        imageConfig = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, true, 1, null);
         version = "10.0.3";
     }
 
@@ -37,7 +37,7 @@ public class OfficialAgentImageResolverTest {
 
     @Test
     public void shouldNotResolveImagesWithoutFlag() {
-        imageConfig = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, false, 1);
+        imageConfig = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, false, 1, null);
 
         clientFty.configureClient((clt) -> clt.knownImage(OfficialAgentImageResolver.REPO, "4.0", "5.2", "5.2.1",
                 "5.2.1.1", "6.0"));

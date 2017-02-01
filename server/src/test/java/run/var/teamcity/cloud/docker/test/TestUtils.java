@@ -106,18 +106,18 @@ public final class TestUtils {
         String prefix = withPrefix ? DockerCloudUtils.TC_PROPERTY_PREFIX : "";
         EditableNode images = Node.EMPTY_ARRAY.editNode();
         EditableNode image = images.addObject();
-        getSampleImageConfigSpec(image);
+        getSampleImageConfigSpec(image, "Test");
         return Collections.singletonMap(prefix + DockerCloudUtils.IMAGES_PARAM, images.toString());
     }
 
     public static Node getSampleImageConfigSpec() {
-        return getSampleImageConfigSpec(Node.EMPTY_OBJECT.editNode());
+        return getSampleImageConfigSpec(Node.EMPTY_OBJECT.editNode(), "Test");
     }
 
-    public static Node getSampleImageConfigSpec(EditableNode parent) {
+    public static Node getSampleImageConfigSpec(EditableNode parent, String profileName) {
         parent.getOrCreateObject("Administration").
                 put("Version", DockerImageConfig.DOCKER_IMAGE_SPEC_VERSION).
-                put("Profile", "Test").
+                put("Profile", profileName).
                 put("RmOnExit", true).
                 put("MaxInstanceCount", 2).
                 put("UseOfficialTCAgentImage", false);

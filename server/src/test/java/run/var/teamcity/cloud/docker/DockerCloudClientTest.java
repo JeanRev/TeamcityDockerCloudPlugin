@@ -82,6 +82,7 @@ public class DockerCloudClientTest {
 
         assertThat(image.getImageName()).isEqualTo("test-image");
         assertThat(image.getInstances()).isEmpty();
+        assertThat(image.getAgentPoolId()).isEqualTo(111);
 
         dockerClient.lock();
 
@@ -596,7 +597,7 @@ public class DockerCloudClientTest {
                 apiVersion(DockerCloudUtils.DOCKER_API_TARGET_VERSION);
         DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2, serverURL);
         DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, rmOnExit, false,
-                maxInstanceCount);
+                maxInstanceCount, 111);
         return client = new DefaultDockerCloudClient(clientConfig, dockerClientFactory,
                 Collections.singletonList(imageConfig), dockerImageResolver,
                 cloudState, buildServer);
