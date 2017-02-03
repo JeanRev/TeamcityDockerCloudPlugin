@@ -5,27 +5,27 @@ import jetbrains.buildServer.web.openapi.ControllerAction;
 import jetbrains.buildServer.web.openapi.PagePlace;
 import jetbrains.buildServer.web.openapi.PlaceId;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.springframework.web.servlet.mvc.Controller;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 
 @SuppressWarnings("deprecation")
 public class TestWebControllerManager implements WebControllerManager {
     @Override
-    public void registerController(@NotNull String path, @NotNull Controller controller) {
+    public void registerController(@Nonnull String path, @Nonnull Controller controller) {
         // Do nothing.
     }
 
     @Override
-    public void registerAction(@NotNull BaseController controller, @NotNull ControllerAction controllerAction) {
+    public void registerAction(@Nonnull BaseController controller, @Nonnull ControllerAction controllerAction) {
         throw new UnsupportedOperationException("Not a real manager.");
     }
 
     @Nullable
     @Override
-    public ControllerAction getAction(@NotNull BaseController controller, @NotNull HttpServletRequest request) {
+    public ControllerAction getAction(@Nonnull BaseController controller, @Nonnull HttpServletRequest request) {
         throw new UnsupportedOperationException("Not a real manager.");
     }
 
@@ -39,9 +39,9 @@ public class TestWebControllerManager implements WebControllerManager {
         throw new UnsupportedOperationException("Not a real manager.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public PagePlace getPlaceById(@NotNull PlaceId pagePlaceId) {
+    public PagePlace getPlaceById(@Nonnull PlaceId pagePlaceId) {
         throw new UnsupportedOperationException("Not a real manager.");
     }
 }

@@ -1,8 +1,9 @@
 package run.var.teamcity.cloud.docker.test;
 
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
+
+import javax.annotation.Nullable;
 
 public class TestDockerImageResolver extends DockerImageNameResolver {
 

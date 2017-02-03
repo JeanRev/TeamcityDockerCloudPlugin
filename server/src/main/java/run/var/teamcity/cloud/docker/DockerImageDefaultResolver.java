@@ -1,8 +1,12 @@
 package run.var.teamcity.cloud.docker;
 
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nullable;
+
+/**
+ * Default {@link DockerImageNameResolver}. It will just use the image name defined in its configuration (if any).
+ */
 public class DockerImageDefaultResolver extends DockerImageNameResolver {
 
     public DockerImageDefaultResolver() {

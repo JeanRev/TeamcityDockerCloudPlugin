@@ -1,6 +1,6 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.jetbrains.annotations.Nullable;
+import javax.annotation.Nullable;
 
 /**
  * Processing exception when interacting with the Docker client. Indicates that no communication can be established
@@ -20,7 +20,7 @@ public class DockerClientProcessingException extends DockerClientException {
     /**
      * Creates a new exception with the specified message and cause.
      *
-     * @param msg the message (may be null)
+     * @param msg   the message (may be null)
      * @param cause the exception cause (may be null)
      */
     public DockerClientProcessingException(@Nullable String msg, @Nullable Throwable cause) {

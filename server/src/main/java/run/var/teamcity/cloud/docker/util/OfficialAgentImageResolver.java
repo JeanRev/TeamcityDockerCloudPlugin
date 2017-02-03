@@ -2,16 +2,15 @@ package run.var.teamcity.cloud.docker.util;
 
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.version.ServerVersionHolder;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageDefaultResolver;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
 import run.var.teamcity.cloud.docker.client.DockerClientException;
-import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClient;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,27 +18,31 @@ import java.util.regex.Pattern;
 /**
  * Utility class to resolve the TeamCity agent official images tag name.
  * <p>
- *     In order to keep agent upgrade/downgrade time as low as possible, we should always use the agent image matching
- *     this server version. The algorithm implemented here rely on the assumption that the official image version tag
- *     uses the server version string (excluding the EAP marker).
+ * In order to keep agent upgrade/downgrade time as low as possible, we should always use the agent image matching
+ * this server version. The algorithm implemented here rely on the assumption that the official image version tag
+ * uses the server version string (excluding the EAP marker).
  * </p>
  * <p>
- *     This resolver will attempt to connect the Docker HUB registry in order to know if the resulting version tag
- *     exists. If not, the {@code latest} tag will be used instead. This check is ignored the connection with the
- *     Docker registry is possible (eg. because of network related restrictions).
+ * This resolver will attempt to connect the Docker HUB registry in order to know if the resulting version tag
+ * exists. If not, the {@code latest} tag will be used instead. This check is ignored the connection with the
+ * Docker registry is possible (eg. because of network related restrictions).
  * </p>
  * <p>
- *     The resolution result will be cached indefinitely.
+ * The resolution result will be cached indefinitely.
  * </p>
  * <p>
- *     This class is thread-safe.
+ * This class is thread-safe.
  * </p>
  */
 public class OfficialAgentImageResolver extends DockerImageNameResolver {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(OfficialAgentImageResolver.class);
     final static String REPO = "jetbrains/teamcity-agent";
-    static { assert !REPO.contains(":"): "Repository name must NOT contains a tag name"; }
+
+    static {
+        assert !REPO.contains(":") : "Repository name must NOT contains a tag name";
+    }
+
     final static String LATEST = REPO + ":latest";
 
     private final ReentrantLock lock = new ReentrantLock();
@@ -52,7 +55,7 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
     /**
      * Creates a new resolved for the specified major and minor server version.
      *
-     * @param version the server major version
+     * @param version           the server major version
      * @param registryClientFty the Docker registry client factory to be used to query the available tags
      *
      * @throws IllegalArgumentException if any version number is negative
@@ -116,7 +119,7 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
             }
         }
 
-        if (foundMatchingTag)  {
+        if (foundMatchingTag) {
             return REPO + ":" + version;
         }
 
@@ -134,13 +137,13 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
      *
      * @throws NullPointerException if {@code registryFty} is {@code null}
      */
-    @NotNull
+    @Nonnull
     public static OfficialAgentImageResolver forCurrentServer(DockerRegistryClientFactory registryFty) {
         DockerCloudUtils.requireNonNull(registryFty, "Registry client factory cannot be null.");
         String version = ServerVersionHolder.getVersion().getDisplayVersion();
         Matcher m = TC_DISPLAY_VERSION_PTN.matcher(ServerVersionHolder.getVersion().getDisplayVersion());
         boolean matches = m.matches();
-        assert matches: "Unparseable server version: " + version;
+        assert matches : "Unparseable server version: " + version;
 
         return new OfficialAgentImageResolver(m.group(1), registryFty);
     }

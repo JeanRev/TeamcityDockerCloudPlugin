@@ -4,9 +4,9 @@ import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.AgentDescription;
 import org.apache.commons.io.output.ByteArrayOutputStream;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
@@ -79,6 +79,11 @@ public final class DockerCloudUtils {
      * The Docker socket default location on Unix systems.
      */
     public static final URI DOCKER_DEFAULT_SOCKET_URI;
+    /**
+     * Supported Docker API version.
+     */
+    public static final String DOCKER_API_TARGET_VERSION = "1.24";
+
     static {
         try {
             DOCKER_DEFAULT_SOCKET_URI = new URI("unix:///var/run/docker.sock");
@@ -86,6 +91,7 @@ public final class DockerCloudUtils {
             throw new AssertionError(e);
         }
     }
+
     /**
      * Debug flag system property.
      */
@@ -95,7 +101,9 @@ public final class DockerCloudUtils {
      */
     public static final String CLOUD_CODE = "VRDC";
 
-    static { assert CLOUD_CODE.length() == 4: "Per spec, the cloud code must be 4 chars long."; }
+    static {
+        assert CLOUD_CODE.length() == 4 : "Per spec, the cloud code must be 4 chars long.";
+    }
 
     /**
      * Prefix for environment variables to be published.
@@ -131,7 +139,7 @@ public final class DockerCloudUtils {
      *
      * @throws NullPointerException if any argument is {@code null}
      */
-    public static void requireNonNull(@NotNull Object obj, @NotNull String msg) {
+    public static void requireNonNull(@Nonnull Object obj, @Nonnull String msg) {
         if (msg == null) {
             throw new NullPointerException("Error message cannot be null.");
         }
@@ -150,7 +158,7 @@ public final class DockerCloudUtils {
      * @throws NullPointerException if {@code agentDescription} is {@code null}
      */
     @Nullable
-    public static UUID getClientId(@NotNull AgentDescription agentDescription) {
+    public static UUID getClientId(@Nonnull AgentDescription agentDescription) {
         requireNonNull(agentDescription, "Agent description cannot be null.");
         return tryParseAsUUID(getEnvParameter(agentDescription, ENV_CLIENT_ID));
     }
@@ -165,7 +173,7 @@ public final class DockerCloudUtils {
      * @throws NullPointerException if {@code agentDescription} is {@code null}
      */
     @Nullable
-    public static UUID getImageId(@NotNull AgentDescription agentDescription) {
+    public static UUID getImageId(@Nonnull AgentDescription agentDescription) {
         requireNonNull(agentDescription, "Agent description cannot be null.");
         return tryParseAsUUID(getEnvParameter(agentDescription, ENV_IMAGE_ID));
     }
@@ -180,7 +188,7 @@ public final class DockerCloudUtils {
      * @throws NullPointerException if {@code agentDescription} is {@code null}
      */
     @Nullable
-    public static UUID getInstanceId(@NotNull AgentDescription agentDescription) {
+    public static UUID getInstanceId(@Nonnull AgentDescription agentDescription) {
         requireNonNull(agentDescription, "Agent description cannot be null.");
         return tryParseAsUUID(getEnvParameter(agentDescription, ENV_INSTANCE_ID));
     }
@@ -196,7 +204,7 @@ public final class DockerCloudUtils {
     public static UUID tryParseAsUUID(@Nullable String value) {
         try {
             return value != null ? UUID.fromString(value) : null;
-        }catch (IllegalArgumentException e ){
+        } catch (IllegalArgumentException e) {
             // Ignore.
         }
         return null;
@@ -212,8 +220,8 @@ public final class DockerCloudUtils {
      *
      * @throws NullPointerException if {@code id} is {@code null}
      */
-    @NotNull
-    public static String toShortId(@NotNull String id) {
+    @Nonnull
+    public static String toShortId(@Nonnull String id) {
         requireNonNull(id, "ID cannot be null.");
         return id.substring(0, Math.min(id.length(), 12));
     }
@@ -229,8 +237,8 @@ public final class DockerCloudUtils {
      *
      * @throws NullPointerException if {@code cls} is {@code null}
      */
-    @NotNull
-    public static Logger getLogger(@NotNull Class<?> cls) {
+    @Nonnull
+    public static Logger getLogger(@Nonnull Class<?> cls) {
         requireNonNull(cls, "Class cannot be null.");
         return Logger.getInstance(Loggers.CLOUD_CATEGORY_ROOT + cls.getName());
     }
@@ -239,14 +247,14 @@ public final class DockerCloudUtils {
      * Retrieves an environment variable value from an agent description.
      *
      * @param agentDescription the agent description
-     * @param name the variable name
+     * @param name             the variable name
      *
      * @return the variable value (may be {@code null})
      *
      * @throws NullPointerException if any arguemtn is {@code null}
      */
     @Nullable
-    public static String getEnvParameter(@NotNull AgentDescription agentDescription, @NotNull String name) {
+    public static String getEnvParameter(@Nonnull AgentDescription agentDescription, @Nonnull String name) {
         requireNonNull(agentDescription, "Agent description cannot be null.");
         requireNonNull(name, "Environment variable name cannot be null.");
         return agentDescription.getAvailableParameters().get("env." + name);
@@ -261,10 +269,10 @@ public final class DockerCloudUtils {
      * @return the string
      *
      * @throws NullPointerException if {@code inputStream} is {@code null}
-     * @throws IOException if an error occurred while reading the stream
+     * @throws IOException          if an error occurred while reading the stream
      */
-    @NotNull
-    public static String readUTF8String(@NotNull InputStream inputStream) throws IOException {
+    @Nonnull
+    public static String readUTF8String(@Nonnull InputStream inputStream) throws IOException {
         return readUTF8String(inputStream, -1);
     }
 
@@ -273,18 +281,18 @@ public final class DockerCloudUtils {
      * commonly occurs while truncating the string) will be ignored (replacement character will be used when
      * applicable). The provided stream will NOT be closed on completion.
      *
-     * @param inputStream the input stream to read from
+     * @param inputStream   the input stream to read from
      * @param maxByteLength the maximum count of bytes to be read or {@code -1} to read the whole stream.
      *
      * @return the string
      *
-     * @throws NullPointerException if {@code inputStream} is {@code null}
+     * @throws NullPointerException     if {@code inputStream} is {@code null}
      * @throws IllegalArgumentException if {@code maxByteLength} is smaller than {@code 1} but not equals to
-     * {@code -1}.
-     * @throws IOException if an error occurred while reading the stream
+     *                                  {@code -1}.
+     * @throws IOException              if an error occurred while reading the stream
      */
-    @NotNull
-    public static String readUTF8String(@NotNull InputStream inputStream, int maxByteLength) throws IOException {
+    @Nonnull
+    public static String readUTF8String(@Nonnull InputStream inputStream, int maxByteLength) throws IOException {
         DockerCloudUtils.requireNonNull(inputStream, "Input stream cannot be null.");
         if (maxByteLength != -1 && maxByteLength < 1) {
             throw new IllegalArgumentException("Invalid byte length: " + maxByteLength);
@@ -324,7 +332,7 @@ public final class DockerCloudUtils {
      *
      * @throws NullPointerException if {@code image} is {@code null}
      */
-    public static boolean hasImageTag(@NotNull String image) {
+    public static boolean hasImageTag(@Nonnull String image) {
         DockerCloudUtils.requireNonNull(image, "Image name cannot be null.");
         return IMAGE_WITH_TAG_PTN.matcher(image).matches();
     }
@@ -332,7 +340,7 @@ public final class DockerCloudUtils {
     /**
      * Simple method to widen an signed {@code int} to a unsigned long.
      * <p>
-     *     Java-8: uses Integer.toUnsignedLong() instead.
+     * Java-8: uses Integer.toUnsignedLong() instead.
      * </p>
      *
      * @param value the signed {@code int}
@@ -350,7 +358,7 @@ public final class DockerCloudUtils {
      *
      * @return the stacktrace as a string
      */
-    @NotNull
+    @Nonnull
     public static String getStackTrace(@Nullable Throwable throwable) {
         if (throwable == null) {
             return "";
@@ -374,8 +382,8 @@ public final class DockerCloudUtils {
      *
      * @throws NullPointerException if {@code request} is {@code null}
      */
-    @NotNull
-    public static Map<String, String> extractTCPluginParams(@NotNull HttpServletRequest request) {
+    @Nonnull
+    public static Map<String, String> extractTCPluginParams(@Nonnull HttpServletRequest request) {
         DockerCloudUtils.requireNonNull(request, "Request cannot be null.");
         Map<String, String> params = new HashMap<>();
         for (Map.Entry<String, String[]> param : request.getParameterMap().entrySet()) {
@@ -422,8 +430,8 @@ public final class DockerCloudUtils {
      *
      * @throws NullPointerException if {@code txt} is {@code null}
      */
-    @NotNull
-    public static String filterXmlText(@NotNull String txt) {
+    @Nonnull
+    public static String filterXmlText(@Nonnull String txt) {
         DockerCloudUtils.requireNonNull(txt, "Text cannot be null.");
 
         StringBuilder sb = new StringBuilder(txt.length());

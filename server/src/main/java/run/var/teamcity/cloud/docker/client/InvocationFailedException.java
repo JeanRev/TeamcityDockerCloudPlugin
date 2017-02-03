@@ -1,6 +1,6 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.jetbrains.annotations.Nullable;
+import javax.annotation.Nullable;
 
 /**
  * Exception thrown when a Docker client invocation failed on the server side.

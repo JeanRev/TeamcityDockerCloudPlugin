@@ -15,7 +15,6 @@ import org.atmosphere.websocket.WebSocketHandlerAdapter;
 import org.atmosphere.websocket.WebSocketProcessor;
 import org.jdom.Element;
 import org.jdom.output.XMLOutputter;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.ModelAndView;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
@@ -28,6 +27,8 @@ import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.atmo.DefaultAtmosphereFacade;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -64,24 +65,24 @@ public class ContainerTestController extends BaseFormXmlController {
     private final DockerClientFactory dockerClientFactory;
 
     @Autowired
-    public ContainerTestController(@NotNull DefaultAtmosphereFacade atmosphereFramework,
-                                   @NotNull SBuildServer server,
-                                   @NotNull PluginDescriptor pluginDescriptor,
-                                   @NotNull WebControllerManager manager,
-                                   @NotNull WebLinks webLinks,
-                                   @NotNull StreamingController streamingController) {
+    public ContainerTestController(@Nonnull DefaultAtmosphereFacade atmosphereFramework,
+                                   @Nonnull SBuildServer server,
+                                   @Nonnull PluginDescriptor pluginDescriptor,
+                                   @Nonnull WebControllerManager manager,
+                                   @Nonnull WebLinks webLinks,
+                                   @Nonnull StreamingController streamingController) {
         this(DockerClientFactory.getDefault(), atmosphereFramework, server, pluginDescriptor, manager,
                 new DefaultContainerTestManager(OfficialAgentImageResolver.forCurrentServer(DockerRegistryClientFactory.getDefault()),
                         DockerClientFactory.getDefault(), server, webLinks, streamingController));
 
     }
 
-    ContainerTestController(@NotNull DockerClientFactory dockerClientFactory,
-                            @NotNull AtmosphereFrameworkFacade atmosphereFramework,
-                            @NotNull SBuildServer buildServer,
-                            @NotNull PluginDescriptor pluginDescriptor,
-                            @NotNull WebControllerManager manager,
-                            @NotNull ContainerTestManager testMgr) {
+    ContainerTestController(@Nonnull DockerClientFactory dockerClientFactory,
+                            @Nonnull AtmosphereFrameworkFacade atmosphereFramework,
+                            @Nonnull SBuildServer buildServer,
+                            @Nonnull PluginDescriptor pluginDescriptor,
+                            @Nonnull WebControllerManager manager,
+                            @Nonnull ContainerTestManager testMgr) {
 
 
         this.dockerClientFactory = dockerClientFactory;
@@ -92,7 +93,7 @@ public class ContainerTestController extends BaseFormXmlController {
         manager.registerController("/app/docker-cloud/test-container/**", this);
 
         atmosphereFramework.addWebSocketHandler("/app/docker-cloud/test-container/getStatus", new WSHandler(),
-                AtmosphereFramework.REFLECTOR_ATMOSPHEREHANDLER, Collections.<AtmosphereInterceptor>emptyList());
+                AtmosphereFramework.REFLECTOR_ATMOSPHEREHANDLER, Collections.emptyList());
 
         statusBroadcaster = atmosphereFramework.getBroadcasterFactory().get(SimpleBroadcaster.class, UUID.randomUUID());
 
@@ -101,7 +102,7 @@ public class ContainerTestController extends BaseFormXmlController {
 
 
     @Override
-    protected ModelAndView doGet(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response) {
+    protected ModelAndView doGet(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response) {
 
         WebUtils.configureRequestForAtmosphere(request);
 
@@ -120,7 +121,7 @@ public class ContainerTestController extends BaseFormXmlController {
     }
 
     @Override
-    protected void doPost(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Element xmlResponse) {
+    protected void doPost(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Element xmlResponse) {
 
         String actionParam = request.getParameter("action");
 
@@ -146,7 +147,9 @@ public class ContainerTestController extends BaseFormXmlController {
 
             try {
                 clientConfig = DockerCloudClientConfig.processParams(params, dockerClientFactory);
-                imageConfig = DockerImageConfig.fromJSon(Node.parse(params.get(DockerCloudUtils.TEST_IMAGE_PARAM)));
+                // Note: we let the cloud image parameters here to "null" because the test container will actually not
+                // be started through the cloud API.
+                imageConfig = DockerImageConfig.fromJSon(Node.parse(params.get(DockerCloudUtils.TEST_IMAGE_PARAM)), null);
             } catch (DockerCloudClientConfigException e) {
                 sendErrorQuietly(response, HttpServletResponse.SC_BAD_REQUEST, "Invalid configuration. Please check your connection settings.");
                 return;
@@ -196,7 +199,7 @@ public class ContainerTestController extends BaseFormXmlController {
             return;
         }
 
-        assert action == Action.CANCEL: "Unknown enum member: " + action;
+        assert action == Action.CANCEL : "Unknown enum member: " + action;
 
         try {
             testMgr.dispose(testUuid);
@@ -263,7 +266,7 @@ public class ContainerTestController extends BaseFormXmlController {
         volatile AtmosphereResource atmosphereResource;
 
         @Override
-        public void notifyStatus(TestContainerStatusMsg statusMsg) {
+        public void notifyStatus(@Nullable TestContainerStatusMsg statusMsg) {
             lastStatus = statusMsg;
             broadcast(statusMsg);
         }

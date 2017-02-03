@@ -11,9 +11,9 @@ import jetbrains.buildServer.serverSide.comments.Comment;
 import jetbrains.buildServer.users.SUser;
 import jetbrains.buildServer.users.User;
 import jetbrains.buildServer.util.Action;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.*;
 
 /**
@@ -26,19 +26,20 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     private boolean enabled = true;
 
     private final Map<String, String> availableParameters = new HashMap<>();
-    @NotNull
+
+    @Nonnull
     @Override
     public List<RunType> getAvailableRunTypes() {
         return Collections.emptyList();
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public List<String> getAvailableVcsPlugins() {
         return Collections.emptyList();
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getOperatingSystemName() {
         return "Linux";
@@ -54,26 +55,26 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
         return 0;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Map<String, String> getAvailableParameters() {
         return Collections.unmodifiableMap(availableParameters);
     }
 
-    @NotNull
+    @Nonnull
     @Override
     @SuppressWarnings("deprecation")
     public Map<String, String> getDefinedParameters() {
         return Collections.emptyMap();
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Map<String, String> getConfigurationParameters() {
         return Collections.emptyMap();
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Map<String, String> getBuildParameters() {
         return Collections.emptyMap();
@@ -94,13 +95,13 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getVersion() {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getPluginsSignature() {
         throw new UnsupportedOperationException("Not a real agent.");
@@ -122,7 +123,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getAuthorizationToken() {
         throw new UnsupportedOperationException("Not a real agent.");
@@ -143,13 +144,13 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getCommunicationProtocolDescription() {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getCommunicationProtocolType() {
         throw new UnsupportedOperationException("Not a real agent.");
@@ -185,13 +186,13 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Comment getStatusComment() {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Comment getAuthorizeComment() {
         throw new UnsupportedOperationException("Not a real agent.");
@@ -208,7 +209,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Date getRegistrationTimestamp() {
         throw new UnsupportedOperationException("Not a real agent.");
@@ -220,17 +221,17 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     }
 
     @Override
-    public void setEnabled(boolean enabled, @Nullable SUser user, @NotNull String reason) {
+    public void setEnabled(boolean enabled, @Nullable SUser user, @Nonnull String reason) {
         this.enabled = enabled;
     }
 
     @Override
-    public void setEnabled(boolean enabled, @Nullable SUser user, @NotNull String reason, long statusRestoringTimestamp) {
+    public void setEnabled(boolean enabled, @Nullable SUser user, @Nonnull String reason, long statusRestoringTimestamp) {
         this.enabled = enabled;
     }
 
     @Override
-    public void setAuthorized(boolean authorized, @Nullable SUser user, @NotNull String reason) throws LicenseNotGrantedException {
+    public void setAuthorized(boolean authorized, @Nullable SUser user, @Nonnull String reason) throws LicenseNotGrantedException {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
@@ -240,11 +241,11 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     }
 
     @Override
-    public void releaseSources(@NotNull SBuildType buildType) {
+    public void releaseSources(@Nonnull SBuildType buildType) {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public List<SBuildType> getBuildConfigurationsBuilt() {
         throw new UnsupportedOperationException("Not a real agent.");
@@ -267,18 +268,18 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String describe(boolean verbose) {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
     @Override
-    public int compareTo(@NotNull BuildAgent o) {
+    public int compareTo(@Nonnull BuildAgent o) {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public List<SFinishedBuild> getBuildHistory(@Nullable User user, boolean includeCanceled) {
         throw new UnsupportedOperationException("Not a real agent.");
@@ -300,7 +301,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     }
 
     @Override
-    public void setAuthorizationToken(@NotNull String s) {
+    public void setAuthorizationToken(@Nonnull String s) {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
@@ -310,7 +311,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     }
 
     @Override
-    public void setName(@NotNull String s) throws IllegalStateException {
+    public void setName(@Nonnull String s) throws IllegalStateException {
         this.name = s;
     }
 
@@ -343,14 +344,14 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public SAgentType getAgentType() {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
     @Override
-    public AgentBuildResult runBuild(@NotNull AgentBuild agentBuild) {
+    public AgentBuildResult runBuild(@Nonnull AgentBuild agentBuild) {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
@@ -364,7 +365,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getPingCode() {
         throw new UnsupportedOperationException("Not a real agent.");
@@ -376,7 +377,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     }
 
     @Override
-    public void unregister(@NotNull String s) {
+    public void unregister(@Nonnull String s) {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
@@ -386,7 +387,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     }
 
     @Override
-    public void setAgentDescription(@NotNull AgentDescription agentDescription) {
+    public void setAgentDescription(@Nonnull AgentDescription agentDescription) {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
@@ -396,7 +397,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     }
 
     @Override
-    public <T> T getRemoteInterface(@NotNull Class<T> aClass) {
+    public <T> T getRemoteInterface(@Nonnull Class<T> aClass) {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 

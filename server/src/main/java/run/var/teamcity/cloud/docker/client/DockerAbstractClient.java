@@ -1,12 +1,12 @@
 package run.var.teamcity.cloud.docker.client;
 
 import com.intellij.openapi.diagnostic.Logger;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
@@ -23,9 +23,9 @@ import java.nio.charset.StandardCharsets;
 /**
  * Base class to access Docker services using JAX-WS.
  * <p>
- *     This class provides helper method to work with the most common data-structure returned from Docker services like
- *     the Docker client remote API or the Docker registry API. It also provides a common ground for exception handling
- *     with an operation specific {@link ErrorCodeMapper}.
+ * This class provides helper method to work with the most common data-structure returned from Docker services like
+ * the Docker client remote API or the Docker registry API. It also provides a common ground for exception handling
+ * with an operation specific {@link ErrorCodeMapper}.
  * </p>
  */
 /*
@@ -45,6 +45,8 @@ public abstract class DockerAbstractClient implements Closeable {
         @Override
         public InvocationFailedException mapToException(int errorCode, String msg) {
             switch (errorCode) {
+                case 400:
+                    return new BadRequestException(msg);
                 case 404:
                     return new NotFoundException(msg);
             }
@@ -61,24 +63,24 @@ public abstract class DockerAbstractClient implements Closeable {
      *
      * @param jerseyClient the Jersey client
      */
-    protected DockerAbstractClient(@NotNull Client jerseyClient) {
+    protected DockerAbstractClient(@Nonnull Client jerseyClient) {
         this.jerseyClient = jerseyClient;
     }
 
     /**
      * Invokes an operation on the service returning JSON structure.
      *
-     * @param target the targeted resource
-     * @param method the operation method
-     * @param entity the entity to be submitted, may be {@code null}
-     * @param authToken the authorization token for the operation, may be {@code null}
+     * @param target          the targeted resource
+     * @param method          the operation method
+     * @param entity          the entity to be submitted, may be {@code null}
+     * @param authToken       the authorization token for the operation, may be {@code null}
      * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
      *
      * @return the parsed response
      *
      * @throws DockerClientException if invoking the operation failed
      */
-    @NotNull
+    @Nonnull
     protected Node invoke(WebTarget target, String method, Node entity, String authToken, ErrorCodeMapper
             errorCodeMapper) {
 
@@ -105,17 +107,17 @@ public abstract class DockerAbstractClient implements Closeable {
     /**
      * Invokes an operation on the service returning a stream of JSON structures.
      *
-     * @param target the targeted resource
-     * @param method the operation method
-     * @param entity the entity to be submitted, may be {@code null}
-     * @param authToken the authorization token for the operation, may be {@code null}
+     * @param target          the targeted resource
+     * @param method          the operation method
+     * @param entity          the entity to be submitted, may be {@code null}
+     * @param authToken       the authorization token for the operation, may be {@code null}
      * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
      *
      * @return the stream of JSON elements
      *
      * @throws DockerClientException if invoking the operation failed
      */
-    @NotNull
+    @Nonnull
     protected NodeStream invokeNodeStream(WebTarget target, String method, Node entity, String authToken,
                                           ErrorCodeMapper errorCodeMapper) {
 
@@ -136,8 +138,8 @@ public abstract class DockerAbstractClient implements Closeable {
     /**
      * Invokes an operation on the service with no return type.
      *
-     * @param target the targeted resource
-     * @param method the operation method
+     * @param target          the targeted resource
+     * @param method          the operation method
      * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
      *
      * @throws DockerClientException if invoking the operation failed
@@ -149,7 +151,7 @@ public abstract class DockerAbstractClient implements Closeable {
         Response response = execRequest(target,
                 target.request(MediaType.APPLICATION_JSON).acceptEncoding(SUPPORTED_CHARSET.name()),
                 method, entity != null ? Entity.json(entity.toString()) :
-                null, null, errorCodeMapper);
+                        null, null, errorCodeMapper);
 
         response.close();
     }
@@ -157,21 +159,21 @@ public abstract class DockerAbstractClient implements Closeable {
     /**
      * Low-level method to perform a request and validate a response from the Jersey client.
      *
-     * @param target the targeted resource
+     * @param target            the targeted resource
      * @param invocationBuilder the invocation builder to be used
-     * @param method the operation method
-     * @param entity the entity to be submitted, may be {@code null}
-     * @param authToken the authorization token for the operation, may be {@code null}
-     * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
-     * @param <T> the submitted entity type
+     * @param method            the operation method
+     * @param entity            the entity to be submitted, may be {@code null}
+     * @param authToken         the authorization token for the operation, may be {@code null}
+     * @param errorCodeMapper   the additional error code mapper to be used, may be {@code null}
+     * @param <T>               the submitted entity type
      *
      * @return the Jersey response
      *
      * @throws DockerClientException if invoking the operation failed
      */
     protected <T> Response execRequest(WebTarget target, Invocation.Builder invocationBuilder, String method,
-                                        Entity<T> entity, String authToken,
-                                     ErrorCodeMapper errorCodeMapper) {
+                                       Entity<T> entity, String authToken,
+                                       ErrorCodeMapper errorCodeMapper) {
         if (authToken != null) {
             invocationBuilder.header("Authorization", "Bearer " + authToken);
         }
@@ -195,12 +197,13 @@ public abstract class DockerAbstractClient implements Closeable {
 
     /**
      * Build a request specification from a target resource and an HTTP method. For debug purpose.
+     *
      * @param target the targeted resource
      * @param method the HTTP method to be used
      *
      * @return the request specification
      */
-    @NotNull
+    @Nonnull
     protected String getRequestSpec(WebTarget target, String method) {
         return method + " " + target.getUri().getPath();
     }
@@ -208,11 +211,11 @@ public abstract class DockerAbstractClient implements Closeable {
     /**
      * Validates a response from the server.
      *
-     * @param requestSpec the request specification
-     * @param response the reponse from the server
+     * @param requestSpec     the request specification
+     * @param response        the reponse from the server
      * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
      */
-    protected void validate(@NotNull String requestSpec, @NotNull Response response, @Nullable ErrorCodeMapper
+    protected void validate(@Nonnull String requestSpec, @Nonnull Response response, @Nullable ErrorCodeMapper
             errorCodeMapper) {
         assert requestSpec != null && response != null;
 

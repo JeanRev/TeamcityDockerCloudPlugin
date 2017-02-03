@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.testng.annotations.BeforeMethod;
+import org.junit.Before;
+import org.junit.Test;
 import run.var.teamcity.cloud.docker.test.TestInputStream;
 import run.var.teamcity.cloud.docker.test.TestOutputStream;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
@@ -25,7 +26,7 @@ public class MultiplexedStreamHandlerTest extends StreamHandlerTest {
 
     private InputStream multiplexedStream;
 
-    @BeforeMethod
+    @Before
     public void init() {
         ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
         byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
@@ -53,6 +54,7 @@ public class MultiplexedStreamHandlerTest extends StreamHandlerTest {
         multiplexedStream = new ByteArrayInputStream(content);
     }
 
+    @Test
     public void demultiplexing() throws IOException {
         inputStream = new TestInputStream(multiplexedStream);
         StreamHandler handler = createHandler();

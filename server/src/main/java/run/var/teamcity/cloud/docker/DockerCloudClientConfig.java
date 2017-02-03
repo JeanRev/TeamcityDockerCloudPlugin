@@ -2,12 +2,12 @@ package run.var.teamcity.cloud.docker;
 
 import com.intellij.openapi.util.text.StringUtil;
 import jetbrains.buildServer.serverSide.InvalidProperty;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -15,9 +15,8 @@ import java.net.URL;
 import java.util.*;
 
 /**
- * Configuration of a {@link DockerCloudClient}.
- *
- * <p>Instances of this class are immutable.</p>
+ * Configuration of a {@link DockerCloudClient}. Could be instantiated directly, or from a cloud parameter map.
+ * The wrapped Docker client config will use the currently supported API version.
  */
 public class DockerCloudClientConfig {
 
@@ -32,14 +31,13 @@ public class DockerCloudClientConfig {
     /**
      * Creates a new configuration instance.
      *
-     * @param uuid the cloud client UUID
+     * @param uuid               the cloud client UUID
      * @param dockerClientConfig the Docker client configuration
      * @param usingDaemonThreads {@code true} if the client must use daemon threads to manage containers
-     * @param serverURL the server URL to be configured on the agents
-     *
+     * @param serverURL          the server URL to be configured on the agents
      * @throws NullPointerException if any argument is {@code null}
      */
-    public DockerCloudClientConfig(@NotNull UUID uuid, @NotNull DockerClientConfig dockerClientConfig,
+    public DockerCloudClientConfig(@Nonnull UUID uuid, @Nonnull DockerClientConfig dockerClientConfig,
                                    boolean usingDaemonThreads, @Nullable URL serverURL) {
         this(uuid, dockerClientConfig, usingDaemonThreads, DEFAULT_DOCKER_SYNC_RATE_SEC, serverURL);
     }
@@ -47,16 +45,15 @@ public class DockerCloudClientConfig {
     /**
      * Creates a new configuration instance.
      *
-     * @param uuid the cloud client UUID
+     * @param uuid               the cloud client UUID
      * @param dockerClientConfig the Docker client configuration
      * @param usingDaemonThreads {@code true} if the client must use daemon threads to manage containers
-     * @param dockerSyncRateSec the rate at which the client is synchronized with the Docker daemon, in seconds
-     * @param serverURL the server URL to be configured on the agents
-     *
-     * @throws NullPointerException if any argument is {@code null}
+     * @param dockerSyncRateSec  the rate at which the client is synchronized with the Docker daemon, in seconds
+     * @param serverURL          the server URL to be configured on the agents
+     * @throws NullPointerException     if any argument is {@code null}
      * @throws IllegalArgumentException if the Docker sync rate is below 2 seconds
      */
-    public DockerCloudClientConfig(@NotNull UUID uuid, @NotNull DockerClientConfig dockerClientConfig,
+    public DockerCloudClientConfig(@Nonnull UUID uuid, @Nonnull DockerClientConfig dockerClientConfig,
                                    boolean usingDaemonThreads, int dockerSyncRateSec, @Nullable URL serverURL) {
         DockerCloudUtils.requireNonNull(uuid, "Client UUID cannot be null.");
         DockerCloudUtils.requireNonNull(dockerClientConfig, "Docker client configuration cannot be null.");
@@ -68,6 +65,8 @@ public class DockerCloudClientConfig {
         this.usingDaemonThreads = usingDaemonThreads;
         this.dockerSyncRateSec = dockerSyncRateSec;
         this.serverURL = serverURL;
+
+        dockerClientConfig.apiVersion(DockerCloudUtils.DOCKER_API_TARGET_VERSION);
     }
 
     /**
@@ -84,7 +83,7 @@ public class DockerCloudClientConfig {
      *
      * @return the Docker client configuration
      */
-    @NotNull
+    @Nonnull
     public DockerClientConfig getDockerClientConfig() {
         return dockerClientConfig;
     }
@@ -116,14 +115,12 @@ public class DockerCloudClientConfig {
      * Load the configuration from the Teamcity properties map.
      *
      * @param properties the properties map
-     *
      * @return the loaded configuration
-     *
      * @throws DockerCloudClientConfigException if no valid configuration could be build from the properties map
      */
-    @NotNull
-    public static DockerCloudClientConfig processParams(@NotNull Map<String, String> properties,
-                                                        @NotNull DockerClientFactory dockerClientFactory) {
+    @Nonnull
+    public static DockerCloudClientConfig processParams(@Nonnull Map<String, String> properties,
+                                                        @Nonnull DockerClientFactory dockerClientFactory) {
         DockerCloudUtils.requireNonNull(properties, "Properties map cannot be null.");
         DockerCloudUtils.requireNonNull(properties, "Docker client factory cannot be null.");
 
@@ -191,11 +188,10 @@ public class DockerCloudClientConfig {
     /**
      * Generic validation method for a required field.
      *
-     * @param msg the error message to be used if the condition is not met
-     * @param key the property key
-     * @param properties the properties map
+     * @param msg               the error message to be used if the condition is not met
+     * @param key               the property key
+     * @param properties        the properties map
      * @param invalidProperties the collection of invalid properties to be used
-     *
      * @return the property value or {@code null} if missing
      */
     @Nullable

@@ -1,7 +1,6 @@
 package run.var.teamcity.cloud.docker.util;
 
-import org.jetbrains.annotations.Nullable;
-
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 

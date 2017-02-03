@@ -4,10 +4,10 @@ import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.CloudErrorInfo;
 import jetbrains.buildServer.clouds.CloudImage;
 import jetbrains.buildServer.clouds.InstanceStatus;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -22,7 +22,7 @@ public class DockerImage implements CloudImage {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(DockerImage.class);
 
-    private final DockerCloudClient cloudClient;
+    private final DefaultDockerCloudClient cloudClient;
     private final UUID uuid = UUID.randomUUID();
     private final DockerImageConfig config;
 
@@ -34,13 +34,13 @@ public class DockerImage implements CloudImage {
     @Nullable
     private String imageName;
 
-    DockerImage(DockerCloudClient cloudClient, DockerImageConfig config) {
+    DockerImage(DefaultDockerCloudClient cloudClient, DockerImageConfig config) {
         this.cloudClient = cloudClient;
         this.config = config;
         imageName = config.getContainerSpec().getAsString("Image", null);
     }
 
-    public DockerCloudClient getCloudClient() {
+    public DefaultDockerCloudClient getCloudClient() {
         return cloudClient;
     }
 
@@ -49,19 +49,18 @@ public class DockerImage implements CloudImage {
      *
      * @return this image UUID
      */
-    @NotNull
+    @Nonnull
     UUID getUuid() {
         return uuid;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getId() {
         return config.getProfileName();
-        //return uuid.toString();
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getName() {
         try {
@@ -86,7 +85,7 @@ public class DockerImage implements CloudImage {
         }
     }
 
-    void setImageName(@NotNull String imageName) {
+    void setImageName(@Nonnull String imageName) {
         lock.lock();
         try {
             this.imageName = imageName;
@@ -100,12 +99,12 @@ public class DockerImage implements CloudImage {
      *
      * @return the image configuration
      */
-    @NotNull
+    @Nonnull
     public DockerImageConfig getConfig() {
         return config;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Collection<DockerInstance> getInstances() {
         try {
@@ -118,7 +117,7 @@ public class DockerImage implements CloudImage {
 
     @Nullable
     @Override
-    public DockerInstance findInstanceById(@NotNull String id) {
+    public DockerInstance findInstanceById(@Nonnull String id) {
         DockerCloudUtils.requireNonNull(id, "ID cannot be null.");
         try {
             return findInstanceById(UUID.fromString(id));
@@ -138,7 +137,7 @@ public class DockerImage implements CloudImage {
      * @throws NullPointerException if {@code id} is {@code null}
      */
     @Nullable
-    DockerInstance findInstanceById(@NotNull UUID id) {
+    DockerInstance findInstanceById(@Nonnull UUID id) {
         DockerCloudUtils.requireNonNull(id, "UUID cannot be null.");
         try {
             lock.lock();
@@ -151,7 +150,7 @@ public class DockerImage implements CloudImage {
     @Nullable
     @Override
     public Integer getAgentPoolId() {
-        return null;
+        return getConfig().getAgentPoolId();
     }
 
     @Nullable
@@ -165,7 +164,7 @@ public class DockerImage implements CloudImage {
      *
      * @return the created cloud instancec
      */
-    @NotNull
+    @Nonnull
     DockerInstance createInstance() {
         DockerInstance instance = new DockerInstance(this);
         try {
@@ -220,7 +219,7 @@ public class DockerImage implements CloudImage {
      *
      * @throws NullPointerException if {@code id} is {@code null}
      */
-    void clearInstanceId(@NotNull UUID id) {
+    void clearInstanceId(@Nonnull UUID id) {
         DockerCloudUtils.requireNonNull(id, "UUID cannot be null.");
         try {
             lock.lock();

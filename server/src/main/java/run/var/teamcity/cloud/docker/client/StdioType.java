@@ -1,7 +1,6 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.jetbrains.annotations.NotNull;
-
+import javax.annotation.Nonnull;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -50,7 +49,7 @@ public enum StdioType {
      *
      * @throws IllegalArgumentException if the given type cannot be resolved
      */
-    @NotNull
+    @Nonnull
     static StdioType fromStreamType(long streamType) {
         for (StdioType type : values()) {
             if (type.streamType == streamType) {

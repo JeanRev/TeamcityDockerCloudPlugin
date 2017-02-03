@@ -1,8 +1,8 @@
 package run.var.teamcity.cloud.docker;
 
 import jetbrains.buildServer.serverSide.InvalidProperty;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.Test;
+import org.junit.Before;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
 import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
@@ -18,22 +18,23 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.*;
 
 @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-@Test
 public class DockerCloudClientConfigTest {
 
     private TestDockerClientFactory dockerClientFactory;
     private URL serverURL;
 
-    @BeforeMethod
+    @Before
     public void init() throws MalformedURLException {
         dockerClientFactory = new TestDockerClientFactory();
         serverURL = new URL("http://not.a.real.server:8111");
     }
 
+    @Test
     public void fromConstructor() {
         DockerClientConfig dockerConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
         DockerCloudClientConfig config = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 42, serverURL);
 
+        assertThat(config.getDockerClientConfig().getApiVersion()).isEqualTo(DockerCloudUtils.DOCKER_API_TARGET_VERSION);
         assertThat(config.getUuid()).isEqualTo(TestUtils.TEST_UUID);
         assertThat(config.getDockerClientConfig()).isSameAs(dockerConfig);
         assertThat(config.isUsingDaemonThreads()).isTrue();
@@ -45,6 +46,7 @@ public class DockerCloudClientConfigTest {
         assertThat(config.getServerURL()).isNull();
     }
 
+    @Test
     @SuppressWarnings("ConstantConditions")
     public void fromConstructorInvalidInput() {
 
@@ -59,11 +61,12 @@ public class DockerCloudClientConfigTest {
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> new DockerCloudClientConfig(TestUtils.TEST_UUID,
                 dockerConfig, true, 1, serverURL));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> new DockerCloudClientConfig(TestUtils.TEST_UUID,
-                dockerConfig, true, 0,serverURL));
+                dockerConfig, true, 0, serverURL));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> new DockerCloudClientConfig(TestUtils.TEST_UUID,
                 dockerConfig, true, -1, serverURL));
     }
 
+    @Test
     public void fromValidConfigMap() {
         Map<String, String> params = new HashMap<>();
 
@@ -73,6 +76,7 @@ public class DockerCloudClientConfigTest {
 
         DockerCloudClientConfig config = DockerCloudClientConfig.processParams(params, dockerClientFactory);
 
+        assertThat(config.getDockerClientConfig().getApiVersion()).isEqualTo(DockerCloudUtils.DOCKER_API_TARGET_VERSION);
         assertThat(config.getUuid()).isEqualTo(TestUtils.TEST_UUID);
         assertThat(config.getServerURL()).isNull();
 
@@ -104,6 +108,7 @@ public class DockerCloudClientConfigTest {
         assertThat(dockerConfig.isUsingTLS()).isTrue();
     }
 
+    @Test
     public void fromInvalidConfigMap() {
         Map<String, String> params = new HashMap<>();
 

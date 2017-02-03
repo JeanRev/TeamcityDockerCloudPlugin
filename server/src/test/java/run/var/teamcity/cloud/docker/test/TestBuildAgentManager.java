@@ -6,9 +6,9 @@ import jetbrains.buildServer.serverSide.AgentCompatibility;
 import jetbrains.buildServer.serverSide.BuildAgentManager;
 import jetbrains.buildServer.serverSide.SBuildAgent;
 import jetbrains.buildServer.users.SUser;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -57,7 +57,7 @@ public class TestBuildAgentManager implements BuildAgentManager {
     }
 
     @Override
-    public void removeAgent(@NotNull SBuildAgent agent, @Nullable SUser user) throws AgentCannotBeRemovedException {
+    public void removeAgent(@Nonnull SBuildAgent agent, @Nullable SUser user) throws AgentCannotBeRemovedException {
         if (!((TestSBuildAgent) agent).isRemovable()) {
             throw new AgentCannotBeRemovedException("Test agent removal forbidden.");
         }

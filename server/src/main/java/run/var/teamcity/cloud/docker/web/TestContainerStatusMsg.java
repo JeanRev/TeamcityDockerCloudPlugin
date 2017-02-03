@@ -1,10 +1,10 @@
 package run.var.teamcity.cloud.docker.web;
 
 import org.jdom.Element;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
 
@@ -60,15 +60,15 @@ public class TestContainerStatusMsg {
     /**
      * Creates a new status message instance.
      *
-     * @param uuid the test UUID
-     * @param phase the test phase
-     * @param status the test status
-     * @param msg the status message (may be {@code null})
+     * @param uuid    the test UUID
+     * @param phase   the test phase
+     * @param status  the test status
+     * @param msg     the status message (may be {@code null})
      * @param failure a failure cause (may be {@code null})
      *
      * @throws NullPointerException if {@code uuid}, {@code phase}, or {@code status} are {@code null}
      */
-    public TestContainerStatusMsg(@NotNull UUID uuid, @NotNull Phase phase, @NotNull Status status, @Nullable String msg,
+    public TestContainerStatusMsg(@Nonnull UUID uuid, @Nonnull Phase phase, @Nonnull Status status, @Nullable String msg,
                                   @Nullable String containerId, @Nullable Throwable failure, List<String> warnings) {
         DockerCloudUtils.requireNonNull(uuid, "Test UUID cannot be null.");
         DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
@@ -98,7 +98,7 @@ public class TestContainerStatusMsg {
      *
      * @return the test status
      */
-    @NotNull
+    @Nonnull
     public Status getStatus() {
         return status;
     }
@@ -108,7 +108,7 @@ public class TestContainerStatusMsg {
      *
      * @return the test phase
      */
-    @NotNull
+    @Nonnull
     public Phase getPhase() {
         return phase;
     }
@@ -118,7 +118,7 @@ public class TestContainerStatusMsg {
      *
      * @return the test UUID
      */
-    @NotNull
+    @Nonnull
     public UUID getTaskUuid() {
         return taskUuid;
     }
@@ -138,7 +138,7 @@ public class TestContainerStatusMsg {
      *
      * @return the tree root element
      */
-    @NotNull
+    @Nonnull
     public Element toExternalForm() {
         Element root = new Element("statusMsg");
         addChildElement(root, "msg", msg);

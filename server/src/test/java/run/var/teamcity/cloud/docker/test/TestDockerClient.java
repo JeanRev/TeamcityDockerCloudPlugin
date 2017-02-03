@@ -1,13 +1,13 @@
 package run.var.teamcity.cloud.docker.test;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.*;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
 import java.util.*;
@@ -17,8 +17,8 @@ import java.util.stream.Collectors;
 /**
  * A {@link DockerClient} made for testing. Will simulate a Docker daemon using in-memory structures.
  * <p>
- *     Note about synchronization: this client is thread-safe. Locking is currently done in such a way to minimize
- *     thread contention and increase parallelism.
+ * Note about synchronization: this client is thread-safe. Locking is currently done in such a way to minimize
+ * thread contention and increase parallelism.
  * </p>
  */
 public class TestDockerClient implements DockerClient {
@@ -27,6 +27,7 @@ public class TestDockerClient implements DockerClient {
         CREATED,
         STARTED
     }
+
     private final Map<String, Container> containers = new HashMap<>();
     private final Set<TestImage> knownRepoImages = new HashSet<>();
     private final Set<TestImage> knownLocalImages = new HashSet<>();
@@ -38,32 +39,45 @@ public class TestDockerClient implements DockerClient {
      */
     public static URI TEST_CLIENT_URI = URI.create("tcp://not.a.real.docker.client:0000");
     private boolean closed = false;
-    private DockerClientProcessingException failOnAccessException = null;
+    private DockerClientException failOnAccessException = null;
+    private final DockerClientConfig config;
+    private String supportedAPIVersion = null;
+
+    public ReentrantLock getLock() {
+        return lock;
+    }
 
     public TestDockerClient(DockerClientConfig config) {
+        this.config = config;
         if (!TEST_CLIENT_URI.equals(config.getInstanceURI())) {
             throw new IllegalArgumentException("Unsupported URI: " + config.getInstanceURI());
         }
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Node getVersion() {
-        return Node.EMPTY_OBJECT.editNode().
-                put("Version", "1.0").
-                put("ApiVersion", "1.0").
-                put("Os", "NotARealOS").
-                put("Arch", "NotARealArch").
-                put("Kernel", "1.0").
-                put("build", "00000000").
-                put("buildtime", "0000-00-00T00:00:00.000000000+00:00").
-                put("GoVersion", "go1.0").
-                put("experimental", false).saveNode();
+        lock.lock();
+        try {
+            checkForFailure();
+            return Node.EMPTY_OBJECT.editNode().
+                    put("Version", "1.0").
+                    put("ApiVersion", "1.0").
+                    put("Os", "NotARealOS").
+                    put("Arch", "NotARealArch").
+                    put("Kernel", "1.0").
+                    put("build", "00000000").
+                    put("buildtime", "0000-00-00T00:00:00.000000000+00:00").
+                    put("GoVersion", "go1.0").
+                    put("experimental", false).saveNode();
+        } finally {
+            lock.unlock();
+        }
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public Node createContainer(@NotNull Node containerSpec, @Nullable String name) {
+    public Node createContainer(@Nonnull Node containerSpec, @Nullable String name) {
 
         TestUtils.waitMillis(300);
 
@@ -82,11 +96,11 @@ public class TestDockerClient implements DockerClient {
                     entrySet().forEach(entry -> labels.put(entry.getKey(), entry.getValue().getAsString()));
             Map<String, String> env = new HashMap<>();
             containerSpec.getArray("Env", Node.EMPTY_ARRAY).getArrayValues().
-                forEach(val -> {
-                  String entry = val.getAsString();
-                  int sepIndex = entry.indexOf('=');
-                  env.put(entry.substring(0, sepIndex), entry.substring(sepIndex + 1));
-                });
+                    forEach(val -> {
+                        String entry = val.getAsString();
+                        int sepIndex = entry.indexOf('=');
+                        env.put(entry.substring(0, sepIndex), entry.substring(sepIndex + 1));
+                    });
 
             Container container = new Container(labels, env);
             containerId = container.getId();
@@ -99,7 +113,7 @@ public class TestDockerClient implements DockerClient {
     }
 
     @Override
-    public void startContainer(@NotNull String containerId) {
+    public void startContainer(@Nonnull String containerId) {
         TestUtils.waitMillis(300);
         lock.lock();
         try {
@@ -118,7 +132,7 @@ public class TestDockerClient implements DockerClient {
     }
 
     @Override
-    public void restartContainer(@NotNull String containerId) {
+    public void restartContainer(@Nonnull String containerId) {
         // Virtually no difference with a simple start from a test perspective.
         try {
             stopContainer(containerId, 0);
@@ -128,15 +142,15 @@ public class TestDockerClient implements DockerClient {
         startContainer(containerId);
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public Node inspectContainer(@NotNull String containerId) {
+    public Node inspectContainer(@Nonnull String containerId) {
         throw new UnsupportedOperationException();
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public NodeStream createImage(@NotNull String from, @Nullable String tag) {
+    public NodeStream createImage(@Nonnull String from, @Nullable String tag) {
         if (DockerCloudUtils.hasImageTag(from)) {
             if (tag != null) {
                 throw new InvocationFailedException("Duplicate tag specification.");
@@ -234,7 +248,7 @@ public class TestDockerClient implements DockerClient {
     }
 
     @Override
-    public void stopContainer(@NotNull String containerId, long timeoutSec) {
+    public void stopContainer(@Nonnull String containerId, long timeoutSec) {
         TestUtils.waitMillis(300);
         lock.lock();
         try {
@@ -253,7 +267,7 @@ public class TestDockerClient implements DockerClient {
     }
 
     @Override
-    public void removeContainer(@NotNull String containerId, boolean removeVolumes, boolean force) {
+    public void removeContainer(@Nonnull String containerId, boolean removeVolumes, boolean force) {
         lock.lock();
 
         TestUtils.waitMillis(300);
@@ -271,9 +285,9 @@ public class TestDockerClient implements DockerClient {
         }
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public Node listContainersWithLabel(@NotNull String key, @NotNull String value) {
+    public Node listContainersWithLabel(@Nonnull String key, @Nonnull String value) {
 
         EditableNode result;
 
@@ -335,7 +349,7 @@ public class TestDockerClient implements DockerClient {
         }
     }
 
-    public void setFailOnAccessException(DockerClientProcessingException exception) {
+    public void setFailOnAccessException(DockerClientException exception) {
         lock.lock();
         try {
             failOnAccessException = exception;
@@ -360,6 +374,14 @@ public class TestDockerClient implements DockerClient {
         return closed;
     }
 
+    public DockerClientConfig getConfig() {
+        return config;
+    }
+
+    public void setSupportedAPIVersion(String supportedAPIVersion) {
+        this.supportedAPIVersion = supportedAPIVersion;
+    }
+
     private void checkForFailure() {
         lock.lock();
         try {
@@ -368,6 +390,10 @@ public class TestDockerClient implements DockerClient {
             }
             if (failOnAccessException != null) {
                 throw failOnAccessException;
+            }
+            String apiVersion = config.getApiVersion();
+            if (supportedAPIVersion != null && apiVersion != null && !apiVersion.equals(supportedAPIVersion)) {
+                throw new BadRequestException("Bad version.");
             }
         } finally {
             lock.unlock();
@@ -385,7 +411,7 @@ public class TestDockerClient implements DockerClient {
         }
 
         public Container(Map<String, String> labels, Map<String, String> env) {
-           this(labels, env, ContainerStatus.CREATED);
+            this(labels, env, ContainerStatus.CREATED);
         }
 
         public Container(Map<String, String> labels, Map<String, String> env, ContainerStatus status) {

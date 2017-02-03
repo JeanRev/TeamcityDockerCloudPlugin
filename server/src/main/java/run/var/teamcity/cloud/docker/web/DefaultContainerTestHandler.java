@@ -1,8 +1,6 @@
 package run.var.teamcity.cloud.docker.web;
 
 import com.intellij.openapi.diagnostic.Logger;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
@@ -12,14 +10,18 @@ import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * Default {@link ContainerTestHandler} implementation.
+ */
+public class DefaultContainerTestHandler implements ContainerTestHandler {
 
-public class ContainerSpecTest implements ContainerTestTaskHandler{
-
-    private final static Logger LOG = DockerCloudUtils.getLogger(ContainerSpecTest.class);
+    private final static Logger LOG = DockerCloudUtils.getLogger(DefaultContainerTestHandler.class);
 
     private final UUID uuid = UUID.randomUUID();
     private final ReentrantLock lock = new ReentrantLock();
@@ -34,9 +36,9 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
 
     private ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTaskFuture = null;
 
-    private ContainerSpecTest(DockerClientConfig clientConfig, DockerClient client,
-                              ContainerTestListener statusListener, StreamingController streamingController) {
-        assert client != null  && statusListener != null;
+    private DefaultContainerTestHandler(DockerClientConfig clientConfig, DockerClient client,
+                                        ContainerTestListener statusListener, StreamingController streamingController) {
+        assert client != null && statusListener != null;
 
         this.clientConfig = clientConfig;
         this.client = client;
@@ -46,16 +48,16 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         notifyInteraction();
     }
 
-    public static ContainerSpecTest newTestInstance(@NotNull DockerCloudClientConfig clientConfig,
-                                                    @NotNull DockerClientFactory dockerClientFactory,
-                                                    @NotNull ContainerTestListener statusListener,
-                                                    @Nullable StreamingController streamingController) {
+    public static DefaultContainerTestHandler newTestInstance(@Nonnull DockerCloudClientConfig clientConfig,
+                                                              @Nonnull DockerClientFactory dockerClientFactory,
+                                                              @Nonnull ContainerTestListener statusListener,
+                                                              @Nullable StreamingController streamingController) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
         DockerCloudUtils.requireNonNull(dockerClientFactory, "Docker client factory cannot be null.");
         DockerCloudUtils.requireNonNull(statusListener, "Status listener cannot be null.");
         DockerClient client = dockerClientFactory.createClient(clientConfig.getDockerClientConfig()
-                .threadPoolSize(1));
-        return new ContainerSpecTest(clientConfig.getDockerClientConfig(), client, statusListener,
+                .connectionPoolSize(1));
+        return new DefaultContainerTestHandler(clientConfig.getDockerClientConfig(), client, statusListener,
                 streamingController);
     }
 
@@ -63,9 +65,8 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
      * Gets the test UUID.
      *
      * @return the test UUID
-     *
      */
-    @NotNull
+    @Nonnull
     public UUID getUuid() {
         return uuid;
     }
@@ -111,12 +112,12 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
         lock.lock();
         try {
             return currentTaskFuture;
-        }finally {
+        } finally {
             lock.unlock();
         }
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public DockerClient getDockerClient() {
         return client;
@@ -145,8 +146,8 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
      *
      * @throws NullPointerException if {@code currentTask} is {@code null}
      */
-    public void setCurrentTask(@NotNull ScheduledFutureWithRunnable<? extends ContainerTestTask>
-            currentTask) {
+    public void setCurrentTask(@Nonnull ScheduledFutureWithRunnable<? extends ContainerTestTask>
+                                       currentTask) {
         DockerCloudUtils.requireNonNull(currentTask, "Current task cannot be null.");
         lock.lock();
         try {
@@ -159,7 +160,7 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
     }
 
     @Override
-    public void notifyContainerId(@NotNull String containerId) {
+    public void notifyContainerId(@Nonnull String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         lock.lock();
         try {
@@ -174,8 +175,8 @@ public class ContainerSpecTest implements ContainerTestTaskHandler{
     }
 
     @Override
-    public void notifyStatus(@NotNull Phase phase, @NotNull Status status, @Nullable String msg,
-                             @Nullable Throwable failure, @NotNull List<String> warnings) {
+    public void notifyStatus(@Nonnull Phase phase, @Nonnull Status status, @Nullable String msg,
+                             @Nullable Throwable failure, @Nonnull List<String> warnings) {
         DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
         DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
         DockerCloudUtils.requireNonNull(status, "Warnings list cannot be null.");

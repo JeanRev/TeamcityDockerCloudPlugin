@@ -1,10 +1,10 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Closeable;
 
 /**
@@ -12,28 +12,28 @@ import java.io.Closeable;
  */
 public interface DockerClient extends Closeable {
 
-    @NotNull
+    @Nonnull
     Node getVersion();
 
-    @NotNull
-    Node createContainer(@NotNull Node containerSpec, @Nullable String name);
+    @Nonnull
+    Node createContainer(@Nonnull Node containerSpec, @Nullable String name);
 
-    void startContainer(@NotNull String containerId);
+    void startContainer(@Nonnull String containerId);
 
-    void restartContainer(@NotNull String containerId);
+    void restartContainer(@Nonnull String containerId);
 
-    @NotNull
-    Node inspectContainer(@NotNull String containerId);
+    @Nonnull
+    Node inspectContainer(@Nonnull String containerId);
 
-    @NotNull
-    NodeStream createImage(@NotNull String from, @Nullable String tag);
+    @Nonnull
+    NodeStream createImage(@Nonnull String from, @Nullable String tag);
 
-    void stopContainer(@NotNull String containerId, long timeoutSec);
+    void stopContainer(@Nonnull String containerId, long timeoutSec);
 
-    void removeContainer(@NotNull String containerId, boolean removeVolumes, boolean force);
+    void removeContainer(@Nonnull String containerId, boolean removeVolumes, boolean force);
 
-    @NotNull
-    Node listContainersWithLabel(@NotNull String key, @NotNull String value);
+    @Nonnull
+    Node listContainersWithLabel(@Nonnull String key, @Nonnull String value);
 
     @Override
     void close();

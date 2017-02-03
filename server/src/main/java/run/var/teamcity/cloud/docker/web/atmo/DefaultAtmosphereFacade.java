@@ -1,18 +1,14 @@
 package run.var.teamcity.cloud.docker.web.atmo;
 
 
-import org.atmosphere.cpr.AtmosphereFramework;
-import org.atmosphere.cpr.AtmosphereHandler;
-import org.atmosphere.cpr.AtmosphereInterceptor;
-import org.atmosphere.cpr.AtmosphereRequest;
-import org.atmosphere.cpr.AtmosphereResponse;
+import org.atmosphere.cpr.*;
 import org.atmosphere.interceptor.HeartbeatInterceptor;
 import org.atmosphere.websocket.WebSocketHandler;
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.web.AtmosphereFrameworkFacade;
 import run.var.teamcity.cloud.docker.web.BroadcasterFactoryFacade;
 
+import javax.annotation.Nonnull;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import java.io.IOException;
@@ -29,7 +25,7 @@ public class DefaultAtmosphereFacade implements AtmosphereFrameworkFacade {
      *
      * @throws ServletException if configuring the framework with the given configuration failed
      */
-    public DefaultAtmosphereFacade(@NotNull ServletConfig servletConfig) throws ServletException {
+    public DefaultAtmosphereFacade(@Nonnull ServletConfig servletConfig) throws ServletException {
         DockerCloudUtils.requireNonNull(servletConfig, "Servlet configuration cannot be null.");
 
         AtmosphereFramework atmosphereFramework = new AtmosphereFramework();

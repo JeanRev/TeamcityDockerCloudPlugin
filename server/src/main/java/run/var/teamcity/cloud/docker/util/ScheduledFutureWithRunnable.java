@@ -1,7 +1,6 @@
 package run.var.teamcity.cloud.docker.util;
 
-import org.jetbrains.annotations.NotNull;
-
+import javax.annotation.Nonnull;
 import java.util.concurrent.RunnableScheduledFuture;
 
 /**
@@ -13,12 +12,12 @@ public class ScheduledFutureWithRunnable<R extends Runnable> extends WrappedRunn
     /**
      * Creates a new wrapper instance.
      *
-     * @param task the task to be referenced
+     * @param task    the task to be referenced
      * @param wrapped the future to be wrapped
      *
      * @throws NullPointerException if any argument is {@code null}
      */
-    public ScheduledFutureWithRunnable(@NotNull R task, @NotNull RunnableScheduledFuture<Void> wrapped) {
+    public ScheduledFutureWithRunnable(@Nonnull R task, @Nonnull RunnableScheduledFuture<Void> wrapped) {
         super(task, wrapped);
     }
 }

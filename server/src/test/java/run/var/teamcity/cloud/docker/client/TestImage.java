@@ -17,7 +17,7 @@ public class TestImage {
         this.tag = tag;
         coordinates = repo + ":" + tag;
         layers = new HashSet<>();
-        IntStream.range(0,3).forEach(i -> layers.add(TestUtils.createRandomSha256()));
+        IntStream.range(0, 3).forEach(i -> layers.add(TestUtils.createRandomSha256()));
     }
 
     public static TestImage parse(String coordinates) {

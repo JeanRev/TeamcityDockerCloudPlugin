@@ -1,12 +1,12 @@
 package run.var.teamcity.cloud.docker.web;
 
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
+import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -29,11 +29,11 @@ class StartContainerTestTask extends ContainerTestTask {
      * Creates a new task instance.
      *
      * @param testTaskHandler the test task handler
-     * @param containerId the ID of the container to be started
-     * @param instanceUuid the container test instance UUID
+     * @param containerId     the ID of the container to be started
+     * @param instanceUuid    the container test instance UUID
      */
-    StartContainerTestTask(@NotNull ContainerTestTaskHandler testTaskHandler, @NotNull String containerId,
-                           @NotNull UUID instanceUuid) {
+    StartContainerTestTask(@Nonnull ContainerTestHandler testTaskHandler, @Nonnull String containerId,
+                           @Nonnull UUID instanceUuid) {
         super(testTaskHandler, Phase.START);
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         DockerCloudUtils.requireNonNull(instanceUuid, "Test instance UUID cannot be null.");
@@ -75,7 +75,7 @@ class StartContainerTestTask extends ContainerTestTask {
                 throw new ContainerTestTaskException("Container exited prematurely (" + state + ")");
             }
         } else {
-            assert false: "Multiple containers found for the test instance UUID: " + instanceUuid;
+            assert false : "Multiple containers found for the test instance UUID: " + instanceUuid;
         }
 
         return PENDING;

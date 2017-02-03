@@ -1,7 +1,5 @@
 package run.var.teamcity.cloud.docker.test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -9,7 +7,7 @@ import java.io.OutputStream;
 /**
  * Simple output stream filter tracking various interactions.
  * <p>
- *     For test purpose only.
+ * For test purpose only.
  * </p>
  */
 public class TestOutputStream extends FilterOutputStream {

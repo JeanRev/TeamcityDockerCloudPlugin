@@ -1,37 +1,37 @@
 package run.var.teamcity.cloud.docker.test;
 
 import jetbrains.buildServer.clouds.CloudState;
-import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.List;
 
 public class TestCloudState implements CloudState {
     @Override
-    public void registerRunningInstance(@NotNull String imageId, @NotNull String instanceId) {
+    public void registerRunningInstance(@Nonnull String imageId, @Nonnull String instanceId) {
         // Do nothing.
     }
 
     @Override
-    public void registerTerminatedInstance(@NotNull String imageId, @NotNull String instanceId) {
+    public void registerTerminatedInstance(@Nonnull String imageId, @Nonnull String instanceId) {
         // Do nothing.
     }
 
     @Override
-    public boolean isInstanceStarted(@NotNull String imageId, @NotNull String instanceId) {
+    public boolean isInstanceStarted(@Nonnull String imageId, @Nonnull String instanceId) {
         return false;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getProfileId() {
         return "TEST";
     }
 
-    @NotNull
+    @Nonnull
     @Override
     @SuppressWarnings("deprecation")
-    public List<String> getStartedInstances(@NotNull String imageId) {
+    public List<String> getStartedInstances(@Nonnull String imageId) {
         return Collections.emptyList();
     }
 }

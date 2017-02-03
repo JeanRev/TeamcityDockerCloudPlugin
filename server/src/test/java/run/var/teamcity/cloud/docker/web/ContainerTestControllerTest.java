@@ -1,22 +1,19 @@
 package run.var.teamcity.cloud.docker.web;
 
-import org.assertj.core.api.AssertProvider;
 import org.jdom.Element;
 import org.jdom.output.XMLOutputter;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.Before;
+import org.junit.Test;
 import run.var.teamcity.cloud.docker.test.*;
 import run.var.teamcity.cloud.docker.web.ContainerTestController.Action;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.servlet.http.HttpServletResponse;
-
 import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Test
 @SuppressWarnings("unchecked")
 public class ContainerTestControllerTest {
 
@@ -26,7 +23,7 @@ public class ContainerTestControllerTest {
     private Element element;
 
 
-    @BeforeMethod
+    @Before
     public void init() {
         testMgr = new TestContainerTestManager();
 
@@ -37,6 +34,7 @@ public class ContainerTestControllerTest {
         resetResponse();
     }
 
+    @Test
     public void createAction() {
         ContainerTestController ctrl = createController();
 
@@ -53,6 +51,7 @@ public class ContainerTestControllerTest {
 
     }
 
+    @Test
     public void startAction() {
         ContainerTestController ctrl = createController();
 
@@ -73,6 +72,7 @@ public class ContainerTestControllerTest {
         assertThat(element.getChildren()).isEmpty();
     }
 
+    @Test
     public void queryAction() {
         ContainerTestController ctrl = createController();
 
@@ -97,6 +97,7 @@ public class ContainerTestControllerTest {
                 .containsIgnoringCase(Status.PENDING.name());
     }
 
+    @Test
     public void cancelAction() {
         ContainerTestController ctrl = createController();
 
@@ -116,7 +117,7 @@ public class ContainerTestControllerTest {
         assertThat(element.getChildren()).isEmpty();
     }
 
-
+    @Test
     public void invalidQueries() {
         ContainerTestController ctrl = createController();
 
@@ -182,6 +183,6 @@ public class ContainerTestControllerTest {
 
     private TestContainerStatusMsg createStatusMsg(Phase phase) {
         return new TestContainerStatusMsg(TestUtils.TEST_UUID, phase,
-                Status.PENDING, "status msg",  null,null, Collections.emptyList());
+                Status.PENDING, "status msg", null, null, Collections.emptyList());
     }
 }

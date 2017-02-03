@@ -1,10 +1,9 @@
 <%@ page import="run.var.teamcity.cloud.docker.DockerInstance" %>
+<%@ page import="run.var.teamcity.cloud.docker.util.DockerCloudUtils" %>
 <%@ page import="run.var.teamcity.cloud.docker.util.Node" %>
 <%@ page import="java.text.DateFormat" %>
 <%@ page import="java.util.Locale" %>
-<%@ page import="org.joda.time.format.DateTimeFormat" %>
-<%@ page import="run.var.teamcity.cloud.docker.util.DockerCloudUtils" %>
-<%@ page import="java.text.SimpleDateFormat" %><%--
+<%--
   ~ Copyright 2000-2012 JetBrains s.r.o.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,42 +28,49 @@
 </script>
 
 <div class="dockerCloudImageDetails">
-<h4>Registered containers:</h4>
-<div style="margin: 5px 10%; width: 90%">
-<table style="width: 80%;">
-    <thead>
-        <tr>
-            <th style="width: 30%;">Container ID</th><th style="width: 20%;">Created</th><th style="width: 20%;">State</th><th style="width: 30%;">Names</th>
-        </tr>
-    </thead>
-    <tbody>
-    <%
-        DateFormat dateFmt = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.ENGLISH);
-        for (DockerInstance instance : image.getInstances()) {
-            Node containerInfo = instance.getContainerInfo();
-            if (containerInfo == null) {
-                continue;
-            }
-            StringBuilder displayName = new StringBuilder();
-            for (Node name : containerInfo.getArray("Names").getArrayValues()) {
-                if (displayName.length() > 0) {
-                    displayName.append(", ");
+    <h4>Registered containers:</h4>
+    <div style="margin: 5px 10%; width: 90%">
+        <table style="width: 80%;">
+            <thead>
+            <tr>
+                <th style="width: 30%;">Container ID</th>
+                <th style="width: 20%;">Created</th>
+                <th style="width: 20%;">State</th>
+                <th style="width: 30%;">Names</th>
+            </tr>
+            </thead>
+            <tbody>
+            <%
+                DateFormat dateFmt = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.ENGLISH);
+                for (DockerInstance instance : image.getInstances()) {
+                    Node containerInfo = instance.getContainerInfo();
+                    if (containerInfo == null) {
+                        continue;
+                    }
+                    StringBuilder displayName = new StringBuilder();
+                    for (Node name : containerInfo.getArray("Names").getArrayValues()) {
+                        if (displayName.length() > 0) {
+                            displayName.append(", ");
+                        }
+                        displayName.append(name);
+                    }
+            %>
+            <tr>
+                <td><%= DockerCloudUtils.toShortId(containerInfo.getAsString("Id")) %>
+                </td>
+                <td><%= dateFmt.format(containerInfo.getAsLong("Created") * 1000) %>
+                </td>
+                <td><%= containerInfo.getAsString("State") %>
+                </td>
+                <td><%= displayName.toString() %>
+                </td>
+            </tr>
+            <%
                 }
-                displayName.append(name);
-            }
-    %>
-    <tr>
-        <td><%= DockerCloudUtils.toShortId(containerInfo.getAsString("Id")) %></td>
-        <td><%= dateFmt.format(containerInfo.getAsLong("Created") * 1000) %></td>
-        <td><%= containerInfo.getAsString("State") %></td>
-        <td><%= displayName.toString() %></td>
-    </tr>
-    <%
-        }
-    %>
-    </tbody>
-</table>
-</div>
+            %>
+            </tbody>
+        </table>
+    </div>
     <%
         String lastSync;
         long lastDockerSyncTimeMillis = image.getCloudClient().getLastDockerSyncTimeMillis();
@@ -75,5 +81,5 @@
         }
 
     %>
-Last sync with docker: <%= lastSync %>
+    Last sync with docker: <%= lastSync %>
 </div>

@@ -4,8 +4,8 @@ import org.apache.http.config.ConnectionConfig;
 import org.apache.http.conn.HttpConnectionFactory;
 import org.apache.http.conn.ManagedHttpClientConnection;
 import org.apache.http.conn.routing.HttpRoute;
-import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.Nullable;
 import java.util.UUID;
 
 /**

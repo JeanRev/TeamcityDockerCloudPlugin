@@ -39,6 +39,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.debugEnabled = params.debugEnabled;
 
                 var imagesParam = params.imagesParam;
+                var tcImagesDetailsParam = params.tcImagesDetails;
 
                 self.hasWebSocketSupport = 'WebSocket' in window;
                 self.hasXTermSupport = self.hasWebSocketSupport && self.checkXtermBrowserSupport();
@@ -49,12 +50,14 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$image = $j("#dockerCloudImage_Image");
                 self.$checkConnectionBtn = $j("#dockerCloudCheckConnectionBtn");
                 self.$checkConnectionSuccess = $j('#dockerCloudCheckConnectionSuccess');
+                self.$checkConnectionWarning = $j('#dockerCloudCheckConnectionWarning');
                 self.$checkConnectionError = $j('#dockerCloudCheckConnectionError');
                 self.$newImageBtn = $j('#dockerShowDialogButton');
                 self.$imageDialogSubmitBtn = $j('#dockerAddImageButton');
                 self.$imageDialogCancelBtn = $j('#dockerCancelAddImageButton');
                 self.$imagesTable = $j('#dockerCloudImagesTable');
                 self.$images = $j(BS.Util.escapeId(imagesParam));
+                self.$tcImagesDetails = $j(BS.Util.escapeId(tcImagesDetailsParam));
                 self.$dockerAddress = $j("#dockerCloudDockerAddress");
                 self.$useLocalInstance = $j("#dockerCloudUseLocalInstance");
                 self.$useCustomInstance = $j("#dockerCloudUseCustomInstance");
@@ -164,6 +167,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self._toggleCheckConnectionBtn();
                 self.$checkConnectionLoader.show();
                 self.$checkConnectionSuccess.hide().empty();
+                self.$checkConnectionWarning.hide().empty();
                 self.$checkConnectionError.hide().empty();
 
                 var deferred = $j.Deferred();
@@ -198,6 +202,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         self.$checkConnectionSuccess.text('Connection successful to Docker version ' + $version.attr('docker') +
                             ' (API: ' + $version.attr('api') + ') on ' +
                             $version.attr('os') + '/' + $version.attr('arch')).show();
+                        var warning = $response.find("warning").text();
+                        if (warning) {
+                            self.$checkConnectionWarning.text(warning).show();
+                        }
                     }
                 }).
                 always(function () {
@@ -215,13 +223,47 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 var json = self.$images.val();
 
-                images = json ? JSON.parse(self.$images.val()) : [];
+                var images = json ? JSON.parse(json) : [];
                 self.imagesData = {};
                 self.logDebug(images.length + " images to be loaded.");
                 $j.each(images, function(i, image) {
                     self.imagesData[image.Administration.Profile] = image;
                 });
 
+                // Update the image details when the configuration is initially loaded.
+                self._updateTCImageDetails();
+            },
+
+            _updateTCImageDetails: function(oldSourceId, newSourceId) {
+
+                self.logDebug("Updating cloud image details (oldSourceId=" + oldSourceId + ", newSourceId=" +
+                    newSourceId + ").");
+                var newTCImagesDetails = [];
+                var json = self.$tcImagesDetails.val();
+                var oldTCImagesDetails = [];
+                if (json) {
+                    try { oldTCImagesDetails = JSON.parse(json) } catch (e) {
+                        self.logError("Failed to parse image details: " + json);
+                    }
+                }
+
+                self._safeKeyValueEach(self.imagesData, function(name) {
+                    // If the profile name changed, then the source-id parameter in the image details must be
+                    // translated as well.
+                    var sourceImageName = name === newSourceId ? oldSourceId : name;
+                    var oldImageDetails = $j.grep(oldTCImagesDetails, function (imageDetails) {
+                        return imageDetails['source-id'] === sourceImageName;
+                    });
+                    var newImageDetails = oldImageDetails.length ? oldImageDetails[0] : {};
+                    newImageDetails['source-id'] = name;
+                    newTCImagesDetails.push(newImageDetails);
+                });
+
+                json = JSON.stringify(newTCImagesDetails);
+
+                self.logDebug("Updated cloud image details: " + json);
+
+                self.$tcImagesDetails.val(json);
             },
 
             _updateAllTablesMandoryStarsVisibility: function() {
@@ -879,6 +921,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                     var currentProfile = self.$imageDialogSubmitBtn.data('profile');
                     var newProfile = settings.Administration.Profile;
+                    self.logDebug("Saving profile: " + newProfile + "(was: " + currentProfile + ")");
                     delete self.imagesData[currentProfile];
                     self.imagesData[newProfile] = settings;
                     var tmp = [];
@@ -886,6 +929,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                        tmp.push(value);
                     });
                     self.$images.val(JSON.stringify(tmp));
+                    self._updateTCImageDetails(currentProfile, newProfile);
                     BS.DockerImageDialog.close();
                     self._renderImagesTable();
                 });
@@ -950,6 +994,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         return;
                     }
                     delete self.imagesData[$j(this).closest('tr').data('profile')];
+                    self._updateTCImageDetails();
                     self._renderImagesTable();
                 });
 
@@ -1411,7 +1456,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         if (newProfile != currentProfile && self.imagesData[newProfile]) {
                             return {msg: 'An image profile with this name already exists.'}
                         }
-
                     }],
                     dockerCloudImage_Image: [requiredValidator],
                     dockerCloudImage_MaxInstanceCount: [positiveIntegerValidator, function($elt) {

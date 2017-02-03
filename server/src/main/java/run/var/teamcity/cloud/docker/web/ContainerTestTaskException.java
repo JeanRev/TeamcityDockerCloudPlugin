@@ -17,7 +17,7 @@ public class ContainerTestTaskException extends RuntimeException {
     /**
      * Creates a new exception with the specified message and cause.
      *
-     * @param msg the message (may be null)
+     * @param msg   the message (may be null)
      * @param cause the exception cause (may be null)
      */
     public ContainerTestTaskException(String msg, Throwable cause) {

@@ -1,18 +1,17 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import javax.annotation.Nonnull;
 import java.io.Closeable;
-import java.io.IOException;
 
 public interface DockerRegistryClient extends Closeable {
 
-    @NotNull
-    Node anonymousLogin(@NotNull String scope);
+    @Nonnull
+    Node anonymousLogin(@Nonnull String scope);
 
-    @NotNull
-    Node listTags(@NotNull String loginToken, @NotNull String repo);
+    @Nonnull
+    Node listTags(@Nonnull String loginToken, @Nonnull String repo);
 
     @Override
     void close();

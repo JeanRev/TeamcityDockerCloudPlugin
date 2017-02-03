@@ -1,6 +1,6 @@
 package run.var.teamcity.cloud.docker;
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
@@ -16,7 +16,7 @@ public class DockerInstanceTest {
     @Test
     public void startedTimeInitializedAfterConstruct() {
         DockerInstance instance = new DockerInstance(new DockerImage(null,
-                new DockerImageConfig("test", Node.EMPTY_OBJECT, false, false, 1)));
+                new DockerImageConfig("test", Node.EMPTY_OBJECT, false, false, 1, null)));
 
         assertThat(instance.getStartedTime()).isInSameMinuteAs(new Date());
     }
@@ -24,7 +24,7 @@ public class DockerInstanceTest {
     @Test
     public void startedTimeIsUpdated() {
         DockerInstance instance = new DockerInstance(new DockerImage(null,
-                new DockerImageConfig("test", Node.EMPTY_OBJECT, false, false, 1)));
+                new DockerImageConfig("test", Node.EMPTY_OBJECT, false, false, 1, null)));
 
         Date before = instance.getStartedTime();
 

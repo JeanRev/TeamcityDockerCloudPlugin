@@ -9,6 +9,7 @@ import org.apache.http.conn.HttpClientConnectionOperator;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.DefaultHostnameVerifier;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.util.PublicSuffixMatcherLoader;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
@@ -16,13 +17,13 @@ import org.apache.http.util.TextUtils;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.client.apcon.ApacheConnectorProvider;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
 import javax.ws.rs.HttpMethod;
@@ -49,9 +50,9 @@ import java.util.concurrent.TimeUnit;
 // Implementation note:
 /* This class uses the same concept than docker-java (https://github.com/docker-java) to connect to the Docker
 daemon: a Jersey client using an HTTP client connector from Apache. This connector is specially configured to allow
-connecting to a Unix socket. One significant difference from docker-java is that we do not leverage full ORM
-framework, but we deal instead directly with JSON structures since we are only interested only
-in a handful of attributes. */
+connecting to an Unix socket. One significant difference from docker-java is that we do not leverage a full ORM
+framework, but we deal instead directly with JSON structures since we are only interested in a handful of
+attributes. */
 public class DefaultDockerClient extends DockerAbstractClient implements DockerClient {
 
     private final static Charset SUPPORTED_CHARSET = StandardCharsets.UTF_8;
@@ -64,7 +65,10 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     private final DockerHttpConnectionFactory connectionFactory;
     private final WebTarget target;
 
-    public enum SupportedScheme {
+    /**
+     * Supported scheme for the configured Docker URI.
+     */
+    private enum SupportedScheme {
         UNIX,
         TCP;
 
@@ -73,6 +77,9 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         }
     }
 
+    /**
+     * Effective that will be used to connect using Jersey.
+     */
     private enum TranslatedScheme {
         HTTP,
         HTTPS;
@@ -82,20 +89,24 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         }
     }
 
-    private DefaultDockerClient(DockerHttpConnectionFactory connectionFactory, Client jerseyClient, URI target) {
+    private DefaultDockerClient(DockerHttpConnectionFactory connectionFactory, Client jerseyClient, URI targetUri,
+                                String apiVersion) {
         super(jerseyClient);
         this.connectionFactory = connectionFactory;
-        this.target = jerseyClient.target(target);
+        WebTarget target = jerseyClient.target(targetUri);
+        if (apiVersion != null) {
+            target = target.path("v" + apiVersion);
+        }
+        this.target = target;
     }
 
-    @NotNull
+    @Nonnull
     public Node getVersion() {
         return invoke(target.path("/version"), HttpMethod.GET, null, null, null);
     }
 
-
-    @NotNull
-    public Node createContainer(@NotNull Node containerSpec, @Nullable String name) {
+    @Nonnull
+    public Node createContainer(@Nonnull Node containerSpec, @Nullable String name) {
         DockerCloudUtils.requireNonNull(containerSpec, "Container JSON specification cannot be null.");
         WebTarget target = this.target.path("/containers/create");
         if (name != null) {
@@ -105,27 +116,27 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         return invoke(target, HttpMethod.POST, containerSpec, null, null);
     }
 
-    public void startContainer(@NotNull final String containerId) {
+    public void startContainer(@Nonnull final String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         invokeVoid(target.path("/containers/{id}/start").resolveTemplate("id", containerId), HttpMethod.POST, null,
                 null);
     }
 
-    public void restartContainer(@NotNull String containerId) {
+    public void restartContainer(@Nonnull String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         invokeVoid(target.path("/containers/{id}/restart").resolveTemplate("id", containerId), HttpMethod.POST, null,
                 null);
     }
 
-    @NotNull
-    public Node inspectContainer(@NotNull String containerId) {
+    @Nonnull
+    public Node inspectContainer(@Nonnull String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         return invoke(target.path("/containers/{id}/json").resolveTemplate("id", containerId), HttpMethod.GET, null,
                 null, null);
     }
 
-    @NotNull
-    public NodeStream createImage(@NotNull String from, @Nullable String tag) {
+    @Nonnull
+    public NodeStream createImage(@Nonnull String from, @Nullable String tag) {
         DockerCloudUtils.requireNonNull(from, "Source image cannot be null.");
 
         WebTarget target = this.target.path("/images/create").
@@ -136,7 +147,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         return invokeNodeStream(target, HttpMethod.POST, null, null, null);
     }
 
-    public StreamHandler attach(@NotNull String containerId) {
+    public StreamHandler attach(@Nonnull String containerId) {
 
         return invokeStream(target.path("/containers/{id}/attach").resolveTemplate("id", containerId)
                         .queryParam
@@ -145,7 +156,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 null, hasTty(containerId));
     }
 
-    public StreamHandler streamLogs(@NotNull String containerId, int lineCount, Set<StdioType> stdioTypes, boolean
+    public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, Set<StdioType> stdioTypes, boolean
             follow) {
 
         return invokeStream(prepareLogsTarget(target, containerId, lineCount, stdioTypes).queryParam("follow",
@@ -173,7 +184,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 .queryParam("tail", tail);
     }
 
-    public void stopContainer(@NotNull String containerId, long timeoutSec) {
+    public void stopContainer(@Nonnull String containerId, long timeoutSec) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         if (timeoutSec < 0) {
             throw new IllegalArgumentException("Timeout must be a positive integer.");
@@ -192,20 +203,20 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 });
     }
 
-    public void removeContainer(@NotNull String containerId, boolean removeVolumes, boolean force) {
+    public void removeContainer(@Nonnull String containerId, boolean removeVolumes, boolean force) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         invokeVoid(target.path("/containers/{id}").resolveTemplate("id", containerId).queryParam("v", removeVolumes)
                 .queryParam("force", force), HttpMethod.DELETE, null, null);
     }
 
-    @NotNull
-    public Node listContainersWithLabel(@NotNull String key, @NotNull String value) {
+    @Nonnull
+    public Node listContainersWithLabel(@Nonnull String key, @Nonnull String value) {
         DockerCloudUtils.requireNonNull(key, "Label key cannot be null.");
         DockerCloudUtils.requireNonNull(value, "Label value cannot be null.");
         return invoke(target.path("/containers/json").
                 queryParam("all", true).
                 queryParam("filters", "%7B\"label\": " +
-                "[\"" + key + "=" + value + "\"]%7D"), HttpMethod.GET, null, null, null);
+                        "[\"" + key + "=" + value + "\"]%7D"), HttpMethod.GET, null, null, null);
     }
 
     private boolean hasTty(String containerId) {
@@ -216,7 +227,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         assert target != null && stdioTypes != null;
 
         for (StdioType type : stdioTypes) {
-           target = target.queryParam(type.name().toLowerCase(), 1);
+            target = target.queryParam(type.name().toLowerCase(), 1);
         }
 
         return target;
@@ -255,7 +266,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
 
     /**
-     * Open a new client targeting the specified instance. The provided Docker URI must use one of the supported scheme
+     * Open a new client using the provided configuration. The Docker URI must use one of the supported scheme
      * from the Docker CLI, either <tt>unix://<em>[absolute_path_to_unix_socket]</em> for Unix sockets or
      * <tt>tcp://<em>[ip_address]</em></tt> for TCP connections.
      *
@@ -263,16 +274,16 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
      *
      * @return the new client
      *
-     * @throws NullPointerException if {@code clientConfig} is {@code null}
+     * @throws NullPointerException     if {@code clientConfig} is {@code null}
      * @throws IllegalArgumentException if an invalid configuration setting is detected
      */
-    @NotNull
+    @Nonnull
     public static DefaultDockerClient newInstance(DockerClientConfig clientConfig) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
 
         URI dockerURI = clientConfig.getInstanceURI();
         boolean usingTLS = clientConfig.isUsingTLS();
-        int connectionPoolSize = clientConfig.getThreadPoolSize();
+        int connectionPoolSize = clientConfig.getConnectionPoolSize();
 
         if (dockerURI.isOpaque()) {
             throw new IllegalArgumentException("Non opaque URI expected: " + dockerURI);
@@ -281,7 +292,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
             throw new IllegalArgumentException("Absolute URI expected: " + dockerURI);
         }
 
-        ClientConfig config  = new ClientConfig();
+        ClientConfig config = new ClientConfig();
         config.connectorProvider(new ApacheConnectorProvider());
 
         SupportedScheme scheme = SupportedScheme.valueOf(dockerURI.getScheme().toUpperCase());
@@ -295,7 +306,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         switch (scheme) {
             case TCP:
                 if (StringUtil.isNotEmpty(dockerURI.getPath()) || dockerURI.getUserInfo() != null ||
-                        dockerURI.getQuery() != null || dockerURI.getFragment() != null ) {
+                        dockerURI.getQuery() != null || dockerURI.getFragment() != null) {
                     throw new IllegalArgumentException("Only host ip/name and port can be provided for tcp scheme.");
                 }
                 if (StringUtil.isEmpty(dockerURI.getHost())) {
@@ -314,7 +325,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 break;
             case UNIX:
                 if (dockerURI.getHost() != null || dockerURI.getPort() != -1 || dockerURI.getUserInfo() != null ||
-                        dockerURI.getQuery() != null || dockerURI.getFragment() != null ) {
+                        dockerURI.getQuery() != null || dockerURI.getFragment() != null) {
                     throw new IllegalArgumentException("Only path can be provided for unix scheme.");
                 }
                 if (usingTLS) {
@@ -338,7 +349,8 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
             connManager = new PoolingHttpClientConnectionManager(connectionOperator,
                     connectionFactory, -1, TimeUnit.SECONDS);
         } else {
-           connManager = new PoolingHttpClientConnectionManager(getDefaultRegistry(), connectionFactory, null);
+            connManager = new PoolingHttpClientConnectionManager(
+                    getDefaultRegistry(clientConfig.isVerifyingHostname()), connectionFactory, null);
         }
 
 
@@ -348,10 +360,11 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
         config.property(ApacheClientProperties.CONNECTION_MANAGER, connManager);
         config.property(ClientProperties.CONNECT_TIMEOUT, clientConfig.getConnectTimeoutMillis());
-        return new DefaultDockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI);
+        return new DefaultDockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI,
+                clientConfig.getApiVersion());
     }
 
-    private static Registry<ConnectionSocketFactory> getDefaultRegistry() {
+    private static Registry<ConnectionSocketFactory> getDefaultRegistry(boolean verifyHostname) {
 
         // Gets a custom registry leveraging standard JSE system properties to create the client SSL context.
         // This allows for example to configure externally the trusted CA as well as the client certificate and key to
@@ -364,12 +377,16 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 System.getProperty("https.protocols"));
         final String[] supportedCipherSuites = split(
                 System.getProperty("https.cipherSuites"));
-        HostnameVerifier hostnameVerifierCopy = new DefaultHostnameVerifier
-                (PublicSuffixMatcherLoader.getDefault());
+        HostnameVerifier hostnameVerifier;
+        if (verifyHostname) {
+            hostnameVerifier = new DefaultHostnameVerifier(PublicSuffixMatcherLoader.getDefault());
+        } else {
+            hostnameVerifier = new NoopHostnameVerifier();
+        }
 
         SSLConnectionSocketFactory sslCF = new SSLConnectionSocketFactory(
                 (SSLSocketFactory) SSLSocketFactory.getDefault(),
-                supportedProtocols, supportedCipherSuites, hostnameVerifierCopy);
+                supportedProtocols, supportedCipherSuites, hostnameVerifier);
 
         return RegistryBuilder.<ConnectionSocketFactory>create()
                 .register("http", PlainConnectionSocketFactory.getSocketFactory())

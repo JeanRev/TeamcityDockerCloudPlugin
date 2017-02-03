@@ -1,28 +1,12 @@
 package run.var.teamcity.cloud.docker.test;
 
-import javax.servlet.AsyncContext;
-import javax.servlet.DispatcherType;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletInputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.Part;
+import javax.servlet.*;
+import javax.servlet.http.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.Principal;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 @SuppressWarnings("deprecation")
 public class TestHttpServletRequest implements HttpServletRequest {
@@ -361,12 +345,12 @@ public class TestHttpServletRequest implements HttpServletRequest {
     }
 
     public TestHttpServletRequest parameter(String name, String value) {
-        parameters.put(name, new String[] { value });
+        parameters.put(name, new String[]{value});
         return this;
     }
 
     public TestHttpServletRequest parameters(Map<String, String> parameters) {
-        parameters.entrySet().forEach(e -> this.parameters.put(e.getKey(), new String[]{ e.getValue() }));
+        parameters.entrySet().forEach(e -> this.parameters.put(e.getKey(), new String[]{e.getValue()}));
         return this;
     }
 }

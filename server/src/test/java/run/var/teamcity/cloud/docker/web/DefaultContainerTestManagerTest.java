@@ -1,8 +1,9 @@
 package run.var.teamcity.cloud.docker.web;
 
 import jetbrains.buildServer.serverSide.WebLinks;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
@@ -26,7 +27,7 @@ import static run.var.teamcity.cloud.docker.web.ContainerTestManager.ActionExcep
 /**
  * {@link ContainerTestController} test suite.
  */
-@Test(groups = "longRunning")
+@Category(LongRunning.class)
 public class DefaultContainerTestManagerTest {
 
     private long testMaxIdleTime;
@@ -42,14 +43,10 @@ public class DefaultContainerTestManagerTest {
     private URL serverURL;
     private TestContainerTestStatusListener testListener;
 
-    @BeforeMethod
+    @Before
     public void init() throws MalformedURLException {
-        dockerClientFactory = new TestDockerClientFactory() {
-            @Override
-            public void configureClient(TestDockerClient dockerClient) {
-                dockerClient.knownImage("resolved-image", "1.0");
-            }
-        };
+        dockerClientFactory = new TestDockerClientFactory();
+        dockerClientFactory.addConfigurator(dockerClient -> dockerClient.knownImage("resolved-image", "1.0"));
 
         serverURL = new URL("http://not.a.real.server");
 
@@ -58,7 +55,7 @@ public class DefaultContainerTestManagerTest {
                 serverURL);
 
         Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
-        imageConfig = new DockerImageConfig("test", containerSpec, true, false, 1);
+        imageConfig = new DockerImageConfig("test", containerSpec, true, false, 1, null);
         buildServer = new TestSBuildServer();
         agentMgr = buildServer.getBuildAgentManager();
 
@@ -68,6 +65,7 @@ public class DefaultContainerTestManagerTest {
         testListener = new TestContainerTestStatusListener();
     }
 
+    @Test
     public void fullTest() {
 
         ContainerTestManager mgr = createManager();
@@ -104,7 +102,9 @@ public class DefaultContainerTestManagerTest {
         mgr.dispose();
     }
 
+    @Test
     public void errorHandling() {
+        // Client factory with no known image.
         dockerClientFactory = new TestDockerClientFactory();
 
         ContainerTestManager mgr = createManager();
@@ -117,6 +117,7 @@ public class DefaultContainerTestManagerTest {
                 () -> mgr.startTestContainer(testUuid));
     }
 
+    @Test
     public void diposeTest() {
         ContainerTestManager mgr = createManager();
 
@@ -149,6 +150,7 @@ public class DefaultContainerTestManagerTest {
         assertThat(dockerClient.isClosed()).isTrue();
     }
 
+    @Test
     public void statusListenerBaseFunction() {
 
         // To test listener disposal.
@@ -172,6 +174,7 @@ public class DefaultContainerTestManagerTest {
         assertThat(testListener.isDisposed()).isTrue();
     }
 
+    @Test
     public void handlingOfDefaultServerUrl() {
         clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, null);
 
@@ -186,6 +189,7 @@ public class DefaultContainerTestManagerTest {
 
     }
 
+    @Test
     public void failedToResolveImageMakesTestFail() {
         imageResolver.image(null);
 
@@ -196,7 +200,7 @@ public class DefaultContainerTestManagerTest {
         queryUntilFailure();
     }
 
-    private void setupFastCleanupRate(){
+    private void setupFastCleanupRate() {
         cleanupRateSec = 2;
         testMaxIdleTime = 3;
     }

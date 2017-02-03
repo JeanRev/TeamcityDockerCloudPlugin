@@ -1,13 +1,12 @@
 package run.var.teamcity.cloud.docker;
 
 import jetbrains.buildServer.clouds.InstanceStatus;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * A {@link DockerTask} associated with a {@link DockerInstance}.
- *
- * <p>This </p>
  */
 abstract class DockerInstanceTask extends DockerTask {
 
@@ -17,14 +16,14 @@ abstract class DockerInstanceTask extends DockerTask {
     /**
      * Creates a one-shot task.
      *
-     * @param operationName the operation name
-     * @param instance the cloud instance
+     * @param operationName   the operation name
+     * @param instance        the cloud instance
      * @param scheduledStatus the instance status to be set when the task is scheduled for execution or {@code null} if
-     * none
+     *                        none
      *
      * @throws NullPointerException if {@code operationName} or {@code instance} is {@code null}
      */
-    DockerInstanceTask(@NotNull String operationName, @NotNull DockerInstance instance, @Nullable InstanceStatus
+    DockerInstanceTask(@Nonnull String operationName, @Nonnull DockerInstance instance, @Nullable InstanceStatus
             scheduledStatus) {
         super(operationName, instance);
         this.instance = instance;
@@ -36,7 +35,7 @@ abstract class DockerInstanceTask extends DockerTask {
      *
      * @return the docker instance
      */
-    @NotNull
+    @Nonnull
     DockerInstance getInstance() {
         return instance;
     }

@@ -1,9 +1,9 @@
 package run.var.teamcity.cloud.docker.client;
 
 
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nonnull;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.core.Response;
 import java.io.Closeable;
@@ -23,7 +23,7 @@ public class JaxWsResponseCloseableAdapter implements Closeable {
      *
      * @throws NullPointerException if {@code response} is {@code null}
      */
-    public JaxWsResponseCloseableAdapter(@NotNull Response response) {
+    public JaxWsResponseCloseableAdapter(@Nonnull Response response) {
         DockerCloudUtils.requireNonNull(response, "Response cannot be null.");
         this.response = response;
     }

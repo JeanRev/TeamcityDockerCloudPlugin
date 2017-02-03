@@ -1,15 +1,11 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import javax.annotation.Nonnull;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 
@@ -24,9 +20,9 @@ public class TestDockerClientRegistry implements DockerRegistryClient {
     private Map<UUID, String> loginTokenToScopes = new HashMap<>();
     private boolean closed = false;
 
-    @NotNull
+    @Nonnull
     @Override
-    public Node anonymousLogin(@NotNull String scope) {
+    public Node anonymousLogin(@Nonnull String scope) {
 
         TestUtils.waitMillis(300);
         lock.lock();
@@ -40,15 +36,15 @@ public class TestDockerClientRegistry implements DockerRegistryClient {
         }
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public Node listTags(@NotNull String loginToken, @NotNull String repo) {
+    public Node listTags(@Nonnull String loginToken, @Nonnull String repo) {
         TestUtils.waitMillis(300);
 
         lock.lock();
         try {
             String scope = loginTokenToScopes.get(UUID.fromString(loginToken));
-            if (scope == null || !scope.equals("repository:" + repo+ ":pull")) {
+            if (scope == null || !scope.equals("repository:" + repo + ":pull")) {
                 throw new InvocationFailedException("Test authorization failed. Not in scope: " + repo);
             }
 

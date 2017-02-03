@@ -2,9 +2,9 @@ package run.var.teamcity.cloud.docker.client;
 
 
 import com.intellij.openapi.diagnostic.Logger;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,7 +44,7 @@ public class MultiplexedStreamHandler extends StreamHandler {
         // Demultiplexes the streams using the instructions from the Docker remote API.
         int n;
         int headerOffset = 0;
-        while((n = inputStream.read(headerBuffer, headerOffset, headerBuffer.length - headerOffset)) != -1) {
+        while ((n = inputStream.read(headerBuffer, headerOffset, headerBuffer.length - headerOffset)) != -1) {
             headerOffset += n;
             assert headerOffset <= headerBuffer.length;
             if (headerOffset == headerBuffer.length) {
@@ -60,9 +60,9 @@ public class MultiplexedStreamHandler extends StreamHandler {
 
                 bb.order(ByteOrder.BIG_ENDIAN);
                 long fragmentLength = DockerCloudUtils.toUnsignedLong(bb.getInt());
-                assert !bb.hasRemaining(): "Header not fully parsed.";
+                assert !bb.hasRemaining() : "Header not fully parsed.";
 
-                CappedInputStream streamFragment= new CappedInputStream(inputStream,
+                CappedInputStream streamFragment = new CappedInputStream(inputStream,
                         fragmentLength);
 
                 previousStreamFragment = streamFragment;

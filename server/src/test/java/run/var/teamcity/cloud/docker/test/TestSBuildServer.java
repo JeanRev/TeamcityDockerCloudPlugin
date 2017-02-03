@@ -11,9 +11,9 @@ import jetbrains.buildServer.util.ItemProcessor;
 import jetbrains.buildServer.vcs.VcsManager;
 import jetbrains.buildServer.vcs.VcsModificationHistory;
 import org.jetbrains.annotations.NonNls;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Collection;
@@ -42,37 +42,37 @@ public class TestSBuildServer implements SBuildServer {
         buildListeners.remove(listener);
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public ProjectManager getProjectManager() {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public BuildQueue getQueue() {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public BuildHistory getHistory() {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public UserModel getUserModel() {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public VcsManager getVcsManager() {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public VcsModificationHistory getVcsHistory() {
         throw new UnsupportedOperationException("Not a real build server.");
@@ -83,7 +83,7 @@ public class TestSBuildServer implements SBuildServer {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public RunTypeRegistry getRunTypeRegistry() {
         throw new UnsupportedOperationException("Not a real build server.");
@@ -144,7 +144,7 @@ public class TestSBuildServer implements SBuildServer {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public TestBuildAgentManager getBuildAgentManager() {
         return buildAgentManager;
@@ -181,64 +181,64 @@ public class TestSBuildServer implements SBuildServer {
     }
 
     @Override
-    public <T extends TeamCityExtension> void registerExtension(@NotNull Class<T> extensionClass, @NonNls @NotNull String sourceId, @NotNull T extension) {
+    public <T extends TeamCityExtension> void registerExtension(@Nonnull Class<T> extensionClass, @NonNls @Nonnull String sourceId, @Nonnull T extension) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
     @Override
-    public <T extends TeamCityExtension> void unregisterExtension(@NotNull Class<T> extensionClass, @NonNls @NotNull String sourceId) {
+    public <T extends TeamCityExtension> void unregisterExtension(@Nonnull Class<T> extensionClass, @NonNls @Nonnull String sourceId) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public <T extends TeamCityExtension> Collection<T> getExtensions(@NotNull Class<T> extensionClass) {
+    public <T extends TeamCityExtension> Collection<T> getExtensions(@Nonnull Class<T> extensionClass) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
     @Override
-    public <T extends TeamCityExtension> void foreachExtension(@NotNull Class<T> agentExtensionClass, @NotNull ExtensionAction<T> action) {
+    public <T extends TeamCityExtension> void foreachExtension(@Nonnull Class<T> agentExtensionClass, @Nonnull ExtensionAction<T> action) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public <T extends TeamCityExtension> Collection<String> getExtensionSources(@NotNull Class<T> extensionClass) {
+    public <T extends TeamCityExtension> Collection<String> getExtensionSources(@Nonnull Class<T> extensionClass) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
     @Nullable
     @Override
-    public <T extends TeamCityExtension> T getExtension(@NotNull Class<T> extensionClass, @NotNull String sourceId) {
+    public <T extends TeamCityExtension> T getExtension(@Nonnull Class<T> extensionClass, @Nonnull String sourceId) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getRootUrl() {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
     @Override
-    public void setRootUrl(@NotNull String rootUrl) {
+    public void setRootUrl(@Nonnull String rootUrl) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public <T> T getSingletonService(@NotNull Class<T> serviceClass) throws ServiceNotFoundException {
+    public <T> T getSingletonService(@Nonnull Class<T> serviceClass) throws ServiceNotFoundException {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
     @Nullable
     @Override
-    public <T> T findSingletonService(@NotNull Class<T> serviceClass) {
+    public <T> T findSingletonService(@Nonnull Class<T> serviceClass) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public <T> Collection<T> getServices(@NotNull Class<T> serviceClass) {
+    public <T> Collection<T> getServices(@Nonnull Class<T> serviceClass) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
@@ -260,19 +260,19 @@ public class TestSBuildServer implements SBuildServer {
 
     @Nullable
     @Override
-    public SBuild findPreviousBuild(@NotNull SBuild build) {
+    public SBuild findPreviousBuild(@Nonnull SBuild build) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
     @Nullable
     @Override
-    public SBuild findPreviousBuild(@NotNull SBuild build, @NotNull BuildDataFilter filter) {
+    public SBuild findPreviousBuild(@Nonnull SBuild build, @Nonnull BuildDataFilter filter) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
     @Nullable
     @Override
-    public SBuild findNextBuild(@NotNull SBuild build, @NotNull BuildDataFilter filter) {
+    public SBuild findNextBuild(@Nonnull SBuild build, @Nonnull BuildDataFilter filter) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
@@ -283,18 +283,18 @@ public class TestSBuildServer implements SBuildServer {
 
     @Nullable
     @Override
-    public SBuild findBuildInstanceByBuildNumber(@NotNull String buildTypeId, @NotNull String buildNumber) {
+    public SBuild findBuildInstanceByBuildNumber(@Nonnull String buildTypeId, @Nonnull String buildNumber) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
-    public List<SBuild> findBuildInstancesByBuildNumber(@NotNull String buildTypeId, @NotNull String buildNumber) {
+    public List<SBuild> findBuildInstancesByBuildNumber(@Nonnull String buildTypeId, @Nonnull String buildNumber) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
     @Override
-    public void processBuilds(@NotNull BuildQueryOptions options, @NotNull ItemProcessor<SBuild> processor) {
+    public void processBuilds(@Nonnull BuildQueryOptions options, @Nonnull ItemProcessor<SBuild> processor) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
@@ -310,13 +310,13 @@ public class TestSBuildServer implements SBuildServer {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public List<SRunningBuild> getRunningBuilds(@Nullable User user, @Nullable BuildDataFilter filter) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public List<SRunningBuild> getRunningBuilds() {
         throw new UnsupportedOperationException("Not a real build server.");

@@ -1,18 +1,19 @@
 package run.var.teamcity.cloud.docker.web;
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 import run.var.teamcity.cloud.docker.test.TestHttpServletRequest;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-@Test
 public class WebUtilsTest {
 
+    @Test
     public void normalOperation() {
         // Not much expected here.
         WebUtils.configureRequestForAtmosphere(new TestHttpServletRequest());
     }
 
+    @Test
     public void invalidInput() {
         //noinspection ConstantConditions
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(

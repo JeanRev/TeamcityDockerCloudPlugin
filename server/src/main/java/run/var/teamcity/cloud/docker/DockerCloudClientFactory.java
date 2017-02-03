@@ -4,13 +4,13 @@ import jetbrains.buildServer.clouds.*;
 import jetbrains.buildServer.serverSide.AgentDescription;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.DockerCloudSettingsController;
 
+import javax.annotation.Nonnull;
 import java.util.*;
 
 /**
@@ -22,16 +22,16 @@ public class DockerCloudClientFactory implements CloudClientFactory {
     private final SBuildServer buildServer;
     private final DockerClientFactory dockerClientFactory;
 
-    public DockerCloudClientFactory(@NotNull final SBuildServer buildServer,
-                                    @NotNull final CloudRegistrar cloudRegistrar,
-                                   @NotNull final PluginDescriptor pluginDescriptor) {
+    public DockerCloudClientFactory(@Nonnull final SBuildServer buildServer,
+                                    @Nonnull final CloudRegistrar cloudRegistrar,
+                                    @Nonnull final PluginDescriptor pluginDescriptor) {
         this(buildServer, cloudRegistrar, pluginDescriptor, DockerClientFactory.getDefault());
     }
 
-    DockerCloudClientFactory(@NotNull final SBuildServer buildServer,
-                             @NotNull final CloudRegistrar cloudRegistrar,
-                             @NotNull final PluginDescriptor pluginDescriptor,
-                             @NotNull final DockerClientFactory dockerClientFactory) {
+    DockerCloudClientFactory(@Nonnull final SBuildServer buildServer,
+                             @Nonnull final CloudRegistrar cloudRegistrar,
+                             @Nonnull final PluginDescriptor pluginDescriptor,
+                             @Nonnull final DockerClientFactory dockerClientFactory) {
         this.editProfileUrl = pluginDescriptor.getPluginResourcesPath(DockerCloudSettingsController.EDIT_PATH);
         cloudRegistrar.registerCloudFactory(this);
         this.buildServer = buildServer;
@@ -39,9 +39,9 @@ public class DockerCloudClientFactory implements CloudClientFactory {
     }
 
 
-    @NotNull
+    @Nonnull
     @Override
-    public CloudClientEx createNewClient(@NotNull CloudState state, @NotNull CloudClientParameters params) {
+    public CloudClientEx createNewClient(@Nonnull CloudState state, @Nonnull CloudClientParameters params) {
         Collection<String> paramNames = params.listParameterNames();
         Map<String, String> properties = new HashMap<>(paramNames.size());
         for (String paramName : paramNames) {
@@ -51,33 +51,33 @@ public class DockerCloudClientFactory implements CloudClientFactory {
         List<DockerImageConfig> imageConfigs = DockerImageConfig.processParams(properties);
 
         final int threadPoolSize = Math.min(imageConfigs.size() * 2, Runtime.getRuntime().availableProcessors() + 1);
-        clientConfig.getDockerClientConfig().threadPoolSize(threadPoolSize);
+        clientConfig.getDockerClientConfig()
+                .connectionPoolSize(threadPoolSize);
 
-
-        return new DockerCloudClient(clientConfig, dockerClientFactory, imageConfigs,
+        return new DefaultDockerCloudClient(clientConfig, dockerClientFactory, imageConfigs,
                 OfficialAgentImageResolver.forCurrentServer(DockerRegistryClientFactory.getDefault()), state,
                 buildServer);
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getCloudCode() {
         return DockerCloudUtils.CLOUD_CODE;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getDisplayName() {
         return "Docker";
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getEditProfileUrl() {
         return editProfileUrl;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Map<String, String> getInitialParameterValues() {
         HashMap<String, String> params = new HashMap<>();
@@ -89,14 +89,14 @@ public class DockerCloudClientFactory implements CloudClientFactory {
         return params;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public jetbrains.buildServer.serverSide.PropertiesProcessor getPropertiesProcessor() {
         return new DockerCloudPropertiesProcessor();
     }
 
     @Override
-    public boolean canBeAgentOfType(@NotNull AgentDescription description) {
+    public boolean canBeAgentOfType(@Nonnull AgentDescription description) {
         return DockerCloudUtils.getClientId(description) != null;
     }
 }

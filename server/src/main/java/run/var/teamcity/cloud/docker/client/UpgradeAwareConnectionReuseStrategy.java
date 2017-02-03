@@ -15,7 +15,7 @@ import org.apache.http.protocol.HttpContext;
  * used with WebSockets) should never be reused to perform HTTP requests again.
  */
 public class UpgradeAwareConnectionReuseStrategy extends DefaultClientConnectionReuseStrategy {
-    
+
     @Override
     public boolean keepAlive(HttpResponse response, HttpContext context) {
         boolean reuse = super.keepAlive(response, context);

@@ -4,11 +4,11 @@ import jetbrains.buildServer.clouds.CloudErrorInfo;
 import jetbrains.buildServer.clouds.CloudInstance;
 import jetbrains.buildServer.clouds.InstanceStatus;
 import jetbrains.buildServer.serverSide.AgentDescription;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.locks.Lock;
@@ -40,7 +40,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      *
      * @throws NullPointerException if {@code img} is {@code null}
      */
-    DockerInstance(@NotNull DockerImage img) {
+    DockerInstance(@Nonnull DockerImage img) {
         DockerCloudUtils.requireNonNull(img, "Docker image cannot be null.");
 
         this.img = img;
@@ -55,12 +55,12 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      *
      * @return the instance UUID.
      */
-    @NotNull
+    @Nonnull
     UUID getUuid() {
         return uuid;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getInstanceId() {
         return uuid.toString();
@@ -81,10 +81,11 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      * Sets the Docker container ID.
      *
      * @param containerId the container ID
-     *S
+     *                    S
+     *
      * @throws NullPointerException if {@code containerId} is {@code null}
      */
-    void setContainerId(@NotNull String containerId) {
+    void setContainerId(@Nonnull String containerId) {
         DockerCloudUtils.requireNonNull("Container ID cannot be null.", containerId);
         lock.lock();
         try {
@@ -95,7 +96,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
 
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getName() {
         lock.lock();
@@ -123,7 +124,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      *
      * @throws NullPointerException if {@code name} is {@code null}
      */
-    void setContainerName(@NotNull String containerName) {
+    void setContainerName(@Nonnull String containerName) {
         DockerCloudUtils.requireNonNull(containerName, "Container name cannot be null.");
         lock.lock();
         try {
@@ -133,19 +134,19 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
         }
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public String getImageId() {
         return img.getId();
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public DockerImage getImage() {
         return img;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Date getStartedTime() {
         return new Date(startedTimeMillis);
@@ -160,7 +161,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
         return null;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public InstanceStatus getStatus() {
         return status;
@@ -173,7 +174,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      *
      * @throws NullPointerException if {@code status} is {@code null}
      */
-    void setStatus(@NotNull InstanceStatus status) {
+    void setStatus(@Nonnull InstanceStatus status) {
         DockerCloudUtils.requireNonNull(status, "Instance status cannot be null.");
         lock.lock();
         try {
@@ -231,7 +232,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     }
 
     @Override
-    public void notifyFailure(@NotNull String msg, @Nullable Throwable throwable) {
+    public void notifyFailure(@Nonnull String msg, @Nullable Throwable throwable) {
         DockerCloudUtils.requireNonNull(msg, "Message cannot be null.");
 
         try {
@@ -250,7 +251,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     }
 
     @Override
-    public boolean containsAgent(@NotNull AgentDescription agent) {
+    public boolean containsAgent(@Nonnull AgentDescription agent) {
         return uuid.equals(DockerCloudUtils.getInstanceId(agent));
     }
 
