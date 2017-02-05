@@ -2,7 +2,7 @@ import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.bundling.Zip
 
-version = "0.3.2-SNAPSHOT"
+version = "0.3.3-SNAPSHOT"
 group = "var.run.docker.cloud"
 val commitId = gitCommitId()
 allprojects {
