@@ -141,14 +141,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     '<td class="dockerCloudCtrlCell">' + self.arrayTemplates.settingsCell + self.arrayTemplates.deleteCell + '</td>' +
                     '</tr>').data('profile', image.Administration.Profile));
             },
-            _addressState: function () {
-                var useLocalInstance = self.$useLocalInstance.is(':checked');
-                self.$dockerAddress.prop('disabled', useLocalInstance);
-            },
             _instanceChange: function() {
-                self._addressState();
                 var useLocalInstance = self.$useLocalInstance.is(':checked');
                 self.$dockerAddress.val(useLocalInstance ? self.defaultLocalSocketURI : "");
+                self.$dockerAddress.prop('disabled', useLocalInstance);
             },
             _checkConnection: function () {
                 self._toggleCheckConnectionBtn();
@@ -865,7 +861,12 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self.$useLocalInstance.change(self._instanceChange);
                 self.$useCustomInstance.change(self._instanceChange);
-                self._addressState();
+
+                var useLocalInstance = self.$useLocalInstance.is(':checked');
+                self.$dockerAddress.prop('disabled', useLocalInstance);
+                if (useLocalInstance) {
+                    self.$dockerAddress.val(self.defaultLocalSocketURI);
+                }
 
                 self.$checkConnectionBtn.click(self._checkConnectionClickHandler);
                 self.$newImageBtn.click(self._showImageDialogClickHandler);
