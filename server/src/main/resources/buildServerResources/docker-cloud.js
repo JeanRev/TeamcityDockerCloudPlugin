@@ -891,9 +891,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             scheme = 'unix';
                             schemeSpecificPart = match[1];
                         } else {
+                            // Most certainly invalid, but let the server complain about it.
                             return;
                         }
-                        // Most certainly invalid, but let the server complain about it.
                     }
 
                     self.$dockerAddress.val(scheme + ':' + (scheme == 'unix' ? '///' : '//') + schemeSpecificPart);
