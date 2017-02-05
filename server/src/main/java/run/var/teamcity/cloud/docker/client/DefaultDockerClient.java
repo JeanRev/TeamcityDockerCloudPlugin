@@ -295,13 +295,17 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         ClientConfig config = new ClientConfig();
         config.connectorProvider(new ApacheConnectorProvider());
 
-        SupportedScheme scheme = SupportedScheme.valueOf(dockerURI.getScheme().toUpperCase());
+        SupportedScheme scheme;
+        try {
+            scheme = SupportedScheme.valueOf(dockerURI.getScheme().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid scheme: " + dockerURI.getScheme() + ". Only 'tcp' or 'unix' supported.", e);
+        }
         // Note: we use a custom connection operator here to handle Unix sockets because 1) it allows use to circumvent
         // some problem encountered with the default connection operator 2) it dispense us from implementing a custom
         // ConnectionSocketFactory which is oriented toward internet sockets.
         HttpClientConnectionOperator connectionOperator = null;
         final URI effectiveURI;
-
 
         switch (scheme) {
             case TCP:
