@@ -160,9 +160,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
             _addressState: function () {
                 var useLocalInstance = self.$useLocalInstance.is(':checked');
-                self.$dockerAddress.prop('disabled', useLocalInstance).val(useLocalInstance ? self.defaultLocalSocketURI : "");
+                self.$dockerAddress.prop('disabled', useLocalInstance);
             },
-
+            _instanceChange: function() {
+                self._addressState();
+                var useLocalInstance = self.$useLocalInstance.is(':checked');
+                self.$dockerAddress.val(useLocalInstance ? self.defaultLocalSocketURI : "");
+            },
             _checkConnection: function () {
                 self._toggleCheckConnectionBtn();
                 self.$checkConnectionLoader.show();
@@ -876,8 +880,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _bindHandlers: function () {
                 self.logDebug("Binding handlers.");
 
-                self.$useLocalInstance.change(self._addressState);
-                self.$useCustomInstance.change(self._addressState)
+                self.$useLocalInstance.change(self._instanceChange);
+                self.$useCustomInstance.change(self._instanceChange);
                 self._addressState();
 
                 self.$checkConnectionBtn.click(self._checkConnectionClickHandler);
