@@ -90,7 +90,7 @@
     <props:hiddenProperty name="<%=DockerCloudUtils.CLIENT_UUID%>"/>
     <jsp:useBean id="propertiesBean" scope="request" type="jetbrains.buildServer.controllers.BasePropertiesBean"/>
     <c:set var="sourceImagesJson" value="${propertiesBean.properties['source_images_json']}"/>
-    <input type="hidden" class="jsonParam" name="prop:source_images_json" id="source_images_json" value="<c:out value='${sourceImagesJson}'/>" data-err-id="source_images_json"/>
+    <input type="hidden" name="prop:source_images_json" id="source_images_json" value="<c:out value='${sourceImagesJson}'/>" data-err-id="source_images_json"/>
     <c:set var="imagesData" value="${propertiesBean.properties['run.var.teamcity.docker.cloud.img_param']}"/>
     <input type="hidden" name="prop:run.var.teamcity.docker.cloud.img_param"
            id="run.var.teamcity.docker.cloud.img_param" value="<c:out value="${imagesData}"/>"/>
