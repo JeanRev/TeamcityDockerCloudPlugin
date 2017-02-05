@@ -885,12 +885,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     } else if (address.match(/[0-9].*/)) {
                         scheme = 'tcp';
                         schemeSpecificPart = address;
-                    } else if (address.startsWith('/')) {
-                        scheme = 'unix';
-                        schemeSpecificPart = address
                     } else {
+                        match = address.match(/\/+(.*)/);
+                        if (match) {
+                            scheme = 'unix';
+                            schemeSpecificPart = match[1];
+                        } else {
+                            return;
+                        }
                         // Most certainly invalid, but let the server complain about it.
-                        return;
                     }
 
                     self.$dockerAddress.val(scheme + ':' + (scheme == 'unix' ? '///' : '//') + schemeSpecificPart);
