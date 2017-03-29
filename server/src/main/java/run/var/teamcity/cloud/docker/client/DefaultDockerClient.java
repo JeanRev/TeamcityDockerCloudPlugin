@@ -52,7 +52,8 @@ import java.util.concurrent.TimeUnit;
 daemon: a Jersey client using an HTTP client connector from Apache. This connector is specially configured to allow
 connecting to an Unix socket. One significant difference from docker-java is that we do not leverage a full ORM
 framework, but we deal instead directly with JSON structures since we are only interested in a handful of
-attributes. */
+attributes. Not relying on entity binding also allow us to handle HTTP error in a much more fine-granular way, as well
+as handling special use-cases like "streams" of json objects used for example to report status when pulling. */
 public class DefaultDockerClient extends DockerAbstractClient implements DockerClient {
 
     private final static Charset SUPPORTED_CHARSET = StandardCharsets.UTF_8;
