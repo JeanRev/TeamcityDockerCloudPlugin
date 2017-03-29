@@ -117,12 +117,14 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         return invoke(target, HttpMethod.POST, containerSpec, null, null);
     }
 
+    @Override
     public void startContainer(@Nonnull final String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         invokeVoid(target.path("/containers/{id}/start").resolveTemplate("id", containerId), HttpMethod.POST, null,
                 null);
     }
 
+    @Override
     public void restartContainer(@Nonnull String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         invokeVoid(target.path("/containers/{id}/restart").resolveTemplate("id", containerId), HttpMethod.POST, null,
@@ -136,6 +138,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 null, null);
     }
 
+    @Override
     @Nonnull
     public NodeStream createImage(@Nonnull String from, @Nullable String tag) {
         DockerCloudUtils.requireNonNull(from, "Source image cannot be null.");
@@ -185,6 +188,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 .queryParam("tail", tail);
     }
 
+    @Override
     public void stopContainer(@Nonnull String containerId, long timeoutSec) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         if (timeoutSec < 0) {
@@ -204,12 +208,14 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 });
     }
 
+    @Override
     public void removeContainer(@Nonnull String containerId, boolean removeVolumes, boolean force) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         invokeVoid(target.path("/containers/{id}").resolveTemplate("id", containerId).queryParam("v", removeVolumes)
                 .queryParam("force", force), HttpMethod.DELETE, null, null);
     }
 
+    @Override
     @Nonnull
     public Node listContainersWithLabel(@Nonnull String key, @Nonnull String value) {
         DockerCloudUtils.requireNonNull(key, "Label key cannot be null.");
@@ -219,7 +225,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 queryParam("filters", "%7B\"label\": " +
                         "[\"" + key + "=" + value + "\"]%7D"), HttpMethod.GET, null, null, null);
     }
-
+    
     private boolean hasTty(String containerId) {
         return inspectContainer(containerId).getObject("Config").getAsBoolean("Tty");
     }
