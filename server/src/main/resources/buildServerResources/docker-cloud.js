@@ -524,6 +524,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self._convertViewModelFieldToSettingsField(viewModel, container, 'StopSignal');
 
+                if (self._filterFromSettings(viewModel.StopTimeout)) {
+                    container.StopTimeout = parseInt(viewModel.StopTimeout);
+                }
+
                 var hostConfig = container.HostConfig = {};
 
                 if (self._filterFromSettings(viewModel.Volumes)) {
@@ -693,6 +697,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
 
                 viewModel.StopSignal = container.StopSignal;
+                viewModel.StopTimeout = container.StopTimeout;
 
                 var hostConfig = container.HostConfig || {};
 
@@ -1454,6 +1459,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             return {msg: "At least one instance must be permitted."};
                         }
                     }],
+                    dockerCloudImage_StopTimeout: [positiveIntegerValidator],
                     dockerCloudImage_Entrypoint_IDX: [function ($elt) {
                         var row = $elt.closest("tr");
                         if (row.index() === 0) {

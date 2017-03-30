@@ -12,6 +12,12 @@ import java.io.Closeable;
  */
 public interface DockerClient extends Closeable {
 
+    /**
+     * Flag indicating that the container timeout must be used when stopping containers. If no timeout is specified
+     * in the container configuration, the Docker daemon default timeout will apply (10 seconds).
+     */
+    long CONTAINER_TIMEOUT = -1;
+
     @Nonnull
     Node getVersion();
 

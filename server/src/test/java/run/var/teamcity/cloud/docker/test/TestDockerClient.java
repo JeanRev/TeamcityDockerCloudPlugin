@@ -29,6 +29,7 @@ public class TestDockerClient implements DockerClient {
     }
 
     private final Map<String, Container> containers = new HashMap<>();
+    private final Collection<Container> discardedContainers = new ArrayList<>();
     private final Set<TestImage> knownRepoImages = new HashSet<>();
     private final Set<TestImage> knownLocalImages = new HashSet<>();
     private final Set<String> pulledLayer = new HashSet<>();
@@ -93,7 +94,7 @@ public class TestDockerClient implements DockerClient {
 
             Map<String, String> labels = new HashMap<>();
             containerSpec.getObject("Labels", Node.EMPTY_OBJECT).getObjectValues().
-                    entrySet().forEach(entry -> labels.put(entry.getKey(), entry.getValue().getAsString()));
+                    forEach((key, value) -> labels.put(key, value.getAsString()));
             Map<String, String> env = new HashMap<>();
             containerSpec.getArray("Env", Node.EMPTY_ARRAY).getArrayValues().
                     forEach(val -> {
@@ -125,6 +126,7 @@ public class TestDockerClient implements DockerClient {
                 throw new InvocationFailedException("Container already started: " + containerId);
             }
 
+            container.appliedStopTimeout = null;
             container.status = ContainerStatus.STARTED;
         } finally {
             lock.unlock();
@@ -260,6 +262,7 @@ public class TestDockerClient implements DockerClient {
                 throw new ContainerAlreadyStoppedException("Container is not running: " + containerId);
             }
 
+            container.appliedStopTimeout = timeoutSec;
             container.status = ContainerStatus.CREATED;
         } finally {
             lock.unlock();
@@ -280,6 +283,7 @@ public class TestDockerClient implements DockerClient {
                 throw new InvocationFailedException("Container is still running: " + containerId);
             }
             containers.remove(containerId);
+            discardedContainers.add(container);
         } finally {
             lock.unlock();
         }
@@ -320,8 +324,7 @@ public class TestDockerClient implements DockerClient {
     }
 
     public TestDockerClient knownImage(String repo, String tag) {
-        knownImage(repo, tag, false);
-        return this;
+        return knownImage(repo, tag, false);
     }
 
     public TestDockerClient knownImage(String repo, String tag, boolean localOnly) {
@@ -370,6 +373,9 @@ public class TestDockerClient implements DockerClient {
         return Collections.unmodifiableCollection(containers.values());
     }
 
+    public Collection<Container> getDiscardedContainers() {
+        return Collections.unmodifiableCollection(discardedContainers);
+    }
     public boolean isClosed() {
         return closed;
     }
@@ -405,6 +411,7 @@ public class TestDockerClient implements DockerClient {
         private final Map<String, String> labels = new HashMap<>();
         private final Map<String, String> env = new HashMap<>();
         private ContainerStatus status;
+        private Long appliedStopTimeout = null;
 
         public Container(ContainerStatus status) {
             this(Collections.emptyMap(), Collections.emptyMap(), status);
@@ -434,6 +441,10 @@ public class TestDockerClient implements DockerClient {
 
         public ContainerStatus getStatus() {
             return status;
+        }
+
+        public Long getAppliedStopTimeout() {
+            return appliedStopTimeout;
         }
 
         public Container label(String key, String value) {

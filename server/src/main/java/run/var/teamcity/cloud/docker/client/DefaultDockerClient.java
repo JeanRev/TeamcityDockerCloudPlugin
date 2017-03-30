@@ -191,11 +191,18 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     @Override
     public void stopContainer(@Nonnull String containerId, long timeoutSec) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
-        if (timeoutSec < 0) {
-            throw new IllegalArgumentException("Timeout must be a positive integer.");
+
+        WebTarget target = this.target.path("/containers/{id}/stop").resolveTemplate("id", containerId);
+        if (timeoutSec != DockerClient.CONTAINER_TIMEOUT) {
+            if (timeoutSec < 0) {
+                throw new IllegalArgumentException("Timeout must be a positive integer.");
+            }
+
+            target = target.queryParam("t", timeoutSec);
         }
 
-        invokeVoid(target.path("/containers/{id}/stop").resolveTemplate("id", containerId).queryParam("t", timeoutSec),
+
+        invokeVoid(target,
                 HttpMethod.POST, null, new ErrorCodeMapper() {
                     @Override
                     public InvocationFailedException mapToException(int errorCode, String msg) {

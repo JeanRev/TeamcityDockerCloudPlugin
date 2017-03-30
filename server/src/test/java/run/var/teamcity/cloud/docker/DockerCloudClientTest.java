@@ -8,6 +8,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
 import run.var.teamcity.cloud.docker.test.*;
@@ -574,6 +575,58 @@ public class DockerCloudClientTest {
         waitUntil(() -> image.getInstances().isEmpty());
 
         waitUntil(() -> dockerClient.getContainers().isEmpty());
+    }
+
+    @Test
+    public void stopTimeoutObservedWhenDiscardingIdleAgent() {
+
+        DefaultDockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+
+        waitUntil(() -> client.canStartNewInstance(image));
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        TestDockerClient dockerClient = dockerClientFactory.getClient();
+
+        client.terminateInstance(instance);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.STOPPED);
+
+        assertThat(dockerClient.getDiscardedContainers()).hasSize(1);
+        Container container = dockerClient.getDiscardedContainers().iterator().next();
+
+        assertThat(container.getStatus()).isEqualTo(ContainerStatus.CREATED);
+        assertThat(container.getAppliedStopTimeout()).isEqualTo(DockerClient.CONTAINER_TIMEOUT);
+    }
+
+    @Test
+    public void noTimeoutObservedWhenDiscardingCloudClient() {
+
+        DefaultDockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+
+        waitUntil(() -> client.canStartNewInstance(image));
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        TestDockerClient dockerClient = dockerClientFactory.getClient();
+
+        client.dispose();
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.STOPPED);
+
+        assertThat(dockerClient.getDiscardedContainers()).hasSize(1);
+        Container container = dockerClient.getDiscardedContainers().iterator().next();
+
+        assertThat(container.getStatus()).isEqualTo(ContainerStatus.CREATED);
+        assertThat(container.getAppliedStopTimeout()).isEqualTo(0);
     }
 
     private DockerInstance extractInstance(DockerImage dockerImage) {

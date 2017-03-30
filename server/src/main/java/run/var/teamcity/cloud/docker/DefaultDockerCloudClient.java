@@ -4,10 +4,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.*;
 import jetbrains.buildServer.serverSide.*;
 import run.var.teamcity.cloud.docker.client.*;
-import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-import run.var.teamcity.cloud.docker.util.EditableNode;
-import run.var.teamcity.cloud.docker.util.Node;
-import run.var.teamcity.cloud.docker.util.NodeStream;
+import run.var.teamcity.cloud.docker.util.*;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -451,6 +448,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     }
 
     private void terminateInstance(@Nonnull final CloudInstance instance, final boolean clientDisposed) {
+        assert instance != null;
         LOG.info("Scheduling cloud instance termination: " + instance + " (client disposed: " + clientDisposed + ").");
         final DockerInstance dockerInstance = ((DockerInstance) instance);
         taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Disposal of container", dockerInstance, InstanceStatus.SCHEDULED_TO_STOP) {
@@ -467,7 +465,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 boolean containerAvailable = false;
                 if (containerId != null) {
                     boolean rmContainer = clientDisposed || dockerInstance.getImage().getConfig().isRmOnExit();
-                    containerAvailable = terminateContainer(containerId, rmContainer);
+                    containerAvailable = terminateContainer(containerId, clientDisposed, rmContainer);
                 }
 
                 try {
@@ -487,10 +485,18 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         });
     }
 
-    private boolean terminateContainer(String containerId, boolean rmContainer) {
+    private boolean terminateContainer(String containerId, boolean clientDisposed, boolean rmContainer) {
+        assert containerId != null;
+        assert !clientDisposed || rmContainer;
         try {
             // We always try to stop the container before destroying it independently of our metadata.
-            dockerClient.stopContainer(containerId, TimeUnit.SECONDS.toSeconds(0));
+            // No stop timeout (timeout = 0s) will be observed If the whole cloud client was stopped. This is to
+            // maximize the chances to issue all stop requests when the server is shutting down, before the JVM is
+            // effectively killed. Applying no timeout has the disadvantage that the agent will not have the time
+            // to properly shutdown and the TC server will need more time to notice that it is effectively gone.
+            long stopTime = Stopwatch.measureMillis(() ->
+                    dockerClient.stopContainer(containerId, clientDisposed ? 0 : DockerClient.CONTAINER_TIMEOUT));
+            LOG.info("Container " + containerId + " stopped in " + stopTime + "ms.");
         } catch (ContainerAlreadyStoppedException e) {
             LOG.debug("Container " + containerId + " was already stopped.");
         } catch (NotFoundException e) {
@@ -773,7 +779,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 LOG.info("The following orphaned containers will be removed: " + orphanedContainers);
             }
             for (String orphanedContainer : orphanedContainers) {
-                terminateContainer(orphanedContainer, true);
+                terminateContainer(orphanedContainer, false, true);
             }
         }
     }

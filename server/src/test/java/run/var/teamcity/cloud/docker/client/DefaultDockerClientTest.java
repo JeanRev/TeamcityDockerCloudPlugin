@@ -5,10 +5,7 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.test.Integration;
-import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-import run.var.teamcity.cloud.docker.util.EditableNode;
-import run.var.teamcity.cloud.docker.util.Node;
-import run.var.teamcity.cloud.docker.util.NodeStream;
+import run.var.teamcity.cloud.docker.util.*;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -16,14 +13,15 @@ import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.data.Offset.offset;
 
 /**
  * {@link DefaultDockerClient} test suite.
@@ -120,6 +118,37 @@ public class DefaultDockerClientTest {
         // Unknown scheme.
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
                 DefaultDockerClient.newInstance(createConfig(URI.create("http://127.0.0.1:2375"), false)));
+    }
+
+    @Test
+    public void stopContainersTimeout() throws URISyntaxException {
+        DefaultDockerClient client = createClient(1);
+
+        Node containerSpec = Node.EMPTY_OBJECT.editNode().
+                put("Image", TEST_IMAGE).
+                put("OpenStdin", true).
+                put("StopTimeout", 3).
+                saveNode();
+        Node createNode = client.createContainer(containerSpec, null);
+        String containerId = createNode.getAsString("Id", null);
+
+        this.containerId = containerId;
+
+        assertThat(containerId).isNotNull().isNotEmpty();
+
+        client.startContainer(containerId);
+
+        Stopwatch sw = Stopwatch.start();
+        client.stopContainer(containerId, 2);
+
+        assertThat(sw.millis()).isCloseTo(TimeUnit.SECONDS.toMillis(2), offset(400L));
+
+        client.startContainer(containerId);
+
+        sw.reset();
+        client.stopContainer(containerId, DockerClient.CONTAINER_TIMEOUT);
+
+        assertThat(sw.millis()).isCloseTo(TimeUnit.SECONDS.toMillis(3), offset(400L));
     }
 
     @Test
