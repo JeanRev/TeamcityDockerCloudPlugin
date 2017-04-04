@@ -1,8 +1,9 @@
 package run.var.teamcity.cloud.docker;
 
 import jetbrains.buildServer.serverSide.InvalidProperty;
-import org.junit.Test;
 import org.junit.Before;
+import org.junit.Test;
+import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
 import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
@@ -31,7 +32,8 @@ public class DockerCloudClientConfigTest {
 
     @Test
     public void fromConstructor() {
-        DockerClientConfig dockerConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
+        DockerClientConfig dockerConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
+                DockerAPIVersion.DEFAULT);
         DockerCloudClientConfig config = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 42, serverURL);
 
         assertThat(config.getDockerClientConfig().getApiVersion()).isEqualTo(DockerCloudUtils.DOCKER_API_TARGET_VERSION);
@@ -50,7 +52,8 @@ public class DockerCloudClientConfigTest {
     @SuppressWarnings("ConstantConditions")
     public void fromConstructorInvalidInput() {
 
-        DockerClientConfig dockerConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
+        DockerClientConfig dockerConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
+                DockerAPIVersion.DEFAULT);
 
         new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 2, serverURL);
 

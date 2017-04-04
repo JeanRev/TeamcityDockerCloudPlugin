@@ -41,17 +41,36 @@ public class TestDockerClient implements DockerClient {
     public static URI TEST_CLIENT_URI = URI.create("tcp://not.a.real.docker.client:0000");
     private boolean closed = false;
     private DockerClientException failOnAccessException = null;
-    private final DockerClientConfig config;
-    private String supportedAPIVersion = null;
-
-    public ReentrantLock getLock() {
-        return lock;
-    }
+    private DockerAPIVersion supportedAPIVersion = null;
+    private DockerAPIVersion minAPIVersion = null;
+    private DockerAPIVersion apiVersion;
+    private boolean lenientVersionCheck = false;
 
     public TestDockerClient(DockerClientConfig config) {
-        this.config = config;
+        this.apiVersion = config.getApiVersion();
         if (!TEST_CLIENT_URI.equals(config.getInstanceURI())) {
             throw new IllegalArgumentException("Unsupported URI: " + config.getInstanceURI());
+        }
+    }
+
+    @Nonnull
+    @Override
+    public DockerAPIVersion getApiVersion() {
+        lock.lock();
+        try {
+            return apiVersion;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void setApiVersion(@Nonnull DockerAPIVersion apiVersion) {
+        lock.lock();
+        try {
+            this.apiVersion = apiVersion;
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -61,16 +80,20 @@ public class TestDockerClient implements DockerClient {
         lock.lock();
         try {
             checkForFailure();
-            return Node.EMPTY_OBJECT.editNode().
+            EditableNode node = Node.EMPTY_OBJECT.editNode().
                     put("Version", "1.0").
-                    put("ApiVersion", "1.0").
+                    put("ApiVersion", supportedAPIVersion != null ? supportedAPIVersion.getVersionString() : "1.0").
                     put("Os", "NotARealOS").
                     put("Arch", "NotARealArch").
                     put("Kernel", "1.0").
                     put("build", "00000000").
                     put("buildtime", "0000-00-00T00:00:00.000000000+00:00").
                     put("GoVersion", "go1.0").
-                    put("experimental", false).saveNode();
+                    put("experimental", false);
+            if (minAPIVersion != null) {
+                node.put("MinAPIVersion", minAPIVersion.getVersionString());
+            }
+            return node.saveNode();
         } finally {
             lock.unlock();
         }
@@ -380,12 +403,16 @@ public class TestDockerClient implements DockerClient {
         return closed;
     }
 
-    public DockerClientConfig getConfig() {
-        return config;
+    public void setSupportedAPIVersion(DockerAPIVersion supportedAPIVersion) {
+        this.supportedAPIVersion = supportedAPIVersion;
     }
 
-    public void setSupportedAPIVersion(String supportedAPIVersion) {
-        this.supportedAPIVersion = supportedAPIVersion;
+    public void setMinAPIVersion(DockerAPIVersion minAPIVersion) {
+        this.minAPIVersion = minAPIVersion;
+    }
+
+    public void setLenientVersionCheck(boolean lenientVersionCheck) {
+        this.lenientVersionCheck = lenientVersionCheck;
     }
 
     private void checkForFailure() {
@@ -397,9 +424,19 @@ public class TestDockerClient implements DockerClient {
             if (failOnAccessException != null) {
                 throw failOnAccessException;
             }
-            String apiVersion = config.getApiVersion();
-            if (supportedAPIVersion != null && apiVersion != null && !apiVersion.equals(supportedAPIVersion)) {
-                throw new BadRequestException("Bad version.");
+
+            if (lenientVersionCheck) {
+                return;
+            }
+
+            if (!apiVersion.isDefaultVersion() && supportedAPIVersion != null) {
+                if (minAPIVersion != null) {
+                    if (!apiVersion.isInRange(minAPIVersion, supportedAPIVersion)) {
+                        throw new BadRequestException("Bad version.");
+                    }
+                } else if (!apiVersion.equals(supportedAPIVersion)){
+                    throw new BadRequestException("Bad version.");
+                }
             }
         } finally {
             lock.unlock();

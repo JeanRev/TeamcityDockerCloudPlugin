@@ -646,8 +646,8 @@ public class DockerCloudClientTest {
 
     private DefaultDockerCloudClient createClient() {
 
-        DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI).
-                apiVersion(DockerCloudUtils.DOCKER_API_TARGET_VERSION);
+        DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI,
+                DockerCloudUtils.DOCKER_API_TARGET_VERSION);
         DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2, serverURL);
         DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, rmOnExit, false,
                 maxInstanceCount, 111);

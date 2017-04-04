@@ -62,9 +62,9 @@ public class CheckConnectivityController extends BaseFormXmlController {
         Exception error = null;
         try {
 
-            DockerClientConfig dockerConfig = new DockerClientConfig(new URI(uri))
+            DockerClientConfig dockerConfig = new DockerClientConfig(new URI(uri),
+                    DockerCloudUtils.DOCKER_API_TARGET_VERSION)
                     .usingTls(useTLS)
-                    .apiVersion(DockerCloudUtils.DOCKER_API_TARGET_VERSION)
                     .connectionPoolSize(1)
                     .connectTimeoutMillis((int) TimeUnit.SECONDS.toMillis(20));
 

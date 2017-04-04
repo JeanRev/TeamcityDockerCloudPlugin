@@ -262,9 +262,7 @@ public class DefaultDockerClientTest {
 
     @Test
     public void connectWithSpecificAPIVersion() throws URISyntaxException {
-        DockerClientConfig config = createTcpClientConfig();
-
-        config.apiVersion("1.24");
+        DockerClientConfig config = createTcpClientConfig(DockerAPIVersion.parse("1.24"));
 
         DefaultDockerClient client = createClient(config);
 
@@ -274,9 +272,7 @@ public class DefaultDockerClientTest {
 
     @Test(expected = BadRequestException.class)
     public void connectWithUnsupportedAPIVersion() throws URISyntaxException {
-        DockerClientConfig config = createTcpClientConfig();
-
-        config.apiVersion("9.99");
+        DockerClientConfig config = createTcpClientConfig(DockerAPIVersion.parse("1.0"));
 
         DefaultDockerClient client = createClient(config);
 
@@ -290,18 +286,22 @@ public class DefaultDockerClientTest {
 
     private DefaultDockerClient createClient(int connectionPoolSize) throws URISyntaxException {
 
-       DockerClientConfig config = createTcpClientConfig();
+        DockerClientConfig config = createTcpClientConfig();
 
-       config.connectionPoolSize(connectionPoolSize);
+        config.connectionPoolSize(connectionPoolSize);
 
         return client = DefaultDockerClient.newInstance(config);
     }
 
     private DockerClientConfig createTcpClientConfig() throws URISyntaxException {
+        return createTcpClientConfig(DockerCloudUtils.DOCKER_API_TARGET_VERSION);
+    }
+
+    private DockerClientConfig createTcpClientConfig(DockerAPIVersion apiVersion) throws URISyntaxException {
         String dockerTcpAddress = System.getProperty("docker.test.tcp.address");
         Assume.assumeNotNull(dockerTcpAddress);
 
-        return createConfig(new URI("tcp://" + dockerTcpAddress), false);
+        return createConfig(new URI("tcp://" + dockerTcpAddress), apiVersion, false);
     }
 
     private DefaultDockerClient createClient(DockerClientConfig clientConfig) throws URISyntaxException {
@@ -333,7 +333,7 @@ public class DefaultDockerClientTest {
 
         client.getVersion();
     }
-   
+
 
     @Test
     public void connectWithUnixSocket() throws URISyntaxException {
@@ -372,6 +372,10 @@ public class DefaultDockerClientTest {
     }
 
     private DockerClientConfig createConfig(URI uri, boolean usingTls) {
-        return new DockerClientConfig(uri).usingTls(usingTls);
+        return createConfig(uri, DockerCloudUtils.DOCKER_API_TARGET_VERSION, usingTls);
+    }
+
+    private DockerClientConfig createConfig(URI uri, DockerAPIVersion apiVersion, boolean usingTls) {
+        return new DockerClientConfig(uri, apiVersion).usingTls(usingTls);
     }
 }

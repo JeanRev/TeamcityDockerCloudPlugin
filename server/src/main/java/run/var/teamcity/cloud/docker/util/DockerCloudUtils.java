@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.AgentDescription;
 import org.apache.commons.io.output.ByteArrayOutputStream;
+import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -82,7 +83,7 @@ public final class DockerCloudUtils {
     /**
      * Supported Docker API version.
      */
-    public static final String DOCKER_API_TARGET_VERSION = "1.24";
+    public static final DockerAPIVersion DOCKER_API_TARGET_VERSION = DockerAPIVersion.parse("1.24");
 
     static {
         try {

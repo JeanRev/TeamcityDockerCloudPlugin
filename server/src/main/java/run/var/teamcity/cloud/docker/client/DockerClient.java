@@ -18,6 +18,13 @@ public interface DockerClient extends Closeable {
      */
     long CONTAINER_TIMEOUT = -1;
 
+    // Api version: must be settable after instantiation to handle with API version negotiation.
+
+    @Nonnull
+    DockerAPIVersion getApiVersion();
+
+    void setApiVersion(@Nonnull DockerAPIVersion apiVersion);
+
     @Nonnull
     Node getVersion();
 

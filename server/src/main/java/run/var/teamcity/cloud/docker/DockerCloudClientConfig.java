@@ -65,8 +65,6 @@ public class DockerCloudClientConfig {
         this.usingDaemonThreads = usingDaemonThreads;
         this.dockerSyncRateSec = dockerSyncRateSec;
         this.serverURL = serverURL;
-
-        dockerClientConfig.apiVersion(DockerCloudUtils.DOCKER_API_TARGET_VERSION);
     }
 
     /**
@@ -150,7 +148,8 @@ public class DockerCloudClientConfig {
             if (instanceURLStr != null) {
                 try {
                     instanceURI = new URI(instanceURLStr);
-                    DockerClientConfig dockerConfig = new DockerClientConfig(instanceURI).usingTls(usingTls);
+                    DockerClientConfig dockerConfig = new DockerClientConfig(instanceURI,
+                            DockerCloudUtils.DOCKER_API_TARGET_VERSION).usingTls(usingTls);
                     try {
                         dockerClientFactory.createClient(dockerConfig);
                     } catch (IllegalArgumentException e) {
@@ -180,7 +179,8 @@ public class DockerCloudClientConfig {
 
         assert clientUuid != null && instanceURI != null;
 
-        DockerClientConfig dockerClientConfig = new DockerClientConfig(instanceURI).usingTls(usingTls);
+        DockerClientConfig dockerClientConfig =
+                new DockerClientConfig(instanceURI, DockerCloudUtils.DOCKER_API_TARGET_VERSION).usingTls(usingTls);
 
         return new DockerCloudClientConfig(clientUuid, dockerClientConfig, true, serverURL);
     }
