@@ -133,7 +133,7 @@ class CreateContainerTestTask extends ContainerTestTask {
                 }
 
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOG.warn("Failed to pull image: " + image, e);
         }
 

@@ -5,6 +5,7 @@ import org.junit.Before;
 import org.junit.Test;
 import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.test.*;
+import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,6 +29,10 @@ public class CheckConnectivityControllerTest {
 
     @Test
     public void doPost() {
+
+        dockerClientFty.addConfigurator(dockerClient ->
+                dockerClient.setSupportedAPIVersion(DockerCloudUtils.DOCKER_API_TARGET_VERSION));
+
         CheckConnectivityController ctrl = createController();
 
         TestHttpServletRequest request = new TestHttpServletRequest();

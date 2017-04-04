@@ -46,9 +46,7 @@ public abstract class DockerClientFactory {
 
         DockerClient client = createClient(config);
 
-        DockerAPIVersion targetVersion = config.getApiVersion();
-
-        assert client.getApiVersion().equals(targetVersion);
+        DockerAPIVersion targetVersion = client.getApiVersion();
 
         negotiate(client, targetVersion);
 

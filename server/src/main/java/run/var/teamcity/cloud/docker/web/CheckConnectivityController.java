@@ -83,7 +83,7 @@ public class CheckConnectivityController extends BaseFormXmlController {
             setAttr(versionElt, "experimental", version.getAsBoolean("experimental", false));
             xmlResponse.addContent(versionElt);
 
-            if (!DockerCloudUtils.DOCKER_API_TARGET_VERSION.equals(dockerConfig.getApiVersion())) {
+            if (!DockerCloudUtils.DOCKER_API_TARGET_VERSION.equals(client.getApiVersion())) {
                 Element warning = new Element("warning").
                         addContent(DockerCloudUtils.filterXmlText("Warning: the daemon does not seems to support " +
                                 "API v" + DockerCloudUtils.DOCKER_API_TARGET_VERSION + ". You may encounter issues."));

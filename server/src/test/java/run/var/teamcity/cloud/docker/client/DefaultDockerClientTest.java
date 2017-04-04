@@ -223,23 +223,11 @@ public class DefaultDockerClientTest {
         assertThat(fragment.getType()).isSameAs(type);
     }
 
-    @Test
-    public void createImage() throws URISyntaxException, IOException {
+    @Test(expected = NotFoundException.class)
+    public void createImageWithImageNotFound() throws URISyntaxException, IOException {
         DockerClient client = createClient();
 
-        NodeStream nodeStream = client.createImage("run.var.teamcity.cloud.docker.client.not_a_real_image", "1.0");
-
-        Node node = nodeStream.next();
-
-        assertThat(node).isNotNull();
-        assertThat(node.getAsString("status", null)).isNotEmpty();
-
-        node = nodeStream.next();
-        assertThat(node).isNotNull();
-        assertThat(node.getObject("errorDetail", Node.EMPTY_OBJECT).getAsString("message", null)).isNotNull();
-        assertThat(node.getAsString("error", null)).isNotEmpty();
-
-        assertThat(nodeStream.next()).isNull();
+        client.createImage("run.var.teamcity.cloud.docker.client.not_a_real_image", "1.0");
     }
 
     @Test
