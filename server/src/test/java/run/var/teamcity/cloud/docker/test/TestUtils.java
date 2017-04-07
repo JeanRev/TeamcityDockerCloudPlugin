@@ -103,12 +103,17 @@ public final class TestUtils {
     }
 
     public static Map<String, String> getSampleImagesConfigParams(boolean withPrefix) {
+        return getSampleImagesConfigParams("Test", withPrefix);
+    }
+
+    public static Map<String, String> getSampleImagesConfigParams(String profileName, boolean withPrefix) {
         String prefix = withPrefix ? DockerCloudUtils.TC_PROPERTY_PREFIX : "";
         EditableNode images = Node.EMPTY_ARRAY.editNode();
         EditableNode image = images.addObject();
-        getSampleImageConfigSpec(image, "Test");
+        getSampleImageConfigSpec(image, profileName);
         return Collections.singletonMap(prefix + DockerCloudUtils.IMAGES_PARAM, images.toString());
     }
+
 
     public static Node getSampleImageConfigSpec() {
         return getSampleImageConfigSpec("Test");
