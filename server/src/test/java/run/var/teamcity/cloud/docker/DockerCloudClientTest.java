@@ -600,7 +600,7 @@ public class DockerCloudClientTest {
         Container container = dockerClient.getDiscardedContainers().iterator().next();
 
         assertThat(container.getStatus()).isEqualTo(ContainerStatus.CREATED);
-        assertThat(container.getAppliedStopTimeout()).isEqualTo(DockerClient.CONTAINER_TIMEOUT);
+        assertThat(container.getAppliedStopTimeout()).isEqualTo(DockerClient.DEFAULT_TIMEOUT);
     }
 
     @Test

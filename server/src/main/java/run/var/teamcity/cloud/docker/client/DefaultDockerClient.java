@@ -208,7 +208,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
 
         WebTarget target = target().path("/containers/{id}/stop").resolveTemplate("id", containerId);
-        if (timeoutSec != DockerClient.CONTAINER_TIMEOUT) {
+        if (timeoutSec != DockerClient.DEFAULT_TIMEOUT) {
             if (timeoutSec < 0) {
                 throw new IllegalArgumentException("Timeout must be a positive integer.");
             }

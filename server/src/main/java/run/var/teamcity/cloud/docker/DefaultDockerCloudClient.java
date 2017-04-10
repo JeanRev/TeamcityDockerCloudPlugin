@@ -495,7 +495,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
             // effectively killed. Applying no timeout has the disadvantage that the agent will not have the time
             // to properly shutdown and the TC server will need more time to notice that it is effectively gone.
             long stopTime = Stopwatch.measureMillis(() ->
-                    dockerClient.stopContainer(containerId, clientDisposed ? 0 : DockerClient.CONTAINER_TIMEOUT));
+                    dockerClient.stopContainer(containerId, clientDisposed ? 0 : DockerClient.DEFAULT_TIMEOUT));
             LOG.info("Container " + containerId + " stopped in " + stopTime + "ms.");
         } catch (ContainerAlreadyStoppedException e) {
             LOG.debug("Container " + containerId + " was already stopped.");

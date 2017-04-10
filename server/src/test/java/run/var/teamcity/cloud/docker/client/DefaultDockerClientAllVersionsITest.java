@@ -101,7 +101,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         client.startContainer(containerId);
 
         sw.reset();
-        client.stopContainer(containerId, DockerClient.CONTAINER_TIMEOUT);
+        client.stopContainer(containerId, DockerClient.DEFAULT_TIMEOUT);
 
         assertThat(sw.millis()).isCloseTo(TimeUnit.SECONDS.toMillis(3), offset(400L));
     }
