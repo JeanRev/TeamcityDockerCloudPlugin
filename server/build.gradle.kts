@@ -20,12 +20,13 @@ buildscript {
 }
 
 val unixSocketInstanceProp = "docker.test.unix.socket"
-val tcpInstanceProp = "docker.test.tcp.address"
+val tcpInstance_1_12Prop = "docker_1_12.test.tcp.address"
+val tcpInstanceLatestProp = "docker.test.tcp.address"
 val tcpTlsInstanceProp = "docker.test.tcp.ssl.address"
 val dockerCertPath = "docker.test.tcp.ssl.certpath"
 
 val dockerTestInstancesProps = mutableMapOf<String, String>()
-listOf(unixSocketInstanceProp, tcpInstanceProp, tcpTlsInstanceProp, dockerCertPath)
+listOf(unixSocketInstanceProp, tcpInstance_1_12Prop, tcpInstanceLatestProp, tcpTlsInstanceProp, dockerCertPath)
         .filter { project.hasProperty(it) }
         .forEach { dockerTestInstancesProps.put(it, project.properties[it] as String) }
 
@@ -119,9 +120,14 @@ val setupTestImages = task("setupTestImages") {
             buildTestImage("unix://$unixInstance")
         }
 
-        val tcpInstance = dockerTestInstancesProps[tcpInstanceProp];
-        if (tcpInstance != null) {
-            buildTestImage("http://$tcpInstance")
+        val tcpInstance1_12 = dockerTestInstancesProps[tcpInstance_1_12Prop];
+        if (tcpInstance1_12 != null) {
+            buildTestImage("http://$tcpInstance1_12")
+        }
+
+        val tcpInstanceLatest = dockerTestInstancesProps[tcpInstanceLatestProp];
+        if (tcpInstanceLatest != null) {
+            buildTestImage("http://$tcpInstanceLatest")
         }
 
         val tcpTlsInstance = dockerTestInstancesProps[tcpTlsInstanceProp]
