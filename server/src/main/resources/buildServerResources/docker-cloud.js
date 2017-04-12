@@ -5,6 +5,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
         //noinspection JSUnresolvedVariable
         var self = {
+            IMAGE_VERSION: 2,
             selectors: {
                 editImageLink: '.editImageLink',
                 imagesTableRow: '.imagesTableRow'
@@ -210,11 +211,61 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.imagesData = {};
                 self.logDebug(images.length + " images to be loaded.");
                 $j.each(images, function(i, image) {
+                    self._migrateImagesData(image);
                     self.imagesData[image.Administration.Profile] = image;
                 });
 
                 // Update the image details when the configuration is initially loaded.
                 self._updateTCImageDetails();
+            },
+
+            _migrateImagesData: function(imageData) {
+                if (imageData.Administration.Version === 1) {
+                    // V1: 'Binds' must be exported from the container configuration into the editor configuration,
+                    // where they will not be stored using the Docker syntax ([host_path]:[container_path]:[mode]) but
+                    // splitted into JSON fields. This allow us to avoid to handle specially with colons in filename
+                    // for unix (see docker issue #8604, still open today) and windows drive letters (solved in
+                    // Docker using complexes regexes).
+                    self.logInfo("Performing migration to version 2.");
+                    var container = imageData.Container || {};
+                    var hostConfig = container.HostConfig || {};
+                    var editor = imageData.Editor || {};
+                    imageData.Editor = editor;
+
+                    editor.Binds = [];
+
+                    self._safeEach(hostConfig.Binds, function(bind) {
+                        self.logDebug("Processing: " + bind);
+                        var tokens = bind.split(':');
+                        if (tokens.length > 3) {
+                            // We are in difficulty as soon as we have more than three tokens: we will then not
+                            // evaluate the whole binding definition. This is less crucial for unix file paths,
+                            // because the Docker daemon will consider such definition invalid and reject them anyway.
+                            // For Windows file paths, we apply a simple heuristic that should be "good enough":
+                            // if a definition token looks like a drive letter then we merge it with the following
+                            // token.
+                            var copy = tokens.slice();
+                            var newTokens = [];
+                            var mode = copy.pop();
+                            while(copy.length) {
+                                var token = copy.shift();
+                                if (token.match('^[a-zA-Z0-9]$') && copy.length) {
+                                    token += ':' + copy.shift();
+                                }
+                                newTokens.push(token);
+                            }
+                            if (newTokens.length >= 2 && (mode === 'ro' || mode === 'rw')) {
+                                tokens = [newTokens[0], newTokens[1], mode];
+                                self.logInfo("Binding fix attempt: " + newTokens[0] + ":" + newTokens[1] + ":" + mode);
+                            }
+                        }
+                        editor.Binds.push({ PathOnHost: tokens[0], PathInContainer: tokens[1],  ReadOnly: tokens[2] });
+                    });
+
+                    imageData.Administration.Version = self.IMAGE_VERSION;
+                } else if (imageData.Administration.Version !== self.IMAGE_VERSION) {
+                    self.logInfo("Warning: unsupported configuration version " + imageData.Administration.Version);
+                }
             },
 
             _updateTCImageDetails: function(oldSourceId, newSourceId) {
@@ -468,8 +519,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var settings = {};
 
                 var admin = settings.Administration = {};
+                var editor = settings.Editor = {};
 
-                admin.Version = 1;
+                admin.Version = self.IMAGE_VERSION;
 
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'RmOnExit');
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'BindAgentProps');
@@ -532,9 +584,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 if (self._filterFromSettings(viewModel.Volumes)) {
                     hostConfig.Binds = [];
+                    editor.Binds = [];
                     self._safeEach(viewModel.Volumes, function (volume) {
                         if (volume.PathOnHost) {
-                            hostConfig.Binds.push(volume.PathOnHost + ':' + volume.PathInContainer + ':' + (volume.ReadOnly ? 'ro' : 'rw'));
+                            var readOnly = volume.ReadOnly ? 'ro' : 'rw';
+                            hostConfig.Binds.push(volume.PathOnHost + ':' + volume.PathInContainer + ':' + readOnly);
+                            editor.Binds.push({ PathOnHost: volume.PathOnHost,
+                                PathInContainer: volume.PathInContainer, ReadOnly: readOnly});
                         }
                     });
                 }
@@ -634,7 +690,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'CgroupParent');
 
-                var editor = settings.Editor = {};
                 editor.MemoryUnit = viewModel.MemoryUnit;
                 editor.MemorySwapUnit = viewModel.MemorySwapUnit;
 
@@ -654,6 +709,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 var admin = settings.Administration || {};
                 var container = settings.Container || {};
+                var hostConfig = container.HostConfig || {};
                 var editor = settings.Editor || {};
 
                 viewModel.Profile = admin.Profile;
@@ -699,11 +755,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 viewModel.StopSignal = container.StopSignal;
                 viewModel.StopTimeout = container.StopTimeout;
 
-                var hostConfig = container.HostConfig || {};
-
-                self._safeEach(hostConfig.Binds, function(bind) {
-                    var tokens = bind.split(':');
-                    viewModel.Volumes.push({ PathOnHost: tokens[0], PathInContainer: tokens[1],  ReadOnly: tokens[2] === 'ro' });
+                self._safeEach(editor.Binds, function(bind) {
+                    viewModel.Volumes.push({ PathOnHost: bind.PathOnHost, PathInContainer: bind.PathInContainer,  ReadOnly: bind.readOnly === 'ro' });
                 });
 
                 viewModel.Links = [];

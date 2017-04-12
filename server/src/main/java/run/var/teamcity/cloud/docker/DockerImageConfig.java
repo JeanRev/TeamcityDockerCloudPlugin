@@ -18,8 +18,6 @@ public class DockerImageConfig {
 
     private static final Logger LOG = DockerCloudUtils.getLogger(DockerImageConfig.class);
 
-    public static final int DOCKER_IMAGE_SPEC_VERSION = 1;
-
     private final String profileName;
     private final Node containerSpec;
     private final boolean rmOnExit;
@@ -144,6 +142,7 @@ public class DockerImageConfig {
                     }
                 }
             } catch (Exception e) {
+                LOG.error("Failed to parse image configuration.", e);
                 invalidProperties.add(new InvalidProperty(DockerCloudUtils.IMAGES_PARAM, "Cannot parse image data."));
             }
         } else {
@@ -175,9 +174,7 @@ public class DockerImageConfig {
         DockerCloudUtils.requireNonNull(node, "JSON node cannot be null.");
         try {
             Node admin = node.getObject("Administration");
-            if (admin.getAsInt("Version") != DOCKER_IMAGE_SPEC_VERSION) {
-                throw new IllegalArgumentException("Unsupported image specification version.");
-            }
+            LOG.info("Loading cloud profile configuration version " + admin.getAsInt("Version") + ".");
 
             Node container = node.getObject("Container");
 
