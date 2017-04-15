@@ -6,10 +6,7 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.test.Integration;
-import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-import run.var.teamcity.cloud.docker.util.EditableNode;
-import run.var.teamcity.cloud.docker.util.Node;
-import run.var.teamcity.cloud.docker.util.Stopwatch;
+import run.var.teamcity.cloud.docker.util.*;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -22,6 +19,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -30,7 +28,9 @@ import static org.assertj.core.data.Offset.offset;
 @Category(Integration.class)
 public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTestBase {
 
-    protected final static String TEST_IMAGE = "tc_dk_cld_plugin_test_img:1.0";
+    final static String TEST_IMAGE = "tc_dk_cld_plugin_test_img:1.0";
+
+    private final static DockerClientCredentials TEST_CREDENTIALS = DockerClientCredentials.from("test", "abc123éà!${}_/|");
 
     private final static String TEST_LABEL_KEY = DefaultDockerClientITest.class.getName();
     private final static String STDERR_MSG_PREFIX = "ERR";
@@ -178,11 +178,41 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         assertThat(fragment.getType()).isSameAs(type);
     }
 
-    @Test(expected = NotFoundException.class)
+    @Test
     public void createImageWithImageNotFound() throws URISyntaxException, IOException {
         DockerClient client = createClient();
+        createImageWithImageNotFound(client, "run.var.teamcity.cloud.docker.client.not_a_real_image", DockerClientCredentials.ANONYMOUS);
+    }
 
-        client.createImage("run.var.teamcity.cloud.docker.client.not_a_real_image", "1.0");
+    @Test
+    public void createImageWithImageNotFoundPrivateRegistry() throws URISyntaxException, IOException {
+        DockerClient client = createClient();
+
+        String registry = getRegistryAddress();
+        createImageWithImageNotFound(client, registry + "/not_a_real_image", TEST_CREDENTIALS);
+    }
+
+
+    private void createImageWithImageNotFound(DockerClient client, String image, DockerClientCredentials credentials) throws IOException {
+        // Depending on the daemon and registry versions and configuration, we may either get a 404 failure or an error
+        // status encoded in the JSON response. Both behaviors are OK.
+        try {
+            NodeStream nodeStream = client.createImage(image, "1.0", credentials);
+
+            Node node = nodeStream.next();
+
+            assertThat(node).isNotNull();
+            assertThat(node.getAsString("status", null)).isNotEmpty();
+
+            node = nodeStream.next();
+            assertThat(node).isNotNull();
+            assertThat(node.getObject("errorDetail", Node.EMPTY_OBJECT).getAsString("message", null)).isNotNull();
+            assertThat(node.getAsString("error", null)).isNotEmpty();
+
+            assertThat(nodeStream.next()).isNull();
+        } catch (NotFoundException e) {
+            // Also OK.
+        }
     }
 
     @Test
@@ -222,6 +252,52 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         client.getVersion();
     }
 
+    @Test
+    public void registryFailedAuthPrivateRegistry() throws URISyntaxException {
+        String registryAddress = getRegistryAddress();
+
+        DefaultDockerClient client = createClient(createTcpClientConfig());
+
+        Stream.of(DockerClientCredentials.ANONYMOUS, DockerClientCredentials.from("invalid", "credentials"))
+                .forEach(credentials ->
+                assertThatExceptionOfType(UnauthorizedException.class).isThrownBy(
+                        () -> client.createImage(registryAddress + "/" + TEST_IMAGE, null, credentials)));
+    }
+
+    @Test
+    public void authentifiedPull() throws URISyntaxException, IOException {
+
+        // Testing a pull from Docker hub using the provided parameters.
+        String repo = System.getProperty("docker.test.hub.repo");
+        String user = System.getProperty("docker.test.hub.user");
+        String pwd = System.getProperty("docker.test.hub.pwd");
+
+        Assume.assumeNotNull(repo, user, pwd);
+
+        DefaultDockerClient client = createClient(createTcpClientConfig());
+
+        NodeStream stream = client.createImage(repo, null, DockerClientCredentials.from(user, pwd));
+        Node node;
+        while ((node = stream.next()) != null) {
+            String error = node.getAsString("error", null);
+            assertThat(error).isNull();
+        }
+    }
+
+    @Test
+    public void authentifiedPullPrivateRegistry() throws URISyntaxException, IOException {
+        String registryAddress = getRegistryAddress();
+
+        DefaultDockerClient client = createClient(createTcpClientConfig());
+
+        NodeStream stream = client.createImage(registryAddress + "/" + TEST_IMAGE, null, TEST_CREDENTIALS);
+        Node node;
+        while ((node = stream.next()) != null) {
+            String error = node.getAsString("error", null);
+            assertThat(error).isNull();
+        }
+    }
+
     protected DefaultDockerClient createClient() throws URISyntaxException {
         return createClient(1);
     }
@@ -250,6 +326,12 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
     private DefaultDockerClient createClient(DockerClientConfig clientConfig) throws URISyntaxException {
 
         return client = DefaultDockerClient.newInstance(clientConfig);
+    }
+
+    private String getRegistryAddress() {
+        String registryAddress = System.getProperty("docker.test.registry.address");
+        Assume.assumeNotNull(registryAddress);
+        return registryAddress;
     }
 
     protected String getDockerAddrSysprop() {

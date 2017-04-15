@@ -1,27 +1,14 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.junit.After;
 import org.junit.Assume;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.test.Integration;
-import run.var.teamcity.cloud.docker.util.*;
 
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.data.Offset.offset;
 
 /**
  * {@link DefaultDockerClient} test suite.
@@ -39,7 +26,6 @@ public class DefaultDockerClientITest extends DefaultDockerClientTestBase {
             client.getVersion();
         }
     }
-
 
     @Test
     public void connectWithUnixSocket() throws URISyntaxException {

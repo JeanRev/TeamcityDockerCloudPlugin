@@ -13,6 +13,8 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.io.Closeable;
 import java.io.IOException;
@@ -47,6 +49,8 @@ public abstract class DockerAbstractClient implements Closeable {
             switch (errorCode) {
                 case 400:
                     return new BadRequestException(msg);
+                case 401:
+                    return new UnauthorizedException(msg);
                 case 404:
                     return new NotFoundException(msg);
             }
@@ -73,7 +77,7 @@ public abstract class DockerAbstractClient implements Closeable {
      * @param target          the targeted resource
      * @param method          the operation method
      * @param entity          the entity to be submitted, may be {@code null}
-     * @param authToken       the authorization token for the operation, may be {@code null}
+     * @param headers         the request headers
      * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
      *
      * @return the parsed response
@@ -81,15 +85,15 @@ public abstract class DockerAbstractClient implements Closeable {
      * @throws DockerClientException if invoking the operation failed
      */
     @Nonnull
-    protected Node invoke(WebTarget target, String method, Node entity, String authToken, ErrorCodeMapper
-            errorCodeMapper) {
+    protected Node invoke(WebTarget target, String method, Node entity, MultivaluedMap<String, Object> headers,
+                          ErrorCodeMapper errorCodeMapper) {
 
-        assert target != null && method != null;
+        assert target != null && method != null && headers != null;
 
         Response response = execRequest(target,
                 target.
                         request(MediaType.APPLICATION_JSON).
-                        acceptEncoding(SUPPORTED_CHARSET.name()), method, entity != null ? Entity.json(entity.toString()) : null, authToken, errorCodeMapper);
+                        acceptEncoding(SUPPORTED_CHARSET.name()), method, entity != null ? Entity.json(entity.toString()) : null, headers, errorCodeMapper);
 
         try {
             return Node.parse((InputStream) response.getEntity());
@@ -110,7 +114,7 @@ public abstract class DockerAbstractClient implements Closeable {
      * @param target          the targeted resource
      * @param method          the operation method
      * @param entity          the entity to be submitted, may be {@code null}
-     * @param authToken       the authorization token for the operation, may be {@code null}
+     * @param headers         the request headers
      * @param errorCodeMapper the additional error code mapper to be used, may be {@code null}
      *
      * @return the stream of JSON elements
@@ -118,15 +122,16 @@ public abstract class DockerAbstractClient implements Closeable {
      * @throws DockerClientException if invoking the operation failed
      */
     @Nonnull
-    protected NodeStream invokeNodeStream(WebTarget target, String method, Node entity, String authToken,
-                                          ErrorCodeMapper errorCodeMapper) {
+    protected NodeStream invokeNodeStream(WebTarget target, String method, Node entity,
+                                          MultivaluedMap<String, Object> headers, ErrorCodeMapper errorCodeMapper) {
 
-        assert target != null && method != null;
+        assert target != null && method != null && headers != null;
 
         Response response = execRequest(target,
                 target.
                         request(MediaType.APPLICATION_JSON).
-                        acceptEncoding(SUPPORTED_CHARSET.name()), method, entity != null ? Entity.json(entity.toString()) : null, authToken, errorCodeMapper);
+                        acceptEncoding(SUPPORTED_CHARSET.name()), method,
+                entity != null ? Entity.json(entity.toString()) : null, headers, errorCodeMapper);
 
         try {
             return Node.parseMany(JaxWsResponseFilterInputStream.wrap(response));
@@ -150,8 +155,7 @@ public abstract class DockerAbstractClient implements Closeable {
 
         Response response = execRequest(target,
                 target.request(MediaType.APPLICATION_JSON).acceptEncoding(SUPPORTED_CHARSET.name()),
-                method, entity != null ? Entity.json(entity.toString()) :
-                        null, null, errorCodeMapper);
+                method, entity != null ? Entity.json(entity.toString()) : null, emptyHeaders(), errorCodeMapper);
 
         response.close();
     }
@@ -163,7 +167,7 @@ public abstract class DockerAbstractClient implements Closeable {
      * @param invocationBuilder the invocation builder to be used
      * @param method            the operation method
      * @param entity            the entity to be submitted, may be {@code null}
-     * @param authToken         the authorization token for the operation, may be {@code null}
+     * @param headers           the request headers
      * @param errorCodeMapper   the additional error code mapper to be used, may be {@code null}
      * @param <T>               the submitted entity type
      *
@@ -172,19 +176,16 @@ public abstract class DockerAbstractClient implements Closeable {
      * @throws DockerClientException if invoking the operation failed
      */
     protected <T> Response execRequest(WebTarget target, Invocation.Builder invocationBuilder, String method,
-                                       Entity<T> entity, String authToken,
+                                       Entity<T> entity, MultivaluedMap<String, Object> headers,
                                        ErrorCodeMapper errorCodeMapper) {
-        if (authToken != null) {
-            invocationBuilder.header("Authorization", "Bearer " + authToken);
-        }
 
         checkNotClosed();
 
-        assert invocationBuilder != null && method != null;
+        assert invocationBuilder != null && method != null && headers != null;
 
         Response response;
         try {
-            response = invocationBuilder.method(method, entity);
+            response = invocationBuilder.headers(headers).method(method, entity);
         } catch (ProcessingException e) {
             String msg = e.getMessage();
             throw new DockerClientProcessingException(msg != null ? msg : "Method invocation failed.", e);
@@ -294,6 +295,27 @@ public abstract class DockerAbstractClient implements Closeable {
         if (closed) {
             throw new IllegalStateException("Client has been closed.");
         }
+    }
+
+    public static void main(String[] args) {
+        byte[] data = new byte[]{61, 22, 11, 57, 110, 89, -20, -1, 0, 99, 111, -120, 55, 4, -9, 10, 11, 45, 71, -89, 21, -99, 54, 51};
+        System.out.println(bytesToHex(data));
+    }
+
+    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+
+    public static String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for ( int j = 0; j < bytes.length; j++ ) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        return new String(hexChars);
+    }
+
+    private MultivaluedMap<String, Object> emptyHeaders() {
+        return new MultivaluedHashMap<>();
     }
 
     @Override

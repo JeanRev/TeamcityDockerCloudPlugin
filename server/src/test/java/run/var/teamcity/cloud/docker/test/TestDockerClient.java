@@ -175,7 +175,8 @@ public class TestDockerClient implements DockerClient {
 
     @Nonnull
     @Override
-    public NodeStream createImage(@Nonnull String from, @Nullable String tag) {
+    public NodeStream createImage(@Nonnull String from, @Nullable String tag,
+                                  @Nonnull DockerClientCredentials credentials) {
         if (DockerCloudUtils.hasImageTag(from)) {
             if (tag != null) {
                 throw new InvocationFailedException("Duplicate tag specification.");

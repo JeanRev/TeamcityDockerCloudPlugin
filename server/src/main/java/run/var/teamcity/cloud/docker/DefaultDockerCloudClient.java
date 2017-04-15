@@ -336,7 +336,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                     Node containerSpec = authorContainerSpec(instance, image, serverAddress);
 
-                    try (NodeStream nodeStream = dockerClient.createImage(image, null)) {
+                    try (NodeStream nodeStream = dockerClient.createImage(image, null, DockerClientCredentials.ANONYMOUS)) {
                         Node status;
                         while ((status = nodeStream.next()) != null) {
                             String error = status.getAsString("error", null);

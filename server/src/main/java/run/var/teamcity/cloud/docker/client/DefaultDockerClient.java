@@ -19,6 +19,7 @@ import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
 import run.var.teamcity.cloud.docker.client.apcon.ApacheConnectorProvider;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
@@ -31,6 +32,8 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.io.Closeable;
 import java.io.File;
@@ -40,6 +43,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -118,7 +122,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
     @Nonnull
     public Node getVersion() {
-        return invoke(target().path("/version"), HttpMethod.GET, null, null, null);
+        return invoke(target().path("/version"), HttpMethod.GET, null, prepareHeaders(DockerClientCredentials.ANONYMOUS), null);
     }
 
     @Nonnull
@@ -129,7 +133,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
             target.queryParam("name", name);
         }
 
-        return invoke(target, HttpMethod.POST, containerSpec, null, null);
+        return invoke(target, HttpMethod.POST, containerSpec, prepareHeaders(DockerClientCredentials.ANONYMOUS), null);
     }
 
     @Override
@@ -147,15 +151,16 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     }
 
     @Nonnull
+    @Override
     public Node inspectContainer(@Nonnull String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         return invoke(target().path("/containers/{id}/json").resolveTemplate("id", containerId), HttpMethod.GET, null,
-                null, null);
+                prepareHeaders(DockerClientCredentials.ANONYMOUS), null);
     }
 
     @Override
     @Nonnull
-    public NodeStream createImage(@Nonnull String from, @Nullable String tag) {
+    public NodeStream createImage(@Nonnull String from, @Nullable String tag, @Nonnull DockerClientCredentials credentials) {
         DockerCloudUtils.requireNonNull(from, "Source image cannot be null.");
 
         WebTarget target = target().path("/images/create").
@@ -163,7 +168,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         if (tag != null) {
             target.queryParam("tag", tag);
         }
-        return invokeNodeStream(target, HttpMethod.POST, null, null, null);
+        return invokeNodeStream(target, HttpMethod.POST, null, prepareHeaders(credentials), null);
     }
 
     public StreamHandler attach(@Nonnull String containerId) {
@@ -218,15 +223,12 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
 
         invokeVoid(target,
-                HttpMethod.POST, null, new ErrorCodeMapper() {
-                    @Override
-                    public InvocationFailedException mapToException(int errorCode, String msg) {
-                        switch (errorCode) {
-                            case 304:
-                                return new ContainerAlreadyStoppedException(msg);
-                        }
-                        return null;
+                HttpMethod.POST, null, (errorCode, msg) -> {
+                    switch (errorCode) {
+                        case 304:
+                            return new ContainerAlreadyStoppedException(msg);
                     }
+                    return null;
                 });
     }
 
@@ -237,15 +239,16 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 .queryParam("force", force), HttpMethod.DELETE, null, null);
     }
 
-    @Override
     @Nonnull
+    @Override
     public Node listContainersWithLabel(@Nonnull String key, @Nonnull String value) {
         DockerCloudUtils.requireNonNull(key, "Label key cannot be null.");
         DockerCloudUtils.requireNonNull(value, "Label value cannot be null.");
         return invoke(target().path("/containers/json").
                 queryParam("all", true).
                 queryParam("filters", "%7B\"label\": " +
-                        "[\"" + key + "=" + value + "\"]%7D"), HttpMethod.GET, null, null, null);
+                        "[\"" + key + "=" + value + "\"]%7D"), HttpMethod.GET, null,
+                prepareHeaders(DockerClientCredentials.ANONYMOUS), null);
     }
     
     private boolean hasTty(String containerId) {
@@ -425,6 +428,19 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 .register("http", PlainConnectionSocketFactory.getSocketFactory())
                 .register("https", sslCF)
                 .build();
+    }
+
+    private MultivaluedMap<String, Object> prepareHeaders(@Nonnull DockerClientCredentials credentials) {
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        if (!credentials.isAnonymous()) {
+            String value = Base64.getEncoder().encodeToString(EditableNode.newEditableNode()
+                    .put("username", credentials.getUsername())
+                    .put("password", credentials.getPassword())
+                    .toString().getBytes(StandardCharsets.UTF_8));
+
+            headers.putSingle("X-Registry-Auth", value);
+        }
+        return headers;
     }
 
     private static String[] split(final String s) {

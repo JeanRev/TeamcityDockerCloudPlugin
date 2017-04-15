@@ -11,6 +11,8 @@ import javax.ws.rs.HttpMethod;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
@@ -62,7 +64,7 @@ public class DefaultDockerRegistryClient extends DockerAbstractClient implements
         return invoke(authTarget.
                 path("token").
                 queryParam("service", service).
-                queryParam("scope", scope), HttpMethod.GET, null, null, null);
+                queryParam("scope", scope), HttpMethod.GET, null, prepareHeaders(null),null);
     }
 
     /**
@@ -80,7 +82,15 @@ public class DefaultDockerRegistryClient extends DockerAbstractClient implements
         return invoke(target.
                 path("v2").
                 path(repo).
-                path("tags/list"), HttpMethod.GET, null, loginToken, null);
+                path("tags/list"), HttpMethod.GET, null, prepareHeaders(loginToken), null);
+    }
+
+    private MultivaluedMap<String, Object> prepareHeaders(String authToken) {
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        if (authToken != null) {
+            headers.putSingle("Authorization", "Bearer " + authToken);
+        }
+        return headers;
     }
 
     @Override

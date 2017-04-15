@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
 import run.var.teamcity.cloud.docker.client.DockerClient;
+import run.var.teamcity.cloud.docker.client.DockerClientCredentials;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -11,7 +12,6 @@ import run.var.teamcity.cloud.docker.util.NodeStream;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 import java.math.BigInteger;
 import java.util.UUID;
 
@@ -79,7 +79,7 @@ class CreateContainerTestTask extends ContainerTestTask {
 
         msg("Pulling image");
 
-        try (NodeStream nodeStream = client.createImage(image, null)) {
+        try (NodeStream nodeStream = client.createImage(image, null, DockerClientCredentials.ANONYMOUS)) {
             Node status;
             String statusMsg = null;
 

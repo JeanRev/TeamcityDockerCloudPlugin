@@ -6,7 +6,7 @@ import com.spotify.docker.client.DockerCertificates
 import com.spotify.docker.client.DockerClient
 
 import java.nio.file.Paths
-import com.spotify.docker.client.messages.AuthConfig
+import com.spotify.docker.client.messages.RegistryAuth
 import org.apache.http.ssl.SSLContextBuilder
 
 buildscript {
@@ -15,18 +15,24 @@ buildscript {
     }
 
     dependencies {
-        classpath("com.spotify:docker-client:6.1.1")
+        classpath("com.spotify:docker-client:8.3.1")
     }
 }
 
+val testImage = "tc_dk_cld_plugin_test_img:1.0"
+val dockerHubTestRepo = "docker.test.hub.repo"
+val dockerHubTestUser = "docker.test.hub.user"
+val dockerHubTestPwd = "docker.test.hub.pwd"
 val unixSocketInstanceProp = "docker.test.unix.socket"
 val tcpInstance_1_12Prop = "docker_1_12.test.tcp.address"
 val tcpInstanceLatestProp = "docker.test.tcp.address"
 val tcpTlsInstanceProp = "docker.test.tcp.ssl.address"
+val registryInstanceProp = "docker.test.registry.address"
 val dockerCertPath = "docker.test.tcp.ssl.certpath"
 
 val dockerTestInstancesProps = mutableMapOf<String, String>()
-listOf(unixSocketInstanceProp, tcpInstance_1_12Prop, tcpInstanceLatestProp, tcpTlsInstanceProp, dockerCertPath)
+listOf(dockerHubTestRepo, dockerHubTestUser, dockerHubTestPwd, unixSocketInstanceProp, tcpInstance_1_12Prop,
+        tcpInstanceLatestProp, tcpTlsInstanceProp, registryInstanceProp, dockerCertPath)
         .filter { project.hasProperty(it) }
         .forEach { dockerTestInstancesProps.put(it, project.properties[it] as String) }
 
@@ -120,14 +126,20 @@ val setupTestImages = task("setupTestImages") {
             buildTestImage("unix://$unixInstance")
         }
 
-        val tcpInstance1_12 = dockerTestInstancesProps[tcpInstance_1_12Prop];
+        val tcpInstance1_12 = dockerTestInstancesProps[tcpInstance_1_12Prop]
         if (tcpInstance1_12 != null) {
             buildTestImage("http://$tcpInstance1_12")
         }
 
-        val tcpInstanceLatest = dockerTestInstancesProps[tcpInstanceLatestProp];
+        val tcpInstanceLatest = dockerTestInstancesProps[tcpInstanceLatestProp]
         if (tcpInstanceLatest != null) {
-            buildTestImage("http://$tcpInstanceLatest")
+            val dockerURI = "http://$tcpInstanceLatest"
+            buildTestImage(dockerURI)
+
+            val registry = dockerTestInstancesProps[registryInstanceProp]
+            if (registry != null) {
+                pushTestImageToRegistry(dockerURI, registry)
+            }
         }
 
         val tcpTlsInstance = dockerTestInstancesProps[tcpTlsInstanceProp]
@@ -147,6 +159,17 @@ fun buildTestImage(dockerURI: String, tls: Boolean = false) {
     val client = clientBuilder.build()
 
     client.use {
-        it.build(project.file("client_test_image").toPath(), DockerClient.BuildParam.name("tc_dk_cld_plugin_test_img:1.0"))
+        it.build(project.file("client_test_image").toPath(), DockerClient.BuildParam.name(testImage))
+    }
+}
+
+fun pushTestImageToRegistry(dockerURI: String, registry: String) {
+    val client = DefaultDockerClient.builder().uri(dockerURI).build()
+
+    val auth = RegistryAuth.builder().username("gradle").password("123").build()
+    val target = registry + "/" + testImage
+    client.use {
+        it.tag(testImage, target)
+        it.push(target, auth)
     }
 }

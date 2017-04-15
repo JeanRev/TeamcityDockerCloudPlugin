@@ -7,6 +7,9 @@ import java.net.URI;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+/**
+ * {@link DefaultDockerClient} test suite.
+ */
 public class DefaultDockerClientTest extends DefaultDockerClientTestBase {
 
     @Test
