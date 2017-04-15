@@ -12,6 +12,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * {@link DockerTaskScheduler} test suite.
+ */
 public class DockerTaskSchedulerTest {
 
     private DockerTaskScheduler scheduler;

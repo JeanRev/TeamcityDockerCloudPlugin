@@ -10,6 +10,9 @@ import java.util.Arrays;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+/**
+ * {@link DockerClientConfig} test suite.
+ */
 public class DockerClientConfigTest {
 
     @Test

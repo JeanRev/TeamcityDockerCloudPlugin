@@ -12,6 +12,9 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+/**
+ * {@link DockerCloudUtils} test suite.
+ */
 @SuppressWarnings("ConstantConditions")
 public class DockerCloudUtilsTest {
 

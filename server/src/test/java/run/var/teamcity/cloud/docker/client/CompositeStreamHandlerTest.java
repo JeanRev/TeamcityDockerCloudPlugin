@@ -8,6 +8,9 @@ import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * {@link CompositeStreamHandler} test suite.
+ */
 public class CompositeStreamHandlerTest extends StreamHandlerTest {
 
     @Test

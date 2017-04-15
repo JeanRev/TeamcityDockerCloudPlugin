@@ -18,6 +18,9 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * {@link DockerCloudClient} test suite.
+ */
 @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
 public class DockerCloudClientConfigTest {
 

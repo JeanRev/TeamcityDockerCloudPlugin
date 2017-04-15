@@ -9,6 +9,9 @@ import run.var.teamcity.cloud.docker.client.TestDockerClientRegistryFactory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+/**
+ * {@link OfficialAgentImageResolver} test suite.
+ */
 public class OfficialAgentImageResolverTest {
 
     private TestDockerClientRegistryFactory clientFty;

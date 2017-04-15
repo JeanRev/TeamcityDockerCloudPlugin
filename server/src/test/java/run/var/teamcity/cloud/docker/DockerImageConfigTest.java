@@ -15,6 +15,9 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * {@link DockerImageConfig} test suite.
+ */
 public class DockerImageConfigTest {
 
     @Test

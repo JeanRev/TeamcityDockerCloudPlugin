@@ -9,6 +9,9 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * {@link CheckConnectivityController} test suite.
+ */
 @SuppressWarnings("unchecked")
 public class CheckConnectivityControllerTest {
 

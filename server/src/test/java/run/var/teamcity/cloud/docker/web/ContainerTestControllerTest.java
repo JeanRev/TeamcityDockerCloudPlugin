@@ -14,6 +14,9 @@ import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * {@link ContainerTestController} test suite.
+ */
 @SuppressWarnings("unchecked")
 public class ContainerTestControllerTest {
 
