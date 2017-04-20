@@ -313,7 +313,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
     }
 
     private DockerClientConfig createTcpClientConfig() throws URISyntaxException {
-        return createTcpClientConfig(DockerCloudUtils.DOCKER_API_TARGET_VERSION);
+        return createTcpClientConfig(getApiTargetVersion());
     }
 
     private DockerClientConfig createTcpClientConfig(DockerAPIVersion apiVersion) throws URISyntaxException {

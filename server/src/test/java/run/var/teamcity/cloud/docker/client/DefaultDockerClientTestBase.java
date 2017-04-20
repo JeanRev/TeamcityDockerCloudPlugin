@@ -7,10 +7,14 @@ import java.net.URI;
 class DefaultDockerClientTestBase {
 
     protected DockerClientConfig createConfig(URI uri, boolean usingTls) {
-        return createConfig(uri, DockerCloudUtils.DOCKER_API_TARGET_VERSION, usingTls);
+        return createConfig(uri, getApiTargetVersion(), usingTls);
     }
 
     protected DockerClientConfig createConfig(URI uri, DockerAPIVersion apiVersion, boolean usingTls) {
         return new DockerClientConfig(uri, apiVersion).usingTls(usingTls);
+    }
+
+    protected DockerAPIVersion getApiTargetVersion() {
+        return DockerCloudUtils.DOCKER_API_TARGET_VERSION;
     }
 }

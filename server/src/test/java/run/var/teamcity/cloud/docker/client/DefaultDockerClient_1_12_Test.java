@@ -40,4 +40,9 @@ public class DefaultDockerClient_1_12_Test extends DefaultDockerClientAllVersion
     protected String getDockerAddrSysprop() {
         return "docker_1_12.test.tcp.address";
     }
+
+    @Override
+    protected DockerAPIVersion getApiTargetVersion() {
+        return DockerAPIVersion.parse("1.24");
+    }
 }

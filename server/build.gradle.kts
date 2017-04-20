@@ -7,7 +7,6 @@ import com.spotify.docker.client.DockerClient
 
 import java.nio.file.Paths
 import com.spotify.docker.client.messages.RegistryAuth
-import org.apache.http.ssl.SSLContextBuilder
 
 buildscript {
     repositories {
