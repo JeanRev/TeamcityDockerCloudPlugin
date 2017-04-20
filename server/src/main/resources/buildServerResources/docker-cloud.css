@@ -16,8 +16,8 @@
 }
 
 /* Error message bar similar to standard successMessage. */
-.dockerCloudSettings .errorMessage {
-    background-color: #feedeb;
+
+.dockerCloudSettings .message {
     margin: 1em 0;
     padding: 2px 20px;
     font-size: 90%;
@@ -25,14 +25,26 @@
     font-weight: bold;
 }
 
+.dockerCloudSettings .successMessage {
+    background-color: #ffc;
+}
+
+.dockerCloudSettings .errorMessage {
+    background-color: #FEEDEB;
+}
+
 .dockerCloudSettings .warningMessage {
     background: #FFF3FD;
-    margin: 1em 0;
-    padding: 2px 20px;
-    font-size: 90%;
-    text-align: center;
-    font-weight: bold;
 }
+
+.dockerCloudSettings .infoMessage {
+    background: #E0F2F9;
+}
+
+.dockerCloudSettings .grayedMessage {
+    background: #F5F5F5;
+}
+
 
 #DockerCloudImageDialog {
     width: 570px;

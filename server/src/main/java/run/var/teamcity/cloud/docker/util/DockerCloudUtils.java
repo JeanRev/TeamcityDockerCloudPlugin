@@ -57,6 +57,10 @@ public final class DockerCloudUtils {
      */
     public static final String SERVER_URL_PARAM = NS_PREFIX + "server_url";
     /**
+     * Docker cloud parameter: last known Daemon API version number.
+     */
+    public static final String DAEMON_INFO_PARAM = NS_PREFIX + "daemon_info";
+    /**
      * Docker cloud parameter: images configuration.
      */
     public static final String IMAGES_PARAM = NS_PREFIX + "img_param";
@@ -81,11 +85,17 @@ public final class DockerCloudUtils {
      */
     public static final URI DOCKER_DEFAULT_SOCKET_URI;
     /**
-     * Supported Docker API version.
+     * Currently supported (highest) Docker API version.
      */
-    public static final DockerAPIVersion DOCKER_API_TARGET_VERSION = DockerAPIVersion.parse("1.24");
+    public static final DockerAPIVersion DOCKER_API_TARGET_VERSION = DockerAPIVersion.parse("1.26");
+    /**
+     * Minimal Docker API version.
+     */
+    public static final DockerAPIVersion DOCKER_API_MIN_VERSION = DockerAPIVersion.parse("1.24");
 
     static {
+        assert DOCKER_API_TARGET_VERSION.isGreaterThan(DOCKER_API_MIN_VERSION);
+
         try {
             DOCKER_DEFAULT_SOCKET_URI = new URI("unix:///var/run/docker.sock");
         } catch (URISyntaxException e) {

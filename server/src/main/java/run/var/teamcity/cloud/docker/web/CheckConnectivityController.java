@@ -6,10 +6,12 @@ import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jdom.Element;
 import org.springframework.web.servlet.ModelAndView;
+import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.annotation.Nonnull;
@@ -70,26 +72,18 @@ public class CheckConnectivityController extends BaseFormXmlController {
 
             DockerClient client = dockerClientFactory.createClientWithAPINegotiation(dockerConfig);
 
+            DockerAPIVersion effectiveApiVersion = client.getApiVersion();
+
             Node version = client.getVersion();
-            Element versionElt = new Element("version");
-            setAttr(versionElt, "docker", version.getAsString("Version", null));
-            setAttr(versionElt, "api", version.getAsString("ApiVersion", null));
-            setAttr(versionElt, "os", version.getAsString("Os", null));
-            setAttr(versionElt, "arch", version.getAsString("Arch", null));
-            setAttr(versionElt, "kernel", version.getAsString("KernelVersion", null));
-            setAttr(versionElt, "build", version.getAsString("GitCommit", null));
-            setAttr(versionElt, "buildTime", version.getAsString("BuildTime", null));
-            setAttr(versionElt, "go", version.getAsString("GoVersion", null));
-            setAttr(versionElt, "experimental", version.getAsBoolean("experimental", false));
-            xmlResponse.addContent(versionElt);
 
-            if (!DockerCloudUtils.DOCKER_API_TARGET_VERSION.equals(client.getApiVersion())) {
-                Element warning = new Element("warning").
-                        addContent(DockerCloudUtils.filterXmlText("Warning: the daemon does not seems to support " +
-                                "API v" + DockerCloudUtils.DOCKER_API_TARGET_VERSION + ". You may encounter issues."));
-                xmlResponse.addContent(warning);
-            }
+            EditableNode infoNode = EditableNode.newEditableNode().put("info", version);
+            infoNode.getOrCreateObject("meta")
+                    .put("serverTime", System.currentTimeMillis())
+                    .put("effectiveApiVersion", effectiveApiVersion.getVersionString());
 
+            Element infoElt = new Element("info");
+            infoElt.addContent(DockerCloudUtils.filterXmlText(infoNode.toString()));
+            xmlResponse.addContent(infoElt);
         } catch (Exception e) {
             error = e;
         }

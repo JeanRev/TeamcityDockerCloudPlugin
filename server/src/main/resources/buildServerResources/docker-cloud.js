@@ -21,9 +21,12 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.errorIconURL = params.errorIconURL;
                 self.warnIconURL = params.warnIconURL;
                 self.debugEnabled = params.debugEnabled;
+                self.daemonTargetVersion = params.daemonTargetVersion;
+                self.daemonMinVersion = params.daemonMinVersion;
 
                 var imagesParam = params.imagesParam;
                 var tcImagesDetailsParam = params.tcImagesDetails;
+                var daemonInfoParam = params.daemonInfoParam;
 
                 self.hasWebSocketSupport = 'WebSocket' in window;
                 self.hasXTermSupport = self.hasWebSocketSupport && self.checkXtermBrowserSupport();
@@ -33,15 +36,16 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self.$image = $j("#dockerCloudImage_Image");
                 self.$checkConnectionBtn = $j("#dockerCloudCheckConnectionBtn");
-                self.$checkConnectionSuccess = $j('#dockerCloudCheckConnectionSuccess');
+                self.$checkConnectionResult = $j('#dockerCloudCheckConnectionResult');
                 self.$checkConnectionWarning = $j('#dockerCloudCheckConnectionWarning');
-                self.$checkConnectionError = $j('#dockerCloudCheckConnectionError');
+                self.$checkConnectionInfo = $j('#dockerCloudCheckConnectionInfo');
                 self.$newImageBtn = $j('#dockerShowDialogButton');
                 self.$imageDialogSubmitBtn = $j('#dockerAddImageButton');
                 self.$imageDialogCancelBtn = $j('#dockerCancelAddImageButton');
                 self.$imagesTable = $j('#dockerCloudImagesTable');
                 self.$images = $j(BS.Util.escapeId(imagesParam));
                 self.$tcImagesDetails = $j(BS.Util.escapeId(tcImagesDetailsParam));
+                self.$daemonInfo = $j(BS.Util.escapeId(daemonInfoParam));
                 self.$dockerAddress = $j("#dockerCloudDockerAddress");
                 self.$useLocalInstance = $j("#dockerCloudUseLocalInstance");
                 self.$useCustomInstance = $j("#dockerCloudUseCustomInstance");
@@ -86,6 +90,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$diagnosticCopyBtn = $j('#dockerDiagnosticCopyBtn');
                 self.$diagnosticCloseBtn = $j('#dockerDiagnosticCloseBtn');
 
+                self._initDaemonInfo();
                 self._initImagesData();
                 self._initTabs();
                 self._initValidators();
@@ -95,6 +100,18 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             /* MAIN SETTINGS */
+
+            _initDaemonInfo: function() {
+                var daemonInfoVal = self.$daemonInfo.val();
+                if (daemonInfoVal) {
+                    try {
+                        self.daemonInfo = JSON.parse(daemonInfoVal);
+                    } catch (e) {
+                        self.logError("Failed to parse server info structure: " + daemonInfoVal);
+                    }
+                }
+                self._updateDaemonApiVersionLbl();
+            },
 
             _renderImagesTable: function () {
                 self.logDebug("Rendering image table.");
@@ -150,10 +167,33 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _checkConnection: function () {
                 self._toggleCheckConnectionBtn();
                 self.$checkConnectionLoader.show();
-                self.$checkConnectionSuccess.hide().empty();
-                self.$checkConnectionWarning.hide().empty();
-                self.$checkConnectionError.hide().empty();
+                self.$checkConnectionResult.hide().removeClass('successMessage errorMessage').empty();
 
+                var deferred = self._queryDaemonInfo();
+
+                deferred.
+                fail(function(msg, failureCause) {
+                    self.logInfo("Checking connection failed");
+                    var $container = self.$checkConnectionResult.addClass('errorMessage').append($j('<div>').append('<span>'));
+                    $container.text(msg);
+                    if (failureCause) {
+                        self.prepareDiagnosticDialogWithLink($container, "Checking for connectivity failed.", failureCause);
+                    }
+                    self.$checkConnectionResult.append($container).show();
+                }).
+                done(function() {
+                    self.$checkConnectionResult.addClass('successMessage');
+                    self.$checkConnectionResult.text('Connection successful.').show();
+                }).
+                always(function () {
+                    self.$checkConnectionLoader.hide();
+                    self._toggleCheckConnectionBtn(true);
+                });
+
+                return false; // to prevent link with href='#' to scroll to the top of the page
+            },
+
+            _queryDaemonInfo: function() {
                 var deferred = $j.Deferred();
 
                 BS.ajaxRequest(self.checkConnectivityCtrlURL, {
@@ -162,42 +202,30 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         deferred.reject(response.getStatusText());
                     },
                     onSuccess: function (response) {
-                        deferred.resolve(response);
+                        var $response = $j(response.responseXML);
+                        self.tmpResp = $response;
+                        var $error = $response.find("error");
+                        if ($error.length) {
+                            var failureCause;
+                            var $failureCause = $response.find("failureCause");
+                            if ($failureCause.length) {
+                                failureCause = $failureCause.text();
+                            }
+                            self.logInfo("Error found " + $error.text());
+                            deferred.reject($error.text(), failureCause);
+                        } else {
+                            var $info = $response.find('info');
+                            var infoJson = $info.text();
+                            self.daemonInfo = JSON.parse(infoJson);
+                            // Serialize the JSON string back to persistable input value.
+                            self.$daemonInfo.val(JSON.stringify(self.daemonInfo));
+                            self._updateDaemonApiVersionLbl();
+                            deferred.resolve($response);
+                        }
                     }
                 });
 
-                deferred.
-                fail(function(msg) {
-                    self.$checkConnectionError.append($j('<div>')).text(msg);
-                }).
-                done(function(response) {
-                    var $response = $j(response.responseXML);
-                    var $error = $response.find("error");
-                    if ($error.length) {
-                        var $container = self.$checkConnectionError.append($j('<div>').append('<span>'));
-                        $container.text($error.text());
-                        var $failureCause = $response.find("failureCause");
-                        if ($failureCause.length) {
-                            self.prepareDiagnosticDialogWithLink($container, "Checking for connectivity failed.", $failureCause.text());
-                        }
-                        self.$checkConnectionError.append($container).show();
-                    } else {
-                        var $version = $response.find("version");
-                        self.$checkConnectionSuccess.text('Connection successful to Docker version ' + $version.attr('docker') +
-                            ' (API: ' + $version.attr('api') + ') on ' +
-                            $version.attr('os') + '/' + $version.attr('arch')).show();
-                        var warning = $response.find("warning").text();
-                        if (warning) {
-                            self.$checkConnectionWarning.text(warning).show();
-                        }
-                    }
-                }).
-                always(function () {
-                    self.$checkConnectionLoader.hide();
-                    self._toggleCheckConnectionBtn(true);
-                });
-
-                return false; // to prevent link with href='#' to scroll to the top of the page
+                return deferred;
             },
 
             /* IMAGE DATA MARSHALLING / UNMARSHALLING */
@@ -838,6 +866,33 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 return viewModel;
             },
 
+            _updateDaemonApiVersionLbl: function() {
+                self.$checkConnectionInfo.empty().hide().removeClass('infoMessage grayedMessage');
+                self.$checkConnectionWarning.empty().hide();
+                if (self.daemonInfo) {
+                    var date = new Date(self.daemonInfo.meta.serverTime);
+                    var effectiveApiVersion = self.daemonInfo.meta.effectiveApiVersion;
+                    self.$checkConnectionInfo.addClass('infoMessage');
+                    self.$checkConnectionInfo.append('Docker v' + self.daemonInfo.info.Version
+                        + ' (API v ' + effectiveApiVersion + ') on '
+                        + self.daemonInfo.info.Os + '/' + self.daemonInfo.info.Arch
+                        + ' (last checked: ' + date.getFullYear() + '/'
+                        + (self._padLeft(date.getMonth() + 1, '0', 2)) + '/'
+                        + self._padLeft(date.getDate(), '0', 2) + ' ' + self._padLeft(date.getHours(), '0', 2)
+                        + ':' + self._padLeft(date.getMinutes(), '0', 2) + ':'
+                        + self._padLeft(date.getSeconds(), '0', 2) + ')').show();
+                   if (self.compareVersionNumbers(effectiveApiVersion, self.daemonMinVersion) < 0 ||
+                       self.compareVersionNumbers(effectiveApiVersion, self.daemonTargetVersion) > 0) {
+                       self.$checkConnectionWarning
+                           .append('Warning: daemon API version is outside of supported version range (v'
+                               + self.daemonMinVersion + " - v." + self.daemonTargetVersion + ").").show();
+                   }
+                } else {
+                    self.$checkConnectionInfo.addClass('grayedMessage');
+                    self.$checkConnectionInfo.append('Check connection to validate the daemon settings.').show();
+                }
+            }
+            ,
             /* TABS */
 
             _initTabs: function () {
@@ -1099,7 +1154,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                     $swap.blur();
                 });
-
 
                 self.$testContainerCreateBtn.click(function() {
                     self._testDialogHideAllBtns();
@@ -1782,7 +1836,39 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.logError('Failed to determine browser support: ' + e);
                 }
             },
+            compareVersionNumbers: function(v1, v2) {
+                var v1Digits = self._convertVersionToDigits(v1);
+                var v2Digits = self._convertVersionToDigits(v2);
 
+                for (var i = 0; i < v1Digits.length && i < v2Digits.length; i++) {
+                    var cmp = v1Digits[i] - v2Digits[i];
+                    if (cmp !== 0) {
+                        return cmp;
+                    }
+                }
+
+                return v1Digits.length - v2Digits.length;
+            },
+            _convertVersionToDigits: function(version) {
+                var tokens = version.split('.');
+                var digits = [];
+                $j(tokens).each(function(i, token) {
+                    var digit;
+                    if (token.match('[0-9]+')) {
+                        digit = parseInt(token, 10);
+                    }
+                    if (!digit || isNaN(digit)) {
+                        digit = 0;
+                    }
+                    digits.push(digit);
+                });
+                return digits;
+            },
+            _padLeft: function(txt, padChar, minSize) {
+                txt = txt.toString();
+                while (txt.length < minSize) txt = padChar + txt;
+                return txt;
+            },
             _units_multiplier:  {
                 GiB: 134217728,
                 MiB: 131072,

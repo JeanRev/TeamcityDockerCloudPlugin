@@ -79,9 +79,9 @@
             </td>
         </tr>
     </table>
-    <div id="dockerCloudCheckConnectionSuccess" class="successMessage hidden"></div>
-    <div id="dockerCloudCheckConnectionError" class="errorMessage hidden"></div>
-    <div id="dockerCloudCheckConnectionWarning" class="warningMessage hidden"></div>
+    <div id="dockerCloudCheckConnectionResult" class="message hidden"></div>
+    <div id="dockerCloudCheckConnectionInfo" class="message hidden"></div>
+    <div id="dockerCloudCheckConnectionWarning" class="message warningMessage hidden"></div>
 
     <h2 class="noBorder section-header">Agent Images <span class="error"
                                                            id="error_<%=DockerCloudUtils.IMAGES_PARAM%>"></span></h2>
@@ -94,6 +94,9 @@
     <c:set var="imagesData" value="${propertiesBean.properties['run.var.teamcity.docker.cloud.img_param']}"/>
     <input type="hidden" name="prop:run.var.teamcity.docker.cloud.img_param"
            id="run.var.teamcity.docker.cloud.img_param" value="<c:out value="${imagesData}"/>"/>
+    <c:set var="daemonInfo" value="${propertiesBean.properties['run.var.teamcity.docker.cloud.daemon_info']}"/>
+    <input type="hidden" name="prop:run.var.teamcity.docker.cloud.daemon_info"
+           id="run.var.teamcity.docker.cloud.daemon_info" value="<c:out value="${daemonInfo}"/>"/>
 
     <table class="settings" style="width: 75%; margin-left: 25%">
         <thead>
@@ -800,6 +803,9 @@
                             testContainerCtrlURL: '<c:url value="${resPath}test-container.html"/>',
                             imagesParam: '<%=DockerCloudUtils.IMAGES_PARAM%>',
                             tcImagesDetails: '<%= CloudImageParameters.SOURCE_IMAGES_JSON %>',
+                            daemonTargetVersion: '<%=DockerCloudUtils.DOCKER_API_TARGET_VERSION.getVersionString()%>',
+                            daemonMinVersion: '<%=DockerCloudUtils.DOCKER_API_MIN_VERSION.getVersionString()%>',
+                            daemonInfoParam: '<%=DockerCloudUtils.DAEMON_INFO_PARAM%>',
                             errorIconURL: '<c:url value="/img/attentionCommentRed.png"/>',
                             warnIconURL: '<c:url value="/img/attentionComment.png"/>',
                             testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>',

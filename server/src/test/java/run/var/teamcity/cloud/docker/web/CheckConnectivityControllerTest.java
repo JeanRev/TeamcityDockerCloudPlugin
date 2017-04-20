@@ -1,11 +1,14 @@
 package run.var.teamcity.cloud.docker.web;
 
+import org.assertj.core.data.Offset;
 import org.jdom.Element;
 import org.junit.Before;
 import org.junit.Test;
-import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.test.*;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.Node;
+
+import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,7 +34,7 @@ public class CheckConnectivityControllerTest {
     }
 
     @Test
-    public void doPost() {
+    public void doPost() throws IOException {
 
         dockerClientFty.addConfigurator(dockerClient ->
                 dockerClient.setSupportedAPIVersion(DockerCloudUtils.DOCKER_API_TARGET_VERSION));
@@ -46,24 +49,23 @@ public class CheckConnectivityControllerTest {
 
         assertThat(element).isNotNull();
         assertThat(element.getChildren()).isNotEmpty();
-        assertThat(element.getChild("warning")).isNull();
-    }
+        assertThat(element.getChild("info")).isNotNull();
 
-    @Test
-    public void checkAPIVersionWarning() {
-        dockerClientFty.addConfigurator(dockerClient ->
-                dockerClient.setSupportedAPIVersion(DockerAPIVersion.parse("9.99")));
+        TestDockerClient client = dockerClientFty.getClient();
 
-        CheckConnectivityController ctrl = createController();
+        Node version = client.getVersion();
+        Node infoRoot = Node.parse(element.getChild("info").getText());
+        assertThat(infoRoot.getObject("info")).isEqualTo(version);
 
-        TestHttpServletRequest request = new TestHttpServletRequest();
-        request.parameters(TestUtils.getSampleDockerConfigParams());
+        Node meta = infoRoot.getObject("meta");
 
-        Element element = new Element("root");
-        ctrl.doPost(request, new TestHttpServletResponse(), element);
+        assertThat(meta).isNotNull();
 
-        assertThat(element.getChild("warning")).isNotNull();
-        assertThat(element.getChild("warning").getText()).isNotEmpty();
+        assertThat(meta.getAsLong("serverTime"))
+                .isCloseTo(System.currentTimeMillis(), Offset.offset(400L));
+        assertThat(meta.getAsString("effectiveApiVersion"))
+                .isEqualTo(client.getApiVersion().getVersionString());
+
     }
 
     private CheckConnectivityController createController() {

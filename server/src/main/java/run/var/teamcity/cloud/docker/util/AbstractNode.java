@@ -442,4 +442,14 @@ abstract class AbstractNode<N extends AbstractNode> {
     }
 
     abstract N newNode(JsonNode node);
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof AbstractNode && node.equals(((AbstractNode<?>) obj).node);
+    }
+
+    @Override
+    public int hashCode() {
+        return node.hashCode();
+    }
 }
