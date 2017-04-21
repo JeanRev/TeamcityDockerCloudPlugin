@@ -553,6 +553,21 @@
                     </td>
                 </tr>
                 <tr>
+                    <th><label for="dockerCloudImage_CPUs">Number of CPUs:
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">Limit the number of CPUs available for execution by the container.
+                            Decimal values can be specified (e.g. <code>1.5</code> to allocate at most 1.5 CPU to the
+                            container). This option is equivalent to the <code>--cpus</code> CLI flag and is effective
+                            for both Linux and Windows containers.
+                        <br/><b>Requires API:</b> v1.25</span></label>
+                    </th>
+                    <td>
+                        <input type="text" id="dockerCloudImage_CPUs" class="textField"/>
+                        <span class="error" id="dockerCloudImage_CPUs_error"></span>
+                        <span class="warning" id="dockerCloudImage_CPUs_warning"></span>
+                    </td>
+                </tr>
+                <tr>
                     <th><label for="dockerCloudImage_CpuQuota">CPU Quota:
                         <i class="icon icon16 tc-icon_help_small tooltip"></i>
                         <span class="tooltiptext">Microseconds of CPU time that the container can get in a CPU period.</span></label>

@@ -637,6 +637,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     hostConfig.MemorySwap = viewModel.MemorySwapUnlimited ? -1 : (parseInt(viewModel.MemorySwap) * self._units_multiplier[viewModel.MemorySwapUnit]);
                 }
 
+                if (self._filterFromSettings(viewModel.CPUs)) {
+                    hostConfig.NanoCPUs = Math.floor(parseFloat(viewModel.CPUs) * 1e9);
+                }
                 if (self._filterFromSettings(viewModel.CpuQuota)) {
                     hostConfig.CpuQuota = parseInt(viewModel.CpuQuota);
                 }
@@ -798,6 +801,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 viewModel.MemorySwapUnit = editor.MemorySwapUnit || 'bytes';
                 viewModel.MemorySwap = hostConfig.MemorySwap && Math.floor(hostConfig.MemorySwap / self._units_multiplier[viewModel.MemorySwapUnit]);
                 viewModel.MemorySwapUnlimited = hostConfig.MemorySwap == -1;
+                viewModel.CPUs = hostConfig.NanoCPUs && hostConfig.NanoCPUs / 1e9;
                 viewModel.CpuQuota = hostConfig.CpuQuota;
                 viewModel.CpuShares = hostConfig.CpuShares;
                 viewModel.CpuPeriod = hostConfig.CpuPeriod;
@@ -1536,6 +1540,24 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     return {msg: "Port number must be between 1 and 65535."};
                 };
 
+                var cpusValidator = function(elt) {
+                    var value = elt.val().trim().replace(/^0+/, '');
+                    if (!value) {
+                        return;
+                    }
+                    if (/^[0-9]+(\.[0-9]+)?$/.test(value)) {
+                        var number = parseFloat(value) * 1e9;
+                        if (number > 9223372036854775807) {
+                            return {msg: "Value out of bound."};
+                        }
+                        if (number % 1 !== 0) { // Should have no decimal part left.
+                            return {msg: "Value is too precise."};
+                        }
+                    } else {
+                        return {msg: "Value must be a positive decimal number."};
+                    }
+                };
+
                 var cpuSetValidator = function(elt) {
                     var value = elt.val().trim();
                     elt.val(value);
@@ -1631,6 +1653,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         }
                         return result;
                     }],
+                    dockerCloudImage_CPUs: [cpusValidator, versionValidator.bind(this, '1.25')],
                     dockerCloudImage_CpuQuota: [function($elt) {
                         var value = $elt.val().trim();
                         $elt.val(value);
