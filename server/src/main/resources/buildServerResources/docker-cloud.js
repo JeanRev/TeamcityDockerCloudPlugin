@@ -1519,7 +1519,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 var positiveIntegerValidator = function (elt) {
                     var value = elt.val().trim().replace(/^0+/, '');
-                    if (value && !/^[0-9]+$/.test(value)) {
+                    if (!value) {
+                        return;
+                    }
+                    if (/^[0-9]+$/.test(value)) {
+                        // Check that we are in the positive range of a golang int64 max value.
+                        if (parseInt(value) > 9223372036854775807) {
+                            return {msg: "Value out of bound."};
+                        }
+                    } else {
                         return {msg: "Value must be a positive integer."};
                     }
                 };
