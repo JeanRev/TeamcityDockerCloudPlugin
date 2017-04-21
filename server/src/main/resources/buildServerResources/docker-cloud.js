@@ -1548,6 +1548,24 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 };
 
+                var versionValidator = function(targetVersion, elt) {
+                    if (!self.daemonInfo) {
+                        return;
+                    }
+                    var value = elt.val().trim();
+                    elt.val(value);
+                    if (!value) {
+                        return;
+                    }
+
+                    var daemonVersion = self.daemonInfo.meta.effectiveApiVersion;
+
+                    if (self.compareVersionNumbers(daemonVersion, targetVersion) < 0) {
+                        return {msg: 'The daemon API version (v' + daemonVersion + ') is lower than required for ' +
+                        'this configuration field (v' + targetVersion + ').', warning: true};
+                    }
+                };
+
                 self.validators = {
                     dockerCloudImage_Profile: [requiredValidator, function($elt) {
                         if (!/^\w+$/.test($elt.val())) {
@@ -1566,7 +1584,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             return {msg: "At least one instance must be permitted."};
                         }
                     }],
-                    dockerCloudImage_StopTimeout: [positiveIntegerValidator],
+                    dockerCloudImage_StopTimeout: [positiveIntegerValidator, versionValidator.bind(this, '1.25')],
                     dockerCloudImage_Entrypoint_IDX: [function ($elt) {
                         var row = $elt.closest("tr");
                         if (row.index() === 0) {

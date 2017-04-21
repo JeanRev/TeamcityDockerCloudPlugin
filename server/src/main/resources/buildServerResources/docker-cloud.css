@@ -45,7 +45,6 @@
     background: #F5F5F5;
 }
 
-
 #DockerCloudImageDialog {
     width: 570px;
 }
@@ -134,41 +133,6 @@ span.tooltiptext{
     border-bottom-color: #B3D4FD;
 }
 
-
-/*
-#dockerCloudImageContainer .tooltip {
-    position: relative;
-    display: inline-block;
-    border-bottom: 1px ;
-}
-
-#dockerCloudImageContainer .tooltip .tooltiptext {
-    visibility: hidden;
-    text-align: left;
-    background: #f7fcff;
-    margin-bottom: 5px;
-    padding: 5px 5px 5px 5px;
-    border: 1px solid #ced9eb;
-    color: #222;
-    position: absolute;
-    z-index: 10000 !important;
-    width: 300px;
-    top: -5px;
-    left: 105%;
-    font-weight: normal;
-    white-space: normal;
-}
-
-.tooltip .tooltiptext::after {
-    content: " ";
-    position: absolute;
-    top: 0.5em;
-    right: 100%;
-
-    border: 5px solid transparent;
-    border-right-color: #B3D4FD;
-}
-*/
 /* Show the tooltip text when you mouse over the tooltip container */
 #dockerCloudImageContainer .tooltip:hover .tooltiptext {
     visibility: visible;
@@ -200,7 +164,6 @@ span.tooltiptext{
 #DockerCloudImageDialog  .settings .dockerCloudCtrlCell {
    width: 10%;
 }
-
 
 /* Table column have fixed width, just tell the input/select to use all of it. */
 #DockerCloudImageDialog .settings input, #DockerCloudImageDialog .settings select {
@@ -242,6 +205,13 @@ aligned on the RHS of the screen. */
     padding-left: 0;
 }
 
+/* Warning and error messages. */
+.dockerCloudSettings .error {
+    color: #ed2c10;
+}
+.dockerCloudSettings .warning {
+    color: #c89400;
+}
 /* H4 header. Used for settings label outside of the main table. */
 #DockerCloudImageDialog h4 {
     margin: 0;

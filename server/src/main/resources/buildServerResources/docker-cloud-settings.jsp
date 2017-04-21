@@ -230,11 +230,12 @@
                     <th><label for="dockerCloudImage_StopTimeout">Stop timeout:
                         <i class="icon icon16 tc-icon_help_small tooltip"></i>
                         <span class="tooltiptext">Timeout to stop a container in seconds.
-                            <code>10</code> seconds by default.</span>
+                            <code>10</code> seconds by default.<br/><b>Requires API:</b> v1.25</span>
                     </label></th>
                     <td>
                         <input type="text" id="dockerCloudImage_StopTimeout"/>
                         <span class="error" id="dockerCloudImage_StopTimeout_error"></span>
+                        <span class="warning" id="dockerCloudImage_StopTimeout_warning"></span>
                     </td>
                 </tr>
             </table>
