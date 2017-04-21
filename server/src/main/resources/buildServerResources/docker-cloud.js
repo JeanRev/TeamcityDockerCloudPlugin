@@ -1903,7 +1903,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var digits = [];
                 $j(tokens).each(function(i, token) {
                     var digit;
-                    if (token.match('[0-9]+')) {
+                    if (token.match('^[0-9]+$')) {
                         digit = parseInt(token, 10);
                     }
                     if (!digit || isNaN(digit)) {
