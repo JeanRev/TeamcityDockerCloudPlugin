@@ -36,7 +36,7 @@ import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
  * {@link DefaultDockerCloudClient} test suite.
  */
 @Category(LongRunning.class)
-public class DockerCloudClientTest {
+public class DefaultDockerCloudClientTest {
 
     private DefaultDockerCloudClient client;
     private TestDockerClientFactory dockerClientFactory;
