@@ -498,14 +498,19 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                     dockerClient.stopContainer(containerId, clientDisposed ? 0 : DockerClient.DEFAULT_TIMEOUT));
             LOG.info("Container " + containerId + " stopped in " + stopTime + "ms.");
         } catch (ContainerAlreadyStoppedException e) {
-            LOG.debug("Container " + containerId + " was already stopped.");
+            LOG.debug("Container " + containerId + " was already stopped.", e);
         } catch (NotFoundException e) {
-            LOG.warn("Container " + containerId + " was destroyed prematurely.");
+            LOG.warn("Container " + containerId + " was destroyed prematurely.", e);
             return false;
         }
         if (rmContainer) {
             LOG.info("Destroying container: " + containerId);
-            dockerClient.removeContainer(containerId, true, true);
+            try {
+                dockerClient.removeContainer(containerId, true, true);
+            } catch (NotFoundException | BadRequestException e) {
+                LOG.debug("Assume container already removed or removal already in progress.", e);
+            }
+
             return false;
         }
 
@@ -779,7 +784,11 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 LOG.info("The following orphaned containers will be removed: " + orphanedContainers);
             }
             for (String orphanedContainer : orphanedContainers) {
-                terminateContainer(orphanedContainer, false, true);
+                try {
+                    terminateContainer(orphanedContainer, false, true);
+                } catch (Exception e) {
+                    LOG.error("Failed to remove container.", e);
+                }
             }
         }
     }
