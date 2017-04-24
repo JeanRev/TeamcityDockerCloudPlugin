@@ -581,7 +581,7 @@
                     <th><label for="dockerCloudImage_CpuPeriod">CPU Period:
                         <i class="icon icon16 tc-icon_help_small tooltip"></i>
                         <span class="tooltiptext">The length of a CPU period in microseconds. Accepts a value between
-                        1000μs (1ms) and 1000000μs (1s)</span></label></th>
+                        1000&micro;s (1ms) and 1000000&micro;s (1s)</span></label></th>
                     <td>
                         <input type="text" class="textField" id="dockerCloudImage_CpuPeriod"/>
                         <span class="error" id="dockerCloudImage_CpuPeriod_error"></span>
