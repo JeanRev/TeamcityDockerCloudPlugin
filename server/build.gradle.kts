@@ -58,8 +58,15 @@ dependencies {
     add("provided", "org.apache.logging.log4j:log4j-api:2.5")
     add("provided", "org.apache.logging.log4j:log4j-api:2.5")
     add("provided", "org.atmosphere:atmosphere-runtime:2.2.4")
-    add("provided", "org.jetbrains.teamcity:cloud-interface:10.0")
-    add("provided", "org.jetbrains.teamcity:server-api:10.0")
+    add("provided", "org.jetbrains.teamcity:cloud-interface:2017.1")
+    add("provided", "org.jetbrains.teamcity:server-api:2017.1")
+    // We depends on the server JAR private API to provide two non-critical features.
+    // Feature requests are pending:
+    // - https://youtrack.jetbrains.com/issue/TW-49810
+    // - https://youtrack.jetbrains.com/issue/TW-49810
+    add("provided", "org.jetbrains.teamcity.internal:server:2017.1")
+    // Provides null-check annotations in the javax.annotation namespace.
+    add("provided", "com.google.code.findbugs:jsr305:3.0.2")
     testCompile("junit:junit:4.12")
     testCompile("org.assertj:assertj-core:3.5.2")
     testCompile("io.takari.junit:takari-cpsuite:1.2.7")

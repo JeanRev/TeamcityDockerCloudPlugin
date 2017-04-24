@@ -17,7 +17,7 @@ subprojects {
 
     repositories {
         maven {
-            setUrl("http://repository.jetbrains.com/all")
+            setUrl("https://download.jetbrains.com/teamcity-repository")
         }
         mavenCentral()
     }
