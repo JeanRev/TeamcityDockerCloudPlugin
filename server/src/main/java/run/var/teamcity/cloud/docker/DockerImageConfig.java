@@ -5,11 +5,15 @@ import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.CloudImageParameters;
 import jetbrains.buildServer.serverSide.InvalidProperty;
 import org.jetbrains.annotations.Nullable;
+import run.var.teamcity.cloud.docker.client.DockerClientCredentials;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.annotation.Nonnull;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+
+import static com.intellij.openapi.util.text.StringUtil.isNotEmpty;
 
 /**
  * A {@link DockerImage} configuration.
@@ -26,7 +30,7 @@ public class DockerImageConfig {
     private final Integer agentPoolId;
 
     public DockerImageConfig(@Nonnull String profileName, @Nonnull Node containerSpec, boolean rmOnExit,
-                             boolean useOfficialTCAgentImage, int maxInstanceCount, @Nullable Integer agentPoolId) {
+                             boolean useOfficialTCAgentImage, DockerClientCredentials registryCredentials, int maxInstanceCount, @Nullable Integer agentPoolId) {
         DockerCloudUtils.requireNonNull(profileName, "Profile name cannot be null.");
         DockerCloudUtils.requireNonNull(containerSpec, "Container specification cannot be null.");
         if (maxInstanceCount < 1) {
@@ -208,10 +212,30 @@ public class DockerImageConfig {
                 }
             }
 
+            DockerClientCredentials dockerClientCredentials =  registryAuthentication(admin);
+
             return new DockerImageConfig(profileName, node.getObject("Container"), deleteOnExit,
-                    useOfficialTCAgentImage, admin.getAsInt("MaxInstanceCount", -1), agentPoolId);
+                    useOfficialTCAgentImage, dockerClientCredentials, admin.getAsInt("MaxInstanceCount", -1), agentPoolId);
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to parse image JSON definition:\n" + node, e);
         }
+    }
+
+    /**
+     * Extract Registry user and password required to pull image.
+     *
+     * @param admin the docker instance for which the container will be created
+     * @return authentication details or anonymous
+     */
+    private static DockerClientCredentials registryAuthentication(Node admin)
+    {
+        String registryUser = admin.getAsString("RegistryUser", null);
+        String registryPassword = admin.getAsString("RegistryPassword", null);
+        DockerClientCredentials dockerClientCredentials = DockerClientCredentials.ANONYMOUS;
+        if (isNotEmpty(registryUser) && isNotEmpty(registryPassword)){
+            String decodedPassword = new String(Base64.getDecoder().decode(registryPassword), StandardCharsets.UTF_8);
+            dockerClientCredentials = DockerClientCredentials.from(registryUser, decodedPassword);
+        }
+        return dockerClientCredentials;
     }
 }

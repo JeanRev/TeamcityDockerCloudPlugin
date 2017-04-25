@@ -45,9 +45,11 @@ public class TestDockerClient implements DockerClient {
     private DockerAPIVersion minAPIVersion = null;
     private DockerAPIVersion apiVersion;
     private boolean lenientVersionCheck = false;
+    private final DockerClientCredentials dockerClientCredentials;
 
-    public TestDockerClient(DockerClientConfig config) {
+    public TestDockerClient(DockerClientConfig config, DockerClientCredentials dockerClientCredentials) {
         this.apiVersion = config.getApiVersion();
+        this.dockerClientCredentials = dockerClientCredentials;
         if (!TEST_CLIENT_URI.equals(config.getInstanceURI())) {
             throw new IllegalArgumentException("Unsupported URI: " + config.getInstanceURI());
         }
@@ -213,6 +215,12 @@ public class TestDockerClient implements DockerClient {
             node.put("id", tag);
         }
         result.add(node.saveNode());
+
+        if (!dockerClientCredentials.equals(credentials))
+        {
+            throw new NotFoundException("Authentication failed");
+        }
+
         if (toPull.isEmpty()) {
             node = Node.EMPTY_OBJECT.editNode();
             String msg = foundImage ? "Error: tag " + tag + " not found" : "Error: image " + from + " not found";

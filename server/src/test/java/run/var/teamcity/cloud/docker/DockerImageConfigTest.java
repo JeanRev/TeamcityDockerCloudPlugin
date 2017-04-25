@@ -3,6 +3,7 @@ package run.var.teamcity.cloud.docker;
 import jetbrains.buildServer.clouds.CloudImageParameters;
 import jetbrains.buildServer.serverSide.InvalidProperty;
 import org.junit.Test;
+import run.var.teamcity.cloud.docker.client.DockerClientCredentials;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
@@ -22,7 +23,7 @@ public class DockerImageConfigTest {
 
     @Test
     public void getters() {
-        DockerImageConfig config = new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, 42, 111);
+        DockerImageConfig config = new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, DockerClientCredentials.ANONYMOUS, 42, 111);
 
         assertThat(config.getProfileName()).isEqualTo("test");
         assertThat(config.getContainerSpec()).isSameAs(Node.EMPTY_OBJECT);
@@ -31,7 +32,7 @@ public class DockerImageConfigTest {
         assertThat(config.getMaxInstanceCount()).isEqualTo(42);
         assertThat(config.getAgentPoolId()).isEqualTo(111);
 
-        config = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, true, 42, null);
+        config = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, true, DockerClientCredentials.ANONYMOUS, 42, null);
 
         assertThat(config.isRmOnExit()).isFalse();
         assertThat(config.isUseOfficialTCAgentImage()).isTrue();
@@ -41,19 +42,19 @@ public class DockerImageConfigTest {
     @Test
     @SuppressWarnings("ConstantConditions")
     public void invalidConstructorsInput() {
-        new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, 1, 111);
+        new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, DockerClientCredentials.ANONYMOUS, 1, 111);
 
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() ->
-                new DockerImageConfig(null, Node.EMPTY_OBJECT, true, false, 1, 111));
+                new DockerImageConfig(null, Node.EMPTY_OBJECT, true, false, DockerClientCredentials.ANONYMOUS, 1, 111));
 
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() ->
-                new DockerImageConfig("test", null, true, false, 1, 111));
+                new DockerImageConfig("test", null, true, false, DockerClientCredentials.ANONYMOUS, 1, 111));
 
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, 0, 111));
+                new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, DockerClientCredentials.ANONYMOUS, 0, 111));
 
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, -1, 111));
+                new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, DockerClientCredentials.ANONYMOUS, -1, 111));
     }
 
     @Test

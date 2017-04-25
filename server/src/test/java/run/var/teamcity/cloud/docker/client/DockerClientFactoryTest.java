@@ -144,7 +144,7 @@ public class DockerClientFactoryTest {
         @Nonnull
         @Override
         public DockerClient createClient(DockerClientConfig config) {
-            TestDockerClient client = new TestDockerClient(config);
+            TestDockerClient client = new TestDockerClient(config, DockerClientCredentials.ANONYMOUS);
 
             if (fixture != null) {
                 fixture.accept(client);

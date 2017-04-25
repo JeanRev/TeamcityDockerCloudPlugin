@@ -3,6 +3,7 @@ package run.var.teamcity.cloud.docker.client;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import javax.annotation.Nonnull;
+import java.util.Objects;
 
 /**
  * Docker credentials for accessing a registry.
@@ -80,5 +81,36 @@ public class DockerClientCredentials {
      */
     public boolean isAnonymous() {
         return this == ANONYMOUS;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o)
+        {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
+        DockerClientCredentials that = (DockerClientCredentials) o;
+        return Objects.equals(username, that.username) &&
+                Objects.equals(password, that.password);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(username, password);
+    }
+
+    @Override
+    public String toString()
+    {
+        return isAnonymous()? "DockerClientCredentials{Anonymous}" : "DockerClientCredentials{" +
+                "username='" + username + '\'' +
+                ", password='" + password + '\'' +
+                '}';
     }
 }

@@ -35,6 +35,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
 
                 self.$image = $j("#dockerCloudImage_Image");
+                self.$registryUser = $j("#dockerCloudImage_RegistryUser");
+                self.$registryPassword = $j("#dockerCloudImage_RegistryPassword");
                 self.$checkConnectionBtn = $j("#dockerCloudCheckConnectionBtn");
                 self.$checkConnectionResult = $j('#dockerCloudCheckConnectionResult');
                 self.$checkConnectionWarning = $j('#dockerCloudCheckConnectionWarning');
@@ -557,6 +559,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     admin.MaxInstanceCount = parseInt(viewModel.MaxInstanceCount);
                 }
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'UseOfficialTCAgentImage');
+                self._convertViewModelFieldToSettingsField(viewModel, admin, 'RegistryUser');
+                self._convertViewModelFieldToSettingsField(viewModel, admin, 'RegistryPassword', window.btoa);
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'Profile');
 
                 var container = settings.Container = {};
@@ -726,10 +730,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 return settings;
             },
-            _convertViewModelFieldToSettingsField: function(viewModel, settings, fieldName) {
+            _convertViewModelFieldToSettingsField: function(viewModel, settings, fieldName, conversionFunction) {
                 var value = viewModel[fieldName];
                 if (self._filterFromSettings(value)) {
-                    settings[fieldName] = value;
+                    settings[fieldName] =  conversionFunction ? conversionFunction(value) : value;
                 }
             },
             _filterFromSettings: function(value) {
@@ -748,6 +752,14 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 viewModel.BindAgentProps = admin.BindAgentProps;
                 viewModel.MaxInstanceCount = admin.MaxInstanceCount;
                 viewModel.UseOfficialTCAgentImage = admin.UseOfficialTCAgentImage;
+                viewModel.RegistryUser = admin.RegistryUser;
+                try {
+                        viewModel.RegistryPassword = window.atob(admin.RegistryPassword);
+                    }
+                catch (e)
+                {
+                    self.logError("Failed to decode registry password");
+                }
 
                 viewModel.Hostname = container.Hostname;
                 viewModel.Domainname = container.Domainname;
@@ -1054,8 +1066,17 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self.$useOfficialDockerImage.change(function () {
                     self.$image.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
+                    self.$registryUser.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
+                    self.$registryPassword.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
                     self.$image.blur();
                 }).change();
+
+                self.$registryUser.change(function () {
+                    self.$registryPassword.blur();
+                }).change()
+                self.$registryPassword.change(function () {
+                    self.$registryUser.blur();
+                }).change
 
                 var networkMode = $j("#dockerCloudImage_NetworkMode");
                 var customNetwork = $j("#dockerCloudImage_NetworkCustom");
@@ -1612,6 +1633,20 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     dockerCloudImage_MaxInstanceCount: [positiveIntegerValidator, function($elt) {
                         if (parseInt($elt.val()) < 1) {
                             return {msg: "At least one instance must be permitted."};
+                        }
+                    }],
+                    dockerCloudImage_RegistryUser: [function ($elt){
+                        var pass = self.$registryPassword.val().trim();
+                        var user = $elt.val().trim();
+                        if (pass && !user) {
+                            return {msg: 'Must specify user if password set.'}
+                        }
+                    }],
+                    dockerCloudImage_RegistryPassword: [function ($elt){
+                        var user = self.$registryUser.val().trim();
+                        var pass = $elt.val().trim();
+                        if (user && !pass) {
+                            return {msg: 'Must specify password if user set.'}
                         }
                     }],
                     dockerCloudImage_StopTimeout: [positiveIntegerValidator, versionValidator.bind(this, '1.25')],
