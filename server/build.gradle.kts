@@ -118,9 +118,14 @@ task<Test>("dockerIT") {
         systemProperty("javax.net.ssl.trustStorePassword", "fortestonly")
     }
 
-
     include("run/var/teamcity/cloud/docker/test/DockerTestSuite.class")
 }
+
+task("karmaTest").doFirst({
+    val proc = ProcessBuilder("karma", "start", "--single-run").redirectErrorStream(true).directory(projectDir).start()
+    proc.inputStream.reader().readLines().forEach { println(it) }
+    proc.waitFor()
+})
 
 val setupTestImages = task("setupTestImages") {
 

@@ -2065,21 +2065,24 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
         return self;
     })();
 
-BS.DockerImageDialog = OO.extend(BS.AbstractModalDialog, {
-    getContainer: function () {
-        return $('DockerCloudImageDialog');
-    }
-});
+if (typeof OO !== "undefined") {
+    BS.DockerImageDialog = OO.extend(BS.AbstractModalDialog, {
+            getContainer: function () {
+                return $('DockerCloudImageDialog');
+            }
+        });
 
-BS.DockerTestContainerDialog = OO.extend(BS.AbstractModalDialog, {
-    getContainer: function () {
-        return $('DockerTestContainerDialog');
-    }
-});
+    BS.DockerTestContainerDialog = OO.extend(BS.AbstractModalDialog, {
+            getContainer: function () {
+                return $('DockerTestContainerDialog');
+            }
+        });
 
-BS.DockerDiagnosticDialog = OO.extend(BS.AbstractModalDialog, {
-    getContainer: function () {
-        return $('DockerDiagnosticDialog');
-    }
-});
+    BS.DockerDiagnosticDialog = OO.extend(BS.AbstractModalDialog, {
+            getContainer: function () {
+                return $('DockerDiagnosticDialog');
+            }
+        });
+}
+
 
