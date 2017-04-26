@@ -62,7 +62,7 @@ dependencies {
     add("provided", "org.jetbrains.teamcity:server-api:2017.1")
     // We depends on the server JAR private API to provide two non-critical features.
     // Feature requests are pending:
-    // - https://youtrack.jetbrains.com/issue/TW-49810
+    // - https://youtrack.jetbrains.com/issue/TW-49809
     // - https://youtrack.jetbrains.com/issue/TW-49810
     add("provided", "org.jetbrains.teamcity.internal:server:2017.1")
     // Provides null-check annotations in the javax.annotation namespace.
