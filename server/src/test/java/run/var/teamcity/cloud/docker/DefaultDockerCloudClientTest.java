@@ -10,6 +10,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
+import run.var.teamcity.cloud.docker.client.DockerClientCredentials;
 import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
 import run.var.teamcity.cloud.docker.test.*;
 import run.var.teamcity.cloud.docker.test.TestDockerClient.Container;
@@ -455,6 +456,19 @@ public class DefaultDockerCloudClientTest {
     }
 
     @Test
+    public void registryAuthenticationTest()
+    {
+        dockerClientFactory.setDockerClientCredentials(DockerClientCredentials.from("user", "password"));
+        DefaultDockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+        waitUntil(() -> client.canStartNewInstance(image));
+        DockerInstance instance = client.startNewInstance(image, userData);
+        //auth failure should be treated as unable to retreive remote image, will continue with local image
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+    }
+
+    @Test
     public void startNewInstanceErrorHandling() {
 
         // Image cannot be resolved.
@@ -650,7 +664,7 @@ public class DefaultDockerCloudClientTest {
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
         DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2, serverURL);
         DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, rmOnExit, false,
-                maxInstanceCount, 111);
+                DockerClientCredentials.ANONYMOUS, maxInstanceCount, 111);
         return client = new DefaultDockerCloudClient(clientConfig, dockerClientFactory,
                 Collections.singletonList(imageConfig), dockerImageResolver,
                 cloudState, buildServer);

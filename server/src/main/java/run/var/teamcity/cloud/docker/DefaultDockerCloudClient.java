@@ -9,9 +9,12 @@ import run.var.teamcity.cloud.docker.util.*;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static com.intellij.openapi.util.text.StringUtil.isNotEmpty;
 
 /**
  * A Docker {@link CloudClient}.
@@ -336,7 +339,8 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                     Node containerSpec = authorContainerSpec(instance, image, serverAddress);
 
-                    try (NodeStream nodeStream = dockerClient.createImage(image, null, DockerClientCredentials.ANONYMOUS)) {
+                    DockerClientCredentials dockerClientCredentials = registryAuthentication(instance);
+                    try (NodeStream nodeStream = dockerClient.createImage(image, null, dockerClientCredentials)) {
                         Node status;
                         while ((status = nodeStream.next()) != null) {
                             String error = status.getAsString("error", null);
@@ -575,6 +579,25 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         container.put("Image", resolvedImage);
 
         return container.saveNode();
+    }
+
+    /**
+     * Extract Registry user and password required to pull image.
+     *
+     * @param instance the docker instance for which the container will be created
+     * @return authentication details or anonymous
+     */
+    private DockerClientCredentials registryAuthentication(DockerInstance instance)
+    {
+        Node containerSpec = instance.getImage().getConfig().getContainerSpec();
+        String registryUser = containerSpec.getAsString("RegistryUser", null);
+        String registryPassword = containerSpec.getAsString("RegistryPassword", null);
+        DockerClientCredentials dockerClientCredentials = DockerClientCredentials.ANONYMOUS;
+        if (isNotEmpty(registryUser) && isNotEmpty(registryPassword)){
+            String decodedPassword = new String(Base64.getDecoder().decode(registryPassword), StandardCharsets.UTF_8);
+            dockerClientCredentials = DockerClientCredentials.from(registryUser, decodedPassword);
+        }
+        return dockerClientCredentials;
     }
 
     @Override
