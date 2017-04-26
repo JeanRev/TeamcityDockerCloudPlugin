@@ -4,7 +4,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
 import run.var.teamcity.cloud.docker.client.DockerClient;
-import run.var.teamcity.cloud.docker.client.DockerClientCredentials;
+import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -79,7 +79,7 @@ class CreateContainerTestTask extends ContainerTestTask {
 
         msg("Pulling image");
 
-        try (NodeStream nodeStream = client.createImage(image, null, DockerClientCredentials.ANONYMOUS)) {
+        try (NodeStream nodeStream = client.createImage(image, null, DockerRegistryCredentials.ANONYMOUS)) {
             Node status;
             String statusMsg = null;
 

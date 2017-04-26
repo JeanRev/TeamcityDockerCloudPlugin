@@ -10,7 +10,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerClientCredentials;
+import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
 import run.var.teamcity.cloud.docker.test.*;
 import run.var.teamcity.cloud.docker.test.TestDockerClient.Container;
@@ -458,7 +458,7 @@ public class DefaultDockerCloudClientTest {
     @Test
     public void registryAuthenticationTest()
     {
-        dockerClientFactory.setDockerClientCredentials(DockerClientCredentials.from("user", "password"));
+        dockerClientFactory.setDockerRegistryCredentials(DockerRegistryCredentials.from("user", "password"));
         DefaultDockerCloudClient client = createClient();
 
         DockerImage image = extractImage(client);
@@ -664,7 +664,7 @@ public class DefaultDockerCloudClientTest {
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
         DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2, serverURL);
         DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, rmOnExit, false,
-                DockerClientCredentials.ANONYMOUS, maxInstanceCount, 111);
+                DockerRegistryCredentials.ANONYMOUS, maxInstanceCount, 111);
         return client = new DefaultDockerCloudClient(clientConfig, dockerClientFactory,
                 Collections.singletonList(imageConfig), dockerImageResolver,
                 cloudState, buildServer);

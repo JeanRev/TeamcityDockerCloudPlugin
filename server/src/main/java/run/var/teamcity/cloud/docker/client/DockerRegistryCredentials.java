@@ -8,14 +8,14 @@ import java.util.Objects;
 /**
  * Docker credentials for accessing a registry.
  */
-public class DockerClientCredentials {
+public class DockerRegistryCredentials {
 
-    public static final DockerClientCredentials ANONYMOUS = new DockerClientCredentials("", "");
+    public static final DockerRegistryCredentials ANONYMOUS = new DockerRegistryCredentials("", "");
 
     private final String username;
     private final String password;
 
-    private DockerClientCredentials(String username, String password) {
+    private DockerRegistryCredentials(String username, String password) {
         this.username = username;
         this.password = password;
     }
@@ -31,7 +31,7 @@ public class DockerClientCredentials {
      * @throws NullPointerException if any argument is {@code null}
      * @throws IllegalArgumentException if username is empty
      */
-    public static DockerClientCredentials from(@Nonnull String username, @Nonnull String password) {
+    public static DockerRegistryCredentials from(@Nonnull String username, @Nonnull String password) {
         DockerCloudUtils.requireNonNull(username, "Username cannot be null.");
         DockerCloudUtils.requireNonNull(password, "Password cannot be null.");
 
@@ -41,7 +41,7 @@ public class DockerClientCredentials {
             throw new IllegalArgumentException("Username cannot be empty.");
         }
 
-        return new DockerClientCredentials(username, password);
+        return new DockerRegistryCredentials(username, password);
     }
 
     /**
@@ -94,7 +94,7 @@ public class DockerClientCredentials {
         {
             return false;
         }
-        DockerClientCredentials that = (DockerClientCredentials) o;
+        DockerRegistryCredentials that = (DockerRegistryCredentials) o;
         return Objects.equals(username, that.username) &&
                 Objects.equals(password, that.password);
     }
@@ -108,7 +108,7 @@ public class DockerClientCredentials {
     @Override
     public String toString()
     {
-        return isAnonymous()? "DockerClientCredentials{Anonymous}" : "DockerClientCredentials{" +
+        return isAnonymous()? "DockerRegistryCredentials{Anonymous}" : "DockerRegistryCredentials{" +
                 "username='" + username + '\'' +
                 ", password='" + password + '\'' +
                 '}';

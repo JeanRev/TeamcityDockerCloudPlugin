@@ -2,7 +2,7 @@ package run.var.teamcity.cloud.docker.test;
 
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerClientCredentials;
+import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 
 import javax.annotation.Nonnull;
@@ -18,7 +18,7 @@ public class TestDockerClientFactory extends DockerClientFactory {
     private final Deque<Consumer<TestDockerClient>> configurators = new ArrayDeque<>();
 
     private TestDockerClient client;
-    private DockerClientCredentials dockerClientCredentials = DockerClientCredentials.ANONYMOUS;
+    private DockerRegistryCredentials dockerRegistryCredentials = DockerRegistryCredentials.ANONYMOUS;
 
     @Nonnull
     @Override
@@ -26,7 +26,7 @@ public class TestDockerClientFactory extends DockerClientFactory {
 
         lock.lock();
         try {
-            TestDockerClient client = new TestDockerClient(config, dockerClientCredentials);
+            TestDockerClient client = new TestDockerClient(config, dockerRegistryCredentials);
             for (Consumer<TestDockerClient> configurator : configurators) {
                 configurator.accept(client);
             }
@@ -40,13 +40,13 @@ public class TestDockerClientFactory extends DockerClientFactory {
 
     /**
      * credentials used to check when pulling image from registry
-     * @param dockerClientCredentials
+     * @param dockerRegistryCredentials
      */
-    public void setDockerClientCredentials(DockerClientCredentials dockerClientCredentials)
+    public void setDockerRegistryCredentials(DockerRegistryCredentials dockerRegistryCredentials)
     {
         lock.lock();
         try {
-            this.dockerClientCredentials = dockerClientCredentials;
+            this.dockerRegistryCredentials = dockerRegistryCredentials;
         } finally {
             lock.unlock();
         }

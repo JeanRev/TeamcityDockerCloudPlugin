@@ -8,7 +8,7 @@ import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerClientCredentials;
+import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.client.TestContainerTestStatusListener;
 import run.var.teamcity.cloud.docker.test.*;
 import run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus;
@@ -57,7 +57,7 @@ public class DefaultContainerTestManagerTest {
                 serverURL);
 
         Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
-        imageConfig = new DockerImageConfig("test", containerSpec, true, false, DockerClientCredentials.ANONYMOUS, 1, null);
+        imageConfig = new DockerImageConfig("test", containerSpec, true, false, DockerRegistryCredentials.ANONYMOUS, 1, null);
         buildServer = new TestSBuildServer();
         agentMgr = buildServer.getBuildAgentManager();
 

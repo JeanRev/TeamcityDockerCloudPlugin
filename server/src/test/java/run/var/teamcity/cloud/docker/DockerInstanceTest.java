@@ -1,7 +1,7 @@
 package run.var.teamcity.cloud.docker;
 
 import org.junit.Test;
-import run.var.teamcity.cloud.docker.client.DockerClientCredentials;
+import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
@@ -17,7 +17,7 @@ public class DockerInstanceTest {
     @Test
     public void startedTimeInitializedAfterConstruct() {
         DockerInstance instance = new DockerInstance(new DockerImage(null,
-                new DockerImageConfig("test", Node.EMPTY_OBJECT, false, false, DockerClientCredentials.ANONYMOUS, 1, null)));
+                new DockerImageConfig("test", Node.EMPTY_OBJECT, false, false, DockerRegistryCredentials.ANONYMOUS, 1, null)));
 
         assertThat(instance.getStartedTime()).isInSameMinuteAs(new Date());
     }
@@ -25,7 +25,7 @@ public class DockerInstanceTest {
     @Test
     public void startedTimeIsUpdated() {
         DockerInstance instance = new DockerInstance(new DockerImage(null,
-                new DockerImageConfig("test", Node.EMPTY_OBJECT, false, false, DockerClientCredentials.ANONYMOUS, 1, null)));
+                new DockerImageConfig("test", Node.EMPTY_OBJECT, false, false, DockerRegistryCredentials.ANONYMOUS, 1, null)));
 
         Date before = instance.getStartedTime();
 

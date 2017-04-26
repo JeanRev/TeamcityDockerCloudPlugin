@@ -339,8 +339,8 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                     Node containerSpec = authorContainerSpec(instance, image, serverAddress);
 
-                    DockerClientCredentials dockerClientCredentials = registryAuthentication(instance);
-                    try (NodeStream nodeStream = dockerClient.createImage(image, null, dockerClientCredentials)) {
+                    try (NodeStream nodeStream = dockerClient.createImage(image, null, dockerImage.getConfig()
+                            .getRegistryCredentials())) {
                         Node status;
                         while ((status = nodeStream.next()) != null) {
                             String error = status.getAsString("error", null);
@@ -579,25 +579,6 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         container.put("Image", resolvedImage);
 
         return container.saveNode();
-    }
-
-    /**
-     * Extract Registry user and password required to pull image.
-     *
-     * @param instance the docker instance for which the container will be created
-     * @return authentication details or anonymous
-     */
-    private DockerClientCredentials registryAuthentication(DockerInstance instance)
-    {
-        Node containerSpec = instance.getImage().getConfig().getContainerSpec();
-        String registryUser = containerSpec.getAsString("RegistryUser", null);
-        String registryPassword = containerSpec.getAsString("RegistryPassword", null);
-        DockerClientCredentials dockerClientCredentials = DockerClientCredentials.ANONYMOUS;
-        if (isNotEmpty(registryUser) && isNotEmpty(registryPassword)){
-            String decodedPassword = new String(Base64.getDecoder().decode(registryPassword), StandardCharsets.UTF_8);
-            dockerClientCredentials = DockerClientCredentials.from(registryUser, decodedPassword);
-        }
-        return dockerClientCredentials;
     }
 
     @Override

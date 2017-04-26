@@ -6,45 +6,45 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
- * {@link DockerClientCredentials} test suite.
+ * {@link DockerRegistryCredentials} test suite.
  */
-public class DockerClientCredentialsTest {
+public class DockerRegistryCredentialsTest {
 
     @Test
     public void getters() {
-        DockerClientCredentials credentials = DockerClientCredentials.from("usr", "pwd");
+        DockerRegistryCredentials credentials = DockerRegistryCredentials.from("usr", "pwd");
 
         assertThat(credentials.getUsername()).isEqualTo("usr");
         assertThat(credentials.getPassword()).isEqualTo("pwd");
 
-        credentials = DockerClientCredentials.from("usr", "");
+        credentials = DockerRegistryCredentials.from("usr", "");
 
         assertThat(credentials.getPassword()).isEqualTo("");
     }
 
     @Test
     public void anonymousFlag() {
-        DockerClientCredentials credentials = DockerClientCredentials.from("usr", "pwd");
+        DockerRegistryCredentials credentials = DockerRegistryCredentials.from("usr", "pwd");
 
         assertThat(credentials.isAnonymous()).isFalse();
-        assertThat(DockerClientCredentials.ANONYMOUS.isAnonymous()).isTrue();
+        assertThat(DockerRegistryCredentials.ANONYMOUS.isAnonymous()).isTrue();
     }
 
     @Test
     public void invalidConstructorInput() {
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(
-                () -> DockerClientCredentials.from(null, "pwd"));
+                () -> DockerRegistryCredentials.from(null, "pwd"));
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(
-                () -> DockerClientCredentials.from("usr", null));
+                () -> DockerRegistryCredentials.from("usr", null));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(
-                () -> DockerClientCredentials.from("", "pwd"));
+                () -> DockerRegistryCredentials.from("", "pwd"));
     }
 
     @Test
     public void usingGettersWithAnonymousLogin() {
         assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(
-                DockerClientCredentials.ANONYMOUS::getUsername);
+                DockerRegistryCredentials.ANONYMOUS::getUsername);
         assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(
-                DockerClientCredentials.ANONYMOUS::getPassword);
+                DockerRegistryCredentials.ANONYMOUS::getPassword);
     }
 }
