@@ -9,9 +9,12 @@ import run.var.teamcity.cloud.docker.util.*;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static com.intellij.openapi.util.text.StringUtil.isNotEmpty;
 
 /**
  * A Docker {@link CloudClient}.
@@ -336,7 +339,8 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                     Node containerSpec = authorContainerSpec(instance, image, serverAddress);
 
-                    try (NodeStream nodeStream = dockerClient.createImage(image, null, DockerClientCredentials.ANONYMOUS)) {
+                    try (NodeStream nodeStream = dockerClient.createImage(image, null, dockerImage.getConfig()
+                            .getRegistryCredentials())) {
                         Node status;
                         while ((status = nodeStream.next()) != null) {
                             String error = status.getAsString("error", null);

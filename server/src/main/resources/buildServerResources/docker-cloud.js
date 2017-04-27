@@ -35,6 +35,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
 
                 self.$image = $j("#dockerCloudImage_Image");
+                self.$registryUser = $j("#dockerCloudImage_RegistryUser");
+                self.$registryPassword = $j("#dockerCloudImage_RegistryPassword");
                 self.$checkConnectionBtn = $j("#dockerCloudCheckConnectionBtn");
                 self.$checkConnectionResult = $j('#dockerCloudCheckConnectionResult');
                 self.$checkConnectionWarning = $j('#dockerCloudCheckConnectionWarning');
@@ -557,6 +559,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     admin.MaxInstanceCount = parseInt(viewModel.MaxInstanceCount);
                 }
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'UseOfficialTCAgentImage');
+                self._convertViewModelFieldToSettingsField(viewModel, admin, 'RegistryUser');
+                self._convertViewModelFieldToSettingsField(viewModel, admin, 'RegistryPassword', self.base64Utf16BEEncode);
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'Profile');
 
                 var container = settings.Container = {};
@@ -726,10 +730,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 return settings;
             },
-            _convertViewModelFieldToSettingsField: function(viewModel, settings, fieldName) {
+            _convertViewModelFieldToSettingsField: function(viewModel, settings, fieldName, conversionFunction) {
                 var value = viewModel[fieldName];
                 if (self._filterFromSettings(value)) {
-                    settings[fieldName] = value;
+                    settings[fieldName] =  conversionFunction ? conversionFunction(value) : value;
                 }
             },
             _filterFromSettings: function(value) {
@@ -748,6 +752,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 viewModel.BindAgentProps = admin.BindAgentProps;
                 viewModel.MaxInstanceCount = admin.MaxInstanceCount;
                 viewModel.UseOfficialTCAgentImage = admin.UseOfficialTCAgentImage;
+                viewModel.RegistryUser = admin.RegistryUser;
+                viewModel.RegistryPassword = self.base64Utf16BEDecode(admin.RegistryPassword);
 
                 viewModel.Hostname = container.Hostname;
                 viewModel.Domainname = container.Domainname;
@@ -1054,8 +1060,17 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self.$useOfficialDockerImage.change(function () {
                     self.$image.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
+                    self.$registryUser.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
+                    self.$registryPassword.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
                     self.$image.blur();
                 }).change();
+
+                self.$registryUser.change(function () {
+                    self.$registryPassword.blur();
+                }).change()
+                self.$registryPassword.change(function () {
+                    self.$registryUser.blur();
+                }).change
 
                 var networkMode = $j("#dockerCloudImage_NetworkMode");
                 var customNetwork = $j("#dockerCloudImage_NetworkCustom");
@@ -1614,6 +1629,20 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             return {msg: "At least one instance must be permitted."};
                         }
                     }],
+                    dockerCloudImage_RegistryUser: [function ($elt){
+                        var pass = self.$registryPassword.val().trim();
+                        var user = $elt.val().trim();
+                        if (pass && !user) {
+                            return {msg: 'Must specify user if password set.'}
+                        }
+                    }],
+                    dockerCloudImage_RegistryPassword: [function ($elt){
+                        var user = self.$registryUser.val().trim();
+                        var pass = $elt.val().trim();
+                        if (user && !pass) {
+                            return {msg: 'Must specify password if user set.'}
+                        }
+                    }],
                     dockerCloudImage_StopTimeout: [positiveIntegerValidator, versionValidator.bind(this, '1.25')],
                     dockerCloudImage_Entrypoint_IDX: [function ($elt) {
                         var row = $elt.closest("tr");
@@ -1946,6 +1975,45 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     array.push(value);
                 }
             },
+
+            // Base-64 encoding/decoding is tricky to achieve in an unicode-safe way (especially when using the atob
+            // and btoa standard functions). We leverage here an all-purpose binary-based Base64 encoder and do the
+            // string to UTF-16BE conversion ourselves.
+            base64Utf16BEEncode: function(str) {
+                if (!str) {
+                    return;
+                }
+                try {
+                    var arr = [];
+                    for (var i = 0; i < str.length; i++) {
+                        var charcode = str.charCodeAt(i);
+                        arr.push((charcode >> 8) & 0xff);
+                        arr.push(charcode & 0xff);
+                    }
+                    return base64js.fromByteArray(arr);
+                } catch (e) {
+                    self.logError("Failed to encode base64 string.");
+                }
+            },
+            base64Utf16BEDecode: function(base64) {
+                if (!base64) {
+                    return;
+                }
+                try {
+                    var byteArray = base64js.toByteArray(base64);
+                    if (byteArray.length % 2 !== 0) {
+                        self.logError("Invalid content length.");
+                    }
+                    var charcodes = [];
+                    for (var i = 0; i < byteArray.length - 1; i+=2) {
+                        charcodes.push((((byteArray[i] & 0xff) << 8) | (byteArray[i+1] & 0xff)));
+                    }
+                    return String.fromCharCode.apply(null, charcodes);
+                } catch (e) {
+                    self.logError("Failed to decode base64 string.");
+                }
+            },
+
             arrayTemplates: {
                 deleteCell: '<a class="btn dockerCloudCtrlBtn dockerCloudDeleteBtn" href="#/" title="Delete"><span></span></a>',
                 settingsCell: '<a class="btn dockerCloudCtrlBtn dockerCloudSettingsBtn" href="#/" title="Settings"><span></span></a>',

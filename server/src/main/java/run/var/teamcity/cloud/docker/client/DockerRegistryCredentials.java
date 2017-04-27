@@ -3,18 +3,19 @@ package run.var.teamcity.cloud.docker.client;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import javax.annotation.Nonnull;
+import java.util.Objects;
 
 /**
  * Docker credentials for accessing a registry.
  */
-public class DockerClientCredentials {
+public class DockerRegistryCredentials {
 
-    public static final DockerClientCredentials ANONYMOUS = new DockerClientCredentials("", "");
+    public static final DockerRegistryCredentials ANONYMOUS = new DockerRegistryCredentials("", "");
 
     private final String username;
     private final String password;
 
-    private DockerClientCredentials(String username, String password) {
+    private DockerRegistryCredentials(String username, String password) {
         this.username = username;
         this.password = password;
     }
@@ -30,7 +31,7 @@ public class DockerClientCredentials {
      * @throws NullPointerException if any argument is {@code null}
      * @throws IllegalArgumentException if username is empty
      */
-    public static DockerClientCredentials from(@Nonnull String username, @Nonnull String password) {
+    public static DockerRegistryCredentials from(@Nonnull String username, @Nonnull String password) {
         DockerCloudUtils.requireNonNull(username, "Username cannot be null.");
         DockerCloudUtils.requireNonNull(password, "Password cannot be null.");
 
@@ -40,7 +41,7 @@ public class DockerClientCredentials {
             throw new IllegalArgumentException("Username cannot be empty.");
         }
 
-        return new DockerClientCredentials(username, password);
+        return new DockerRegistryCredentials(username, password);
     }
 
     /**
@@ -80,5 +81,36 @@ public class DockerClientCredentials {
      */
     public boolean isAnonymous() {
         return this == ANONYMOUS;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o)
+        {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
+        DockerRegistryCredentials that = (DockerRegistryCredentials) o;
+        return Objects.equals(username, that.username) &&
+                Objects.equals(password, that.password);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(username, password);
+    }
+
+    @Override
+    public String toString()
+    {
+        return isAnonymous()? "DockerRegistryCredentials{Anonymous}" : "DockerRegistryCredentials{" +
+                "username='" + username + '\'' +
+                ", password='" + password + '\'' +
+                '}';
     }
 }

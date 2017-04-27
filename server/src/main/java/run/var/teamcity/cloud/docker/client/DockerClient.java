@@ -40,7 +40,7 @@ public interface DockerClient extends Closeable {
     Node inspectContainer(@Nonnull String containerId);
 
     @Nonnull
-    NodeStream createImage(@Nonnull String from, @Nullable String tag, @Nonnull DockerClientCredentials credentials);
+    NodeStream createImage(@Nonnull String from, @Nullable String tag, @Nonnull DockerRegistryCredentials credentials);
 
     void stopContainer(@Nonnull String containerId, long timeoutSec);
 

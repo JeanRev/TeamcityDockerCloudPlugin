@@ -166,6 +166,24 @@
                     </td>
                 </tr>
                 <tr>
+                    <th><label for="dockerCloudImage_RegistryUser">Registry User:</label></th>
+                    <td>
+                        <p>
+                            <input type="text" id="dockerCloudImage_RegistryUser" class="mediumField"/>
+                            <span class="error" id="dockerCloudImage_RegistryUser_error"></span>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="dockerCloudImage_RegistryPassword">Registry Password:</label></th>
+                    <td>
+                        <p>
+                            <input type="text" id="dockerCloudImage_RegistryPassword" class="mediumField"/>
+                            <span class="error" id="dockerCloudImage_RegistryPassword_error"></span>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
                     <th><label for="dockerCloudImage_Image">Maximum instance count:&nbsp;</label></th>
                     <td>
                         <input type="text" id="dockerCloudImage_MaxInstanceCount" class="mediumField"/>
@@ -803,6 +821,7 @@
         $j.when(
             $j.getScript("<c:url value="${resPath}clipboard.min.js"/>"),
             $j.getScript("<c:url value="${resPath}ua-parser.min.js"/>"),
+            $j.getScript("<c:url value="${resPath}base64js.min.js"/>"),
             $j.when($j.getScript("<c:url value="${resPath}xterm.js"/>"))
                 .done(function () {
                     $j.getScript("<c:url value="${resPath}attach/attach.js"/>");

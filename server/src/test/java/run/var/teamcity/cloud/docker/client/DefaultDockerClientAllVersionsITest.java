@@ -30,7 +30,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
 
     final static String TEST_IMAGE = "tc_dk_cld_plugin_test_img:1.0";
 
-    private final static DockerClientCredentials TEST_CREDENTIALS = DockerClientCredentials.from("test", "abc123éà!${}_/|");
+    private final static DockerRegistryCredentials TEST_CREDENTIALS = DockerRegistryCredentials.from("test", "abc123éà!${}_/|");
 
     private final static String TEST_LABEL_KEY = DefaultDockerClientITest.class.getName();
     private final static String STDERR_MSG_PREFIX = "ERR";
@@ -181,7 +181,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
     @Test
     public void createImageWithImageNotFound() throws URISyntaxException, IOException {
         DockerClient client = createClient();
-        createImageWithImageNotFound(client, "run.var.teamcity.cloud.docker.client.not_a_real_image", DockerClientCredentials.ANONYMOUS);
+        createImageWithImageNotFound(client, "run.var.teamcity.cloud.docker.client.not_a_real_image", DockerRegistryCredentials.ANONYMOUS);
     }
 
     @Test
@@ -193,7 +193,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
     }
 
 
-    private void createImageWithImageNotFound(DockerClient client, String image, DockerClientCredentials credentials) throws IOException {
+    private void createImageWithImageNotFound(DockerClient client, String image, DockerRegistryCredentials credentials) throws IOException {
         // Depending on the daemon and registry versions and configuration, we may either get a 404 failure or an error
         // status encoded in the JSON response. Both behaviors are OK.
         try {
@@ -258,7 +258,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
 
         DefaultDockerClient client = createClient(createTcpClientConfig());
 
-        Stream.of(DockerClientCredentials.ANONYMOUS, DockerClientCredentials.from("invalid", "credentials"))
+        Stream.of(DockerRegistryCredentials.ANONYMOUS, DockerRegistryCredentials.from("invalid", "credentials"))
                 .forEach(credentials ->
                 assertThatExceptionOfType(UnauthorizedException.class).isThrownBy(
                         () -> client.createImage(registryAddress + "/" + TEST_IMAGE, null, credentials)));
@@ -276,7 +276,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
 
         DefaultDockerClient client = createClient(createTcpClientConfig());
 
-        NodeStream stream = client.createImage(repo, null, DockerClientCredentials.from(user, pwd));
+        NodeStream stream = client.createImage(repo, null, DockerRegistryCredentials.from(user, pwd));
         Node node;
         while ((node = stream.next()) != null) {
             String error = node.getAsString("error", null);

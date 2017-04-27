@@ -122,7 +122,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
     @Nonnull
     public Node getVersion() {
-        return invoke(target().path("/version"), HttpMethod.GET, null, prepareHeaders(DockerClientCredentials.ANONYMOUS), null);
+        return invoke(target().path("/version"), HttpMethod.GET, null, prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
     }
 
     @Nonnull
@@ -133,7 +133,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
             target.queryParam("name", name);
         }
 
-        return invoke(target, HttpMethod.POST, containerSpec, prepareHeaders(DockerClientCredentials.ANONYMOUS), null);
+        return invoke(target, HttpMethod.POST, containerSpec, prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
     }
 
     @Override
@@ -155,12 +155,12 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     public Node inspectContainer(@Nonnull String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
         return invoke(target().path("/containers/{id}/json").resolveTemplate("id", containerId), HttpMethod.GET, null,
-                prepareHeaders(DockerClientCredentials.ANONYMOUS), null);
+                prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
     }
 
     @Override
     @Nonnull
-    public NodeStream createImage(@Nonnull String from, @Nullable String tag, @Nonnull DockerClientCredentials credentials) {
+    public NodeStream createImage(@Nonnull String from, @Nullable String tag, @Nonnull DockerRegistryCredentials credentials) {
         DockerCloudUtils.requireNonNull(from, "Source image cannot be null.");
 
         WebTarget target = target().path("/images/create").
@@ -248,7 +248,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 queryParam("all", true).
                 queryParam("filters", "%7B\"label\": " +
                         "[\"" + key + "=" + value + "\"]%7D"), HttpMethod.GET, null,
-                prepareHeaders(DockerClientCredentials.ANONYMOUS), null);
+                prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
     }
     
     private boolean hasTty(String containerId) {
@@ -430,7 +430,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 .build();
     }
 
-    private MultivaluedMap<String, Object> prepareHeaders(@Nonnull DockerClientCredentials credentials) {
+    private MultivaluedMap<String, Object> prepareHeaders(@Nonnull DockerRegistryCredentials credentials) {
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         if (!credentials.isAnonymous()) {
             String value = Base64.getEncoder().encodeToString(EditableNode.newEditableNode()

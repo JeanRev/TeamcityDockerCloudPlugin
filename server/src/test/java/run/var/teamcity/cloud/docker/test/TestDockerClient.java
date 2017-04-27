@@ -45,9 +45,11 @@ public class TestDockerClient implements DockerClient {
     private DockerAPIVersion minAPIVersion = null;
     private DockerAPIVersion apiVersion;
     private boolean lenientVersionCheck = false;
+    private final DockerRegistryCredentials dockerRegistryCredentials;
 
-    public TestDockerClient(DockerClientConfig config) {
+    public TestDockerClient(DockerClientConfig config, DockerRegistryCredentials dockerRegistryCredentials) {
         this.apiVersion = config.getApiVersion();
+        this.dockerRegistryCredentials = dockerRegistryCredentials;
         if (!TEST_CLIENT_URI.equals(config.getInstanceURI())) {
             throw new IllegalArgumentException("Unsupported URI: " + config.getInstanceURI());
         }
@@ -176,7 +178,7 @@ public class TestDockerClient implements DockerClient {
     @Nonnull
     @Override
     public NodeStream createImage(@Nonnull String from, @Nullable String tag,
-                                  @Nonnull DockerClientCredentials credentials) {
+                                  @Nonnull DockerRegistryCredentials credentials) {
         if (DockerCloudUtils.hasImageTag(from)) {
             if (tag != null) {
                 throw new InvocationFailedException("Duplicate tag specification.");
@@ -213,6 +215,12 @@ public class TestDockerClient implements DockerClient {
             node.put("id", tag);
         }
         result.add(node.saveNode());
+
+        if (!dockerRegistryCredentials.equals(credentials))
+        {
+            throw new NotFoundException("Authentication failed");
+        }
+
         if (toPull.isEmpty()) {
             node = Node.EMPTY_OBJECT.editNode();
             String msg = foundImage ? "Error: tag " + tag + " not found" : "Error: image " + from + " not found";
