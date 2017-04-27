@@ -560,7 +560,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'UseOfficialTCAgentImage');
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'RegistryUser');
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'RegistryPassword', window.btoa);
+                self._convertViewModelFieldToSettingsField(viewModel, admin, 'RegistryPassword', self.base64Utf16BEEncode);
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'Profile');
 
                 var container = settings.Container = {};
@@ -753,13 +753,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 viewModel.MaxInstanceCount = admin.MaxInstanceCount;
                 viewModel.UseOfficialTCAgentImage = admin.UseOfficialTCAgentImage;
                 viewModel.RegistryUser = admin.RegistryUser;
-                try {
-                        viewModel.RegistryPassword = window.atob(admin.RegistryPassword);
-                    }
-                catch (e)
-                {
-                    self.logError("Failed to decode registry password");
-                }
+                viewModel.RegistryPassword = self.base64Utf16BEDecode(admin.RegistryPassword);
 
                 viewModel.Hostname = container.Hostname;
                 viewModel.Domainname = container.Domainname;
@@ -1981,6 +1975,45 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     array.push(value);
                 }
             },
+
+            // Base-64 encoding/decoding is tricky to achieve in an unicode-safe way (especially when using the atob
+            // and btoa standard functions). We leverage here an all-purpose binary-based Base64 encoder and do the
+            // string to UTF-16BE conversion ourselves.
+            base64Utf16BEEncode: function(str) {
+                if (!str) {
+                    return;
+                }
+                try {
+                    var arr = [];
+                    for (var i = 0; i < str.length; i++) {
+                        var charcode = str.charCodeAt(i);
+                        arr.push((charcode >> 8) & 0xff);
+                        arr.push(charcode & 0xff);
+                    }
+                    return base64js.fromByteArray(arr);
+                } catch (e) {
+                    self.logError("Failed to encode base64 string.");
+                }
+            },
+            base64Utf16BEDecode: function(base64) {
+                if (!base64) {
+                    return;
+                }
+                try {
+                    var byteArray = base64js.toByteArray(base64);
+                    if (byteArray.length % 2 !== 0) {
+                        self.logError("Invalid content length.");
+                    }
+                    var charcodes = [];
+                    for (var i = 0; i < byteArray.length - 1; i+=2) {
+                        charcodes.push((((byteArray[i] & 0xff) << 8) | (byteArray[i+1] & 0xff)));
+                    }
+                    return String.fromCharCode.apply(null, charcodes);
+                } catch (e) {
+                    self.logError("Failed to decode base64 string.");
+                }
+            },
+
             arrayTemplates: {
                 deleteCell: '<a class="btn dockerCloudCtrlBtn dockerCloudDeleteBtn" href="#/" title="Delete"><span></span></a>',
                 settingsCell: '<a class="btn dockerCloudCtrlBtn dockerCloudSettingsBtn" href="#/" title="Settings"><span></span></a>',

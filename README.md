@@ -50,6 +50,7 @@ This plugin bundles the following third-party libraries:
 - [xterm.js](http://xtermjs.org/), a terminal front in Javascript ([MIT License](https://opensource.org/licenses/MIT))
 - [clipboard.js](https://clipboardjs.com/), clipboard manager for Javascript ([MIT License](https://opensource.org/licenses/MIT))
 - [ua-parser.js](http://faisalman.github.io/ua-parser-js/), a lightweight User-Agent parser for Javascript ([MIT License](https://opensource.org/licenses/MIT)).
+- [base64js](https://github.com/beatgammit/base64-js/), a base64 encoder/decoder in Javascript ([MIT License](https://opensource.org/licenses/MIT)).
 
 In addition, the [docker-java](https://github.com/docker-java/docker-java) library was also a source of inspiration.
 

@@ -246,7 +246,7 @@ public class DockerImageConfig {
         String registryPassword = admin.getAsString("RegistryPassword", null);
         DockerRegistryCredentials dockerRegistryCredentials = DockerRegistryCredentials.ANONYMOUS;
         if (isNotEmpty(registryUser) && isNotEmpty(registryPassword)){
-            String decodedPassword = new String(Base64.getDecoder().decode(registryPassword), StandardCharsets.UTF_8);
+            String decodedPassword = new String(Base64.getDecoder().decode(registryPassword), StandardCharsets.UTF_16BE);
             dockerRegistryCredentials = DockerRegistryCredentials.from(registryUser, decodedPassword);
         }
         return dockerRegistryCredentials;

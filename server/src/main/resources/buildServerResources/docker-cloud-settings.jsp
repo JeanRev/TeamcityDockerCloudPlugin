@@ -821,6 +821,7 @@
         $j.when(
             $j.getScript("<c:url value="${resPath}clipboard.min.js"/>"),
             $j.getScript("<c:url value="${resPath}ua-parser.min.js"/>"),
+            $j.getScript("<c:url value="${resPath}base64js.min.js"/>"),
             $j.when($j.getScript("<c:url value="${resPath}xterm.js"/>"))
                 .done(function () {
                     $j.getScript("<c:url value="${resPath}attach/attach.js"/>");
