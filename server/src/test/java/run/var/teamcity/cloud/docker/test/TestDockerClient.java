@@ -30,8 +30,8 @@ public class TestDockerClient implements DockerClient {
 
     private final Map<String, Container> containers = new HashMap<>();
     private final Collection<Container> discardedContainers = new ArrayList<>();
-    private final Set<TestImage> knownRepoImages = new HashSet<>();
-    private final Set<TestImage> knownLocalImages = new HashSet<>();
+    private final Set<TestImage> registryImages = new HashSet<>();
+    private final Set<TestImage> localImages = new HashSet<>();
     private final Set<String> pulledLayer = new HashSet<>();
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -113,7 +113,7 @@ public class TestDockerClient implements DockerClient {
             checkForFailure();
             String imageName = containerSpec.getAsString("Image");
             TestImage img = TestImage.parse(containerSpec.getAsString("Image"));
-            if (!knownLocalImages.contains(img)) {
+            if (!localImages.contains(img)) {
                 throw new NotFoundException("No such image: " + imageName);
             }
 
@@ -197,7 +197,7 @@ public class TestDockerClient implements DockerClient {
         Set<TestImage> toPull = new HashSet<>();
         lock.lock();
         try {
-            for (TestImage img : knownRepoImages) {
+            for (TestImage img : registryImages) {
                 if (img.getRepo().equals(from)) {
                     foundImage = true;
                     if (tag == null || tag.equals(img.getTag())) {
@@ -261,6 +261,7 @@ public class TestDockerClient implements DockerClient {
                     }
                     node = Node.EMPTY_OBJECT.editNode();
                     node.put("status", "Status: Downloaded newer image for " + img);
+                    localImages.add(img);
                 }
             } finally {
                 lock.unlock();
@@ -355,24 +356,25 @@ public class TestDockerClient implements DockerClient {
         return result.saveNode();
     }
 
-    public TestDockerClient knownImage(String repo, String tag) {
-        return knownImage(repo, tag, false);
-    }
-
-    public TestDockerClient knownImage(String repo, String tag, boolean localOnly) {
+    public TestDockerClient localImage(String repo, String tag) {
         lock.lock();
         try {
-            TestImage img = new TestImage(repo, tag);
-            if (!localOnly) {
-                knownRepoImages.add(img);
-            }
-            knownLocalImages.add(img);
+            localImages.add(new TestImage(repo, tag));
         } finally {
             lock.unlock();
         }
         return this;
     }
 
+    public TestDockerClient registryImage(String repo, String tag) {
+        lock.lock();
+        try {
+            registryImages.add(new TestImage(repo, tag));
+        } finally {
+            lock.unlock();
+        }
+        return this;
+    }
 
     @Override
     public void close() {

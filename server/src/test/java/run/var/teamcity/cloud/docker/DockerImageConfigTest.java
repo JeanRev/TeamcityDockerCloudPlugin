@@ -23,38 +23,47 @@ public class DockerImageConfigTest {
 
     @Test
     public void getters() {
-        DockerImageConfig config = new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, DockerRegistryCredentials.ANONYMOUS, 42, 111);
+        DockerImageConfig config = new DockerImageConfig("test", Node.EMPTY_OBJECT,  true,false, false, DockerRegistryCredentials.ANONYMOUS, 42, 111);
 
         assertThat(config.getProfileName()).isEqualTo("test");
         assertThat(config.getContainerSpec()).isSameAs(Node.EMPTY_OBJECT);
-        assertThat(config.isRmOnExit()).isTrue();
+        assertThat(config.isPullOnCreate()).isTrue();
+        assertThat(config.isRmOnExit()).isFalse();
         assertThat(config.isUseOfficialTCAgentImage()).isFalse();
         assertThat(config.getMaxInstanceCount()).isEqualTo(42);
         assertThat(config.getAgentPoolId()).isEqualTo(111);
 
-        config = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, true, DockerRegistryCredentials.ANONYMOUS, 42, null);
+        config = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, true, false, DockerRegistryCredentials.ANONYMOUS, 42, null);
+        assertThat(config.isPullOnCreate()).isFalse();
+        assertThat(config.isRmOnExit()).isTrue();
+        assertThat(config.isUseOfficialTCAgentImage()).isFalse();
+        assertThat(config.getAgentPoolId()).isNull();
 
+        config = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, false, true, DockerRegistryCredentials.ANONYMOUS, 42, null);
+        assertThat(config.isPullOnCreate()).isFalse();
         assertThat(config.isRmOnExit()).isFalse();
         assertThat(config.isUseOfficialTCAgentImage()).isTrue();
-        assertThat(config.getAgentPoolId()).isNull();
     }
 
     @Test
     @SuppressWarnings("ConstantConditions")
     public void invalidConstructorsInput() {
-        new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, DockerRegistryCredentials.ANONYMOUS, 1, 111);
+        new DockerImageConfig("test", Node.EMPTY_OBJECT, true,true, false, DockerRegistryCredentials.ANONYMOUS, 1, 111);
 
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() ->
-                new DockerImageConfig(null, Node.EMPTY_OBJECT, true, false, DockerRegistryCredentials.ANONYMOUS, 1, 111));
+                new DockerImageConfig(null, Node.EMPTY_OBJECT, true,true, false, DockerRegistryCredentials.ANONYMOUS, 1, 111));
 
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() ->
-                new DockerImageConfig("test", null, true, false, DockerRegistryCredentials.ANONYMOUS, 1, 111));
+                new DockerImageConfig("test", Node.EMPTY_OBJECT, true,true, false, null, 1, 111));
+
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() ->
+                new DockerImageConfig("test", null, true,true, false, DockerRegistryCredentials.ANONYMOUS, 1, 111));
 
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, DockerRegistryCredentials.ANONYMOUS, 0, 111));
+                new DockerImageConfig("test", Node.EMPTY_OBJECT, true,true, false, DockerRegistryCredentials.ANONYMOUS, 0, 111));
 
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                new DockerImageConfig("test", Node.EMPTY_OBJECT, true, false, DockerRegistryCredentials.ANONYMOUS, -1, 111));
+                new DockerImageConfig("test", Node.EMPTY_OBJECT, true,true, false, DockerRegistryCredentials.ANONYMOUS, -1, 111));
     }
 
     @Test
@@ -73,7 +82,15 @@ public class DockerImageConfigTest {
         imageParameters.setParameter(CloudImageParameters.SOURCE_ID_FIELD, "TestProfile");
         imageParameters.setParameter(CloudImageParameters.AGENT_POOL_ID_FIELD, "42");
 
-        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(), "TestProfile");
+        EditableNode imageNode = imagesNode.addObject();
+        imageNode.getOrCreateObject("Administration").
+                put("Version", 42).
+                put("Profile", "TestProfile").
+                put("RmOnExit", true).
+                put("MaxInstanceCount", 2).
+                put("UseOfficialTCAgentImage", false);
+
+        imageNode.getOrCreateObject("Container").put("Image", "test-image");
 
         params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
         params.put(CloudImageParameters.SOURCE_IMAGES_JSON,
@@ -86,8 +103,19 @@ public class DockerImageConfigTest {
         DockerImageConfig imageConfig = images.get(0);
         assertThat(imageConfig.getProfileName()).isEqualTo("TestProfile");
         assertThat(imageConfig.getAgentPoolId()).isEqualTo(42);
+        assertThat(imageConfig.isUseOfficialTCAgentImage()).isFalse();
+        assertThat(imageConfig.isPullOnCreate()).isTrue(); // Default value
 
-        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(), "TestProfile2");
+        imageNode = imagesNode.addObject();
+        imageNode.getOrCreateObject("Administration").
+                put("Version", 42).
+                put("Profile", "TestProfile2").
+                put("RmOnExit", true).
+                put("MaxInstanceCount", 2).
+                put("UseOfficialTCAgentImage", true).
+                put("PullOnCreate", false);
+
+        imageNode.getOrCreateObject("Container").put("Image", "test-image");
 
         params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
 
@@ -96,6 +124,8 @@ public class DockerImageConfigTest {
 
         imageConfig = images.get(1);
         assertThat(imageConfig.getProfileName()).isEqualTo("TestProfile2");
+        assertThat(imageConfig.isUseOfficialTCAgentImage()).isTrue();
+        assertThat(imageConfig.isPullOnCreate()).isFalse();
         assertThat(imageConfig.getAgentPoolId()).isNull();
 
     }

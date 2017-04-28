@@ -11,6 +11,7 @@ import run.var.teamcity.cloud.docker.util.NodeStream;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.UUID;
 
@@ -76,7 +77,26 @@ class CreateContainerTestTask extends ContainerTestTask {
 
         container.put("Image", image);
 
-        msg("Pulling image");
+        if (imageConfig.isPullOnCreate()) {
+            pullImage(client, image);
+        }
+
+        msg("Creating container");
+        Node containerNode = client.createContainer(container.saveNode(), null);
+        String containerId = containerNode.getAsString("Id");
+
+        Node warnings = containerNode.getArray("Warnings", Node.EMPTY_ARRAY);
+        for (Node warning : warnings.getArrayValues()) {
+            warning(warning.getAsString());
+        }
+
+        testTaskHandler.notifyContainerId(containerId);
+
+        return Status.SUCCESS;
+    }
+
+    private void pullImage(DockerClient client, String image) {
+        msg("Pulling image " + image);
 
         try (NodeStream nodeStream = client.createImage(image, null, imageConfig.getRegistryCredentials())) {
             Node status;
@@ -91,8 +111,7 @@ class CreateContainerTestTask extends ContainerTestTask {
                 String error = status.getAsString("error", null);
                 if (error != null) {
                     Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
-                    LOG.warn("Failed to pull image: " + error + " -- " + details.getAsString("message", null));
-                    break;
+                    throw new ContainerTestTaskException("Failed to pull image: " + error + " -- " + details.getAsString("message", null));
                 }
                 String newStatusMsg = status.getAsString("status", null);
                 if (newStatusMsg != null) {
@@ -132,22 +151,9 @@ class CreateContainerTestTask extends ContainerTestTask {
                 }
 
             }
-        } catch (Exception e) {
-            LOG.warn("Failed to pull image: " + image, e);
+        } catch (IOException e) {
+            throw new ContainerTestTaskException("Failed to pull image.", e);
         }
-
-        msg("Creating container");
-        Node containerNode = client.createContainer(container.saveNode(), null);
-        String containerId = containerNode.getAsString("Id");
-
-        Node warnings = containerNode.getArray("Warnings", Node.EMPTY_ARRAY);
-        for (Node warning : warnings.getArrayValues()) {
-            warning(warning.getAsString());
-        }
-
-        testTaskHandler.notifyContainerId(containerId);
-
-        return Status.SUCCESS;
     }
 
     private boolean validProgress(BigInteger progress) {

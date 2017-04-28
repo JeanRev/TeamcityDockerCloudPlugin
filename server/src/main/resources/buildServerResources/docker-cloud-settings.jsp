@@ -166,6 +166,36 @@
                     </td>
                 </tr>
                 <tr>
+                    <th><label for="dockerCloudImage_Image">Maximum instance count:&nbsp;</label></th>
+                    <td>
+                        <input type="text" id="dockerCloudImage_MaxInstanceCount" class="mediumField"/>
+                        <span class="error" id="dockerCloudImage_MaxInstanceCount_error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Management:</th>
+                    <td>
+                        <p>
+                            <input type="checkbox" id="dockerCloudImage_PullOnCreate"/>
+                            <label for="dockerCloudImage_PullOnCreate">Pull image before creating container</label>
+                            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                            <span class="tooltiptext">Always attempt to pull the agent image before creating
+                                containers. If this box is unchecked, the agent image will need to be already available
+                                in the daemon local image store.</span>
+                        </p>
+                        <p>
+                            <input type="checkbox" id="dockerCloudImage_RmOnExit"/>
+                            <label for="dockerCloudImage_RmOnExit">Delete container when cloud agent is stopped</label>
+                            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                            <span class="tooltiptext">You may check this box if you want to remove the container as
+                                soon as the corresponding cloud instance is stopped. This may potentially free some
+                            disk space, and ensure that the next build will start in a totally fresh state. However, it
+                            also means that all the agent meta-data and applied server plugin upgrade so far will be
+                                lost.</span>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
                     <th><label for="dockerCloudImage_RegistryUser">Registry User:</label></th>
                     <td>
                         <p>
@@ -183,29 +213,6 @@
                         </p>
                     </td>
                 </tr>
-                <tr>
-                    <th><label for="dockerCloudImage_Image">Maximum instance count:&nbsp;</label></th>
-                    <td>
-                        <input type="text" id="dockerCloudImage_MaxInstanceCount" class="mediumField"/>
-                        <span class="error" id="dockerCloudImage_MaxInstanceCount_error"></span>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Management:</th>
-                    <td>
-                        <p>
-                            <input type="checkbox" id="dockerCloudImage_RmOnExit"/>
-                            <label for="dockerCloudImage_RmOnExit">Delete container when cloud agent is stopped</label>
-                            <i class="icon icon16 tc-icon_help_small tooltip"></i>
-                            <span class="tooltiptext">You may check this box if you want to remove the container as
-                                soon as the corresponding cloud instance is stopped. This may potentially free some
-                            disk space, and ensure that the next build will start in a totally fresh state. However, it
-                            also means that all the agent meta-data and applied server plugin upgrade so far will be
-                                lost.</span>
-                        </p>
-                    </td>
-                </tr>
-
             </table>
         </div>
         <div id="dockerCloudImageTab_run">

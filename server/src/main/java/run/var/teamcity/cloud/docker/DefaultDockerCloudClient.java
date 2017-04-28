@@ -339,23 +339,26 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                     Node containerSpec = authorContainerSpec(instance, image, serverAddress);
 
-                    try (NodeStream nodeStream = dockerClient.createImage(image, null, dockerImage.getConfig()
-                            .getRegistryCredentials())) {
-                        Node status;
-                        while ((status = nodeStream.next()) != null) {
-                            String error = status.getAsString("error", null);
-                            if (error != null) {
-                                Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
-                                throw new CloudException("Failed to pull image: " + error + " -- " + details
-                                        .getAsString("message", null), null);
+                    if (dockerImage.getConfig().isPullOnCreate()) {
+                        try (NodeStream nodeStream = dockerClient.createImage(image, null, dockerImage.getConfig()
+                                .getRegistryCredentials())) {
+                            Node status;
+                            while ((status = nodeStream.next()) != null) {
+                                String error = status.getAsString("error", null);
+                                if (error != null) {
+                                    Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
+                                    throw new CloudException("Failed to pull image: " + error + " -- " + details
+                                            .getAsString("message", null), null);
+                                }
                             }
+                        } catch (Exception e) {
+                            // Failure to pull is considered non-critical: if an image of this name exists in the Docker
+                            // daemon local repository but is potentially outdated we will use it anyway.
+                            LOG.warn("Failed to pull image " + image + " for instance " + instance.getUuid() +
+                                    ", proceeding anyway.", e);
                         }
-                    } catch (Exception e) {
-                        // Failure to pull is considered non-critical: if an image of this name exists in the Docker
-                        // daemon local repository but is potentially outdated we will use it anyway.
-                        LOG.warn("Failed to pull image " + image + " for instance " + instance.getUuid() +
-                                ", proceeding anyway.", e);
                     }
+
                     Node createNode = dockerClient.createContainer(containerSpec, null);
                     containerId = createNode.getAsString("Id");
                     LOG.info("New container " + containerId + " created.");

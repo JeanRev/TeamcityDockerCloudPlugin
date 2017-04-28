@@ -148,7 +148,7 @@ public class DockerTaskSchedulerTest {
     private DockerImage testImage() {
 
         return new DockerImage(null,
-                new DockerImageConfig("test", Node.EMPTY_OBJECT, true, true, DockerRegistryCredentials.ANONYMOUS, 1, null));
+                new DockerImageConfig("test", Node.EMPTY_OBJECT, true,true, true, DockerRegistryCredentials.ANONYMOUS, 1, null));
     }
 
     private class TestDockerClientTask extends DockerClientTask {

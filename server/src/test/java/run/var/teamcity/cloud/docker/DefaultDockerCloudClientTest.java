@@ -42,6 +42,7 @@ public class DefaultDockerCloudClientTest {
     private DefaultDockerCloudClient client;
     private TestDockerClientFactory dockerClientFactory;
     private Node containerSpec;
+    private boolean pullOnCreate;
     private boolean rmOnExit;
     private int maxInstanceCount;
     private TestSBuildServer buildServer;
@@ -55,7 +56,9 @@ public class DefaultDockerCloudClientTest {
     @Before
     public void init() throws MalformedURLException {
         dockerClientFactory = new TestDockerClientFactory();
-        dockerClientFactory.addConfigurator(dockerClient -> dockerClient.knownImage("resolved-image", "latest"));
+        dockerClientFactory.addConfigurator(dockerClient -> dockerClient
+                .localImage("resolved-image", "latest")
+                .registryImage("resolved-image", "latest"));
         serverURL = new URL("http://not.a.real.server.url");
         defaultServerURL = new URL("http://not.a.real.default.server.url");
         containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
@@ -66,6 +69,7 @@ public class DefaultDockerCloudClientTest {
                 null, "", "", Collections.emptyMap());
         errorInfo = null;
         maxInstanceCount = 1;
+        pullOnCreate = true;
         rmOnExit = true;
     }
 
@@ -484,7 +488,9 @@ public class DefaultDockerCloudClientTest {
         waitUntil(() -> instance.getStatus() == InstanceStatus.ERROR);
         waitUntil(() -> image.getInstances().isEmpty());
 
-        // Image does not exists.
+        assertThat(image.getConfig().isPullOnCreate()).isTrue();
+
+        // Image does not exists in registry nor locally.
         dockerImageResolver.image("not a valid image:1.0");
 
         DockerInstance instance2 = client.startNewInstance(image, userData);
@@ -495,7 +501,7 @@ public class DefaultDockerCloudClientTest {
         // Image exists only locally. Pull will fail, but should start the container anyway.
         TestDockerClient dockerClient = dockerClientFactory.getClient();
         dockerImageResolver.image("image_not_in_repo:1.0");
-        dockerClient.knownImage("image_not_in_repo", "1.0", true);
+        dockerClient.localImage("image_not_in_repo", "1.0");
 
         DockerInstance instance3 = client.startNewInstance(image, userData);
         waitUntil(() -> instance3.getStatus() == InstanceStatus.RUNNING);
@@ -503,6 +509,34 @@ public class DefaultDockerCloudClientTest {
         assertThat(client.canStartNewInstance(image)).isFalse();
 
         assertThatExceptionOfType(QuotaException.class).isThrownBy(() -> client.startNewInstance(image, userData));
+    }
+
+    @Test
+    public void startNewInstanceNoPull() {
+
+        pullOnCreate = false;
+        maxInstanceCount = 2;
+
+        DefaultDockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+        waitUntil(() -> client.canStartNewInstance(image));
+
+        TestDockerClient dockerClient = dockerClientFactory.getClient();
+
+        // Image exists locally but not in registry.
+        dockerClient.localImage("localImage", "1.0");
+        dockerImageResolver.image("localImage:1.0");
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        // Image exists in registry but not locally.
+        dockerClient.registryImage("registryImage", "1.0");
+        dockerImageResolver.image("registryImage:1.0");
+
+        DockerInstance instance2 = client.startNewInstance(image, userData);
+        waitUntil(() -> instance2.getStatus() == InstanceStatus.ERROR);
     }
 
     @Test
@@ -663,7 +697,7 @@ public class DefaultDockerCloudClientTest {
         DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
         DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2, serverURL);
-        DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, rmOnExit, false,
+        DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, pullOnCreate, rmOnExit, false,
                 DockerRegistryCredentials.ANONYMOUS, maxInstanceCount, 111);
         return client = new DefaultDockerCloudClient(clientConfig, dockerClientFactory,
                 Collections.singletonList(imageConfig), dockerImageResolver,

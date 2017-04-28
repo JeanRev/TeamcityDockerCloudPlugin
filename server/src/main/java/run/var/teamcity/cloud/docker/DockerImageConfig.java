@@ -24,22 +24,26 @@ public class DockerImageConfig {
 
     private final String profileName;
     private final Node containerSpec;
+    private final boolean pullOnCreate;
     private final boolean rmOnExit;
     private final boolean useOfficialTCAgentImage;
     private final int maxInstanceCount;
     private final Integer agentPoolId;
     private final DockerRegistryCredentials registryCredentials;
 
-    public DockerImageConfig(@Nonnull String profileName, @Nonnull Node containerSpec, boolean rmOnExit,
-                             boolean useOfficialTCAgentImage, @Nonnull DockerRegistryCredentials registryCredentials,
-                             int maxInstanceCount, @Nullable Integer agentPoolId) {
+    public DockerImageConfig(@Nonnull String profileName, @Nonnull Node containerSpec, boolean pullOnCreate,
+                             boolean rmOnExit, boolean useOfficialTCAgentImage,
+                             @Nonnull DockerRegistryCredentials registryCredentials, int maxInstanceCount,
+                             @Nullable Integer agentPoolId) {
         DockerCloudUtils.requireNonNull(profileName, "Profile name cannot be null.");
+        DockerCloudUtils.requireNonNull(registryCredentials, "Registry credentials cannot be null.");
         DockerCloudUtils.requireNonNull(containerSpec, "Container specification cannot be null.");
         if (maxInstanceCount < 1) {
             throw new IllegalArgumentException("At least 1 instance must be allowed.");
         }
         this.profileName = profileName;
         this.containerSpec = containerSpec;
+        this.pullOnCreate = pullOnCreate;
         this.rmOnExit = rmOnExit;
         this.useOfficialTCAgentImage = useOfficialTCAgentImage;
         this.maxInstanceCount = maxInstanceCount;
@@ -65,6 +69,15 @@ public class DockerImageConfig {
     @Nonnull
     public Node getContainerSpec() {
         return containerSpec;
+    }
+
+    /**
+     * Pull-on-create flag. When {@code true}, the image will be pulled before the container creation.
+     *
+     * @return {@code true} if the container image must be pulled before creation.
+     */
+    public boolean isPullOnCreate() {
+        return pullOnCreate;
     }
 
     /**
@@ -212,6 +225,7 @@ public class DockerImageConfig {
             }
 
             String profileName = admin.getAsString("Profile");
+            boolean pullOnCreate = admin.getAsBoolean("PullOnCreate", true);
             boolean deleteOnExit = admin.getAsBoolean("RmOnExit");
             boolean useOfficialTCAgentImage = admin.getAsBoolean("UseOfficialTCAgentImage");
 
@@ -227,7 +241,7 @@ public class DockerImageConfig {
 
             DockerRegistryCredentials dockerRegistryCredentials =  registryAuthentication(admin);
 
-            return new DockerImageConfig(profileName, node.getObject("Container"), deleteOnExit,
+            return new DockerImageConfig(profileName, node.getObject("Container"), pullOnCreate, deleteOnExit,
                     useOfficialTCAgentImage, dockerRegistryCredentials, admin.getAsInt("MaxInstanceCount", -1), agentPoolId);
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to parse image JSON definition:\n" + node, e);
