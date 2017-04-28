@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Spring controller to handle Docker connectivity tests.
  */
-public class CheckConnectivityController extends BaseFormXmlController {
+public class CheckConnectivityController extends BaseFormJsonController {
 
     public static final String PATH = "checkconnectivity.html";
 
@@ -42,7 +42,6 @@ public class CheckConnectivityController extends BaseFormXmlController {
                                 @Nonnull PluginDescriptor pluginDescriptor,
                                 @Nonnull WebControllerManager manager,
                                 @Nonnull DockerClientFactory dockerClientFactory) {
-        super(server);
         this.dockerClientFactory = dockerClientFactory;
         manager.registerController(pluginDescriptor.getPluginResourcesPath(PATH), this);
     }
@@ -54,7 +53,7 @@ public class CheckConnectivityController extends BaseFormXmlController {
     }
 
     @Override
-    protected void doPost(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Element xmlResponse) {
+    protected void doPost(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull EditableNode responseNode) {
 
         Map<String, String> properties = DockerCloudUtils.extractTCPluginParams(request);
 
@@ -76,23 +75,19 @@ public class CheckConnectivityController extends BaseFormXmlController {
 
             Node version = client.getVersion();
 
-            EditableNode infoNode = EditableNode.newEditableNode().put("info", version);
-            infoNode.getOrCreateObject("meta")
+            responseNode.put("info", version);
+            responseNode.getOrCreateObject("meta")
                     .put("serverTime", System.currentTimeMillis())
                     .put("effectiveApiVersion", effectiveApiVersion.getVersionString());
-
-            Element infoElt = new Element("info");
-            infoElt.addContent(DockerCloudUtils.filterXmlText(infoNode.toString()));
-            xmlResponse.addContent(infoElt);
         } catch (Exception e) {
             error = e;
         }
 
         if (error != null) {
             String msg = error.getMessage();
-            xmlResponse.addContent(new Element("error").setText(DockerCloudUtils.filterXmlText(msg != null ? msg : "")));
-            xmlResponse.addContent(new Element("failureCause").setText(DockerCloudUtils.filterXmlText(
-                    DockerCloudUtils.getStackTrace(error))));
+            responseNode
+                    .put("error", msg != null ? msg : "")
+                    .put("failureCause", DockerCloudUtils.getStackTrace(error));
         }
     }
 

@@ -1,11 +1,11 @@
 package run.var.teamcity.cloud.docker.web;
 
 import org.assertj.core.data.Offset;
-import org.jdom.Element;
 import org.junit.Before;
 import org.junit.Test;
 import run.var.teamcity.cloud.docker.test.*;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import java.io.IOException;
@@ -44,22 +44,18 @@ public class CheckConnectivityControllerTest {
         TestHttpServletRequest request = new TestHttpServletRequest();
         request.parameters(TestUtils.getSampleDockerConfigParams());
 
-        Element element = new Element("root");
-        ctrl.doPost(request, new TestHttpServletResponse(), element);
+        EditableNode responseNode = Node.EMPTY_OBJECT.editNode();
+        ctrl.doPost(request, new TestHttpServletResponse(), responseNode);
 
-        assertThat(element).isNotNull();
-        assertThat(element.getChildren()).isNotEmpty();
-        assertThat(element.getChild("info")).isNotNull();
+        assertThat(responseNode.getObject("info", null)).isNotNull();
 
         TestDockerClient client = dockerClientFty.getClient();
 
         Node version = client.getVersion();
-        Node infoRoot = Node.parse(element.getChild("info").getText());
-        assertThat(infoRoot.getObject("info")).isEqualTo(version);
+        EditableNode infoNode = responseNode.getObject("info");
+        assertThat(infoNode).isEqualTo(version);
 
-        Node meta = infoRoot.getObject("meta");
-
-        assertThat(meta).isNotNull();
+        EditableNode meta = responseNode.getObject("meta");
 
         assertThat(meta.getAsLong("serverTime"))
                 .isCloseTo(System.currentTimeMillis(), Offset.offset(400L));

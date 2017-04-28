@@ -204,25 +204,16 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         deferred.reject(response.getStatusText());
                     },
                     onSuccess: function (response) {
-                        var $response = $j(response.responseXML);
-                        self.tmpResp = $response;
-                        var $error = $response.find("error");
-                        if ($error.length) {
-                            var failureCause;
-                            var $failureCause = $response.find("failureCause");
-                            if ($failureCause.length) {
-                                failureCause = $failureCause.text();
-                            }
-                            self.logInfo("Error found " + $error.text());
-                            deferred.reject($error.text(), failureCause);
+                        var responseMap = JSON.parse(response.responseText);
+                        var error = responseMap.error;
+                        if (error) {
+                            deferred.reject(error, responseMap.failureCause);
                         } else {
-                            var $info = $response.find('info');
-                            var infoJson = $info.text();
-                            self.daemonInfo = JSON.parse(infoJson);
+                            self.daemonInfo = responseMap;
                             // Serialize the JSON string back to persistable input value.
-                            self.$daemonInfo.val(JSON.stringify(self.daemonInfo));
+                            self.$daemonInfo.val(JSON.stringify(responseMap));
                             self._updateDaemonApiVersionLbl();
-                            deferred.resolve($response);
+                            deferred.resolve(responseMap);
                         }
                     }
                 });
@@ -1190,7 +1181,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.$testContainerLabel.text("Starting test...");
                     self._invokeTestAction('create', BS.Clouds.Admin.CreateProfileForm.serializeParameters())
                         .done(function (response) {
-                            self.testUuid = $j(response.responseXML).find('testUuid').text();
+                            self.testUuid = JSON.parse(response.responseText).testUuid;
                             self._queryTestStatus();
                         });
                 });
@@ -1226,7 +1217,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerContainerLogsBtn.click(function() {
                     self._invokeTestAction('logs', null, true)
                         .done(function(response) {
-                            var logs = $j(response.responseXML).find('logs').text();
+                            var logs = JSON.parse(response.responseText).logs;
                             self.prepareDiagnosticDialog("Container logs:", logs);
                             self.$testContainerLoader.hide();
                             BS.DockerDiagnosticDialog.showCentered();
@@ -1275,7 +1266,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 } else {
                     self._invokeTestAction('query', BS.Clouds.Admin.CreateProfileForm.serializeParameters())
                         .done(function(response){
-                            var responseMap = self._parseTestStatusResponse(response.responseXML);
+                            var responseMap = self._parseTestStatusResponse(response.responseText);
                             if (responseMap.status == 'PENDING') {
                                 self.logDebug('Scheduling status retrieval.');
                                 setTimeout(self._queryTestStatus, 5000);
@@ -1412,23 +1403,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
             },
 
-            _parseTestStatusResponse: function(xml) {
-                var $xml = $j(xml);
-                var responseMap = {
-                    msg: $xml.find('msg').text(),
-                    containerId: $xml.find('containerId').text(),
-                    status: $xml.find('status').text(),
-                    phase: $xml.find('phase').text(),
-                    taskUuid: $xml.find("taskUuid").text(),
-                    failureCause: $xml.find("failureCause").text(),
-                    warnings: []
-                };
-
-                $xml.find('warning').each(function() {
-                    responseMap.warnings.push(this.innerText);
-                });
-
-                return responseMap;
+            _parseTestStatusResponse: function(json) {
+                self.logInfo("Received MSG: " + json);
+                return JSON.parse(json).statusMsg;
             },
 
             _invokeTestAction: function(action, parameters, immediate) {
