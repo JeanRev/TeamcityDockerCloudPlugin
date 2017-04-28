@@ -208,7 +208,7 @@
                     <th><label for="dockerCloudImage_RegistryPassword">Registry Password:</label></th>
                     <td>
                         <p>
-                            <input type="text" id="dockerCloudImage_RegistryPassword" class="mediumField"/>
+                            <input type="password" id="dockerCloudImage_RegistryPassword" class="mediumField"/>
                             <span class="error" id="dockerCloudImage_RegistryPassword_error"></span>
                         </p>
                     </td>

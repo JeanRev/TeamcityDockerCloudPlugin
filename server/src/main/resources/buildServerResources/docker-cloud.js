@@ -393,7 +393,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                     });
                     self._insertAddButton($elt, colCount);
-                } else if ($elt.is(':text')) {
+                } else if ($elt.is(':text') || $elt.is(':password')) {
                     $elt.val(parentObject[key]);
                 } else if ($elt.is(':checkbox')) {
                     $elt.prop('checked', parentObject[key] === true);
@@ -531,7 +531,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     });
                 } else if (tagName == 'SELECT') {
                     parentObject[key] = $elt.val();
-                } else if ($elt.is(':text')) {
+                } else if ($elt.is(':text') || $elt.is(':password')) {
                     parentObject[key] = $elt.val();
                 } else if ($elt.is(':checkbox')) {
                     parentObject[key] = $elt.is(':checked');
