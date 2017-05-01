@@ -24,9 +24,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.daemonTargetVersion = params.daemonTargetVersion;
                 self.daemonMinVersion = params.daemonMinVersion;
 
+                var useTlsParam = params.useTlsParam;
                 var imagesParam = params.imagesParam;
                 var tcImagesDetailsParam = params.tcImagesDetails;
-                var daemonInfoParam = params.daemonInfoParam;
 
                 self.hasWebSocketSupport = 'WebSocket' in window;
                 self.hasXTermSupport = self.hasWebSocketSupport && self.checkXtermBrowserSupport();
@@ -45,9 +45,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$imageDialogSubmitBtn = $j('#dockerAddImageButton');
                 self.$imageDialogCancelBtn = $j('#dockerCancelAddImageButton');
                 self.$imagesTable = $j('#dockerCloudImagesTable');
+                self.$useTls = $j(BS.Util.escapeId(useTlsParam));
                 self.$images = $j(BS.Util.escapeId(imagesParam));
                 self.$tcImagesDetails = $j(BS.Util.escapeId(tcImagesDetailsParam));
-                self.$daemonInfo = $j(BS.Util.escapeId(daemonInfoParam));
                 self.$dockerAddress = $j("#dockerCloudDockerAddress");
                 self.$useLocalInstance = $j("#dockerCloudUseLocalInstance");
                 self.$useCustomInstance = $j("#dockerCloudUseCustomInstance");
@@ -92,8 +92,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$diagnosticCopyBtn = $j('#dockerDiagnosticCopyBtn');
                 self.$diagnosticCloseBtn = $j('#dockerDiagnosticCloseBtn');
 
-                self._initDaemonInfo();
                 self._initImagesData();
+                self._initDaemonInfo();
                 self._initTabs();
                 self._initValidators();
                 self._bindHandlers();
@@ -104,15 +104,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             /* MAIN SETTINGS */
 
             _initDaemonInfo: function() {
-                var daemonInfoVal = self.$daemonInfo.val();
-                if (daemonInfoVal) {
-                    try {
-                        self.daemonInfo = JSON.parse(daemonInfoVal);
-                    } catch (e) {
-                        self.logError("Failed to parse server info structure: " + daemonInfoVal);
-                    }
+                // Simple heuristic to check if this is a new cloud profile. At least one image must be saved for
+                // existing profiles.
+                var existingProfile = Object.keys(self.imagesData).length;
+
+                if (existingProfile) {
+                    setTimeout(self._checkConnection, 0);
                 }
-                self._updateDaemonApiVersionLbl();
             },
 
             _renderImagesTable: function () {
@@ -165,11 +163,24 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var useLocalInstance = self.$useLocalInstance.is(':checked');
                 self.$dockerAddress.val(useLocalInstance ? self.defaultLocalSocketURI : "");
                 self.$dockerAddress.prop('disabled', useLocalInstance);
+                self._scheduleConnectionCheck();
+            },
+            _scheduleConnectionCheck: function() {
+                if (self.checkConnectionTimeout) {
+                    clearTimeout(self.checkConnectionTimeout);
+                }
+                self.checkConnectionTimeout = setTimeout(self._checkConnection, 500);
             },
             _checkConnection: function () {
+                self.$checkConnectionResult.hide().removeClass('infoMessage errorMessage').empty();
+                self.$checkConnectionWarning.hide().empty();
+
+                if (!self.$dockerAddress.val()) {
+                    return;
+                }
+
                 self._toggleCheckConnectionBtn();
                 self.$checkConnectionLoader.show();
-                self.$checkConnectionResult.hide().removeClass('successMessage errorMessage').empty();
 
                 var deferred = self._queryDaemonInfo();
 
@@ -183,9 +194,25 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                     self.$checkConnectionResult.append($container).show();
                 }).
-                done(function() {
-                    self.$checkConnectionResult.addClass('successMessage');
-                    self.$checkConnectionResult.text('Connection successful.').show();
+                done(function(daemonInfo) {
+                    var effectiveApiVersion = daemonInfo.meta.effectiveApiVersion;
+
+                    self.$checkConnectionResult.addClass('infoMessage');
+                    self.$checkConnectionResult.text('Connection successful to Docker v' + daemonInfo.info.Version
+                    + ' (API v ' + effectiveApiVersion + ') on '
+                    + daemonInfo.info.Os + '/' + daemonInfo.info.Arch).show();
+
+                    if (self.compareVersionNumbers(effectiveApiVersion, self.daemonMinVersion) < 0 ||
+                        self.compareVersionNumbers(effectiveApiVersion, self.daemonTargetVersion) > 0) {
+                        self.$checkConnectionWarning
+                            .append('Warning: daemon API version is outside of supported version range (v'
+                                + self.daemonMinVersion + " - v" + self.daemonTargetVersion + ").").show();
+
+                        // Prevent further version check.
+                        effectiveApiVersion = null;
+                    }
+
+                    self.effectiveApiVersion = effectiveApiVersion;
                 }).
                 always(function () {
                     self.$checkConnectionLoader.hide();
@@ -198,26 +225,40 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _queryDaemonInfo: function() {
                 var deferred = $j.Deferred();
 
-                BS.ajaxRequest(self.checkConnectivityCtrlURL, {
-                    parameters: BS.Clouds.Admin.CreateProfileForm.serializeParameters(),
-                    onFailure: function (response) {
-                        deferred.reject(response.getStatusText());
+                if (self.queryDaemonInfoReq) {
+                    self.logDebug("Aborting previous connection check.");
+                    self.queryDaemonInfoReq.abort();
+                }
+
+                var data = self.queryDaemonInfoReqData = BS.Clouds.Admin.CreateProfileForm.serializeParameters();
+                    self.queryDaemonInfoReq = $j.ajax({
+                    url: self.checkConnectivityCtrlURL,
+                    method: 'POST',
+                    data: data,
+                    error: function(response) {
+                        var msg = response.statusText;
+                        switch (msg) {
+                            case 'abort':
+                                return;
+                            case 'timeout':
+                                msg = 'Server did not reply in time.'
+                        }
+
+                        deferred.reject(msg);
                     },
-                    onSuccess: function (response) {
-                        var responseMap = JSON.parse(response.responseText);
+                    success: function(responseMap) {
                         var error = responseMap.error;
                         if (error) {
                             deferred.reject(error, responseMap.failureCause);
                         } else {
-                            self.daemonInfo = responseMap;
-                            // Serialize the JSON string back to persistable input value.
-                            self.$daemonInfo.val(JSON.stringify(responseMap));
-                            self._updateDaemonApiVersionLbl();
                             deferred.resolve(responseMap);
                         }
-                    }
+                    },
+                    complete: function() {
+                      delete self.queryDaemonInfoReq;
+                    },
+                    timeout: 15000
                 });
-
                 return deferred;
             },
 
@@ -874,34 +915,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 return viewModel;
             },
-
-            _updateDaemonApiVersionLbl: function() {
-                self.$checkConnectionInfo.empty().hide().removeClass('infoMessage grayedMessage');
-                self.$checkConnectionWarning.empty().hide();
-                if (self.daemonInfo) {
-                    var date = new Date(self.daemonInfo.meta.serverTime);
-                    var effectiveApiVersion = self.daemonInfo.meta.effectiveApiVersion;
-                    self.$checkConnectionInfo.addClass('infoMessage');
-                    self.$checkConnectionInfo.append('Docker v' + self.daemonInfo.info.Version
-                        + ' (API v ' + effectiveApiVersion + ') on '
-                        + self.daemonInfo.info.Os + '/' + self.daemonInfo.info.Arch
-                        + ' (last checked: ' + date.getFullYear() + '/'
-                        + (self._padLeft(date.getMonth() + 1, '0', 2)) + '/'
-                        + self._padLeft(date.getDate(), '0', 2) + ' ' + self._padLeft(date.getHours(), '0', 2)
-                        + ':' + self._padLeft(date.getMinutes(), '0', 2) + ':'
-                        + self._padLeft(date.getSeconds(), '0', 2) + ')').show();
-                   if (self.compareVersionNumbers(effectiveApiVersion, self.daemonMinVersion) < 0 ||
-                       self.compareVersionNumbers(effectiveApiVersion, self.daemonTargetVersion) > 0) {
-                       self.$checkConnectionWarning
-                           .append('Warning: daemon API version is outside of supported version range (v'
-                               + self.daemonMinVersion + " - v." + self.daemonTargetVersion + ").").show();
-                   }
-                } else {
-                    self.$checkConnectionInfo.addClass('grayedMessage');
-                    self.$checkConnectionInfo.append('Check connection to validate the daemon settings.').show();
-                }
-            }
-            ,
             /* TABS */
 
             _initTabs: function () {
@@ -983,6 +996,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self.$useLocalInstance.change(self._instanceChange);
                 self.$useCustomInstance.change(self._instanceChange);
+                self.$useTls.change(self._scheduleConnectionCheck);
 
                 var useLocalInstance = self.$useLocalInstance.is(':checked');
                 self.$dockerAddress.prop('disabled', useLocalInstance);
@@ -1000,6 +1014,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     var match = address.match(/([a-zA-Z]+?):\/*(.*)/);
                     var scheme;
                     var schemeSpecificPart;
+                    var ignore = false;
                     if (match) {
                         // Some scheme detected.
                         scheme = match[1].toLowerCase();
@@ -1014,11 +1029,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             schemeSpecificPart = match[1];
                         } else {
                             // Most certainly invalid, but let the server complain about it.
-                            return;
+                            ignore = true;
                         }
                     }
 
-                    self.$dockerAddress.val(scheme + ':' + (scheme == 'unix' ? '///' : '//') + schemeSpecificPart);
+                    if (!ignore) {
+                        self.$dockerAddress.val(scheme + ':' + (scheme === 'unix' ? '///' : '//') + schemeSpecificPart);
+                    }
+
+                    self._scheduleConnectionCheck();
                 });
 
                 self.$imageDialogSubmitBtn.click(function() {
@@ -1066,10 +1085,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self.$registryUser.change(function () {
                     self.$registryPassword.blur();
-                }).change()
+                }).change();
                 self.$registryPassword.change(function () {
                     self.$registryUser.blur();
-                }).change
+                }).change();
 
                 var networkMode = $j("#dockerCloudImage_NetworkMode");
                 var customNetwork = $j("#dockerCloudImage_NetworkCustom");
@@ -1412,7 +1431,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             _parseTestStatusResponse: function(json) {
-                self.logInfo("Received MSG: " + json);
                 return JSON.parse(json).statusMsg;
             },
 
@@ -1579,7 +1597,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 };
 
                 var versionValidator = function(targetVersion, elt) {
-                    if (!self.daemonInfo) {
+                    if (!self.effectiveApiVersion) {
                         return;
                     }
                     var value = elt.val().trim();
@@ -1588,7 +1606,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         return;
                     }
 
-                    var daemonVersion = self.daemonInfo.meta.effectiveApiVersion;
+                    var daemonVersion = self.effectiveApiVersion;
 
                     if (self.compareVersionNumbers(daemonVersion, targetVersion) < 0) {
                         return {msg: 'The daemon API version (v' + daemonVersion + ') is lower than required for ' +

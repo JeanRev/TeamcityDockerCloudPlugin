@@ -25,10 +25,6 @@
     font-weight: bold;
 }
 
-.dockerCloudSettings .successMessage {
-    background-color: #ffc;
-}
-
 .dockerCloudSettings .errorMessage {
     background-color: #FEEDEB;
 }
@@ -39,10 +35,6 @@
 
 .dockerCloudSettings .infoMessage {
     background: #E0F2F9;
-}
-
-.dockerCloudSettings .grayedMessage {
-    background: #F5F5F5;
 }
 
 #DockerCloudImageDialog {

@@ -80,7 +80,6 @@
         </tr>
     </table>
     <div id="dockerCloudCheckConnectionResult" class="message hidden"></div>
-    <div id="dockerCloudCheckConnectionInfo" class="message hidden"></div>
     <div id="dockerCloudCheckConnectionWarning" class="message warningMessage hidden"></div>
 
     <h2 class="noBorder section-header">Agent Images <span class="error"
@@ -843,11 +842,11 @@
                             defaultLocalSocketURI: '<%=DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI%>',
                             checkConnectivityCtrlURL: '<c:url value="${resPath}checkconnectivity.html"/>',
                             testContainerCtrlURL: '<c:url value="${resPath}test-container.html"/>',
+                            useTlsParam: '<%=DockerCloudUtils.USE_TLS%>',
                             imagesParam: '<%=DockerCloudUtils.IMAGES_PARAM%>',
                             tcImagesDetails: '<%= CloudImageParameters.SOURCE_IMAGES_JSON %>',
                             daemonTargetVersion: '<%=DockerCloudUtils.DOCKER_API_TARGET_VERSION.getVersionString()%>',
                             daemonMinVersion: '<%=DockerCloudUtils.DOCKER_API_MIN_VERSION.getVersionString()%>',
-                            daemonInfoParam: '<%=DockerCloudUtils.DAEMON_INFO_PARAM%>',
                             errorIconURL: '<c:url value="/img/attentionCommentRed.png"/>',
                             warnIconURL: '<c:url value="/img/attentionComment.png"/>',
                             testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>',

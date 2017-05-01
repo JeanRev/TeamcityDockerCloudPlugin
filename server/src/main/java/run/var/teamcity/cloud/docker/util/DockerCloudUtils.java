@@ -57,10 +57,6 @@ public final class DockerCloudUtils {
      */
     public static final String SERVER_URL_PARAM = NS_PREFIX + "server_url";
     /**
-     * Docker cloud parameter: last known Daemon API version number.
-     */
-    public static final String DAEMON_INFO_PARAM = NS_PREFIX + "daemon_info";
-    /**
      * Docker cloud parameter: images configuration.
      */
     public static final String IMAGES_PARAM = NS_PREFIX + "img_param";
