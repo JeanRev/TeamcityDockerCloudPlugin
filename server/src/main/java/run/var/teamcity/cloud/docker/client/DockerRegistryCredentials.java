@@ -86,17 +86,13 @@ public class DockerRegistryCredentials {
     @Override
     public boolean equals(Object o)
     {
-        if (this == o)
-        {
-            return true;
+        if (o instanceof DockerRegistryCredentials) {
+            DockerRegistryCredentials that = (DockerRegistryCredentials) o;
+            return isAnonymous() && that.isAnonymous() ||
+                    (Objects.equals(username, that.username) &&
+                            Objects.equals(password, that.password));
         }
-        if (o == null || getClass() != o.getClass())
-        {
-            return false;
-        }
-        DockerRegistryCredentials that = (DockerRegistryCredentials) o;
-        return Objects.equals(username, that.username) &&
-                Objects.equals(password, that.password);
+        return false;
     }
 
     @Override
