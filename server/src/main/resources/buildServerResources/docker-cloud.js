@@ -391,6 +391,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _applyViewModel: function(viewModel) {
                 $j('[id^="dockerCloudImage_"], [name^="dockerCloudImage_"]').each(function(i, elt) {
                     var $elt = $j(elt);
+                    // TODO: handle attribute name according to input type.
                     var key = $elt.attr('id') || $elt.attr('name');
                     var match = /^dockerCloudImage_([^_]+)$/.exec(key);
                     if (match) {
@@ -402,9 +403,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var tagName = $elt.prop("tagName");
                 if (tagName === "TBODY") {
                     var arrayTemplate = self.arrayTemplates['dockerCloudImage_' + key];
-                    if (!arrayTemplate) {
-                        alert("Template not found: " + key)
-                    }
                     var colCount = arrayTemplate.match(/<td/g).length;
                     // Clear the table content.
                     $elt.empty();

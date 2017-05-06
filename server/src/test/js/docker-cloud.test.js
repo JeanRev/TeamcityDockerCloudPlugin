@@ -80,7 +80,7 @@ describe('Migrating images data', function() {
         ]);
     });
 
-    it('init default PullOnCreate flag when image V2', function() {
+    it('should init default PullOnCreate flag when image V2', function() {
         var image = {
             Administration: { Version: 2 }
         };
@@ -95,5 +95,95 @@ describe('Migrating images data', function() {
         dockerCloud._migrateImagesData(image);
 
         expect(image.Administration.PullOnCreate).toEqual(false);
+    });
+});
+
+describe('Applying view model', function() {
+    it('should handle text input', function() {
+
+        $j(document.body).html('<input id="dockerCloudImage_test1" type="text"/>' +
+            '<input id="dockerCloudImage_test2" type="text"/>' +
+            '<input id="dockerCloudImage_test3" type="text"/>');
+
+        dockerCloud._applyViewModel( { test1: 'hello1', test2: 'hello2', test3: 'hello3' });
+
+        expect($j('#dockerCloudImage_test1').val()).toEqual('hello1');
+        expect($j('#dockerCloudImage_test2').val()).toEqual('hello2');
+        expect($j('#dockerCloudImage_test3').val()).toEqual('hello3');
+    });
+
+    it('should handle password input', function() {
+
+        $j(document.body).html('<input id="dockerCloudImage_test" type="password"/>');
+
+        dockerCloud._applyViewModel( { test: 'hello world' });
+
+        expect($j('#dockerCloudImage_test').val()).toEqual('hello world');
+    });
+
+    it('should handle checkbox input', function() {
+
+        $j(document.body).html('<input id="dockerCloudImage_testChecked" type="checkbox"/>' +
+            '<input id="dockerCloudImage_testUnchecked" type="checkbox"/>');
+
+        dockerCloud._applyViewModel( { testChecked: true, testUnchecked: false });
+
+        expect($j('#dockerCloudImage_testChecked').is(':checked')).toEqual(true);
+        expect($j('#dockerCloudImage_testUnchecked').is(':checked')).toEqual(false);
+    });
+
+    it('should handle radio button', function() {
+        $j(document.body).html('<input class="radioA" name="dockerCloudImage_testRadio" type="radio" value="A"/>' +
+            '<input class="radioB" name="dockerCloudImage_testRadio" type="radio" value="B"/>');
+
+        dockerCloud._applyViewModel( { testRadio: 'B' });
+
+        expect($j('.radioA').is(':checked')).toEqual(false);
+        expect($j('.radioB').is(':checked')).toEqual(true);
+    });
+
+    it('should handle selects', function () {
+        $j(document.body).html('<select id="dockerCloudImage_testSelect">' +
+            '<option value="a">A</option>' +
+            '<option value="b">B</option>' +
+            '</select>');
+
+        dockerCloud._applyViewModel( { testSelect: 'b' });
+
+        expect($j('#dockerCloudImage_testSelect').val()).toEqual('b');
+    });
+
+    it('should handle tabular value', function () {
+        $j(document.body).html('<table>' +
+            '<tbody id="dockerCloudImage_testTable">' +
+            '</tbody>');
+
+        dockerCloud.arrayTemplates['dockerCloudImage_testTable'] =
+            '<td><input type="text" id="dockerCloudImage_testTable_IDX_testFieldA"/></td>' +
+            '<td><input type="checkbox" id="dockerCloudImage_testTable_IDX_testFieldB"/></td>';
+
+        dockerCloud._applyViewModel( { testTable: [
+            { testFieldA: "A1", testFieldB: true },
+            { testFieldA: "A2", testFieldB: false }
+            ] });
+
+        expect($j('#dockerCloudImage_testTable_0_testFieldA').val()).toEqual('A1');
+        expect($j('#dockerCloudImage_testTable_0_testFieldB').is(':checked')).toEqual(true);
+        expect($j('#dockerCloudImage_testTable_1_testFieldA').val()).toEqual('A2');
+        expect($j('#dockerCloudImage_testTable_1_testFieldB').is(':checked')).toEqual(false);
+    });
+
+    it('should handle simple tabular value', function () {
+        $j(document.body).html('<table>' +
+            '<tbody id="dockerCloudImage_testTable">' +
+            '</tbody>');
+
+        dockerCloud.arrayTemplates['dockerCloudImage_testTable'] =
+            '<td><input type="text" id="dockerCloudImage_testTable_IDX"/></td>';
+
+        dockerCloud._applyViewModel( { testTable: [ 'hello', 'world' ] });
+
+        expect($j('#dockerCloudImage_testTable_0').val()).toEqual('hello');
+        expect($j('#dockerCloudImage_testTable_1').val()).toEqual('world');
     });
 });
