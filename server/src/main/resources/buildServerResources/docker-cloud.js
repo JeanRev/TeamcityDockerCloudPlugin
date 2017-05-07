@@ -585,13 +585,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var settings = {};
 
                 var admin = settings.Administration = {};
-                var editor = settings.Editor = {};
+                var editor = {};
 
                 admin.Version = self.IMAGE_VERSION;
 
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'RmOnExit');
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'PullOnCreate');
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'BindAgentProps');
+
                 if (self._filterFromSettings(viewModel.MaxInstanceCount)) {
                     admin.MaxInstanceCount = parseInt(viewModel.MaxInstanceCount);
                 }
@@ -600,7 +600,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'RegistryPassword', self.base64Utf16BEEncode);
                 self._convertViewModelFieldToSettingsField(viewModel, admin, 'Profile');
 
-                var container = settings.Container = {};
+                var container = {};
                 self._convertViewModelFieldToSettingsField(viewModel, container, 'Hostname');
                 self._convertViewModelFieldToSettingsField(viewModel, container, 'Domainname');
                 self._convertViewModelFieldToSettingsField(viewModel, container, 'User');
@@ -624,23 +624,29 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self._convertViewModelFieldToSettingsField(viewModel, container, 'Image');
 
                 if (self._filterFromSettings(viewModel.Volumes)) {
-                    container.Volumes = {};
+                    var volumes = {};
                     self._safeEach(viewModel.Volumes, function (volume) {
                         if (!volume.PathOnHost) {
-                            container.Volumes[volume.PathInContainer] = {};
+                            volumes[volume.PathInContainer] = {};
                         }
                     });
+                    if (Object.keys(volumes).length) {
+                        container.Volumes = volumes;
+                    }
                 }
 
                 self._convertViewModelFieldToSettingsField(viewModel, container, 'WorkingDir');
 
                 if (self._filterFromSettings(viewModel.Ports)) {
-                    container.ExposedPorts = {};
+                    var exposedPorts = {};
                     self._safeEach(viewModel.Ports, function (port) {
                         if (!port.HostIp && !port.HostPort) {
                             container.ExposedPorts[port.HostPort + '/' + port.Protocol] = {};
                         }
                     });
+                    if (Object.keys(exposedPorts).length) {
+                        container.ExposedPorts = exposedPorts;
+                    }
                 }
 
                 self._convertViewModelFieldToSettingsField(viewModel, container, 'StopSignal');
@@ -649,19 +655,24 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     container.StopTimeout = parseInt(viewModel.StopTimeout);
                 }
 
-                var hostConfig = container.HostConfig = {};
+                var hostConfig = {};
 
                 if (self._filterFromSettings(viewModel.Volumes)) {
-                    hostConfig.Binds = [];
-                    editor.Binds = [];
+                    var editorBinds = [];
+                    var hostConfigBinds = [];
                     self._safeEach(viewModel.Volumes, function (volume) {
                         if (volume.PathOnHost) {
                             var readOnly = volume.ReadOnly ? 'ro' : 'rw';
-                            hostConfig.Binds.push(volume.PathOnHost + ':' + volume.PathInContainer + ':' + readOnly);
-                            editor.Binds.push({ PathOnHost: volume.PathOnHost,
+                            hostConfigBinds.push(volume.PathOnHost + ':' + volume.PathInContainer + ':' + readOnly);
+                            editorBinds.push({ PathOnHost: volume.PathOnHost,
                                 PathInContainer: volume.PathInContainer, ReadOnly: readOnly});
                         }
                     });
+
+                    if (editorBinds.length) {
+                        editor.Binds = editorBinds;
+                        hostConfig.Binds = hostConfigBinds;
+                    }
                 }
 
                 if (self._filterFromSettings(viewModel.Links)) {
@@ -674,10 +685,12 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 if (self._filterFromSettings(viewModel.Memory)) {
                     hostConfig.Memory = parseInt(viewModel.Memory) * self._units_multiplier[viewModel.MemoryUnit];
                 }
-                if (self._filterFromSettings(viewModel.MemorySwap)) {
-                    hostConfig.MemorySwap = viewModel.MemorySwapUnlimited ? -1 : (parseInt(viewModel.MemorySwap) * self._units_multiplier[viewModel.MemorySwapUnit]);
-                }
 
+                if (viewModel.MemorySwapUnlimited) {
+                    hostConfig.MemorySwap = -1;
+                } else if (self._filterFromSettings(viewModel.MemorySwap)) {
+                    hostConfig.MemorySwap = parseInt(viewModel.MemorySwap) * self._units_multiplier[viewModel.MemorySwapUnit];
+                }
                 if (self._filterFromSettings(viewModel.CPUs)) {
                     hostConfig.NanoCPUs = Math.floor(parseFloat(viewModel.CPUs) * 1e9);
                 }
@@ -698,19 +711,22 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'OomKillDisable');
 
                 if (self._filterFromSettings(viewModel.Ports)) {
-                    hostConfig.PortBindings = {};
+                    var portBindings = {};
                     self._safeEach(viewModel.Ports, function (port) {
                         if (port.HostIp || port.HostPort) {
                             var key = port.ContainerPort + '/' + port.Protocol;
-                            var binding = hostConfig.PortBindings[key];
+                            var binding = portBindings[key];
                             if (!binding) {
-                                binding = hostConfig.PortBindings[key] = [];
+                                binding = portBindings[key] = [];
                             }
                             binding.push({HostIp: port.HostIp, HostPort: port.HostPort});
                         }
                     });
-                }
 
+                    if (Object.keys(portBindings).length) {
+                        hostConfig.PortBindings = portBindings;
+                    }
+                }
 
                 self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'PublishAllPorts');
                 self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Privileged');
@@ -738,7 +754,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 }
 
-
                 self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Devices');
                 self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Ulimits');
 
@@ -750,20 +765,34 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
 
                 if (self._filterFromSettings(viewModel.LogType)) {
+                    var config = {};
                     hostConfig.LogConfig = {
-                        Type: viewModel.LogType,
-                        Config: {}
+                        Type: viewModel.LogType
                     };
 
                     self._safeEach(viewModel.LogConfig, function (logConfig) {
-                        hostConfig.LogConfig.Config[logConfig.Key] = logConfig.Value;
+                        config[logConfig.Key] = logConfig.Value;
                     });
+
+                    if (Object.keys(config).length) {
+                        hostConfig.LogConfig.Config = config;
+                    }
                 }
 
                 self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'CgroupParent');
 
-                editor.MemoryUnit = viewModel.MemoryUnit;
-                editor.MemorySwapUnit = viewModel.MemorySwapUnit;
+                self._convertViewModelFieldToSettingsField(viewModel, editor, 'MemoryUnit');
+                self._convertViewModelFieldToSettingsField(viewModel, editor, 'MemorySwapUnit');
+
+                if (Object.keys(hostConfig).length) {
+                    container.HostConfig = hostConfig;
+                }
+                if (Object.keys(container).length) {
+                    settings.Container = container;
+                }
+                if (Object.keys(editor).length) {
+                    settings.Editor = editor;
+                }
 
                 return settings;
             },
@@ -787,7 +816,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 viewModel.Profile = admin.Profile;
                 viewModel.PullOnCreate = admin.PullOnCreate;
                 viewModel.RmOnExit = admin.RmOnExit;
-                viewModel.BindAgentProps = admin.BindAgentProps;
                 viewModel.MaxInstanceCount = admin.MaxInstanceCount;
                 viewModel.UseOfficialTCAgentImage = admin.UseOfficialTCAgentImage;
                 viewModel.RegistryUser = admin.RegistryUser;
