@@ -187,3 +187,67 @@ describe('Applying view model', function() {
         expect($j('#dockerCloudImage_testTable_1').val()).toEqual('world');
     });
 });
+
+describe('Restoring view model', function() {
+
+    it('should handle text input', function() {
+        $j(document.body).html('<input id="dockerCloudImage_test1" type="text" value="A"/>' +
+            '<input id="dockerCloudImage_test2" type="text" value="B"/>' +
+            '<input id="dockerCloudImage_test3" type="text" value="C"/>');
+
+        expect(dockerCloud._restoreViewModel()).toEqual({ test1: 'A', test2: 'B', test3: 'C' });
+    });
+
+    it('should handle password input', function() {
+        $j(document.body).html('<input id="dockerCloudImage_test" type="password" value="pwd"/>');
+
+        expect(dockerCloud._restoreViewModel()).toEqual({ test: 'pwd' });
+    });
+
+    it('should handle checkbox input', function() {
+        $j(document.body).html('<input id="dockerCloudImage_testChecked" type="checkbox" checked/>' +
+            '<input id="dockerCloudImage_testUnchecked" type="checkbox"/>');
+
+        expect(dockerCloud._restoreViewModel()).toEqual({ testChecked: true, testUnchecked: false });
+    });
+
+    it('should handle radio button', function() {
+        $j(document.body).html('<input class="radioA" name="dockerCloudImage_testRadio" type="radio" value="A"/>' +
+            '<input class="radioB" name="dockerCloudImage_testRadio" type="radio" value="B" checked/>');
+
+        expect(dockerCloud._restoreViewModel()).toEqual({ testRadio: 'B' });
+    });
+
+    it('should handle selects', function () {
+        $j(document.body).html('<select id="dockerCloudImage_testSelect">' +
+            '<option value="a">A</option>' +
+            '<option value="b" selected>B</option>' +
+            '</select>');
+
+        expect(dockerCloud._restoreViewModel()).toEqual({ testSelect: 'b' });
+    });
+
+    it('should handle tabular value', function () {
+        $j(document.body).html('<table>' +
+            '<tbody id="dockerCloudImage_testTable">' +
+            '<tr><td><input type="text" id="dockerCloudImage_testTable_0_testFieldA" value="A1"/></td>' +
+            '<td><input type="checkbox" id="dockerCloudImage_testTable_0_testFieldB" checked/></td></tr>' +
+            '<tr><td><input type="text" id="dockerCloudImage_testTable_1_testFieldA" value="A2"/></td>' +
+            '<td><input type="checkbox" id="dockerCloudImage_testTable_1_testFieldB"/></td></tr>' +
+            '</tbody>');
+
+        expect(dockerCloud._restoreViewModel()).toEqual({ testTable: [
+            { testFieldA: 'A1', testFieldB: true }, { testFieldA: 'A2', testFieldB: false }
+        ] });
+    });
+
+    it('should handle simple tabular value', function () {
+        $j(document.body).html('<table>' +
+            '<tbody id="dockerCloudImage_testTable">' +
+            '<tr><td><input type="text" id="dockerCloudImage_testTable_0" value="hello"/></td></tr>' +
+            '<tr><td><input type="text" id="dockerCloudImage_testTable_1" value="world"/></td></tr>' +
+            '</tbody>');
+
+        expect(dockerCloud._restoreViewModel()).toEqual({ testTable: [ 'hello', 'world' ] });
+    });
+});
