@@ -472,7 +472,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.selectTabWithId("dockerCloudImageTab_general");
                 self.imageDataTabbedPane.setActiveCaption("dockerCloudImageTab_general");
 
-                self.$imageDialogSubmitBtn.val(existingImage ? 'Save' : 'Add').data('image-id', profileName).data('profile', profileName);
+                if (existingImage) {
+                    self.$imageDialogSubmitBtn.val('Save')
+                        .data('image-id', profileName)
+                        .data('profile', profileName);
+                } else {
+                    self.$imageDialogSubmitBtn.val('Add')
+                        .removeData('image-id')
+                        .removeData('profile');
+                }
 
                 BS.DockerImageDialog.showCentered();
 
