@@ -432,7 +432,7 @@
                             <tr>
                                 <td>
                                     <select id="dockerCloudImage_NetworkMode">
-                                        <option value="default">Default</option>
+                                        <option value="">Default</option>
                                         <option value="bridge">Bridge</option>
                                         <option value="host">Host</option>
                                         <option value="container">Container:</option>

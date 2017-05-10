@@ -449,6 +449,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 $tbody.append('<tr class="dockerCloudAddItem"><td colspan="' + colspan + '" class="dockerCloudCtrlCell"> <a class="btn dockerCloudAddBtn" href="#/"  title="Add item"><span class="dockerCloudAddBtn">Add</span></a></td></tr>');
             },
             showDialog: function (profileName) {
+
                 var existingImage = !!profileName;
 
                 self.$imageDataDialogTitle.text((existingImage ? 'Edit' : 'Add') + ' Image');
@@ -465,6 +466,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             UseOfficialTCAgentImage: true,
                             PullOnCreate: true,
                             MaxInstanceCount: 2
+                        },
+                        Editor: {
+                            MemoryUnit: 'bytes',
+                            MemorySwapUnit: 'bytes'
                         }
                     });
                 self._applyViewModel(viewModel);
@@ -597,41 +602,41 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 admin.Version = self.IMAGE_VERSION;
 
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'RmOnExit');
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'PullOnCreate');
+                self.copy(viewModel, admin, 'RmOnExit');
+                self.copy(viewModel, admin, 'PullOnCreate');
 
-                if (self._filterFromSettings(viewModel.MaxInstanceCount)) {
+                if (self.notEmpty(viewModel.MaxInstanceCount)) {
                     admin.MaxInstanceCount = parseInt(viewModel.MaxInstanceCount);
                 }
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'UseOfficialTCAgentImage');
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'RegistryUser');
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'RegistryPassword', self.base64Utf16BEEncode);
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'Profile');
+                self.copy(viewModel, admin, 'UseOfficialTCAgentImage');
+                self.copy(viewModel, admin, 'RegistryUser');
+                self.copy(viewModel, admin, 'RegistryPassword', self.base64Utf16BEEncode);
+                self.copy(viewModel, admin, 'Profile');
 
                 var container = {};
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'Hostname');
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'Domainname');
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'User');
+                self.copy(viewModel, container, 'Hostname');
+                self.copy(viewModel, container, 'Domainname');
+                self.copy(viewModel, container, 'User');
 
-                if (self._filterFromSettings(viewModel.Env)) {
+                if (self.notEmpty(viewModel.Env)) {
                     container.Env = [];
                     self._safeEach(viewModel.Env, function (envEntry) {
                         container.Env.push(envEntry.Name + '=' + envEntry.Value);
                     });
                 }
 
-                if (self._filterFromSettings(viewModel.Labels)) {
+                if (self.notEmpty(viewModel.Labels)) {
                     container.Labels = {};
                     self._safeEach(viewModel.Labels, function (label) {
                         container.Labels[label.Key] = label.Value;
                     });
                 }
 
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'Cmd');
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'Entrypoint');
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'Image');
+                self.copy(viewModel, container, 'Cmd');
+                self.copy(viewModel, container, 'Entrypoint');
+                self.copy(viewModel, container, 'Image');
 
-                if (self._filterFromSettings(viewModel.Volumes)) {
+                if (self.notEmpty(viewModel.Volumes)) {
                     var volumes = {};
                     self._safeEach(viewModel.Volumes, function (volume) {
                         if (!volume.PathOnHost) {
@@ -643,9 +648,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 }
 
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'WorkingDir');
+                self.copy(viewModel, container, 'WorkingDir');
 
-                if (self._filterFromSettings(viewModel.Ports)) {
+                if (self.notEmpty(viewModel.Ports)) {
                     var exposedPorts = {};
                     self._safeEach(viewModel.Ports, function (port) {
                         if (!port.HostIp && !port.HostPort) {
@@ -657,15 +662,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 }
 
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'StopSignal');
+                self.copy(viewModel, container, 'StopSignal');
 
-                if (self._filterFromSettings(viewModel.StopTimeout)) {
+                if (self.notEmpty(viewModel.StopTimeout)) {
                     container.StopTimeout = parseInt(viewModel.StopTimeout);
                 }
 
                 var hostConfig = {};
 
-                if (self._filterFromSettings(viewModel.Volumes)) {
+                if (self.notEmpty(viewModel.Volumes)) {
                     var editorBinds = [];
                     var hostConfigBinds = [];
                     self._safeEach(viewModel.Volumes, function (volume) {
@@ -683,42 +688,42 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 }
 
-                if (self._filterFromSettings(viewModel.Links)) {
+                if (self.notEmpty(viewModel.Links)) {
                     hostConfig.Links = [];
                     self._safeEach(viewModel.Links, function (link) {
                         hostConfig.Links.push(link.Container + ':' + link.Alias);
                     });
                 }
 
-                if (self._filterFromSettings(viewModel.Memory)) {
+                if (self.notEmpty(viewModel.Memory)) {
                     hostConfig.Memory = parseInt(viewModel.Memory) * self._units_multiplier[viewModel.MemoryUnit];
                 }
 
                 if (viewModel.MemorySwapUnlimited) {
                     hostConfig.MemorySwap = -1;
-                } else if (self._filterFromSettings(viewModel.MemorySwap)) {
+                } else if (self.notEmpty(viewModel.MemorySwap)) {
                     hostConfig.MemorySwap = parseInt(viewModel.MemorySwap) * self._units_multiplier[viewModel.MemorySwapUnit];
                 }
-                if (self._filterFromSettings(viewModel.CPUs)) {
+                if (self.notEmpty(viewModel.CPUs)) {
                     hostConfig.NanoCPUs = Math.floor(parseFloat(viewModel.CPUs) * 1e9);
                 }
-                if (self._filterFromSettings(viewModel.CpuQuota)) {
+                if (self.notEmpty(viewModel.CpuQuota)) {
                     hostConfig.CpuQuota = parseInt(viewModel.CpuQuota);
                 }
-                if (self._filterFromSettings(viewModel.CpuShares)) {
+                if (self.notEmpty(viewModel.CpuShares)) {
                     hostConfig.CpuShares = parseInt(viewModel.CpuShares);
                 }
-                if (self._filterFromSettings(viewModel.CpuPeriod)) {
+                if (self.notEmpty(viewModel.CpuPeriod)) {
                     hostConfig.CpuPeriod = parseInt(viewModel.CpuPeriod);
                 }
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'CpusetCpus');
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'CpusetMems');
-                if (self._filterFromSettings(viewModel.BlkioWeight)) {
+                self.copy(viewModel, hostConfig, 'CpusetCpus');
+                self.copy(viewModel, hostConfig, 'CpusetMems');
+                if (self.notEmpty(viewModel.BlkioWeight)) {
                     hostConfig.BlkioWeight = parseInt(viewModel.BlkioWeight);
                 }
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'OomKillDisable');
+                self.copy(viewModel, hostConfig, 'OomKillDisable');
 
-                if (self._filterFromSettings(viewModel.Ports)) {
+                if (self.notEmpty(viewModel.Ports)) {
                     var portBindings = {};
                     self._safeEach(viewModel.Ports, function (port) {
                         if (port.HostIp || port.HostPort) {
@@ -736,43 +741,43 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 }
 
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'PublishAllPorts');
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Privileged');
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Dns');
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'DnsSearch');
+                self.copy(viewModel, hostConfig, 'PublishAllPorts');
+                self.copy(viewModel, hostConfig, 'Privileged');
+                self.copy(viewModel, hostConfig, 'Dns');
+                self.copy(viewModel, hostConfig, 'DnsSearch');
 
-                if (self._filterFromSettings(viewModel.ExtraHosts)) {
+                if (self.notEmpty(viewModel.ExtraHosts)) {
                     hostConfig.ExtraHosts = [];
                     self._safeEach(viewModel.ExtraHosts, function (extraHost) {
                         hostConfig.ExtraHosts.push(extraHost.Name + ':' + extraHost.Ip);
                     });
                 }
 
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'CapAdd');
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'CapDrop');
+                self.copy(viewModel, hostConfig, 'CapAdd');
+                self.copy(viewModel, hostConfig, 'CapDrop');
 
-                if (self._filterFromSettings(viewModel.NetworkMode)) {
+                if (self.notEmpty(viewModel.NetworkMode)) {
                     var networkMode = viewModel.NetworkMode;
                     if (networkMode === 'bridge' || networkMode === 'host' || networkMode === 'none') {
                         hostConfig.NetworkMode = networkMode;
                     } else if (networkMode === 'container') {
                         hostConfig.NetworkMode = 'container:' + viewModel.NetworkContainer;
-                    } else if (networkMode !== 'default') {
+                    } else if (networkMode) {
                         hostConfig.NetworkMode = viewModel.NetworkCustom;
                     }
                 }
 
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Devices');
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Ulimits');
+                self.copy(viewModel, hostConfig, 'Devices');
+                self.copy(viewModel, hostConfig, 'Ulimits');
 
-                if (self._filterFromSettings(viewModel.Ulimits)) {
+                if (self.notEmpty(viewModel.Ulimits)) {
                     hostConfig.Ulimits = [];
                     self._safeEach(viewModel.Ulimits, function (ulimit) {
                         hostConfig.Ulimits.push({ Name: ulimit.Name, Hard: parseInt(ulimit.Hard), Soft: parseInt(ulimit.Soft)});
                     });
                 }
 
-                if (self._filterFromSettings(viewModel.LogType)) {
+                if (self.notEmpty(viewModel.LogType)) {
                     var config = {};
                     hostConfig.LogConfig = {
                         Type: viewModel.LogType
@@ -787,10 +792,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 }
 
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'CgroupParent');
-
-                self._convertViewModelFieldToSettingsField(viewModel, editor, 'MemoryUnit');
-                self._convertViewModelFieldToSettingsField(viewModel, editor, 'MemorySwapUnit');
+                self.copy(viewModel, hostConfig, 'CgroupParent');
+                self.copy(viewModel, editor, 'MemoryUnit');
+                self.copy(viewModel, editor, 'MemorySwapUnit');
 
                 if (Object.keys(hostConfig).length) {
                     container.HostConfig = hostConfig;
@@ -804,14 +808,14 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 return settings;
             },
-            _convertViewModelFieldToSettingsField: function(viewModel, settings, fieldName, conversionFunction) {
-                var value = viewModel[fieldName];
-                if (self._filterFromSettings(value)) {
-                    settings[fieldName] =  conversionFunction ? conversionFunction(value) : value;
+            copy: function(source, target, fieldName, conversionFunction) {
+                var value = source[fieldName];
+                if (self.notEmpty(value)) {
+                    target[fieldName] =  conversionFunction ? conversionFunction(value) : value;
                 }
             },
-            _filterFromSettings: function(value) {
-                return value !== undefined && (value.length === undefined || value.length) && ($j.type(value) != "object" || Object.keys(value).length);
+            notEmpty: function(value) {
+                return value !== undefined && value !== null && (value.length === undefined || value.length) && ($j.type(value) != "object" || Object.keys(value).length);
             },
             _convertSettingsToViewModel: function(settings) {
                 var viewModel = {};
@@ -821,131 +825,174 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var hostConfig = container.HostConfig || {};
                 var editor = settings.Editor || {};
 
-                viewModel.Profile = admin.Profile;
-                viewModel.PullOnCreate = admin.PullOnCreate;
-                viewModel.RmOnExit = admin.RmOnExit;
-                viewModel.MaxInstanceCount = admin.MaxInstanceCount;
-                viewModel.UseOfficialTCAgentImage = admin.UseOfficialTCAgentImage;
-                viewModel.RegistryUser = admin.RegistryUser;
-                viewModel.RegistryPassword = self.base64Utf16BEDecode(admin.RegistryPassword);
+                self.copy(admin, viewModel, 'Profile');
+                self.copy(admin, viewModel, 'PullOnCreate');
+                self.copy(admin, viewModel, 'RmOnExit');
+                self.copy(admin, viewModel, 'MaxInstanceCount');
+                self.copy(admin, viewModel, 'UseOfficialTCAgentImage');
+                self.copy(admin, viewModel, 'RegistryUser');
 
-                viewModel.Hostname = container.Hostname;
-                viewModel.Domainname = container.Domainname;
-                viewModel.User = container.User;
+                self.copy(admin, viewModel, 'RegistryPassword', self.base64Utf16BEDecode);
 
-                viewModel.Env = [];
+                self.copy(container, viewModel, 'Hostname');
+                self.copy(container, viewModel, 'Domainname');
+                self.copy(container, viewModel, 'User');
+
+                var env = [];
                 self._safeEach(container.Env, function(envEntry) {
                     var sepIndex = envEntry.indexOf('=');
-                    if (sepIndex != -1) {
-                        viewModel.Env.push({ Name: envEntry.substring(0, sepIndex), Value: envEntry.substring(sepIndex + 1)});
+                    if (sepIndex !== -1) {
+                        env.push({ Name: envEntry.substring(0, sepIndex), Value: envEntry.substring(sepIndex + 1)});
                     }
                 });
 
-                viewModel.Cmd = container.Cmd;
-                viewModel.Entrypoint = container.Entrypoint;
-                viewModel.Image = container.Image;
+                if (env.length) {
+                    viewModel.Env = env;
+                }
 
-                viewModel.Volumes = [];
+                self.copy(container, viewModel, 'Cmd');
+                self.copy(container, viewModel, 'Entrypoint');
+                self.copy(container, viewModel, 'Image');
+
+
+                var volumes = [];
                 self._safeKeyValueEach(container.Volumes, function(volume) {
-                    viewModel.Volumes.push({ PathInContainer: volume, ReadOnly: false });
+                    volumes.push({ PathInContainer: volume });
                 });
 
-                viewModel.WorkingDir = container.WorkingDir;
+                self.copy(container, viewModel, 'WorkingDir');
 
-                viewModel.Labels = [];
+                var labels = [];
                 self._safeKeyValueEach(container.Labels, function(key, value) {
-                    viewModel.Labels.push({ Key: key, Value: value});
+                    labels.push({ Key: key, Value: value});
                 });
+                if (labels.length) {
+                    viewModel.Labels = labels;
+                }
 
-                viewModel.Ports = [];
+                var ports = [];
                 self._safeEach(container.ExposedPorts, function(exposedPort) {
                     var tokens = exposedPort.split('/');
-                    viewModel.Ports.push({ ContainerPort: tokens[0], Protocol: tokens[1] })
+                    ports.push({ ContainerPort: tokens[0], Protocol: tokens[1] })
                 });
 
-                viewModel.StopSignal = container.StopSignal;
-                viewModel.StopTimeout = container.StopTimeout;
+                self.copy(container, viewModel, 'StopSignal');
+                self.copy(container, viewModel, 'StopTimeout');
+
 
                 self._safeEach(editor.Binds, function(bind) {
-                    viewModel.Volumes.push({ PathOnHost: bind.PathOnHost, PathInContainer: bind.PathInContainer,  ReadOnly: bind.readOnly === 'ro' });
+                    volumes.push({ PathOnHost: bind.PathOnHost, PathInContainer: bind.PathInContainer,  ReadOnly: bind.ReadOnly === 'ro' });
                 });
+                if (volumes.length) {
+                    viewModel.Volumes = volumes;
+                }
 
-                viewModel.Links = [];
+                var links = [];
                 self._safeEach(hostConfig.Links, function(link) {
                     var tokens = link.split(':');
-                    viewModel.Links.push({ Container: tokens[0], Alias: tokens[1] })
+                    links.push({ Container: tokens[0], Alias: tokens[1] })
                 });
+                if (links.length) {
+                    viewModel.Links = links;
+                }
 
-                viewModel.MemoryUnit = editor.MemoryUnit || 'bytes';
-                viewModel.Memory = hostConfig.Memory && Math.floor(hostConfig.Memory / self._units_multiplier[viewModel.MemoryUnit]);
-                viewModel.MemorySwapUnit = editor.MemorySwapUnit || 'bytes';
-                viewModel.MemorySwap = hostConfig.MemorySwap && Math.floor(hostConfig.MemorySwap / self._units_multiplier[viewModel.MemorySwapUnit]);
-                viewModel.MemorySwapUnlimited = hostConfig.MemorySwap == -1;
-                viewModel.CPUs = hostConfig.NanoCPUs && hostConfig.NanoCPUs / 1e9;
-                viewModel.CpuQuota = hostConfig.CpuQuota;
-                viewModel.CpuShares = hostConfig.CpuShares;
-                viewModel.CpuPeriod = hostConfig.CpuPeriod;
-                viewModel.CpusetCpus = hostConfig.CpusetCpus;
-                viewModel.CpusetMems = hostConfig.CpusetMems;
-                viewModel.BlkioWeight = hostConfig.BlkioWeight;
-                viewModel.OomKillDisable = hostConfig.OomKillDisable;
+                self.copy(editor, viewModel, 'MemoryUnit');
+
+                if (self.notEmpty(hostConfig.Memory)) {
+                    viewModel.Memory = self.str(Math.floor(hostConfig.Memory / self._units_multiplier[viewModel.MemoryUnit]));
+                }
+
+                self.copy(editor, viewModel, 'MemorySwapUnit');
+                if (self.notEmpty(hostConfig.MemorySwap)) {
+                    if (hostConfig.MemorySwap == -1) {
+                        viewModel.MemorySwapUnlimited = true;
+                    } else {
+                        viewModel.MemorySwap = self.str(Math.floor(hostConfig.MemorySwap / self._units_multiplier[viewModel.MemorySwapUnit]));
+                    }
+                }
+
+                if (self.notEmpty(hostConfig.NanoCPUs)) {
+                    viewModel.CPUs = self.str(hostConfig.NanoCPUs / 1e9);
+                }
+
+                self.copy(hostConfig, viewModel, 'CpuQuota', self.str);
+                self.copy(hostConfig, viewModel, 'CpuShares', self.str);
+                self.copy(hostConfig, viewModel, 'CpuPeriod', self.str);
+                self.copy(hostConfig, viewModel, 'CpusetCpus');
+                self.copy(hostConfig, viewModel, 'CpusetMems');
+                self.copy(hostConfig, viewModel, 'BlkioWeight');
+                self.copy(hostConfig, viewModel, 'OomKillDisable');
 
                 self._safeKeyValueEach(hostConfig.PortBindings, function(port, bindings) {
                     var tokens = port.split("/");
                     var containerPort = tokens[0];
                     var protocol = tokens[1];
                     self._safeEach(bindings, function(binding) {
-                        viewModel.Ports.push({ HostIp: binding.HostIp, HostPort: binding.HostPort, ContainerPort: containerPort, Protocol: protocol })
+                        ports.push({ HostIp: binding.HostIp, HostPort: binding.HostPort, ContainerPort: containerPort, Protocol: protocol })
                     });
                 });
 
-                viewModel.PublishAllPorts = hostConfig.PublishAllPorts;
-                viewModel.Privileged = hostConfig.Privileged;
-                viewModel.Dns = hostConfig.Dns;
-                viewModel.DnsSearch = hostConfig.DnsSearch;
+                if (ports.length) {
+                    viewModel.Ports = ports;
+                }
 
-                viewModel.ExtraHosts = [];
+                self.copy(hostConfig, viewModel, 'PublishAllPorts');
+                self.copy(hostConfig, viewModel, 'Privileged');
+                self.copy(hostConfig, viewModel, 'Dns');
+                self.copy(hostConfig, viewModel, 'DnsSearch');
+
+                var extraHosts = [];
                 self._safeEach(hostConfig.ExtraHosts, function(extraHost) {
                     var tokens = extraHost.split(':');
-                    viewModel.ExtraHosts.push({ Name: tokens[0], Ip: tokens[1] });
+                    extraHosts.push({ Name: tokens[0], Ip: tokens[1] });
                 });
+                if (extraHosts.length) {
+                    viewModel.ExtraHosts = extraHosts;
+                }
 
-                viewModel.CapAdd = hostConfig.CapAdd;
-                viewModel.CapDrop = hostConfig.CapDrop;
+                self.copy(hostConfig, viewModel, 'CapAdd');
+                self.copy(hostConfig, viewModel, 'CapDrop');
 
                 var networkMode = hostConfig.NetworkMode;
-                if (!networkMode) {
-                    viewModel.NetworkMode = 'default';
-                } else if (networkMode === "bridge" || networkMode === "host" || networkMode === "none") {
+                if (networkMode === "bridge" || networkMode === "host" || networkMode === "none") {
                     viewModel.NetworkMode = networkMode;
                 } else if (/^container:/.test(networkMode)) {
                     viewModel.NetworkMode = "container";
                     viewModel.NetworkContainer = networkMode.substring('container:'.length);
-                } else {
+                } else if (networkMode) {
                     viewModel.NetworkMode = 'custom';
                     viewModel.NetworkCustom = networkMode;
                 }
 
-                viewModel.Devices = [];
+                var devices = [];
                 self._safeEach(hostConfig.Devices, function(device) {
-                    viewModel.Devices.push(device);
+                    devices.push(device);
                 });
+                if (devices.length) {
+                    viewModel.Devices = devices;
+                }
 
-                viewModel.Ulimits = [];
+                var ulimits = [];
                 self._safeEach(hostConfig.Ulimits, function(ulimit) {
-                    viewModel.Ulimits.push(ulimit);
+                    ulimits.push(ulimit);
                 });
+                if (ulimits.length) {
+                    viewModel.Ulimits = ulimits;
+                }
 
                 var logConfig = hostConfig.LogConfig;
                 if (logConfig) {
                     viewModel.LogType = logConfig.Type;
-                    viewModel.LogConfig = [];
+                    var logConfigProps = [];
                     self._safeKeyValueEach(logConfig.Config, function (key, value) {
-                        viewModel.LogConfig.push({ Key: key, Value: value});
+                        logConfigProps.push({ Key: key, Value: value});
                     });
+                    if (logConfigProps.length) {
+                        viewModel.LogConfig = logConfigProps;
+                    }
                 }
 
-                viewModel.CgroupParent = hostConfig.CgroupParent;
+                self.copy(hostConfig, viewModel, 'CgroupParent');
 
                 return viewModel;
             },
@@ -1075,7 +1122,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
 
                 self.$imageDialogSubmitBtn.click(function() {
-
                     self._triggerAllFields(true);
 
                     if(!self.updateOkBtnState()) {
@@ -1087,7 +1133,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                     var currentProfile = self.$imageDialogSubmitBtn.data('profile');
                     var newProfile = settings.Administration.Profile;
-                    self.logDebug("Saving profile: " + newProfile + "(was: " + currentProfile + ")");
+                    self.logDebug("Saving profile: " + newProfile + " (was: " + currentProfile + ")");
                     delete self.imagesData[currentProfile];
                     self.imagesData[newProfile] = settings;
                     var tmp = [];
@@ -1884,6 +1930,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
               if (self.debugEnabled) {
                   self._log(msg);
               }
+            },
+            str: function(obj) {
+              return self.notEmpty(obj) ? obj.toString() : obj;
             },
             _log: function(msg) {
                 // Catching all errors instead of simply testing for console existence to prevent issues with IE8.
