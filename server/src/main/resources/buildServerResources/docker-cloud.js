@@ -1647,7 +1647,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 };
 
                 var cpusValidator = function(elt) {
-                    var value = elt.val().trim().replace(/^0+/, '');
+                    var value = elt.val().trim().replace(/^0+\B/, '');
                     if (!value) {
                         return;
                     }
