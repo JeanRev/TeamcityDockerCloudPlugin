@@ -7,12 +7,16 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+/**
+ * {@łink ContainerCoordinates} test suite.
+ */
 public class ContainerCoordinatesTest {
 
     @Test
     public void getters() {
 
-        DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
+        DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
+                DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
         ContainerCoordinates coordinates = new ContainerCoordinates("test", clientConfig);
 
@@ -27,6 +31,7 @@ public class ContainerCoordinatesTest {
 
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() ->
                 new ContainerCoordinates(null,
-                        new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI)));
+                        new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
+                                DockerCloudUtils.DOCKER_API_TARGET_VERSION)));
     }
 }

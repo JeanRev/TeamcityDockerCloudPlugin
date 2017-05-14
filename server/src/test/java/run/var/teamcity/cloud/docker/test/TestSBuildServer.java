@@ -10,7 +10,9 @@ import jetbrains.buildServer.users.UserModel;
 import jetbrains.buildServer.util.ItemProcessor;
 import jetbrains.buildServer.vcs.VcsManager;
 import jetbrains.buildServer.vcs.VcsModificationHistory;
+import jetbrains.buildServer.version.ServerVersionInfo;
 import org.jetbrains.annotations.NonNls;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -100,11 +102,6 @@ public class TestSBuildServer implements SBuildServer {
     }
 
     @Override
-    public SourceVersionProvider getSourceVersionProvider() {
-        throw new UnsupportedOperationException("Not a real build server.");
-    }
-
-    @Override
     public LoginConfiguration getLoginConfiguration() {
         throw new UnsupportedOperationException("Not a real build server.");
     }
@@ -117,6 +114,12 @@ public class TestSBuildServer implements SBuildServer {
     @Override
     public byte getServerMinorVersion() {
         return serverMinorVersion;
+    }
+
+    @NotNull
+    @Override
+    public ServerVersionInfo getVersion() {
+        throw new UnsupportedOperationException("Not a real build server.");
     }
 
     @Override

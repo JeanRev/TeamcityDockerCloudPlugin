@@ -29,8 +29,9 @@ public class TestDockerClient implements DockerClient {
     }
 
     private final Map<String, Container> containers = new HashMap<>();
-    private final Set<TestImage> knownRepoImages = new HashSet<>();
-    private final Set<TestImage> knownLocalImages = new HashSet<>();
+    private final Collection<Container> discardedContainers = new ArrayList<>();
+    private final Set<TestImage> registryImages = new HashSet<>();
+    private final Set<TestImage> localImages = new HashSet<>();
     private final Set<String> pulledLayer = new HashSet<>();
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -40,17 +41,38 @@ public class TestDockerClient implements DockerClient {
     public static URI TEST_CLIENT_URI = URI.create("tcp://not.a.real.docker.client:0000");
     private boolean closed = false;
     private DockerClientException failOnAccessException = null;
-    private final DockerClientConfig config;
-    private String supportedAPIVersion = null;
+    private DockerAPIVersion supportedAPIVersion = null;
+    private DockerAPIVersion minAPIVersion = null;
+    private DockerAPIVersion apiVersion;
+    private boolean lenientVersionCheck = false;
+    private final DockerRegistryCredentials dockerRegistryCredentials;
 
-    public ReentrantLock getLock() {
-        return lock;
-    }
-
-    public TestDockerClient(DockerClientConfig config) {
-        this.config = config;
+    public TestDockerClient(DockerClientConfig config, DockerRegistryCredentials dockerRegistryCredentials) {
+        this.apiVersion = config.getApiVersion();
+        this.dockerRegistryCredentials = dockerRegistryCredentials;
         if (!TEST_CLIENT_URI.equals(config.getInstanceURI())) {
             throw new IllegalArgumentException("Unsupported URI: " + config.getInstanceURI());
+        }
+    }
+
+    @Nonnull
+    @Override
+    public DockerAPIVersion getApiVersion() {
+        lock.lock();
+        try {
+            return apiVersion;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void setApiVersion(@Nonnull DockerAPIVersion apiVersion) {
+        lock.lock();
+        try {
+            this.apiVersion = apiVersion;
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -60,16 +82,20 @@ public class TestDockerClient implements DockerClient {
         lock.lock();
         try {
             checkForFailure();
-            return Node.EMPTY_OBJECT.editNode().
+            EditableNode node = Node.EMPTY_OBJECT.editNode().
                     put("Version", "1.0").
-                    put("ApiVersion", "1.0").
+                    put("ApiVersion", supportedAPIVersion != null ? supportedAPIVersion.getVersionString() : "1.0").
                     put("Os", "NotARealOS").
                     put("Arch", "NotARealArch").
                     put("Kernel", "1.0").
                     put("build", "00000000").
                     put("buildtime", "0000-00-00T00:00:00.000000000+00:00").
                     put("GoVersion", "go1.0").
-                    put("experimental", false).saveNode();
+                    put("experimental", false);
+            if (minAPIVersion != null) {
+                node.put("MinAPIVersion", minAPIVersion.getVersionString());
+            }
+            return node.saveNode();
         } finally {
             lock.unlock();
         }
@@ -87,13 +113,13 @@ public class TestDockerClient implements DockerClient {
             checkForFailure();
             String imageName = containerSpec.getAsString("Image");
             TestImage img = TestImage.parse(containerSpec.getAsString("Image"));
-            if (!knownLocalImages.contains(img)) {
+            if (!localImages.contains(img)) {
                 throw new NotFoundException("No such image: " + imageName);
             }
 
             Map<String, String> labels = new HashMap<>();
             containerSpec.getObject("Labels", Node.EMPTY_OBJECT).getObjectValues().
-                    entrySet().forEach(entry -> labels.put(entry.getKey(), entry.getValue().getAsString()));
+                    forEach((key, value) -> labels.put(key, value.getAsString()));
             Map<String, String> env = new HashMap<>();
             containerSpec.getArray("Env", Node.EMPTY_ARRAY).getArrayValues().
                     forEach(val -> {
@@ -125,6 +151,7 @@ public class TestDockerClient implements DockerClient {
                 throw new InvocationFailedException("Container already started: " + containerId);
             }
 
+            container.appliedStopTimeout = null;
             container.status = ContainerStatus.STARTED;
         } finally {
             lock.unlock();
@@ -150,7 +177,8 @@ public class TestDockerClient implements DockerClient {
 
     @Nonnull
     @Override
-    public NodeStream createImage(@Nonnull String from, @Nullable String tag) {
+    public NodeStream createImage(@Nonnull String from, @Nullable String tag,
+                                  @Nonnull DockerRegistryCredentials credentials) {
         if (DockerCloudUtils.hasImageTag(from)) {
             if (tag != null) {
                 throw new InvocationFailedException("Duplicate tag specification.");
@@ -169,7 +197,7 @@ public class TestDockerClient implements DockerClient {
         Set<TestImage> toPull = new HashSet<>();
         lock.lock();
         try {
-            for (TestImage img : knownRepoImages) {
+            for (TestImage img : registryImages) {
                 if (img.getRepo().equals(from)) {
                     foundImage = true;
                     if (tag == null || tag.equals(img.getTag())) {
@@ -187,6 +215,12 @@ public class TestDockerClient implements DockerClient {
             node.put("id", tag);
         }
         result.add(node.saveNode());
+
+        if (!dockerRegistryCredentials.equals(credentials))
+        {
+            throw new NotFoundException("Authentication failed");
+        }
+
         if (toPull.isEmpty()) {
             node = Node.EMPTY_OBJECT.editNode();
             String msg = foundImage ? "Error: tag " + tag + " not found" : "Error: image " + from + " not found";
@@ -227,6 +261,7 @@ public class TestDockerClient implements DockerClient {
                     }
                     node = Node.EMPTY_OBJECT.editNode();
                     node.put("status", "Status: Downloaded newer image for " + img);
+                    localImages.add(img);
                 }
             } finally {
                 lock.unlock();
@@ -260,6 +295,7 @@ public class TestDockerClient implements DockerClient {
                 throw new ContainerAlreadyStoppedException("Container is not running: " + containerId);
             }
 
+            container.appliedStopTimeout = timeoutSec;
             container.status = ContainerStatus.CREATED;
         } finally {
             lock.unlock();
@@ -280,6 +316,7 @@ public class TestDockerClient implements DockerClient {
                 throw new InvocationFailedException("Container is still running: " + containerId);
             }
             containers.remove(containerId);
+            discardedContainers.add(container);
         } finally {
             lock.unlock();
         }
@@ -319,25 +356,25 @@ public class TestDockerClient implements DockerClient {
         return result.saveNode();
     }
 
-    public TestDockerClient knownImage(String repo, String tag) {
-        knownImage(repo, tag, false);
-        return this;
-    }
-
-    public TestDockerClient knownImage(String repo, String tag, boolean localOnly) {
+    public TestDockerClient localImage(String repo, String tag) {
         lock.lock();
         try {
-            TestImage img = new TestImage(repo, tag);
-            if (!localOnly) {
-                knownRepoImages.add(img);
-            }
-            knownLocalImages.add(img);
+            localImages.add(new TestImage(repo, tag));
         } finally {
             lock.unlock();
         }
         return this;
     }
 
+    public TestDockerClient registryImage(String repo, String tag) {
+        lock.lock();
+        try {
+            registryImages.add(new TestImage(repo, tag));
+        } finally {
+            lock.unlock();
+        }
+        return this;
+    }
 
     @Override
     public void close() {
@@ -370,16 +407,23 @@ public class TestDockerClient implements DockerClient {
         return Collections.unmodifiableCollection(containers.values());
     }
 
+    public Collection<Container> getDiscardedContainers() {
+        return Collections.unmodifiableCollection(discardedContainers);
+    }
     public boolean isClosed() {
         return closed;
     }
 
-    public DockerClientConfig getConfig() {
-        return config;
+    public void setSupportedAPIVersion(DockerAPIVersion supportedAPIVersion) {
+        this.supportedAPIVersion = supportedAPIVersion;
     }
 
-    public void setSupportedAPIVersion(String supportedAPIVersion) {
-        this.supportedAPIVersion = supportedAPIVersion;
+    public void setMinAPIVersion(DockerAPIVersion minAPIVersion) {
+        this.minAPIVersion = minAPIVersion;
+    }
+
+    public void setLenientVersionCheck(boolean lenientVersionCheck) {
+        this.lenientVersionCheck = lenientVersionCheck;
     }
 
     private void checkForFailure() {
@@ -391,9 +435,19 @@ public class TestDockerClient implements DockerClient {
             if (failOnAccessException != null) {
                 throw failOnAccessException;
             }
-            String apiVersion = config.getApiVersion();
-            if (supportedAPIVersion != null && apiVersion != null && !apiVersion.equals(supportedAPIVersion)) {
-                throw new BadRequestException("Bad version.");
+
+            if (lenientVersionCheck) {
+                return;
+            }
+
+            if (!apiVersion.isDefaultVersion() && supportedAPIVersion != null) {
+                if (minAPIVersion != null) {
+                    if (!apiVersion.isInRange(minAPIVersion, supportedAPIVersion)) {
+                        throw new BadRequestException("Bad version.");
+                    }
+                } else if (!apiVersion.equals(supportedAPIVersion)){
+                    throw new BadRequestException("Bad version.");
+                }
             }
         } finally {
             lock.unlock();
@@ -405,6 +459,7 @@ public class TestDockerClient implements DockerClient {
         private final Map<String, String> labels = new HashMap<>();
         private final Map<String, String> env = new HashMap<>();
         private ContainerStatus status;
+        private Long appliedStopTimeout = null;
 
         public Container(ContainerStatus status) {
             this(Collections.emptyMap(), Collections.emptyMap(), status);
@@ -434,6 +489,10 @@ public class TestDockerClient implements DockerClient {
 
         public ContainerStatus getStatus() {
             return status;
+        }
+
+        public Long getAppliedStopTimeout() {
+            return appliedStopTimeout;
         }
 
         public Container label(String key, String value) {

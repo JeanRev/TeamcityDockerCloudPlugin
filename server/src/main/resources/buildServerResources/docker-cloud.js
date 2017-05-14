@@ -5,6 +5,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
         //noinspection JSUnresolvedVariable
         var self = {
+            IMAGE_VERSION: 3,
             selectors: {
                 editImageLink: '.editImageLink',
                 imagesTableRow: '.imagesTableRow'
@@ -20,7 +21,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.errorIconURL = params.errorIconURL;
                 self.warnIconURL = params.warnIconURL;
                 self.debugEnabled = params.debugEnabled;
+                self.daemonTargetVersion = params.daemonTargetVersion;
+                self.daemonMinVersion = params.daemonMinVersion;
 
+                var useTlsParam = params.useTlsParam;
                 var imagesParam = params.imagesParam;
                 var tcImagesDetailsParam = params.tcImagesDetails;
 
@@ -31,14 +35,17 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
 
                 self.$image = $j("#dockerCloudImage_Image");
+                self.$registryUser = $j("#dockerCloudImage_RegistryUser");
+                self.$registryPassword = $j("#dockerCloudImage_RegistryPassword");
                 self.$checkConnectionBtn = $j("#dockerCloudCheckConnectionBtn");
-                self.$checkConnectionSuccess = $j('#dockerCloudCheckConnectionSuccess');
+                self.$checkConnectionResult = $j('#dockerCloudCheckConnectionResult');
                 self.$checkConnectionWarning = $j('#dockerCloudCheckConnectionWarning');
-                self.$checkConnectionError = $j('#dockerCloudCheckConnectionError');
+                self.$checkConnectionInfo = $j('#dockerCloudCheckConnectionInfo');
                 self.$newImageBtn = $j('#dockerShowDialogButton');
                 self.$imageDialogSubmitBtn = $j('#dockerAddImageButton');
                 self.$imageDialogCancelBtn = $j('#dockerCancelAddImageButton');
                 self.$imagesTable = $j('#dockerCloudImagesTable');
+                self.$useTls = $j(BS.Util.escapeId(useTlsParam));
                 self.$images = $j(BS.Util.escapeId(imagesParam));
                 self.$tcImagesDetails = $j(BS.Util.escapeId(tcImagesDetailsParam));
                 self.$dockerAddress = $j("#dockerCloudDockerAddress");
@@ -86,6 +93,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$diagnosticCloseBtn = $j('#dockerDiagnosticCloseBtn');
 
                 self._initImagesData();
+                self._initDaemonInfo();
                 self._initTabs();
                 self._initValidators();
                 self._bindHandlers();
@@ -94,6 +102,16 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             /* MAIN SETTINGS */
+
+            _initDaemonInfo: function() {
+                // Simple heuristic to check if this is a new cloud profile. At least one image must be saved for
+                // existing profiles.
+                var existingProfile = Object.keys(self.imagesData).length;
+
+                if (existingProfile) {
+                    setTimeout(self._checkConnection, 0);
+                }
+            },
 
             _renderImagesTable: function () {
                 self.logDebug("Rendering image table.");
@@ -145,51 +163,56 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var useLocalInstance = self.$useLocalInstance.is(':checked');
                 self.$dockerAddress.val(useLocalInstance ? self.defaultLocalSocketURI : "");
                 self.$dockerAddress.prop('disabled', useLocalInstance);
+                self._scheduleConnectionCheck();
+            },
+            _scheduleConnectionCheck: function() {
+                if (self.checkConnectionTimeout) {
+                    clearTimeout(self.checkConnectionTimeout);
+                }
+                self.checkConnectionTimeout = setTimeout(self._checkConnection, 500);
             },
             _checkConnection: function () {
+                self.$checkConnectionResult.hide().removeClass('infoMessage errorMessage').empty();
+                self.$checkConnectionWarning.hide().empty();
+
+                if (!self.$dockerAddress.val()) {
+                    return;
+                }
+
                 self._toggleCheckConnectionBtn();
                 self.$checkConnectionLoader.show();
-                self.$checkConnectionSuccess.hide().empty();
-                self.$checkConnectionWarning.hide().empty();
-                self.$checkConnectionError.hide().empty();
 
-                var deferred = $j.Deferred();
-
-                BS.ajaxRequest(self.checkConnectivityCtrlURL, {
-                    parameters: BS.Clouds.Admin.CreateProfileForm.serializeParameters(),
-                    onFailure: function (response) {
-                        deferred.reject(response.getStatusText());
-                    },
-                    onSuccess: function (response) {
-                        deferred.resolve(response);
-                    }
-                });
+                var deferred = self._queryDaemonInfo();
 
                 deferred.
-                fail(function(msg) {
-                    self.$checkConnectionError.append($j('<div>')).text(msg);
-                }).
-                done(function(response) {
-                    var $response = $j(response.responseXML);
-                    var $error = $response.find("error");
-                    if ($error.length) {
-                        var $container = self.$checkConnectionError.append($j('<div>').append('<span>'));
-                        $container.text($error.text());
-                        var $failureCause = $response.find("failureCause");
-                        if ($failureCause.length) {
-                            self.prepareDiagnosticDialogWithLink($container, "Checking for connectivity failed.", $failureCause.text());
-                        }
-                        self.$checkConnectionError.append($container).show();
-                    } else {
-                        var $version = $response.find("version");
-                        self.$checkConnectionSuccess.text('Connection successful to Docker version ' + $version.attr('docker') +
-                            ' (API: ' + $version.attr('api') + ') on ' +
-                            $version.attr('os') + '/' + $version.attr('arch')).show();
-                        var warning = $response.find("warning").text();
-                        if (warning) {
-                            self.$checkConnectionWarning.text(warning).show();
-                        }
+                fail(function(msg, failureCause) {
+                    self.logInfo("Checking connection failed");
+                    var $container = self.$checkConnectionResult.addClass('errorMessage').append($j('<div>').append('<span>'));
+                    $container.text(msg);
+                    if (failureCause) {
+                        self.prepareDiagnosticDialogWithLink($container, "Checking for connectivity failed.", failureCause);
                     }
+                    self.$checkConnectionResult.append($container).show();
+                }).
+                done(function(daemonInfo) {
+                    var effectiveApiVersion = daemonInfo.meta.effectiveApiVersion;
+
+                    self.$checkConnectionResult.addClass('infoMessage');
+                    self.$checkConnectionResult.text('Connection successful to Docker v' + daemonInfo.info.Version
+                    + ' (API v ' + effectiveApiVersion + ') on '
+                    + daemonInfo.info.Os + '/' + daemonInfo.info.Arch).show();
+
+                    if (self.compareVersionNumbers(effectiveApiVersion, self.daemonMinVersion) < 0 ||
+                        self.compareVersionNumbers(effectiveApiVersion, self.daemonTargetVersion) > 0) {
+                        self.$checkConnectionWarning
+                            .append('Warning: daemon API version is outside of supported version range (v'
+                                + self.daemonMinVersion + " - v" + self.daemonTargetVersion + ").").show();
+
+                        // Prevent further version check.
+                        effectiveApiVersion = null;
+                    }
+
+                    self.effectiveApiVersion = effectiveApiVersion;
                 }).
                 always(function () {
                     self.$checkConnectionLoader.hide();
@@ -197,6 +220,46 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
 
                 return false; // to prevent link with href='#' to scroll to the top of the page
+            },
+
+            _queryDaemonInfo: function() {
+                var deferred = $j.Deferred();
+
+                if (self.queryDaemonInfoReq) {
+                    self.logDebug("Aborting previous connection check.");
+                    self.queryDaemonInfoReq.abort();
+                }
+
+                var data = self.queryDaemonInfoReqData = BS.Clouds.Admin.CreateProfileForm.serializeParameters();
+                    self.queryDaemonInfoReq = $j.ajax({
+                    url: self.checkConnectivityCtrlURL,
+                    method: 'POST',
+                    data: data,
+                    error: function(response) {
+                        var msg = response.statusText;
+                        switch (msg) {
+                            case 'abort':
+                                return;
+                            case 'timeout':
+                                msg = 'Server did not reply in time.'
+                        }
+
+                        deferred.reject(msg);
+                    },
+                    success: function(responseMap) {
+                        var error = responseMap.error;
+                        if (error) {
+                            deferred.reject(error, responseMap.failureCause);
+                        } else {
+                            deferred.resolve(responseMap);
+                        }
+                    },
+                    complete: function() {
+                      delete self.queryDaemonInfoReq;
+                    },
+                    timeout: 15000
+                });
+                return deferred;
             },
 
             /* IMAGE DATA MARSHALLING / UNMARSHALLING */
@@ -210,11 +273,66 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.imagesData = {};
                 self.logDebug(images.length + " images to be loaded.");
                 $j.each(images, function(i, image) {
+                    self._migrateImagesData(image);
                     self.imagesData[image.Administration.Profile] = image;
                 });
 
                 // Update the image details when the configuration is initially loaded.
                 self._updateTCImageDetails();
+            },
+
+            _migrateImagesData: function(imageData) {
+                switch(imageData.Administration.Version) {
+                    case 1:
+                        // V1: 'Binds' must be exported from the container configuration into the editor configuration,
+                        // where they will not be stored using the Docker syntax ([host_path]:[container_path]:[mode])
+                        // but splitted into JSON fields. This allow us to avoid to handle specially with colons in
+                        // filename for unix (see docker issue #8604, still open today) and windows drive letters
+                        // (solved in Docker using complexes regexes).
+                        self.logInfo("Performing migration to version 2.");
+                        var container = imageData.Container || {};
+                        var hostConfig = container.HostConfig || {};
+                        var editor = imageData.Editor || {};
+                        imageData.Editor = editor;
+
+                        editor.Binds = [];
+
+                        self._safeEach(hostConfig.Binds, function(bind) {
+                            self.logDebug("Processing: " + bind);
+                            var tokens = bind.split(':');
+                            if (tokens.length > 3) {
+                                // We are in difficulty as soon as we have more than three tokens: we will then not
+                                // evaluate the whole binding definition. This is less crucial for unix file paths,
+                                // because the Docker daemon will consider such definition invalid and reject them
+                                // anyway.
+                                // For Windows file paths, we apply a simple heuristic that should be "good enough":
+                                // if a definition token looks like a drive letter then we merge it with the following
+                                // token.
+                                var copy = tokens.slice();
+                                var newTokens = [];
+                                var mode = copy.pop();
+                                while(copy.length) {
+                                    var token = copy.shift();
+                                    if (token.match('^[a-zA-Z0-9]$') && copy.length) {
+                                        token += ':' + copy.shift();
+                                    }
+                                    newTokens.push(token);
+                                }
+                                if (newTokens.length >= 2 && (mode === 'ro' || mode === 'rw')) {
+                                    tokens = [newTokens[0], newTokens[1], mode];
+                                    self.logInfo("Binding fix attempt: " + newTokens[0] + ":" + newTokens[1] + ":" + mode);
+                                }
+                            }
+                            editor.Binds.push({ PathOnHost: tokens[0], PathInContainer: tokens[1],  ReadOnly: tokens[2] });
+                        });
+                    case 2:
+                        imageData.Administration.PullOnCreate = true;
+                        imageData.Administration.Version = self.IMAGE_VERSION;
+                    case self.IMAGE_VERSION:
+                        break;
+                    default:
+                        self.logInfo("Warning: unsupported configuration version " + imageData.Administration.Version);
+                }
             },
 
             _updateTCImageDetails: function(oldSourceId, newSourceId) {
@@ -273,6 +391,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _applyViewModel: function(viewModel) {
                 $j('[id^="dockerCloudImage_"], [name^="dockerCloudImage_"]').each(function(i, elt) {
                     var $elt = $j(elt);
+                    // TODO: handle attribute name according to input type.
                     var key = $elt.attr('id') || $elt.attr('name');
                     var match = /^dockerCloudImage_([^_]+)$/.exec(key);
                     if (match) {
@@ -284,9 +403,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var tagName = $elt.prop("tagName");
                 if (tagName === "TBODY") {
                     var arrayTemplate = self.arrayTemplates['dockerCloudImage_' + key];
-                    if (!arrayTemplate) {
-                        alert("Template not found: " + key)
-                    }
                     var colCount = arrayTemplate.match(/<td/g).length;
                     // Clear the table content.
                     $elt.empty();
@@ -316,7 +432,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                     });
                     self._insertAddButton($elt, colCount);
-                } else if ($elt.is(':text')) {
+                } else if ($elt.is(':text') || $elt.is(':password')) {
                     $elt.val(parentObject[key]);
                 } else if ($elt.is(':checkbox')) {
                     $elt.prop('checked', parentObject[key] === true);
@@ -333,6 +449,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 $tbody.append('<tr class="dockerCloudAddItem"><td colspan="' + colspan + '" class="dockerCloudCtrlCell"> <a class="btn dockerCloudAddBtn" href="#/"  title="Add item"><span class="dockerCloudAddBtn">Add</span></a></td></tr>');
             },
             showDialog: function (profileName) {
+
                 var existingImage = !!profileName;
 
                 self.$imageDataDialogTitle.text((existingImage ? 'Edit' : 'Add') + ' Image');
@@ -347,7 +464,12 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         /* Defaults for new images. */
                         Administration: {
                             UseOfficialTCAgentImage: true,
+                            PullOnCreate: true,
                             MaxInstanceCount: 2
+                        },
+                        Editor: {
+                            MemoryUnit: 'bytes',
+                            MemorySwapUnit: 'bytes'
                         }
                     });
                 self._applyViewModel(viewModel);
@@ -355,7 +477,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.selectTabWithId("dockerCloudImageTab_general");
                 self.imageDataTabbedPane.setActiveCaption("dockerCloudImageTab_general");
 
-                self.$imageDialogSubmitBtn.val(existingImage ? 'Save' : 'Add').data('image-id', profileName).data('profile', profileName);
+                if (existingImage) {
+                    self.$imageDialogSubmitBtn.val('Save')
+                        .data('image-id', profileName)
+                        .data('profile', profileName);
+                } else {
+                    self.$imageDialogSubmitBtn.val('Add')
+                        .removeData('image-id')
+                        .removeData('profile');
+                }
 
                 BS.DockerImageDialog.showCentered();
 
@@ -453,7 +583,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     });
                 } else if (tagName == 'SELECT') {
                     parentObject[key] = $elt.val();
-                } else if ($elt.is(':text')) {
+                } else if ($elt.is(':text') || $elt.is(':password')) {
                     parentObject[key] = $elt.val();
                 } else if ($elt.is(':checkbox')) {
                     parentObject[key] = $elt.is(':checked');
@@ -468,318 +598,404 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var settings = {};
 
                 var admin = settings.Administration = {};
+                var editor = {};
 
-                admin.Version = 1;
+                admin.Version = self.IMAGE_VERSION;
 
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'RmOnExit');
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'BindAgentProps');
-                if (self._filterFromSettings(viewModel.MaxInstanceCount)) {
+                self.copy(viewModel, admin, 'RmOnExit');
+                self.copy(viewModel, admin, 'PullOnCreate');
+
+                if (self.notEmpty(viewModel.MaxInstanceCount)) {
                     admin.MaxInstanceCount = parseInt(viewModel.MaxInstanceCount);
                 }
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'UseOfficialTCAgentImage');
-                self._convertViewModelFieldToSettingsField(viewModel, admin, 'Profile');
+                self.copy(viewModel, admin, 'UseOfficialTCAgentImage');
+                self.copy(viewModel, admin, 'RegistryUser');
+                self.copy(viewModel, admin, 'RegistryPassword', self.base64Utf16BEEncode);
+                self.copy(viewModel, admin, 'Profile');
 
-                var container = settings.Container = {};
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'Hostname');
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'Domainname');
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'User');
+                var container = {};
+                self.copy(viewModel, container, 'Hostname');
+                self.copy(viewModel, container, 'Domainname');
+                self.copy(viewModel, container, 'User');
 
-                if (self._filterFromSettings(viewModel.Env)) {
+                if (self.notEmpty(viewModel.Env)) {
                     container.Env = [];
                     self._safeEach(viewModel.Env, function (envEntry) {
                         container.Env.push(envEntry.Name + '=' + envEntry.Value);
                     });
                 }
 
-                if (self._filterFromSettings(viewModel.Labels)) {
+                if (self.notEmpty(viewModel.Labels)) {
                     container.Labels = {};
                     self._safeEach(viewModel.Labels, function (label) {
                         container.Labels[label.Key] = label.Value;
                     });
                 }
 
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'Cmd');
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'Entrypoint');
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'Image');
+                self.copy(viewModel, container, 'Cmd');
+                self.copy(viewModel, container, 'Entrypoint');
+                self.copy(viewModel, container, 'Image');
 
-                if (self._filterFromSettings(viewModel.Volumes)) {
-                    container.Volumes = {};
+                if (self.notEmpty(viewModel.Volumes)) {
+                    var volumes = {};
                     self._safeEach(viewModel.Volumes, function (volume) {
                         if (!volume.PathOnHost) {
-                            container.Volumes[volume.PathInContainer] = {};
+                            volumes[volume.PathInContainer] = {};
                         }
                     });
+                    if (Object.keys(volumes).length) {
+                        container.Volumes = volumes;
+                    }
                 }
 
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'WorkingDir');
+                self.copy(viewModel, container, 'WorkingDir');
 
-                if (self._filterFromSettings(viewModel.Ports)) {
-                    container.ExposedPorts = {};
+                if (self.notEmpty(viewModel.Ports)) {
+                    var exposedPorts = {};
                     self._safeEach(viewModel.Ports, function (port) {
                         if (!port.HostIp && !port.HostPort) {
                             container.ExposedPorts[port.HostPort + '/' + port.Protocol] = {};
                         }
                     });
+                    if (Object.keys(exposedPorts).length) {
+                        container.ExposedPorts = exposedPorts;
+                    }
                 }
 
-                self._convertViewModelFieldToSettingsField(viewModel, container, 'StopSignal');
+                self.copy(viewModel, container, 'StopSignal');
 
-                var hostConfig = container.HostConfig = {};
+                if (self.notEmpty(viewModel.StopTimeout)) {
+                    container.StopTimeout = parseInt(viewModel.StopTimeout);
+                }
 
-                if (self._filterFromSettings(viewModel.Volumes)) {
-                    hostConfig.Binds = [];
+                var hostConfig = {};
+
+                if (self.notEmpty(viewModel.Volumes)) {
+                    var editorBinds = [];
+                    var hostConfigBinds = [];
                     self._safeEach(viewModel.Volumes, function (volume) {
                         if (volume.PathOnHost) {
-                            hostConfig.Binds.push(volume.PathOnHost + ':' + volume.PathInContainer + ':' + (volume.ReadOnly ? 'ro' : 'rw'));
+                            var readOnly = volume.ReadOnly ? 'ro' : 'rw';
+                            hostConfigBinds.push(volume.PathOnHost + ':' + volume.PathInContainer + ':' + readOnly);
+                            editorBinds.push({ PathOnHost: volume.PathOnHost,
+                                PathInContainer: volume.PathInContainer, ReadOnly: readOnly});
                         }
                     });
+
+                    if (editorBinds.length) {
+                        editor.Binds = editorBinds;
+                        hostConfig.Binds = hostConfigBinds;
+                    }
                 }
 
-                if (self._filterFromSettings(viewModel.Links)) {
+                if (self.notEmpty(viewModel.Links)) {
                     hostConfig.Links = [];
                     self._safeEach(viewModel.Links, function (link) {
                         hostConfig.Links.push(link.Container + ':' + link.Alias);
                     });
                 }
 
-                if (self._filterFromSettings(viewModel.Memory)) {
+                if (self.notEmpty(viewModel.Memory)) {
                     hostConfig.Memory = parseInt(viewModel.Memory) * self._units_multiplier[viewModel.MemoryUnit];
                 }
-                if (self._filterFromSettings(viewModel.MemorySwap)) {
-                    hostConfig.MemorySwap = viewModel.MemorySwapUnlimited ? -1 : (parseInt(viewModel.MemorySwap) * self._units_multiplier[viewModel.MemorySwapUnit]);
-                }
 
-                if (self._filterFromSettings(viewModel.CpuQuota)) {
+                if (viewModel.MemorySwapUnlimited) {
+                    hostConfig.MemorySwap = -1;
+                } else if (self.notEmpty(viewModel.MemorySwap)) {
+                    hostConfig.MemorySwap = parseInt(viewModel.MemorySwap) * self._units_multiplier[viewModel.MemorySwapUnit];
+                }
+                if (self.notEmpty(viewModel.CPUs)) {
+                    hostConfig.NanoCPUs = Math.floor(parseFloat(viewModel.CPUs) * 1e9);
+                }
+                if (self.notEmpty(viewModel.CpuQuota)) {
                     hostConfig.CpuQuota = parseInt(viewModel.CpuQuota);
                 }
-                if (self._filterFromSettings(viewModel.CpuShares)) {
+                if (self.notEmpty(viewModel.CpuShares)) {
                     hostConfig.CpuShares = parseInt(viewModel.CpuShares);
                 }
-                if (self._filterFromSettings(viewModel.CpuPeriod)) {
+                if (self.notEmpty(viewModel.CpuPeriod)) {
                     hostConfig.CpuPeriod = parseInt(viewModel.CpuPeriod);
                 }
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'CpusetCpus');
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'CpusetMems');
-                if (self._filterFromSettings(viewModel.BlkioWeight)) {
+                self.copy(viewModel, hostConfig, 'CpusetCpus');
+                self.copy(viewModel, hostConfig, 'CpusetMems');
+                if (self.notEmpty(viewModel.BlkioWeight)) {
                     hostConfig.BlkioWeight = parseInt(viewModel.BlkioWeight);
                 }
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'OomKillDisable');
+                self.copy(viewModel, hostConfig, 'OomKillDisable');
 
-                if (self._filterFromSettings(viewModel.Ports)) {
-                    hostConfig.PortBindings = {};
+                if (self.notEmpty(viewModel.Ports)) {
+                    var portBindings = {};
                     self._safeEach(viewModel.Ports, function (port) {
                         if (port.HostIp || port.HostPort) {
                             var key = port.ContainerPort + '/' + port.Protocol;
-                            var binding = hostConfig.PortBindings[key];
+                            var binding = portBindings[key];
                             if (!binding) {
-                                binding = hostConfig.PortBindings[key] = [];
+                                binding = portBindings[key] = [];
                             }
                             binding.push({HostIp: port.HostIp, HostPort: port.HostPort});
                         }
                     });
+
+                    if (Object.keys(portBindings).length) {
+                        hostConfig.PortBindings = portBindings;
+                    }
                 }
 
+                self.copy(viewModel, hostConfig, 'PublishAllPorts');
+                self.copy(viewModel, hostConfig, 'Privileged');
+                self.copy(viewModel, hostConfig, 'Dns');
+                self.copy(viewModel, hostConfig, 'DnsSearch');
 
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'PublishAllPorts');
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Privileged');
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Dns');
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'DnsSearch');
-
-                if (self._filterFromSettings(viewModel.ExtraHosts)) {
+                if (self.notEmpty(viewModel.ExtraHosts)) {
                     hostConfig.ExtraHosts = [];
                     self._safeEach(viewModel.ExtraHosts, function (extraHost) {
                         hostConfig.ExtraHosts.push(extraHost.Name + ':' + extraHost.Ip);
                     });
                 }
 
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'CapAdd');
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'CapDrop');
+                self.copy(viewModel, hostConfig, 'CapAdd');
+                self.copy(viewModel, hostConfig, 'CapDrop');
 
-                if (self._filterFromSettings(viewModel.NetworkMode)) {
+                if (self.notEmpty(viewModel.NetworkMode)) {
                     var networkMode = viewModel.NetworkMode;
                     if (networkMode === 'bridge' || networkMode === 'host' || networkMode === 'none') {
                         hostConfig.NetworkMode = networkMode;
                     } else if (networkMode === 'container') {
                         hostConfig.NetworkMode = 'container:' + viewModel.NetworkContainer;
-                    } else if (networkMode !== 'default') {
+                    } else if (networkMode) {
                         hostConfig.NetworkMode = viewModel.NetworkCustom;
                     }
                 }
 
+                self.copy(viewModel, hostConfig, 'Devices');
+                self.copy(viewModel, hostConfig, 'Ulimits');
 
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Devices');
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'Ulimits');
-
-                if (self._filterFromSettings(viewModel.Ulimits)) {
+                if (self.notEmpty(viewModel.Ulimits)) {
                     hostConfig.Ulimits = [];
                     self._safeEach(viewModel.Ulimits, function (ulimit) {
                         hostConfig.Ulimits.push({ Name: ulimit.Name, Hard: parseInt(ulimit.Hard), Soft: parseInt(ulimit.Soft)});
                     });
                 }
 
-                if (self._filterFromSettings(viewModel.LogType)) {
+                if (self.notEmpty(viewModel.LogType)) {
+                    var config = {};
                     hostConfig.LogConfig = {
-                        Type: viewModel.LogType,
-                        Config: {}
+                        Type: viewModel.LogType
                     };
 
                     self._safeEach(viewModel.LogConfig, function (logConfig) {
-                        hostConfig.LogConfig.Config[logConfig.Key] = logConfig.Value;
+                        config[logConfig.Key] = logConfig.Value;
                     });
+
+                    if (Object.keys(config).length) {
+                        hostConfig.LogConfig.Config = config;
+                    }
                 }
 
-                self._convertViewModelFieldToSettingsField(viewModel, hostConfig, 'CgroupParent');
+                self.copy(viewModel, hostConfig, 'CgroupParent');
+                self.copy(viewModel, editor, 'MemoryUnit');
+                self.copy(viewModel, editor, 'MemorySwapUnit');
 
-                var editor = settings.Editor = {};
-                editor.MemoryUnit = viewModel.MemoryUnit;
-                editor.MemorySwapUnit = viewModel.MemorySwapUnit;
+                if (Object.keys(hostConfig).length) {
+                    container.HostConfig = hostConfig;
+                }
+                if (Object.keys(container).length) {
+                    settings.Container = container;
+                }
+                if (Object.keys(editor).length) {
+                    settings.Editor = editor;
+                }
 
                 return settings;
             },
-            _convertViewModelFieldToSettingsField: function(viewModel, settings, fieldName) {
-                var value = viewModel[fieldName];
-                if (self._filterFromSettings(value)) {
-                    settings[fieldName] = value;
+            copy: function(source, target, fieldName, conversionFunction) {
+                var value = source[fieldName];
+                if (self.notEmpty(value)) {
+                    target[fieldName] =  conversionFunction ? conversionFunction(value) : value;
                 }
             },
-            _filterFromSettings: function(value) {
-                return value !== undefined && (value.length === undefined || value.length) && ($j.type(value) != "object" || Object.keys(value).length);
+            notEmpty: function(value) {
+                return value !== undefined && value !== null && (value.length === undefined || value.length) && ($j.type(value) != "object" || Object.keys(value).length);
             },
             _convertSettingsToViewModel: function(settings) {
                 var viewModel = {};
 
                 var admin = settings.Administration || {};
                 var container = settings.Container || {};
+                var hostConfig = container.HostConfig || {};
                 var editor = settings.Editor || {};
 
-                viewModel.Profile = admin.Profile;
-                viewModel.RmOnExit = admin.RmOnExit;
-                viewModel.BindAgentProps = admin.BindAgentProps;
-                viewModel.MaxInstanceCount = admin.MaxInstanceCount;
-                viewModel.UseOfficialTCAgentImage = admin.UseOfficialTCAgentImage;
+                self.copy(admin, viewModel, 'Profile');
+                self.copy(admin, viewModel, 'PullOnCreate');
+                self.copy(admin, viewModel, 'RmOnExit');
+                self.copy(admin, viewModel, 'MaxInstanceCount');
+                self.copy(admin, viewModel, 'UseOfficialTCAgentImage');
+                self.copy(admin, viewModel, 'RegistryUser');
 
-                viewModel.Hostname = container.Hostname;
-                viewModel.Domainname = container.Domainname;
-                viewModel.User = container.User;
+                self.copy(admin, viewModel, 'RegistryPassword', self.base64Utf16BEDecode);
 
-                viewModel.Env = [];
+                self.copy(container, viewModel, 'Hostname');
+                self.copy(container, viewModel, 'Domainname');
+                self.copy(container, viewModel, 'User');
+
+                var env = [];
                 self._safeEach(container.Env, function(envEntry) {
                     var sepIndex = envEntry.indexOf('=');
-                    if (sepIndex != -1) {
-                        viewModel.Env.push({ Name: envEntry.substring(0, sepIndex), Value: envEntry.substring(sepIndex + 1)});
+                    if (sepIndex !== -1) {
+                        env.push({ Name: envEntry.substring(0, sepIndex), Value: envEntry.substring(sepIndex + 1)});
                     }
                 });
 
-                viewModel.Cmd = container.Cmd;
-                viewModel.Entrypoint = container.Entrypoint;
-                viewModel.Image = container.Image;
+                if (env.length) {
+                    viewModel.Env = env;
+                }
 
-                viewModel.Volumes = [];
+                self.copy(container, viewModel, 'Cmd');
+                self.copy(container, viewModel, 'Entrypoint');
+                self.copy(container, viewModel, 'Image');
+
+
+                var volumes = [];
                 self._safeKeyValueEach(container.Volumes, function(volume) {
-                    viewModel.Volumes.push({ PathInContainer: volume, ReadOnly: false });
+                    volumes.push({ PathInContainer: volume });
                 });
 
-                viewModel.WorkingDir = container.WorkingDir;
+                self.copy(container, viewModel, 'WorkingDir');
 
-                viewModel.Labels = [];
+                var labels = [];
                 self._safeKeyValueEach(container.Labels, function(key, value) {
-                    viewModel.Labels.push({ Key: key, Value: value});
+                    labels.push({ Key: key, Value: value});
                 });
+                if (labels.length) {
+                    viewModel.Labels = labels;
+                }
 
-                viewModel.Ports = [];
+                var ports = [];
                 self._safeEach(container.ExposedPorts, function(exposedPort) {
                     var tokens = exposedPort.split('/');
-                    viewModel.Ports.push({ ContainerPort: tokens[0], Protocol: tokens[1] })
+                    ports.push({ ContainerPort: tokens[0], Protocol: tokens[1] })
                 });
 
-                viewModel.StopSignal = container.StopSignal;
+                self.copy(container, viewModel, 'StopSignal');
+                self.copy(container, viewModel, 'StopTimeout');
 
-                var hostConfig = container.HostConfig || {};
 
-                self._safeEach(hostConfig.Binds, function(bind) {
-                    var tokens = bind.split(':');
-                    viewModel.Volumes.push({ PathOnHost: tokens[0], PathInContainer: tokens[1],  ReadOnly: tokens[2] === 'ro' });
+                self._safeEach(editor.Binds, function(bind) {
+                    volumes.push({ PathOnHost: bind.PathOnHost, PathInContainer: bind.PathInContainer,  ReadOnly: bind.ReadOnly === 'ro' });
                 });
+                if (volumes.length) {
+                    viewModel.Volumes = volumes;
+                }
 
-                viewModel.Links = [];
+                var links = [];
                 self._safeEach(hostConfig.Links, function(link) {
                     var tokens = link.split(':');
-                    viewModel.Links.push({ Container: tokens[0], Alias: tokens[1] })
+                    links.push({ Container: tokens[0], Alias: tokens[1] })
                 });
+                if (links.length) {
+                    viewModel.Links = links;
+                }
 
-                viewModel.MemoryUnit = editor.MemoryUnit || 'bytes';
-                viewModel.Memory = hostConfig.Memory && Math.floor(hostConfig.Memory / self._units_multiplier[viewModel.MemoryUnit]);
-                viewModel.MemorySwapUnit = editor.MemorySwapUnit || 'bytes';
-                viewModel.MemorySwap = hostConfig.MemorySwap && Math.floor(hostConfig.MemorySwap / self._units_multiplier[viewModel.MemorySwapUnit]);
-                viewModel.MemorySwapUnlimited = hostConfig.MemorySwap == -1;
-                viewModel.CpuQuota = hostConfig.CpuQuota;
-                viewModel.CpuShares = hostConfig.CpuShares;
-                viewModel.CpuPeriod = hostConfig.CpuPeriod;
-                viewModel.CpusetCpus = hostConfig.CpusetCpus;
-                viewModel.CpusetMems = hostConfig.CpusetMems;
-                viewModel.BlkioWeight = hostConfig.BlkioWeight;
-                viewModel.OomKillDisable = hostConfig.OomKillDisable;
+                self.copy(editor, viewModel, 'MemoryUnit');
+
+                if (self.notEmpty(hostConfig.Memory)) {
+                    viewModel.Memory = self.str(Math.floor(hostConfig.Memory / self._units_multiplier[viewModel.MemoryUnit]));
+                }
+
+                self.copy(editor, viewModel, 'MemorySwapUnit');
+                if (self.notEmpty(hostConfig.MemorySwap)) {
+                    if (hostConfig.MemorySwap == -1) {
+                        viewModel.MemorySwapUnlimited = true;
+                    } else {
+                        viewModel.MemorySwap = self.str(Math.floor(hostConfig.MemorySwap / self._units_multiplier[viewModel.MemorySwapUnit]));
+                    }
+                }
+
+                if (self.notEmpty(hostConfig.NanoCPUs)) {
+                    viewModel.CPUs = self.str(hostConfig.NanoCPUs / 1e9);
+                }
+
+                self.copy(hostConfig, viewModel, 'CpuQuota', self.str);
+                self.copy(hostConfig, viewModel, 'CpuShares', self.str);
+                self.copy(hostConfig, viewModel, 'CpuPeriod', self.str);
+                self.copy(hostConfig, viewModel, 'CpusetCpus');
+                self.copy(hostConfig, viewModel, 'CpusetMems');
+                self.copy(hostConfig, viewModel, 'BlkioWeight');
+                self.copy(hostConfig, viewModel, 'OomKillDisable');
 
                 self._safeKeyValueEach(hostConfig.PortBindings, function(port, bindings) {
                     var tokens = port.split("/");
                     var containerPort = tokens[0];
                     var protocol = tokens[1];
                     self._safeEach(bindings, function(binding) {
-                        viewModel.Ports.push({ HostIp: binding.HostIp, HostPort: binding.HostPort, ContainerPort: containerPort, Protocol: protocol })
+                        ports.push({ HostIp: binding.HostIp, HostPort: binding.HostPort, ContainerPort: containerPort, Protocol: protocol })
                     });
                 });
 
-                viewModel.PublishAllPorts = hostConfig.PublishAllPorts;
-                viewModel.Privileged = hostConfig.Privileged;
-                viewModel.Dns = hostConfig.Dns;
-                viewModel.DnsSearch = hostConfig.DnsSearch;
+                if (ports.length) {
+                    viewModel.Ports = ports;
+                }
 
-                viewModel.ExtraHosts = [];
+                self.copy(hostConfig, viewModel, 'PublishAllPorts');
+                self.copy(hostConfig, viewModel, 'Privileged');
+                self.copy(hostConfig, viewModel, 'Dns');
+                self.copy(hostConfig, viewModel, 'DnsSearch');
+
+                var extraHosts = [];
                 self._safeEach(hostConfig.ExtraHosts, function(extraHost) {
                     var tokens = extraHost.split(':');
-                    viewModel.ExtraHosts.push({ Name: tokens[0], Ip: tokens[1] });
+                    extraHosts.push({ Name: tokens[0], Ip: tokens[1] });
                 });
+                if (extraHosts.length) {
+                    viewModel.ExtraHosts = extraHosts;
+                }
 
-                viewModel.CapAdd = hostConfig.CapAdd;
-                viewModel.CapDrop = hostConfig.CapDrop;
+                self.copy(hostConfig, viewModel, 'CapAdd');
+                self.copy(hostConfig, viewModel, 'CapDrop');
 
                 var networkMode = hostConfig.NetworkMode;
-                if (!networkMode) {
-                    viewModel.NetworkMode = 'default';
-                } else if (networkMode === "bridge" || networkMode === "host" || networkMode === "none") {
+                if (networkMode === "bridge" || networkMode === "host" || networkMode === "none") {
                     viewModel.NetworkMode = networkMode;
                 } else if (/^container:/.test(networkMode)) {
                     viewModel.NetworkMode = "container";
                     viewModel.NetworkContainer = networkMode.substring('container:'.length);
-                } else {
+                } else if (networkMode) {
                     viewModel.NetworkMode = 'custom';
                     viewModel.NetworkCustom = networkMode;
                 }
 
-                viewModel.Devices = [];
+                var devices = [];
                 self._safeEach(hostConfig.Devices, function(device) {
-                    viewModel.Devices.push(device);
+                    devices.push(device);
                 });
+                if (devices.length) {
+                    viewModel.Devices = devices;
+                }
 
-                viewModel.Ulimits = [];
+                var ulimits = [];
                 self._safeEach(hostConfig.Ulimits, function(ulimit) {
-                    viewModel.Ulimits.push(ulimit);
+                    ulimits.push(ulimit);
                 });
+                if (ulimits.length) {
+                    viewModel.Ulimits = ulimits;
+                }
 
                 var logConfig = hostConfig.LogConfig;
                 if (logConfig) {
                     viewModel.LogType = logConfig.Type;
-                    viewModel.LogConfig = [];
+                    var logConfigProps = [];
                     self._safeKeyValueEach(logConfig.Config, function (key, value) {
-                        viewModel.LogConfig.push({ Key: key, Value: value});
+                        logConfigProps.push({ Key: key, Value: value});
                     });
+                    if (logConfigProps.length) {
+                        viewModel.LogConfig = logConfigProps;
+                    }
                 }
 
-                viewModel.CgroupParent = hostConfig.CgroupParent;
+                self.copy(hostConfig, viewModel, 'CgroupParent');
 
                 return viewModel;
             },
-
             /* TABS */
 
             _initTabs: function () {
@@ -861,6 +1077,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self.$useLocalInstance.change(self._instanceChange);
                 self.$useCustomInstance.change(self._instanceChange);
+                self.$useTls.change(self._scheduleConnectionCheck);
 
                 var useLocalInstance = self.$useLocalInstance.is(':checked');
                 self.$dockerAddress.prop('disabled', useLocalInstance);
@@ -878,6 +1095,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     var match = address.match(/([a-zA-Z]+?):\/*(.*)/);
                     var scheme;
                     var schemeSpecificPart;
+                    var ignore = false;
                     if (match) {
                         // Some scheme detected.
                         scheme = match[1].toLowerCase();
@@ -892,15 +1110,18 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             schemeSpecificPart = match[1];
                         } else {
                             // Most certainly invalid, but let the server complain about it.
-                            return;
+                            ignore = true;
                         }
                     }
 
-                    self.$dockerAddress.val(scheme + ':' + (scheme == 'unix' ? '///' : '//') + schemeSpecificPart);
+                    if (!ignore) {
+                        self.$dockerAddress.val(scheme + ':' + (scheme === 'unix' ? '///' : '//') + schemeSpecificPart);
+                    }
+
+                    self._scheduleConnectionCheck();
                 });
 
                 self.$imageDialogSubmitBtn.click(function() {
-
                     self._triggerAllFields(true);
 
                     if(!self.updateOkBtnState()) {
@@ -912,7 +1133,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                     var currentProfile = self.$imageDialogSubmitBtn.data('profile');
                     var newProfile = settings.Administration.Profile;
-                    self.logDebug("Saving profile: " + newProfile + "(was: " + currentProfile + ")");
+                    self.logDebug("Saving profile: " + newProfile + " (was: " + currentProfile + ")");
                     delete self.imagesData[currentProfile];
                     self.imagesData[newProfile] = settings;
                     var tmp = [];
@@ -937,7 +1158,16 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 self.$useOfficialDockerImage.change(function () {
                     self.$image.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
+                    self.$registryUser.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
+                    self.$registryPassword.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
                     self.$image.blur();
+                }).change();
+
+                self.$registryUser.change(function () {
+                    self.$registryPassword.blur();
+                }).change();
+                self.$registryPassword.change(function () {
+                    self.$registryUser.blur();
                 }).change();
 
                 var networkMode = $j("#dockerCloudImage_NetworkMode");
@@ -1042,7 +1272,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     $swap.blur();
                 });
 
-
                 self.$testContainerCreateBtn.click(function() {
                     self._testDialogHideAllBtns();
 
@@ -1059,7 +1288,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.$testContainerLabel.text("Starting test...");
                     self._invokeTestAction('create', BS.Clouds.Admin.CreateProfileForm.serializeParameters())
                         .done(function (response) {
-                            self.testUuid = $j(response.responseXML).find('testUuid').text();
+                            self.testUuid = JSON.parse(response.responseText).testUuid;
                             self._queryTestStatus();
                         });
                 });
@@ -1095,7 +1324,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerContainerLogsBtn.click(function() {
                     self._invokeTestAction('logs', null, true)
                         .done(function(response) {
-                            var logs = $j(response.responseXML).find('logs').text();
+                            var logs = JSON.parse(response.responseText).logs;
                             self.prepareDiagnosticDialog("Container logs:", logs);
                             self.$testContainerLoader.hide();
                             BS.DockerDiagnosticDialog.showCentered();
@@ -1144,7 +1373,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 } else {
                     self._invokeTestAction('query', BS.Clouds.Admin.CreateProfileForm.serializeParameters())
                         .done(function(response){
-                            var responseMap = self._parseTestStatusResponse(response.responseXML);
+                            var responseMap = self._parseTestStatusResponse(response.responseText);
                             if (responseMap.status == 'PENDING') {
                                 self.logDebug('Scheduling status retrieval.');
                                 setTimeout(self._queryTestStatus, 5000);
@@ -1281,23 +1510,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
             },
 
-            _parseTestStatusResponse: function(xml) {
-                var $xml = $j(xml);
-                var responseMap = {
-                    msg: $xml.find('msg').text(),
-                    containerId: $xml.find('containerId').text(),
-                    status: $xml.find('status').text(),
-                    phase: $xml.find('phase').text(),
-                    taskUuid: $xml.find("taskUuid").text(),
-                    failureCause: $xml.find("failureCause").text(),
-                    warnings: []
-                };
-
-                $xml.find('warning').each(function() {
-                    responseMap.warnings.push(this.innerText);
-                });
-
-                return responseMap;
+            _parseTestStatusResponse: function(json) {
+                return JSON.parse(json).statusMsg;
             },
 
             _invokeTestAction: function(action, parameters, immediate) {
@@ -1403,7 +1617,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 var positiveIntegerValidator = function (elt) {
                     var value = elt.val().trim().replace(/^0+/, '');
-                    if (value && !/^[0-9]+$/.test(value)) {
+                    if (!value) {
+                        return;
+                    }
+                    if (/^[0-9]+$/.test(value)) {
+                        // Check that we are in the positive range of a golang int64 max value.
+                        if (parseInt(value) > 9223372036854775807) {
+                            return {msg: "Value out of bound."};
+                        }
+                    } else {
                         return {msg: "Value must be a positive integer."};
                     }
                 };
@@ -1424,6 +1646,24 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     return {msg: "Port number must be between 1 and 65535."};
                 };
 
+                var cpusValidator = function(elt) {
+                    var value = elt.val().trim().replace(/^0+\B/, '');
+                    if (!value) {
+                        return;
+                    }
+                    if (/^[0-9]+(\.[0-9]+)?$/.test(value)) {
+                        var number = parseFloat(value) * 1e9;
+                        if (number > 9223372036854775807) {
+                            return {msg: "Value out of bound."};
+                        }
+                        if (number % 1 !== 0) { // Should have no decimal part left.
+                            return {msg: "Value is too precise."};
+                        }
+                    } else {
+                        return {msg: "Value must be a positive decimal number."};
+                    }
+                };
+
                 var cpuSetValidator = function(elt) {
                     var value = elt.val().trim();
                     elt.val(value);
@@ -1433,6 +1673,24 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                     if (!/^[0-9]+(?:[-,][0-9]+)*$/.test(value)) {
                         return {msg: "Invalid Cpuset specification."};
+                    }
+                };
+
+                var versionValidator = function(targetVersion, elt) {
+                    if (!self.effectiveApiVersion) {
+                        return;
+                    }
+                    var value = elt.val().trim();
+                    elt.val(value);
+                    if (!value) {
+                        return;
+                    }
+
+                    var daemonVersion = self.effectiveApiVersion;
+
+                    if (self.compareVersionNumbers(daemonVersion, targetVersion) < 0) {
+                        return {msg: 'The daemon API version (v' + daemonVersion + ') is lower than required for ' +
+                        'this configuration field (v' + targetVersion + ').', warning: true};
                     }
                 };
 
@@ -1454,6 +1712,21 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             return {msg: "At least one instance must be permitted."};
                         }
                     }],
+                    dockerCloudImage_RegistryUser: [function ($elt){
+                        var pass = self.$registryPassword.val().trim();
+                        var user = $elt.val().trim();
+                        if (pass && !user) {
+                            return {msg: 'Must specify user if password set.'}
+                        }
+                    }],
+                    dockerCloudImage_RegistryPassword: [function ($elt){
+                        var user = self.$registryUser.val().trim();
+                        var pass = $elt.val().trim();
+                        if (user && !pass) {
+                            return {msg: 'Must specify password if user set.'}
+                        }
+                    }],
+                    dockerCloudImage_StopTimeout: [positiveIntegerValidator, versionValidator.bind(this, '1.25')],
                     dockerCloudImage_Entrypoint_IDX: [function ($elt) {
                         var row = $elt.closest("tr");
                         if (row.index() === 0) {
@@ -1500,6 +1773,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         }
                         return result;
                     }],
+                    dockerCloudImage_CPUs: [cpusValidator, versionValidator.bind(this, '1.25')],
                     dockerCloudImage_CpuQuota: [function($elt) {
                         var value = $elt.val().trim();
                         $elt.val(value);
@@ -1657,6 +1931,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                   self._log(msg);
               }
             },
+            str: function(obj) {
+              return self.notEmpty(obj) ? obj.toString() : obj;
+            },
             _log: function(msg) {
                 // Catching all errors instead of simply testing for console existence to prevent issues with IE8.
                 try { console.log(msg) } catch (e) {}
@@ -1723,7 +2000,39 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.logError('Failed to determine browser support: ' + e);
                 }
             },
+            compareVersionNumbers: function(v1, v2) {
+                var v1Digits = self._convertVersionToDigits(v1);
+                var v2Digits = self._convertVersionToDigits(v2);
 
+                for (var i = 0; i < v1Digits.length && i < v2Digits.length; i++) {
+                    var cmp = v1Digits[i] - v2Digits[i];
+                    if (cmp !== 0) {
+                        return cmp;
+                    }
+                }
+
+                return v1Digits.length - v2Digits.length;
+            },
+            _convertVersionToDigits: function(version) {
+                var tokens = version.split('.');
+                var digits = [];
+                $j(tokens).each(function(i, token) {
+                    var digit;
+                    if (token.match('^[0-9]+$')) {
+                        digit = parseInt(token, 10);
+                    }
+                    if (!digit || isNaN(digit)) {
+                        digit = 0;
+                    }
+                    digits.push(digit);
+                });
+                return digits;
+            },
+            _padLeft: function(txt, padChar, minSize) {
+                txt = txt.toString();
+                while (txt.length < minSize) txt = padChar + txt;
+                return txt;
+            },
             _units_multiplier:  {
                 GiB: 134217728,
                 MiB: 131072,
@@ -1752,6 +2061,45 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     array.push(value);
                 }
             },
+
+            // Base-64 encoding/decoding is tricky to achieve in an unicode-safe way (especially when using the atob
+            // and btoa standard functions). We leverage here an all-purpose binary-based Base64 encoder and do the
+            // string to UTF-16BE conversion ourselves.
+            base64Utf16BEEncode: function(str) {
+                if (!str) {
+                    return;
+                }
+                try {
+                    var arr = [];
+                    for (var i = 0; i < str.length; i++) {
+                        var charcode = str.charCodeAt(i);
+                        arr.push((charcode >> 8) & 0xff);
+                        arr.push(charcode & 0xff);
+                    }
+                    return base64js.fromByteArray(arr);
+                } catch (e) {
+                    self.logError("Failed to encode base64 string.");
+                }
+            },
+            base64Utf16BEDecode: function(base64) {
+                if (!base64) {
+                    return;
+                }
+                try {
+                    var byteArray = base64js.toByteArray(base64);
+                    if (byteArray.length % 2 !== 0) {
+                        self.logError("Invalid content length.");
+                    }
+                    var charcodes = [];
+                    for (var i = 0; i < byteArray.length - 1; i+=2) {
+                        charcodes.push((((byteArray[i] & 0xff) << 8) | (byteArray[i+1] & 0xff)));
+                    }
+                    return String.fromCharCode.apply(null, charcodes);
+                } catch (e) {
+                    self.logError("Failed to decode base64 string.");
+                }
+            },
+
             arrayTemplates: {
                 deleteCell: '<a class="btn dockerCloudCtrlBtn dockerCloudDeleteBtn" href="#/" title="Delete"><span></span></a>',
                 settingsCell: '<a class="btn dockerCloudCtrlBtn dockerCloudSettingsBtn" href="#/" title="Settings"><span></span></a>',
@@ -1800,21 +2148,24 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
         return self;
     })();
 
-BS.DockerImageDialog = OO.extend(BS.AbstractModalDialog, {
-    getContainer: function () {
-        return $('DockerCloudImageDialog');
-    }
-});
+if (typeof OO !== "undefined") {
+    BS.DockerImageDialog = OO.extend(BS.AbstractModalDialog, {
+            getContainer: function () {
+                return $('DockerCloudImageDialog');
+            }
+        });
 
-BS.DockerTestContainerDialog = OO.extend(BS.AbstractModalDialog, {
-    getContainer: function () {
-        return $('DockerTestContainerDialog');
-    }
-});
+    BS.DockerTestContainerDialog = OO.extend(BS.AbstractModalDialog, {
+            getContainer: function () {
+                return $('DockerTestContainerDialog');
+            }
+        });
 
-BS.DockerDiagnosticDialog = OO.extend(BS.AbstractModalDialog, {
-    getContainer: function () {
-        return $('DockerDiagnosticDialog');
-    }
-});
+    BS.DockerDiagnosticDialog = OO.extend(BS.AbstractModalDialog, {
+            getContainer: function () {
+                return $('DockerDiagnosticDialog');
+            }
+        });
+}
+
 

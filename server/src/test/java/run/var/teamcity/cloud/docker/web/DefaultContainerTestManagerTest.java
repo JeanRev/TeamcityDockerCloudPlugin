@@ -6,7 +6,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
+import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
+import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.client.TestContainerTestStatusListener;
 import run.var.teamcity.cloud.docker.test.*;
 import run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus;
@@ -36,7 +38,8 @@ public class DefaultContainerTestManagerTest {
     private TestDockerClientFactory dockerClientFactory;
     private DockerClientConfig dockerClientConfig;
     private DockerCloudClientConfig clientConfig;
-    private DockerImageConfig imageConfig;
+    private boolean pullOnCreate;
+    private Node containerSpec;
     private TestSBuildServer buildServer;
     private TestBuildAgentManager agentMgr;
     private TestDockerImageResolver imageResolver;
@@ -46,16 +49,19 @@ public class DefaultContainerTestManagerTest {
     @Before
     public void init() throws MalformedURLException {
         dockerClientFactory = new TestDockerClientFactory();
-        dockerClientFactory.addConfigurator(dockerClient -> dockerClient.knownImage("resolved-image", "1.0"));
+        dockerClientFactory.addConfigurator(dockerClient ->
+                dockerClient
+                        .localImage("resolved-image", "1.0")
+                        .registryImage("resolved-image", "1.0"));
 
         serverURL = new URL("http://not.a.real.server");
 
-        dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI);
+        dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI, DockerAPIVersion.DEFAULT);
         clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false,
                 serverURL);
 
-        Node containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
-        imageConfig = new DockerImageConfig("test", containerSpec, true, false, 1, null);
+        pullOnCreate = true;
+        containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
         buildServer = new TestSBuildServer();
         agentMgr = buildServer.getBuildAgentManager();
 
@@ -70,7 +76,7 @@ public class DefaultContainerTestManagerTest {
 
         ContainerTestManager mgr = createManager();
 
-        UUID testUuid = mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
@@ -104,13 +110,15 @@ public class DefaultContainerTestManagerTest {
 
     @Test
     public void errorHandling() {
-        // Client factory with no known image.
-        dockerClientFactory = new TestDockerClientFactory();
+        pullOnCreate = true;
 
         ContainerTestManager mgr = createManager();
+        imageResolver.image("local-only:1.0");
+        dockerClientFactory.addConfigurator(client -> client.localImage("local-only", "1.0"));
 
-        UUID testUuid = mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
 
+        // Image exists only locally, pull will fail.
         queryUntilFailure(Phase.CREATE);
 
         assertThatExceptionOfType(ActionException.class).isThrownBy(
@@ -118,10 +126,25 @@ public class DefaultContainerTestManagerTest {
     }
 
     @Test
+    public void createNoPull() {
+        pullOnCreate = false;
+
+        ContainerTestManager mgr = createManager();
+        imageResolver.image("local-only:1.0");
+        dockerClientFactory.addConfigurator(client -> client.localImage("local-only", "1.0"));
+
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
+
+        queryUntilSuccess(Phase.CREATE);
+
+        imageResolver.image("registry-only:1.0");
+    }
+
+    @Test
     public void diposeTest() {
         ContainerTestManager mgr = createManager();
 
-        UUID testUuid = mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
 
         queryUntilSuccess(Phase.CREATE);
 
@@ -137,7 +160,7 @@ public class DefaultContainerTestManagerTest {
         // Cancelling a test related to an already removed container.
         testListener = new TestContainerTestStatusListener();
 
-        testUuid = mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
+        testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
 
         dockerClient = dockerClientFactory.getClient();
 
@@ -157,7 +180,7 @@ public class DefaultContainerTestManagerTest {
         setupFastCleanupRate();
 
         ContainerTestManager mgr = createManager();
-        mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
+        mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
 
         waitUntil(() -> !testListener.getMsgs().isEmpty());
 
@@ -180,7 +203,7 @@ public class DefaultContainerTestManagerTest {
 
         ContainerTestManager mgr = createManager();
 
-        mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
+        mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
 
         queryUntilSuccess();
 
@@ -195,7 +218,7 @@ public class DefaultContainerTestManagerTest {
 
         ContainerTestManager mgr = createManager();
 
-        mgr.createNewTestContainer(clientConfig, imageConfig, testListener);
+        mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
 
         queryUntilFailure();
     }
@@ -243,6 +266,10 @@ public class DefaultContainerTestManagerTest {
             assertThat(status).isNotSameAs(Status.FAILURE);
             return queryMsg.getPhase() == targetPhase;
         });
+    }
+
+    private DockerImageConfig createImageConfig() {
+        return new DockerImageConfig("test", containerSpec, pullOnCreate,true, false, DockerRegistryCredentials.ANONYMOUS, 1, null);
     }
 
     private ContainerTestManager createManager() {

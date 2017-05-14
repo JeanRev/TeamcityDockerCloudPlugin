@@ -3,12 +3,16 @@ package run.var.teamcity.cloud.docker.util;
 import org.junit.Before;
 import org.junit.Test;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
+import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
 import run.var.teamcity.cloud.docker.client.TestDockerClientRegistryFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+/**
+ * {@link OfficialAgentImageResolver} test suite.
+ */
 public class OfficialAgentImageResolverTest {
 
     private TestDockerClientRegistryFactory clientFty;
@@ -19,7 +23,7 @@ public class OfficialAgentImageResolverTest {
     @Before
     public void init() {
         clientFty = new TestDockerClientRegistryFactory();
-        imageConfig = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, true, 1, null);
+        imageConfig = new DockerImageConfig("test", Node.EMPTY_OBJECT, true,false, true, DockerRegistryCredentials.ANONYMOUS, 1, null);
         version = "10.0.3";
     }
 
@@ -37,7 +41,7 @@ public class OfficialAgentImageResolverTest {
 
     @Test
     public void shouldNotResolveImagesWithoutFlag() {
-        imageConfig = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, false, 1, null);
+        imageConfig = new DockerImageConfig("test", Node.EMPTY_OBJECT, true,false, false, DockerRegistryCredentials.ANONYMOUS, 1, null);
 
         clientFty.configureClient((clt) -> clt.knownImage(OfficialAgentImageResolver.REPO, "4.0", "5.2", "5.2.1",
                 "5.2.1.1", "6.0"));

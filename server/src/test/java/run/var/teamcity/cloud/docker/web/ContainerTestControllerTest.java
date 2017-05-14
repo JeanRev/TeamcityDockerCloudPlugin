@@ -1,10 +1,10 @@
 package run.var.teamcity.cloud.docker.web;
 
-import org.jdom.Element;
-import org.jdom.output.XMLOutputter;
 import org.junit.Before;
 import org.junit.Test;
 import run.var.teamcity.cloud.docker.test.*;
+import run.var.teamcity.cloud.docker.util.EditableNode;
+import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.web.ContainerTestController.Action;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
@@ -14,13 +14,16 @@ import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * {@link ContainerTestController} test suite.
+ */
 @SuppressWarnings("unchecked")
 public class ContainerTestControllerTest {
 
     private TestHttpServletRequest request;
     private TestHttpServletResponse response;
     private TestContainerTestManager testMgr;
-    private Element element;
+    private EditableNode responseNode;
 
 
     @Before
@@ -40,14 +43,14 @@ public class ContainerTestControllerTest {
 
         request.parameter("action", Action.CREATE.name());
 
-        ctrl.doPost(request, response, element);
+        ctrl.doPost(request, response, responseNode);
 
         assertThat(testMgr.getInvolvedPhase()).isSameAs(Phase.CREATE);
         assertThat(testMgr.getClientConfig()).isNotNull();
         assertThat(testMgr.getImageConfig()).isNotNull();
         assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_OK);
         assertThat(response.getWrittenResponse()).isEmpty();
-        assertThat(getResponseString()).containsIgnoringCase(TestUtils.TEST_UUID.toString());
+        assertThat(responseNode.toString()).containsIgnoringCase(TestUtils.TEST_UUID.toString());
 
     }
 
@@ -56,7 +59,7 @@ public class ContainerTestControllerTest {
         ContainerTestController ctrl = createController();
 
         request.parameter("action", Action.CREATE.name());
-        ctrl.doPost(request, response, element);
+        ctrl.doPost(request, response, responseNode);
 
         request.
                 parameter("action", Action.START.name()).
@@ -64,12 +67,12 @@ public class ContainerTestControllerTest {
 
         resetResponse();
 
-        ctrl.doPost(request, response, element);
+        ctrl.doPost(request, response, responseNode);
 
         assertThat(testMgr.getInvolvedPhase()).isSameAs(Phase.START);
         assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_OK);
         assertThat(response.getWrittenResponse()).isEmpty();
-        assertThat(element.getChildren()).isEmpty();
+        assertThat(responseNode).isEqualTo(Node.EMPTY_OBJECT);
     }
 
     @Test
@@ -77,7 +80,7 @@ public class ContainerTestControllerTest {
         ContainerTestController ctrl = createController();
 
         request.parameter("action", Action.CREATE.name());
-        ctrl.doPost(request, response, element);
+        ctrl.doPost(request, response, responseNode);
 
         testMgr.getListener().notifyStatus(new TestContainerStatusMsg(TestUtils.TEST_UUID, Phase.CREATE, Status.PENDING, null, null, null, Collections.emptyList()));
 
@@ -87,11 +90,11 @@ public class ContainerTestControllerTest {
 
         resetResponse();
 
-        ctrl.doPost(request, response, element);
+        ctrl.doPost(request, response, responseNode);
 
         assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_OK);
         assertThat(response.getWrittenResponse()).isEmpty();
-        assertThat(getResponseString())
+        assertThat(responseNode.toString())
                 .containsIgnoringCase(TestUtils.TEST_UUID.toString())
                 .containsIgnoringCase(Phase.CREATE.name())
                 .containsIgnoringCase(Status.PENDING.name());
@@ -102,7 +105,7 @@ public class ContainerTestControllerTest {
         ContainerTestController ctrl = createController();
 
         request.parameter("action", Action.CREATE.name());
-        ctrl.doPost(request, response, element);
+        ctrl.doPost(request, response, responseNode);
 
         request.
                 parameter("action", Action.CANCEL.name()).
@@ -110,11 +113,11 @@ public class ContainerTestControllerTest {
 
         resetResponse();
 
-        ctrl.doPost(request, response, element);
+        ctrl.doPost(request, response, responseNode);
 
         assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_OK);
         assertThat(response.getWrittenResponse()).isEmpty();
-        assertThat(element.getChildren()).isEmpty();
+        assertThat(responseNode).isEqualTo(Node.EMPTY_OBJECT);
     }
 
     @Test
@@ -125,10 +128,10 @@ public class ContainerTestControllerTest {
         TestHttpServletResponse response = new TestHttpServletResponse();
 
         // Missing action parameter.
-        ctrl.doPost(request, response, element);
+        ctrl.doPost(request, response, responseNode);
 
         assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_BAD_REQUEST);
-        assertThat(element.getChildren()).isEmpty();
+        assertThat(responseNode).isEqualTo(Node.EMPTY_OBJECT);
         assertThat(response.getWrittenResponse()).isNotEmpty();
 
         // Invalid action parameter.
@@ -136,10 +139,10 @@ public class ContainerTestControllerTest {
         response = new TestHttpServletResponse();
         request.parameter("action", "not a real action");
 
-        ctrl.doPost(request, response, element);
+        ctrl.doPost(request, response, responseNode);
 
         assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_BAD_REQUEST);
-        assertThat(element.getChildren()).isEmpty();
+        assertThat(responseNode).isEqualTo(Node.EMPTY_OBJECT);
         assertThat(response.getWrittenResponse()).isNotEmpty();
 
         // Missing client configuration.
@@ -148,10 +151,10 @@ public class ContainerTestControllerTest {
         request.parameters(TestUtils.getSampleTestImageConfigParams());
         request.parameter("action", Action.CREATE.name());
 
-        ctrl.doPost(request, response, element);
+        ctrl.doPost(request, response, responseNode);
 
         assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_BAD_REQUEST);
-        assertThat(element.getChildren()).isEmpty();
+        assertThat(responseNode).isEqualTo(Node.EMPTY_OBJECT);
         assertThat(response.getWrittenResponse()).isNotEmpty();
 
         // Missing image configuration.
@@ -160,20 +163,16 @@ public class ContainerTestControllerTest {
         request.parameters(TestUtils.getSampleDockerConfigParams());
         request.parameter("action", Action.CREATE.name());
 
-        ctrl.doPost(request, response, element);
+        ctrl.doPost(request, response, responseNode);
 
         assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        assertThat(element.getChildren()).isEmpty();
+        assertThat(responseNode).isEqualTo(Node.EMPTY_OBJECT);
         assertThat(response.getWrittenResponse()).isNotEmpty();
     }
 
     private void resetResponse() {
         response = new TestHttpServletResponse();
-        element = new Element("root");
-    }
-
-    private String getResponseString() {
-        return new XMLOutputter().outputString(element);
+        responseNode = Node.EMPTY_OBJECT.editNode();
     }
 
     private ContainerTestController createController() {

@@ -4,17 +4,17 @@ import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.*;
 import jetbrains.buildServer.serverSide.*;
 import run.var.teamcity.cloud.docker.client.*;
-import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-import run.var.teamcity.cloud.docker.util.EditableNode;
-import run.var.teamcity.cloud.docker.util.Node;
-import run.var.teamcity.cloud.docker.util.NodeStream;
+import run.var.teamcity.cloud.docker.util.*;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static com.intellij.openapi.util.text.StringUtil.isNotEmpty;
 
 /**
  * A Docker {@link CloudClient}.
@@ -339,22 +339,26 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                     Node containerSpec = authorContainerSpec(instance, image, serverAddress);
 
-                    try (NodeStream nodeStream = dockerClient.createImage(image, null)) {
-                        Node status;
-                        while ((status = nodeStream.next()) != null) {
-                            String error = status.getAsString("error", null);
-                            if (error != null) {
-                                Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
-                                throw new CloudException("Failed to pull image: " + error + " -- " + details
-                                        .getAsString("message", null), null);
+                    if (dockerImage.getConfig().isPullOnCreate()) {
+                        try (NodeStream nodeStream = dockerClient.createImage(image, null, dockerImage.getConfig()
+                                .getRegistryCredentials())) {
+                            Node status;
+                            while ((status = nodeStream.next()) != null) {
+                                String error = status.getAsString("error", null);
+                                if (error != null) {
+                                    Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
+                                    throw new CloudException("Failed to pull image: " + error + " -- " + details
+                                            .getAsString("message", null), null);
+                                }
                             }
+                        } catch (Exception e) {
+                            // Failure to pull is considered non-critical: if an image of this name exists in the Docker
+                            // daemon local repository but is potentially outdated we will use it anyway.
+                            LOG.warn("Failed to pull image " + image + " for instance " + instance.getUuid() +
+                                    ", proceeding anyway.", e);
                         }
-                    } catch (Exception e) {
-                        // Failure to pull is considered non-critical: if an image of this name exists in the Docker
-                        // daemon local repository but is potentially outdated we will use it anyway.
-                        LOG.warn("Failed to pull image " + image + " for instance " + instance.getUuid() +
-                                ", proceeding anyway.", e);
                     }
+
                     Node createNode = dockerClient.createContainer(containerSpec, null);
                     containerId = createNode.getAsString("Id");
                     LOG.info("New container " + containerId + " created.");
@@ -451,6 +455,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     }
 
     private void terminateInstance(@Nonnull final CloudInstance instance, final boolean clientDisposed) {
+        assert instance != null;
         LOG.info("Scheduling cloud instance termination: " + instance + " (client disposed: " + clientDisposed + ").");
         final DockerInstance dockerInstance = ((DockerInstance) instance);
         taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Disposal of container", dockerInstance, InstanceStatus.SCHEDULED_TO_STOP) {
@@ -467,7 +472,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 boolean containerAvailable = false;
                 if (containerId != null) {
                     boolean rmContainer = clientDisposed || dockerInstance.getImage().getConfig().isRmOnExit();
-                    containerAvailable = terminateContainer(containerId, rmContainer);
+                    containerAvailable = terminateContainer(containerId, clientDisposed, rmContainer);
                 }
 
                 try {
@@ -487,19 +492,32 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         });
     }
 
-    private boolean terminateContainer(String containerId, boolean rmContainer) {
+    private boolean terminateContainer(String containerId, boolean clientDisposed, boolean rmContainer) {
+        assert containerId != null;
+        assert !clientDisposed || rmContainer;
         try {
             // We always try to stop the container before destroying it independently of our metadata.
-            dockerClient.stopContainer(containerId, TimeUnit.SECONDS.toSeconds(0));
+            // No stop timeout (timeout = 0s) will be observed If the whole cloud client was stopped. This is to
+            // maximize the chances to issue all stop requests when the server is shutting down, before the JVM is
+            // effectively killed. Applying no timeout has the disadvantage that the agent will not have the time
+            // to properly shutdown and the TC server will need more time to notice that it is effectively gone.
+            long stopTime = Stopwatch.measureMillis(() ->
+                    dockerClient.stopContainer(containerId, clientDisposed ? 0 : DockerClient.DEFAULT_TIMEOUT));
+            LOG.info("Container " + containerId + " stopped in " + stopTime + "ms.");
         } catch (ContainerAlreadyStoppedException e) {
-            LOG.debug("Container " + containerId + " was already stopped.");
+            LOG.debug("Container " + containerId + " was already stopped.", e);
         } catch (NotFoundException e) {
-            LOG.warn("Container " + containerId + " was destroyed prematurely.");
+            LOG.warn("Container " + containerId + " was destroyed prematurely.", e);
             return false;
         }
         if (rmContainer) {
             LOG.info("Destroying container: " + containerId);
-            dockerClient.removeContainer(containerId, true, true);
+            try {
+                dockerClient.removeContainer(containerId, true, true);
+            } catch (NotFoundException | BadRequestException e) {
+                LOG.debug("Assume container already removed or removal already in progress.", e);
+            }
+
             return false;
         }
 
@@ -773,7 +791,11 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 LOG.info("The following orphaned containers will be removed: " + orphanedContainers);
             }
             for (String orphanedContainer : orphanedContainers) {
-                terminateContainer(orphanedContainer, true);
+                try {
+                    terminateContainer(orphanedContainer, false, true);
+                } catch (Exception e) {
+                    LOG.error("Failed to remove container.", e);
+                }
             }
         }
     }

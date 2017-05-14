@@ -79,9 +79,8 @@
             </td>
         </tr>
     </table>
-    <div id="dockerCloudCheckConnectionSuccess" class="successMessage hidden"></div>
-    <div id="dockerCloudCheckConnectionError" class="errorMessage hidden"></div>
-    <div id="dockerCloudCheckConnectionWarning" class="warningMessage hidden"></div>
+    <div id="dockerCloudCheckConnectionResult" class="message hidden"></div>
+    <div id="dockerCloudCheckConnectionWarning" class="message warningMessage hidden"></div>
 
     <h2 class="noBorder section-header">Agent Images <span class="error"
                                                            id="error_<%=DockerCloudUtils.IMAGES_PARAM%>"></span></h2>
@@ -94,6 +93,9 @@
     <c:set var="imagesData" value="${propertiesBean.properties['run.var.teamcity.docker.cloud.img_param']}"/>
     <input type="hidden" name="prop:run.var.teamcity.docker.cloud.img_param"
            id="run.var.teamcity.docker.cloud.img_param" value="<c:out value="${imagesData}"/>"/>
+    <c:set var="daemonInfo" value="${propertiesBean.properties['run.var.teamcity.docker.cloud.daemon_info']}"/>
+    <input type="hidden" name="prop:run.var.teamcity.docker.cloud.daemon_info"
+           id="run.var.teamcity.docker.cloud.daemon_info" value="<c:out value="${daemonInfo}"/>"/>
 
     <table class="settings" style="width: 75%; margin-left: 25%">
         <thead>
@@ -173,6 +175,14 @@
                     <th>Management:</th>
                     <td>
                         <p>
+                            <input type="checkbox" id="dockerCloudImage_PullOnCreate"/>
+                            <label for="dockerCloudImage_PullOnCreate">Pull image before creating container</label>
+                            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                            <span class="tooltiptext">Always attempt to pull the agent image before creating
+                                containers. If this box is unchecked, the agent image will need to be already available
+                                in the daemon local image store.</span>
+                        </p>
+                        <p>
                             <input type="checkbox" id="dockerCloudImage_RmOnExit"/>
                             <label for="dockerCloudImage_RmOnExit">Delete container when cloud agent is stopped</label>
                             <i class="icon icon16 tc-icon_help_small tooltip"></i>
@@ -184,7 +194,24 @@
                         </p>
                     </td>
                 </tr>
-
+                <tr>
+                    <th><label for="dockerCloudImage_RegistryUser">Registry User:</label></th>
+                    <td>
+                        <p>
+                            <input type="text" id="dockerCloudImage_RegistryUser" class="mediumField"/>
+                            <span class="error" id="dockerCloudImage_RegistryUser_error"></span>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="dockerCloudImage_RegistryPassword">Registry Password:</label></th>
+                    <td>
+                        <p>
+                            <input type="password" id="dockerCloudImage_RegistryPassword" class="mediumField"/>
+                            <span class="error" id="dockerCloudImage_RegistryPassword_error"></span>
+                        </p>
+                    </td>
+                </tr>
             </table>
         </div>
         <div id="dockerCloudImageTab_run">
@@ -221,6 +248,18 @@
                     </label></th>
                     <td>
                         <input type="text" id="dockerCloudImage_StopSignal"/>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="dockerCloudImage_StopTimeout">Stop timeout:
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">Timeout to stop a container in seconds.
+                            <code>10</code> seconds by default.<br/><b>Requires API:</b> v1.25</span>
+                    </label></th>
+                    <td>
+                        <input type="text" id="dockerCloudImage_StopTimeout"/>
+                        <span class="error" id="dockerCloudImage_StopTimeout_error"></span>
+                        <span class="warning" id="dockerCloudImage_StopTimeout_warning"></span>
                     </td>
                 </tr>
             </table>
@@ -393,7 +432,7 @@
                             <tr>
                                 <td>
                                     <select id="dockerCloudImage_NetworkMode">
-                                        <option value="default">Default</option>
+                                        <option value="">Default</option>
                                         <option value="bridge">Bridge</option>
                                         <option value="host">Host</option>
                                         <option value="container">Container:</option>
@@ -538,6 +577,21 @@
                     </td>
                 </tr>
                 <tr>
+                    <th><label for="dockerCloudImage_CPUs">Number of CPUs:
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">Limit the number of CPUs available for execution by the container.
+                            Decimal values can be specified (e.g. <code>1.5</code> to allocate at most 1.5 CPU to the
+                            container). This option is equivalent to the <code>--cpus</code> CLI flag and is effective
+                            for both Linux and Windows containers.
+                        <br/><b>Requires API:</b> v1.25</span></label>
+                    </th>
+                    <td>
+                        <input type="text" id="dockerCloudImage_CPUs" class="textField"/>
+                        <span class="error" id="dockerCloudImage_CPUs_error"></span>
+                        <span class="warning" id="dockerCloudImage_CPUs_warning"></span>
+                    </td>
+                </tr>
+                <tr>
                     <th><label for="dockerCloudImage_CpuQuota">CPU Quota:
                         <i class="icon icon16 tc-icon_help_small tooltip"></i>
                         <span class="tooltiptext">Microseconds of CPU time that the container can get in a CPU period.</span></label>
@@ -551,7 +605,7 @@
                     <th><label for="dockerCloudImage_CpuPeriod">CPU Period:
                         <i class="icon icon16 tc-icon_help_small tooltip"></i>
                         <span class="tooltiptext">The length of a CPU period in microseconds. Accepts a value between
-                        1000μs (1ms) and 1000000μs (1s)</span></label></th>
+                        1000&micro;s (1ms) and 1000000&micro;s (1s)</span></label></th>
                     <td>
                         <input type="text" class="textField" id="dockerCloudImage_CpuPeriod"/>
                         <span class="error" id="dockerCloudImage_CpuPeriod_error"></span>
@@ -773,6 +827,7 @@
         $j.when(
             $j.getScript("<c:url value="${resPath}clipboard.min.js"/>"),
             $j.getScript("<c:url value="${resPath}ua-parser.min.js"/>"),
+            $j.getScript("<c:url value="${resPath}base64js.min.js"/>"),
             $j.when($j.getScript("<c:url value="${resPath}xterm.js"/>"))
                 .done(function () {
                     $j.getScript("<c:url value="${resPath}attach/attach.js"/>");
@@ -787,8 +842,11 @@
                             defaultLocalSocketURI: '<%=DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI%>',
                             checkConnectivityCtrlURL: '<c:url value="${resPath}checkconnectivity.html"/>',
                             testContainerCtrlURL: '<c:url value="${resPath}test-container.html"/>',
+                            useTlsParam: '<%=DockerCloudUtils.USE_TLS%>',
                             imagesParam: '<%=DockerCloudUtils.IMAGES_PARAM%>',
                             tcImagesDetails: '<%= CloudImageParameters.SOURCE_IMAGES_JSON %>',
+                            daemonTargetVersion: '<%=DockerCloudUtils.DOCKER_API_TARGET_VERSION.getVersionString()%>',
+                            daemonMinVersion: '<%=DockerCloudUtils.DOCKER_API_MIN_VERSION.getVersionString()%>',
                             errorIconURL: '<c:url value="/img/attentionCommentRed.png"/>',
                             warnIconURL: '<c:url value="/img/attentionComment.png"/>',
                             testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>',

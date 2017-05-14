@@ -2,6 +2,8 @@ package run.var.teamcity.cloud.docker.web;
 
 import org.jdom.Element;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.EditableNode;
+import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -134,34 +136,30 @@ public class TestContainerStatusMsg {
     }
 
     /**
-     * Marshall this status message to a XML tree.
+     * Marshall this status message to a JSON node.
      *
-     * @return the tree root element
+     * @return the JSON node
      */
     @Nonnull
-    public Element toExternalForm() {
-        Element root = new Element("statusMsg");
-        addChildElement(root, "msg", msg);
-        addChildElement(root, "containerId", containerId != null ? DockerCloudUtils.toShortId(containerId) : null);
-        addChildElement(root, "status", status);
-        addChildElement(root, "phase", phase);
-        addChildElement(root, "taskUuid", taskUuid);
-        Element warningsElt = new Element("warnings");
+    public Node toExternalForm() {
+        EditableNode statusMsg = Node.EMPTY_OBJECT.editNode();
+
+        statusMsg
+                .put("msg", msg)
+                .put("containerId", containerId != null ? DockerCloudUtils.toShortId(containerId) : null)
+                .put("status", status)
+                .put("phase", phase)
+                .put("taskUuid", taskUuid);
+
+        EditableNode warningsElt = statusMsg.getOrCreateArray("warnings");
         for (String warning : warnings) {
-            addChildElement(warningsElt, "warning", warning);
+            warningsElt.add(warning);
         }
-        root.addContent(warningsElt);
 
         if (throwable != null) {
-            addChildElement(root, "failureCause", DockerCloudUtils.getStackTrace(throwable));
+            statusMsg.put("failureCause", DockerCloudUtils.getStackTrace(throwable));
         }
 
-        return root;
-    }
-
-    private void addChildElement(Element parent, String name, Object value) {
-        if (value != null) {
-            parent.addContent(new Element(name).setText(DockerCloudUtils.filterXmlText(value.toString())));
-        }
+        return statusMsg.saveNode();
     }
 }

@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.AgentDescription;
 import org.apache.commons.io.output.ByteArrayOutputStream;
+import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -80,11 +81,17 @@ public final class DockerCloudUtils {
      */
     public static final URI DOCKER_DEFAULT_SOCKET_URI;
     /**
-     * Supported Docker API version.
+     * Currently supported (highest) Docker API version.
      */
-    public static final String DOCKER_API_TARGET_VERSION = "1.24";
+    public static final DockerAPIVersion DOCKER_API_TARGET_VERSION = DockerAPIVersion.parse("1.26");
+    /**
+     * Minimal Docker API version.
+     */
+    public static final DockerAPIVersion DOCKER_API_MIN_VERSION = DockerAPIVersion.parse("1.24");
 
     static {
+        assert DOCKER_API_TARGET_VERSION.isGreaterThan(DOCKER_API_MIN_VERSION);
+
         try {
             DOCKER_DEFAULT_SOCKET_URI = new URI("unix:///var/run/docker.sock");
         } catch (URISyntaxException e) {
@@ -418,46 +425,5 @@ public final class DockerCloudUtils {
      */
     public static boolean isDefaultDockerSocketAvailable() {
         return Files.exists(Paths.get(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI.getPath()));
-    }
-
-    /**
-     * Filter characters that are forbidden in the XML 1.0 spec. Invalid characters will be replace with the unicode
-     * replacement character.
-     *
-     * @param txt the text to be filtered
-     *
-     * @return the filtered text
-     *
-     * @throws NullPointerException if {@code txt} is {@code null}
-     */
-    @Nonnull
-    public static String filterXmlText(@Nonnull String txt) {
-        DockerCloudUtils.requireNonNull(txt, "Text cannot be null.");
-
-        StringBuilder sb = new StringBuilder(txt.length());
-
-        final int length = txt.length();
-        for (int offset = 0; offset < length; ) {
-            final int codepoint = txt.codePointAt(offset);
-
-            sb.appendCodePoint(isCodepointValidForXml1_0(codepoint) ? codepoint : 0xFFFD);
-
-            offset += Character.charCount(codepoint);
-        }
-
-        return sb.toString();
-    }
-
-    private static boolean isCodepointValidForXml1_0(int codepoint) {
-        return codepoint == 0x0009 || codepoint == 0x000A || codepoint == 0x000D ||
-                isInRange(0x0020, codepoint, 0xD7FF) ||
-                isInRange(0xE000, codepoint, 0xFFFD) ||
-                isInRange(0x10000, codepoint, 0x10FFFF);
-
-    }
-
-    private static boolean isInRange(int low, int value, int up) {
-        assert low < up;
-        return low <= value && up >= value;
     }
 }

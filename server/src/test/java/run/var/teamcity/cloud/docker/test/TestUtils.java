@@ -1,6 +1,5 @@
 package run.var.teamcity.cloud.docker.test;
 
-import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -125,7 +124,7 @@ public final class TestUtils {
 
     public static Node getSampleImageConfigSpec(EditableNode parent, String profileName) {
         parent.getOrCreateObject("Administration").
-                put("Version", DockerImageConfig.DOCKER_IMAGE_SPEC_VERSION).
+                put("Version", 42).
                 put("Profile", profileName).
                 put("RmOnExit", true).
                 put("MaxInstanceCount", 2).

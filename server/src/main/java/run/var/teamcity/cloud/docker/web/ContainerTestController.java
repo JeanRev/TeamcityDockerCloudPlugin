@@ -2,7 +2,6 @@ package run.var.teamcity.cloud.docker.web;
 
 
 import com.intellij.openapi.diagnostic.Logger;
-import jetbrains.buildServer.controllers.BaseFormXmlController;
 import jetbrains.buildServer.serverSide.BuildServerAdapter;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.WebLinks;
@@ -13,8 +12,6 @@ import org.atmosphere.util.SimpleBroadcaster;
 import org.atmosphere.websocket.WebSocket;
 import org.atmosphere.websocket.WebSocketHandlerAdapter;
 import org.atmosphere.websocket.WebSocketProcessor;
-import org.jdom.Element;
-import org.jdom.output.XMLOutputter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.ModelAndView;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
@@ -23,6 +20,7 @@ import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.atmo.DefaultAtmosphereFacade;
@@ -43,7 +41,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Spring controller to manage lifecycle of container tests.
  */
-public class ContainerTestController extends BaseFormXmlController {
+public class ContainerTestController extends BaseFormJsonController {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(ContainerTestController.class);
 
@@ -121,7 +119,7 @@ public class ContainerTestController extends BaseFormXmlController {
     }
 
     @Override
-    protected void doPost(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Element xmlResponse) {
+    protected void doPost(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull EditableNode responseNode) {
 
         String actionParam = request.getParameter("action");
 
@@ -168,7 +166,7 @@ public class ContainerTestController extends BaseFormXmlController {
                 lock.unlock();
             }
 
-            xmlResponse.addContent(new Element("testUuid").setText(testUuid.toString()));
+            responseNode.put("testUuid", testUuid);
             return;
         }
 
@@ -188,14 +186,14 @@ public class ContainerTestController extends BaseFormXmlController {
         if (action == Action.QUERY) {
             TestContainerStatusMsg lastStatus = listener.lastStatus;
             if (lastStatus != null) {
-                xmlResponse.addContent(listener.lastStatus.toExternalForm());
+                responseNode.put("statusMsg", listener.lastStatus.toExternalForm());
             }
             testMgr.notifyInteraction(testUuid);
             return;
         }
 
         if (action == Action.LOGS) {
-            xmlResponse.addContent(new Element("logs").setText(DockerCloudUtils.filterXmlText(testMgr.getLogs(testUuid))));
+            responseNode.put("logs", testMgr.getLogs(testUuid));
             return;
         }
 
@@ -280,7 +278,9 @@ public class ContainerTestController extends BaseFormXmlController {
 
         private void broadcast(TestContainerStatusMsg statusMsg) {
             if (atmosphereResource != null && statusMsg != null) {
-                statusBroadcaster.broadcast(new XMLOutputter().outputString(statusMsg.toExternalForm()), atmosphereResource);
+                EditableNode responseNode = Node.EMPTY_OBJECT.editNode();
+                responseNode.put("statusMsg", statusMsg.toExternalForm());
+                statusBroadcaster.broadcast(responseNode.toString(), atmosphereResource);
             }
         }
 

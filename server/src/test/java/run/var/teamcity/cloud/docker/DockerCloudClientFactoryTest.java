@@ -21,6 +21,9 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * {@link DockerCloudClientFactory} test suite.
+ */
 public class DockerCloudClientFactoryTest {
 
     @Test

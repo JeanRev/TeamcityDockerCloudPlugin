@@ -7,6 +7,9 @@ import run.var.teamcity.cloud.docker.test.TestPluginDescriptor;
 import run.var.teamcity.cloud.docker.test.TestSBuildServer;
 import run.var.teamcity.cloud.docker.test.TestWebControllerManager;
 
+/**
+ * {@link DockerCloudSettingsController} test suite.
+ */
 public class DockerCloudSettingsControllerTest {
 
     @Test

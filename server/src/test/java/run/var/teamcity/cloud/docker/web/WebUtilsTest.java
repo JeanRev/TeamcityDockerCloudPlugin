@@ -5,6 +5,9 @@ import run.var.teamcity.cloud.docker.test.TestHttpServletRequest;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+/**
+ * {@link WebUtils} test suite.
+ */
 public class WebUtilsTest {
 
     @Test

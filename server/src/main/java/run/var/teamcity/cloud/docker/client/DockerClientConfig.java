@@ -1,6 +1,5 @@
 package run.var.teamcity.cloud.docker.client;
 
-import org.jetbrains.annotations.Nullable;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import javax.annotation.Nonnull;
@@ -20,11 +19,11 @@ public class DockerClientConfig {
     private final static int DEFAULT_CONNECT_TIMEOUT_MILLIS = (int) TimeUnit.MINUTES.toMillis(1);
 
     private final URI instanceURI;
+    private final DockerAPIVersion apiVersion;
     private boolean usingTLS = false;
     private boolean verifyingHostname = true;
     private int connectionPoolSize = 1;
     private int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT_MILLIS;
-    private String apiVersion;
 
     /**
      * Creates a new configuration targeting the specified Docker URI.
@@ -33,9 +32,11 @@ public class DockerClientConfig {
      *
      * @throws NullPointerException if {@code instanceURI} is {@code null}
      */
-    public DockerClientConfig(@Nonnull URI instanceURI) {
+    public DockerClientConfig(@Nonnull URI instanceURI, DockerAPIVersion apiVersion) {
         DockerCloudUtils.requireNonNull(instanceURI, "Docker instance URI cannot be null.");
+        DockerCloudUtils.requireNonNull(apiVersion, "Docker version API cannot be null.");
         this.instanceURI = instanceURI;
+        this.apiVersion = apiVersion;
     }
 
     /**
@@ -61,18 +62,6 @@ public class DockerClientConfig {
      */
     public DockerClientConfig verifyingHostname(boolean verifyingHostname) {
         this.verifyingHostname = verifyingHostname;
-        return this;
-    }
-
-    /**
-     * Set the target Docker API version. If not specified the default API endpoint will be used.
-     *
-     * @param apiVersion the API version to be used (without the {@code v} prefix)
-     *
-     * @return this configuration instance for chained invocation
-     */
-    public DockerClientConfig apiVersion(String apiVersion) {
-        this.apiVersion = apiVersion;
         return this;
     }
 
@@ -156,8 +145,8 @@ public class DockerClientConfig {
      *
      * @return the target API version or {@code null}
      */
-    @Nullable
-    public String getApiVersion() {
+    @Nonnull
+    public DockerAPIVersion getApiVersion() {
         return apiVersion;
     }
 

@@ -5,11 +5,15 @@ import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.CloudImageParameters;
 import jetbrains.buildServer.serverSide.InvalidProperty;
 import org.jetbrains.annotations.Nullable;
+import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.annotation.Nonnull;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+
+import static com.intellij.openapi.util.text.StringUtil.isNotEmpty;
 
 /**
  * A {@link DockerImage} configuration.
@@ -18,28 +22,33 @@ public class DockerImageConfig {
 
     private static final Logger LOG = DockerCloudUtils.getLogger(DockerImageConfig.class);
 
-    public static final int DOCKER_IMAGE_SPEC_VERSION = 1;
-
     private final String profileName;
     private final Node containerSpec;
+    private final boolean pullOnCreate;
     private final boolean rmOnExit;
     private final boolean useOfficialTCAgentImage;
     private final int maxInstanceCount;
     private final Integer agentPoolId;
+    private final DockerRegistryCredentials registryCredentials;
 
-    public DockerImageConfig(@Nonnull String profileName, @Nonnull Node containerSpec, boolean rmOnExit,
-                             boolean useOfficialTCAgentImage, int maxInstanceCount, @Nullable Integer agentPoolId) {
+    public DockerImageConfig(@Nonnull String profileName, @Nonnull Node containerSpec, boolean pullOnCreate,
+                             boolean rmOnExit, boolean useOfficialTCAgentImage,
+                             @Nonnull DockerRegistryCredentials registryCredentials, int maxInstanceCount,
+                             @Nullable Integer agentPoolId) {
         DockerCloudUtils.requireNonNull(profileName, "Profile name cannot be null.");
+        DockerCloudUtils.requireNonNull(registryCredentials, "Registry credentials cannot be null.");
         DockerCloudUtils.requireNonNull(containerSpec, "Container specification cannot be null.");
         if (maxInstanceCount < 1) {
             throw new IllegalArgumentException("At least 1 instance must be allowed.");
         }
         this.profileName = profileName;
         this.containerSpec = containerSpec;
+        this.pullOnCreate = pullOnCreate;
         this.rmOnExit = rmOnExit;
         this.useOfficialTCAgentImage = useOfficialTCAgentImage;
         this.maxInstanceCount = maxInstanceCount;
         this.agentPoolId = agentPoolId;
+        this.registryCredentials = registryCredentials;
     }
 
     /**
@@ -60,6 +69,15 @@ public class DockerImageConfig {
     @Nonnull
     public Node getContainerSpec() {
         return containerSpec;
+    }
+
+    /**
+     * Pull-on-create flag. When {@code true}, the image will be pulled before the container creation.
+     *
+     * @return {@code true} if the container image must be pulled before creation.
+     */
+    public boolean isPullOnCreate() {
+        return pullOnCreate;
     }
 
     /**
@@ -97,6 +115,16 @@ public class DockerImageConfig {
     @Nullable
     public Integer getAgentPoolId() {
         return agentPoolId;
+    }
+
+    /**
+     * Gets the credentials to retrieve the Docker image.
+     *
+     * @return the credentials
+     */
+    @Nonnull
+    public DockerRegistryCredentials getRegistryCredentials() {
+        return registryCredentials;
     }
 
     /**
@@ -144,6 +172,7 @@ public class DockerImageConfig {
                     }
                 }
             } catch (Exception e) {
+                LOG.error("Failed to parse image configuration.", e);
                 invalidProperties.add(new InvalidProperty(DockerCloudUtils.IMAGES_PARAM, "Cannot parse image data."));
             }
         } else {
@@ -175,9 +204,7 @@ public class DockerImageConfig {
         DockerCloudUtils.requireNonNull(node, "JSON node cannot be null.");
         try {
             Node admin = node.getObject("Administration");
-            if (admin.getAsInt("Version") != DOCKER_IMAGE_SPEC_VERSION) {
-                throw new IllegalArgumentException("Unsupported image specification version.");
-            }
+            LOG.info("Loading cloud profile configuration version " + admin.getAsInt("Version") + ".");
 
             Node container = node.getObject("Container");
 
@@ -198,6 +225,7 @@ public class DockerImageConfig {
             }
 
             String profileName = admin.getAsString("Profile");
+            boolean pullOnCreate = admin.getAsBoolean("PullOnCreate", true);
             boolean deleteOnExit = admin.getAsBoolean("RmOnExit");
             boolean useOfficialTCAgentImage = admin.getAsBoolean("UseOfficialTCAgentImage");
 
@@ -211,10 +239,30 @@ public class DockerImageConfig {
                 }
             }
 
-            return new DockerImageConfig(profileName, node.getObject("Container"), deleteOnExit,
-                    useOfficialTCAgentImage, admin.getAsInt("MaxInstanceCount", -1), agentPoolId);
+            DockerRegistryCredentials dockerRegistryCredentials =  registryAuthentication(admin);
+
+            return new DockerImageConfig(profileName, node.getObject("Container"), pullOnCreate, deleteOnExit,
+                    useOfficialTCAgentImage, dockerRegistryCredentials, admin.getAsInt("MaxInstanceCount", -1), agentPoolId);
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to parse image JSON definition:\n" + node, e);
         }
+    }
+
+    /**
+     * Extract Registry user and password required to pull image.
+     *
+     * @param admin the docker instance for which the container will be created
+     * @return authentication details or anonymous
+     */
+    private static DockerRegistryCredentials registryAuthentication(Node admin)
+    {
+        String registryUser = admin.getAsString("RegistryUser", null);
+        String registryPassword = admin.getAsString("RegistryPassword", null);
+        DockerRegistryCredentials dockerRegistryCredentials = DockerRegistryCredentials.ANONYMOUS;
+        if (isNotEmpty(registryUser) && isNotEmpty(registryPassword)){
+            String decodedPassword = new String(Base64.getDecoder().decode(registryPassword), StandardCharsets.UTF_16BE);
+            dockerRegistryCredentials = DockerRegistryCredentials.from(registryUser, decodedPassword);
+        }
+        return dockerRegistryCredentials;
     }
 }

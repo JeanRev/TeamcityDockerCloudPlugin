@@ -4,6 +4,7 @@ import jetbrains.buildServer.clouds.InstanceStatus;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
@@ -12,6 +13,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * {@link DockerTaskScheduler} test suite.
+ */
 public class DockerTaskSchedulerTest {
 
     private DockerTaskScheduler scheduler;
@@ -144,7 +148,7 @@ public class DockerTaskSchedulerTest {
     private DockerImage testImage() {
 
         return new DockerImage(null,
-                new DockerImageConfig("test", Node.EMPTY_OBJECT, true, true, 1, null));
+                new DockerImageConfig("test", Node.EMPTY_OBJECT, true,true, true, DockerRegistryCredentials.ANONYMOUS, 1, null));
     }
 
     private class TestDockerClientTask extends DockerClientTask {
