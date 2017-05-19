@@ -46,8 +46,17 @@ task<Zip>("tcdist") {
 
     archiveName = "docker-cloud_$versionSuffix.zip"
     destinationDir = file("build")
+
+    // Apply filtering on the plugin descriptor.
+    // The version field is especially important since it will be evaluated by the server to detect outdated plugins.
+    // The exact format of the version number is however unspecified, especially when it comes to non-digit characters.
+    // To be safe, we stick to digits separated by dots, and we add a build timestamp as the last version token.
+    val parsedVersion = "((?:[0-9]\\.)*[0-9])(-SNAPSHOT)?".toRegex().matchEntire(project.version.toString())!!
+
     from("teamcity-plugin.xml") {
-        filter<ReplaceTokens>("tokens" to mapOf("version" to "${project.version} (build $commitId)"))
+        filter<ReplaceTokens>("tokens" to mapOf(
+                "version" to "${parsedVersion.groups[1]!!.value}.${System.currentTimeMillis()}",
+                "buildInfo" to "build: $commitId, ${if(parsedVersion.groups[2] != null) "SNAPSHOT" else "RELEASE"}"))
     }
 }
 

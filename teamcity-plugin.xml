@@ -6,7 +6,7 @@
     <name>docker-cloud</name>
     <display-name>Docker Cloud Plugin</display-name>
     <version>@version@</version>
-    <description>Cloud Agent Plugin for Docker containers</description>
+    <description>Cloud Agent Plugin for Docker containers (@buildInfo@).</description>
   </info>
   <deployment use-separate-classloader="true"/>
 </teamcity-plugin>
