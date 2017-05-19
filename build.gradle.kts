@@ -1,6 +1,7 @@
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.bundling.Zip
+import org.gradle.api.tasks.compile.JavaCompile
 
 version = "0.5.0-SNAPSHOT"
 group = "var.run.docker.cloud"
@@ -9,7 +10,10 @@ allprojects {
     group = project.group
     version = project.version
 }
+
 subprojects {
+
+    extra.set("serverApiVersion", "2017.1")
 
     apply {
         plugin("java")
@@ -24,6 +28,15 @@ subprojects {
 
     configurations.create("provided")
 
+    dependencies {
+        add("provided", "org.apache.logging.log4j:log4j-api:2.5")
+        // Provides null-check annotations in the javax.annotation namespace.
+        add("provided", "com.google.code.findbugs:jsr305:3.0.2")
+        testCompile("junit:junit:4.12")
+        testCompile("org.assertj:assertj-core:3.5.2")
+        testCompile("io.takari.junit:takari-cpsuite:1.2.7")
+    }
+
     val sourceSets = the<JavaPluginConvention>().sourceSets
     val mainSourceSet = sourceSets.getByName("main")!!
     val testSourceSet = sourceSets.getByName("test")!!
@@ -34,6 +47,11 @@ subprojects {
 }
 
 task<Zip>("tcdist") {
+    dependsOn(":agent:tcdist")
+    dependsOn(":server:jar")
+    into("agent") {
+        from(tasks.getByPath(":agent:tcdist"))
+    }
     into("server") {
         from(tasks.getByPath(":server:jar"))
         from(project(":server").configurations.runtime)

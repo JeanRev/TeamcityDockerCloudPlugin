@@ -1,4 +1,3 @@
-import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
 
 import com.spotify.docker.client.DefaultDockerClient
@@ -7,6 +6,8 @@ import com.spotify.docker.client.DockerClient
 
 import java.nio.file.Paths
 import com.spotify.docker.client.messages.RegistryAuth
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.jvm.tasks.Jar
 
 buildscript {
     repositories {
@@ -35,9 +36,28 @@ listOf(dockerHubTestRepo, dockerHubTestUser, dockerHubTestPwd, unixSocketInstanc
         .filter { project.hasProperty(it) }
         .forEach { dockerTestInstancesProps.put(it, project.properties[it] as String) }
 
-apply {
-    plugin("java")
+dependencies {
+    compile("com.kohlschutter.junixsocket:junixsocket-common:2.0.4")
+    compile("com.kohlschutter.junixsocket:junixsocket-native-common:2.0.4")
+    compile("org.apache.httpcomponents:httpclient:4.5.2")
+    compile("org.glassfish.jersey.core:jersey-client:2.23.1")
+    compile("org.glassfish.jersey.media:jersey-media-json-jackson:2.23.1")
+    compile("org.glassfish.jersey.connectors:jersey-apache-connector:2.23.1")
+    add("provided", "org.atmosphere:atmosphere-runtime:2.2.4")
+    add("provided", "org.jetbrains.teamcity:cloud-interface:${extra.get("serverApiVersion")}")
+    add("provided", "org.jetbrains.teamcity:server-api:${extra.get("serverApiVersion")}")
+    // We depends on the server JAR private API to provide two non-critical features.
+    // Feature requests are pending:
+    // - https://youtrack.jetbrains.com/issue/TW-49809
+    // - https://youtrack.jetbrains.com/issue/TW-49810
+    add("provided", "org.jetbrains.teamcity.internal:server:${extra.get("serverApiVersion")}")
+    // Required for tests using the cloud API to process JSON structures.
+    testCompile("com.google.code.gson:gson:2.8.0")
 }
+
+val jar = tasks.getByPath("jar") as Jar
+
+jar.baseName = "docker-cloud-server"
 
 tasks.withType<JavaCompile> {
     sourceCompatibility = "1.8"
@@ -46,32 +66,6 @@ tasks.withType<JavaCompile> {
         options.compilerArgs.add("-Xbootclasspath:${project.properties.get("rt8jar")}")
     }
     options.encoding = "UTF-8"
-}
-
-dependencies {
-    compile("com.kohlschutter.junixsocket:junixsocket-common:2.0.4")
-    compile("com.kohlschutter.junixsocket:junixsocket-native-common:2.0.4")
-    compile("org.apache.httpcomponents:httpclient:4.5.2")
-    compile("org.glassfish.jersey.core:jersey-client:2.23.1")
-    compile("org.glassfish.jersey.media:jersey-media-json-jackson:2.23.1")
-    compile("org.glassfish.jersey.connectors:jersey-apache-connector:2.23.1")
-    add("provided", "org.apache.logging.log4j:log4j-api:2.5")
-    add("provided", "org.apache.logging.log4j:log4j-api:2.5")
-    add("provided", "org.atmosphere:atmosphere-runtime:2.2.4")
-    add("provided", "org.jetbrains.teamcity:cloud-interface:2017.1")
-    add("provided", "org.jetbrains.teamcity:server-api:2017.1")
-    // We depends on the server JAR private API to provide two non-critical features.
-    // Feature requests are pending:
-    // - https://youtrack.jetbrains.com/issue/TW-49809
-    // - https://youtrack.jetbrains.com/issue/TW-49810
-    add("provided", "org.jetbrains.teamcity.internal:server:2017.1")
-    // Provides null-check annotations in the javax.annotation namespace.
-    add("provided", "com.google.code.findbugs:jsr305:3.0.2")
-    testCompile("junit:junit:4.12")
-    testCompile("org.assertj:assertj-core:3.5.2")
-    testCompile("io.takari.junit:takari-cpsuite:1.2.7")
-    // Required for tests using the cloud API to process JSON structures.
-    testCompile("com.google.code.gson:gson:2.8.0")
 }
 
 val cpuCountForTest = Math.max(1, Runtime.getRuntime().availableProcessors() / 2)

@@ -3,7 +3,7 @@ def configureGradleScriptKotlinOn(ProjectDescriptor project) {
     project.children.each { configureGradleScriptKotlinOn(it) }
 }
 
-include 'server'
+include 'server', 'agent'
 
 configureGradleScriptKotlinOn rootProject
 
