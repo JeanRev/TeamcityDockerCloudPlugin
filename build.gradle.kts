@@ -50,7 +50,8 @@ task<Zip>("tcdist") {
     // Apply filtering on the plugin descriptor.
     // The version field is especially important since it will be evaluated by the server to detect outdated plugins.
     // The exact format of the version number is however unspecified, especially when it comes to non-digit characters.
-    // To be safe, we stick to digits separated by dots, and we add a build timestamp as the last version token.
+    // To be safe, we stick to digits separated by dots, and we add a timestamp as the last version token to force
+    // older build for the same plugin version to be considered outdated.
     val parsedVersion = "((?:[0-9]\\.)*[0-9])(-SNAPSHOT)?".toRegex().matchEntire(project.version.toString())!!
 
     from("teamcity-plugin.xml") {
