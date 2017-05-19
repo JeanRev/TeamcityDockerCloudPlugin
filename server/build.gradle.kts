@@ -110,7 +110,7 @@ task<Test>("dockerIT") {
 
     dockerTestInstancesProps.forEach { k, v -> systemProperty(k, v) }
 
-    val certPath = dockerTestInstancesProps[dockerCertPath];
+    val certPath = dockerTestInstancesProps[dockerCertPath]
     if (certPath != null) {
         systemProperty("javax.net.ssl.keyStore", Paths.get(certPath, "client.jks").toString())
         systemProperty("javax.net.ssl.trustStore", Paths.get(certPath, "trustStore.jks").toString())

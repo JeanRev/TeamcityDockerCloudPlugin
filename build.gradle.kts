@@ -39,8 +39,11 @@ task<Zip>("tcdist") {
         from(project(":server").configurations.runtime)
     }
 
+    val parsedVersion = "((?:[0-9]\\.)*[0-9])(-SNAPSHOT)?".toRegex().matchEntire(project.version.toString())!!
+    val snapshotVersion = parsedVersion.groups[2] != null
+
     var versionSuffix = project.version as String
-    if (project.version.toString().endsWith("-SNAPSHOT")) {
+    if (snapshotVersion) {
         versionSuffix += "_${commitId.substring(0,7)}"
     }
 
@@ -52,12 +55,10 @@ task<Zip>("tcdist") {
     // The exact format of the version number is however unspecified, especially when it comes to non-digit characters.
     // To be safe, we stick to digits separated by dots, and we add a timestamp as the last version token to force
     // older build for the same plugin version to be considered outdated.
-    val parsedVersion = "((?:[0-9]\\.)*[0-9])(-SNAPSHOT)?".toRegex().matchEntire(project.version.toString())!!
-
     from("teamcity-plugin.xml") {
         filter<ReplaceTokens>("tokens" to mapOf(
                 "version" to "${parsedVersion.groups[1]!!.value}.${System.currentTimeMillis()}",
-                "buildInfo" to "build: $commitId, ${if(parsedVersion.groups[2] != null) "SNAPSHOT" else "RELEASE"}"))
+                "buildInfo" to "build: $commitId, ${if(snapshotVersion) "SNAPSHOT" else "RELEASE"}"))
     }
 }
 
