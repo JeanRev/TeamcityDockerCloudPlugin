@@ -3,6 +3,7 @@ package run.var.teamcity.cloud.docker;
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.*;
 import jetbrains.buildServer.serverSide.*;
+import jetbrains.buildServer.serverSide.impl.AgentNameGenerator;
 import run.var.teamcity.cloud.docker.client.*;
 import run.var.teamcity.cloud.docker.util.*;
 
@@ -94,23 +95,10 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     private final URL serverURL;
     private final DockerImageNameResolver resolver;
 
-    private final BuildServerListener serverListener = new BuildServerAdapter() {
-        @Override
-        public void agentRegistered(@Nonnull SBuildAgent agent, long currentlyRunningBuildId) {
-            if (agent instanceof BuildAgentInit) {
-                DockerInstance instance = findInstanceByAgent(agent);
-                if (instance != null) {
-                    String containerName = instance.getContainerName();
-                    if (containerName != null) {
-                        String defaultName = agent.getName();
-                        if (!defaultName.startsWith(containerName)) {
-                            ((BuildAgentInit) agent).setName(containerName + "/" + defaultName);
-                        }
-                    }
-                }
-            }
-        }
-    };
+    /**
+     * Our agent name generator extension UUID.
+     */
+    private final UUID agentNameGeneratorUuid = UUID.randomUUID();
 
     DefaultDockerCloudClient(@Nonnull DockerCloudClientConfig clientConfig,
                              @Nonnull final DockerClientFactory dockerClientFactory,
@@ -148,7 +136,24 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
         taskScheduler.scheduleClientTask(new SyncWithDockerTask(clientConfig.getDockerSyncRateSec(), TimeUnit.SECONDS));
 
-        buildServer.addListener(serverListener);
+        // Register our agent name generator.
+        buildServer.registerExtension(AgentNameGenerator.class, agentNameGeneratorUuid.toString(), sBuildAgent -> {
+            DockerInstance instance = findInstanceByAgent(sBuildAgent);
+            if (instance != null) {
+                String name = instance.getContainerName();
+                if (name == null) {
+                    LOG.warn("Cloud agent connected for instance " + instance + " no known container name.");
+                } else {
+                    String address = sBuildAgent.getHostAddress();
+                    if (address != null && address.length() > 0) {
+                        name += "/" + address;
+                    }
+                    return name;
+                }
+            }
+
+            return null;
+        });
 
         state = State.READY;
     }
@@ -252,12 +257,18 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     @Nullable
     @Override
     public String generateAgentName(@Nonnull AgentDescription agent) {
-        DockerInstance instance = findInstanceByAgent(agent);
-        if (instance == null) {
-            return null;
-        }
-
-        return instance.getName();
+        // This method cannot be reliably used to set the agent name.
+        // It is normally invoked through the TC cloud manager on the behalf of the default CloudAgentNameGenerator.
+        // In order to fetch the reference to the cloud client, the cloud manager expects the cloud profile id, given
+        // as custom parameter of the CloudInstanceUserData when starting the agent, to be available in the agent
+        // configuration parameters.
+        // The agent configuration parameters are currently filled using an agent plugin (just like the other official
+        // cloud provider). If our plugin is initially unavailable, or outdated, the agent will unregister itself to
+        // upgrade as usual. The CloudAgentNameGenerator will however only be invoked during the initial connection
+        // attempt (before the upgrade). In such case, the cloud manager will never be able to retrieve the cloud
+        // profile id on time.
+        // Ongoing discussion: https://youtrack.jetbrains.com/issue/TW-49809
+        return null;
     }
 
     @Nonnull
@@ -363,6 +374,14 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                     LOG.info("Reusing existing container: " + containerId);
                 }
 
+                // Inspect the created container to retrieve its name and other meta-data.
+                Node containerInspect = dockerClient.inspectContainer(containerId);
+                String instanceName = containerInspect.getAsString("Name");
+                if (instanceName.startsWith("/")) {
+                    instanceName = instanceName.substring(1);
+                }
+                instance.setContainerName(instanceName);
+
                 dockerClient.startContainer(containerId);
                 LOG.info("Container " + containerId + " started.");
 
@@ -438,7 +457,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
             lock.unlock();
         }
 
-        buildServer.removeListener(serverListener);
+        buildServer.unregisterExtension(AgentNameGenerator.class, agentNameGeneratorUuid.toString());
 
         LOG.info("Starting disposal of client.");
         for (DockerImage image : getImages()) {
@@ -758,12 +777,6 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                     }
 
                     instance.setContainerInfo(container);
-
-                    String instanceName = container.getArray("Names").getArrayValues().get(0).getAsString();
-                    if (instanceName.startsWith("/")) {
-                        instanceName = instanceName.substring(1);
-                    }
-                    instance.setContainerName(instanceName);
                 }
 
                 // Step 4, process destroyed containers.

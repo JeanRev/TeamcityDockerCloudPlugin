@@ -4,6 +4,7 @@ import jetbrains.buildServer.ServiceNotFoundException;
 import jetbrains.buildServer.TeamCityExtension;
 import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
+import jetbrains.buildServer.serverSide.impl.AgentNameGenerator;
 import jetbrains.buildServer.status.StatusProvider;
 import jetbrains.buildServer.users.User;
 import jetbrains.buildServer.users.UserModel;
@@ -13,6 +14,7 @@ import jetbrains.buildServer.vcs.VcsModificationHistory;
 import jetbrains.buildServer.version.ServerVersionInfo;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
+import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -30,6 +32,8 @@ public class TestSBuildServer implements SBuildServer {
     private final TestBuildAgentManager buildAgentManager = new TestBuildAgentManager(this);
 
     private final List<BuildServerListener> buildListeners = new CopyOnWriteArrayList<>();
+    private String agentNameGeneratorUuid;
+    private AgentNameGenerator agentNameGenerator;
 
     private byte serverMajorVersion = 1;
     private byte serverMinorVersion = 0;
@@ -185,12 +189,35 @@ public class TestSBuildServer implements SBuildServer {
 
     @Override
     public <T extends TeamCityExtension> void registerExtension(@Nonnull Class<T> extensionClass, @NonNls @Nonnull String sourceId, @Nonnull T extension) {
-        throw new UnsupportedOperationException("Not a real build server.");
+        if (sourceId == null || extension == null) {
+            throw new NullPointerException();
+        }
+        if (!extensionClass.equals(AgentNameGenerator.class)) {
+            throw new IllegalArgumentException("Unknown extension class: " + extensionClass);
+        }
+        if (this.agentNameGenerator != null) {
+            throw new IllegalStateException("Extension already registered.");
+        }
+        this.agentNameGeneratorUuid = sourceId;
+        this.agentNameGenerator = (AgentNameGenerator) extension;
     }
 
     @Override
     public <T extends TeamCityExtension> void unregisterExtension(@Nonnull Class<T> extensionClass, @NonNls @Nonnull String sourceId) {
-        throw new UnsupportedOperationException("Not a real build server.");
+        if (sourceId == null) {
+            throw new NullPointerException();
+        }
+        if (!extensionClass.equals(AgentNameGenerator.class)) {
+            throw new IllegalArgumentException("Unknown extension class: " + extensionClass);
+        }
+        if (this.agentNameGenerator == null) {
+            throw new IllegalStateException("Extension is not registered.");
+        }
+        if (!sourceId.equals(agentNameGeneratorUuid)) {
+            throw new IllegalArgumentException("Unknown extension id.");
+        }
+        agentNameGeneratorUuid = null;
+        agentNameGenerator = null;
     }
 
     @Nonnull
@@ -333,6 +360,10 @@ public class TestSBuildServer implements SBuildServer {
     @Override
     public Map<SBuildType, List<SRunningBuild>> getRunningStatus(@Nullable User user, @Nullable BuildDataFilter filter) {
         throw new UnsupportedOperationException("Not a real build server.");
+    }
+
+    public AgentNameGenerator getAgentNameGenerator() {
+        return agentNameGenerator;
     }
 
     public TestSBuildServer serverMajorVersion(byte serverMajorVersion) {

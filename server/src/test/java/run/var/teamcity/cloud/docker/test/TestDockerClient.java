@@ -14,6 +14,8 @@ import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.*;
+
 /**
  * A {@link DockerClient} made for testing. Will simulate a Docker daemon using in-memory structures.
  * <p>
@@ -46,6 +48,7 @@ public class TestDockerClient implements DockerClient {
     private DockerAPIVersion apiVersion;
     private boolean lenientVersionCheck = false;
     private final DockerRegistryCredentials dockerRegistryCredentials;
+    private Node containerInspection;
 
     public TestDockerClient(DockerClientConfig config, DockerRegistryCredentials dockerRegistryCredentials) {
         this.apiVersion = config.getApiVersion();
@@ -172,7 +175,16 @@ public class TestDockerClient implements DockerClient {
     @Nonnull
     @Override
     public Node inspectContainer(@Nonnull String containerId) {
-        throw new UnsupportedOperationException();
+        lock.lock();
+        try {
+            if (!containers.containsKey(containerId)) {
+                throw new NotFoundException("Container not found: " + containerId);
+            }
+            assertThat(containerInspection).isNotNull();
+            return containerInspection;
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Nonnull
@@ -424,6 +436,11 @@ public class TestDockerClient implements DockerClient {
 
     public void setLenientVersionCheck(boolean lenientVersionCheck) {
         this.lenientVersionCheck = lenientVersionCheck;
+    }
+
+    public TestDockerClient containerInspection(Node containerInspection) {
+        this.containerInspection = containerInspection;
+        return this;
     }
 
     private void checkForFailure() {

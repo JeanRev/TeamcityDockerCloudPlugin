@@ -16,6 +16,7 @@ import run.var.teamcity.cloud.docker.test.*;
 import run.var.teamcity.cloud.docker.test.TestDockerClient.Container;
 import run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import java.net.MalformedURLException;
@@ -29,8 +30,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static run.var.teamcity.cloud.docker.test.TestUtils.waitSec;
-import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
+import static run.var.teamcity.cloud.docker.test.TestUtils.*;
 
 
 /**
@@ -52,13 +52,17 @@ public class DefaultDockerCloudClientTest {
     private CloudErrorInfo errorInfo;
     private URL serverURL;
     private URL defaultServerURL;
+    private Node containerInspection;
 
     @Before
     public void init() throws MalformedURLException {
         dockerClientFactory = new TestDockerClientFactory();
+
+        containerInspection = containerInspection("test_container_name");
         dockerClientFactory.addConfigurator(dockerClient -> dockerClient
                 .localImage("resolved-image", "latest")
-                .registryImage("resolved-image", "latest"));
+                .registryImage("resolved-image", "latest")
+                .containerInspection(containerInspection));
         serverURL = new URL("http://not.a.real.server.url");
         defaultServerURL = new URL("http://not.a.real.default.server.url");
         containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
@@ -258,46 +262,6 @@ public class DefaultDockerCloudClientTest {
 
         assertThat(unregisteredAgents).containsOnly(agentWithCloudAndInstanceIdsNotRemovable, otherAgent);
         assertThat(client.getErrorInfo()).isNull();
-    }
-
-    @Test
-    public void setupAgentName() {
-
-        String agentName = "the_agent_name";
-
-
-        DefaultDockerCloudClient client = createClient();
-
-        DockerImage image = extractImage(client);
-
-        waitUntil(() -> client.canStartNewInstance(image));
-
-        DockerInstance instance = client.startNewInstance(image, userData);
-
-        TestSBuildAgent agent = new TestSBuildAgent().
-                environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString()).
-                environmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, instance.getInstanceId()).
-                environmentVariable(DockerCloudUtils.ENV_IMAGE_ID, image.getUuid().toString()).
-                name(agentName);
-
-        buildServer.notifyAgentRegistered(agent);
-
-        assertThat(agent.getName()).isEqualTo(agentName);
-
-
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
-
-        waitUntil(() -> instance.getContainerName() != null);
-
-        buildServer.notifyAgentRegistered(agent);
-
-        agentName = agent.getName();
-
-        assertThat(agentName).startsWith(instance.getContainerName());
-
-        buildServer.notifyAgentRegistered(agent);
-
-        assertThat(agentName).isEqualTo(agentName);
     }
 
     @Test
@@ -678,6 +642,109 @@ public class DefaultDockerCloudClientTest {
         assertThat(container.getAppliedStopTimeout()).isEqualTo(0);
     }
 
+    @Test
+    public void generateAgentName() {
+        DefaultDockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+
+        waitUntil(() -> client.canStartNewInstance(image));
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        assertThat(buildServer.getAgentNameGenerator()).isNotNull();
+
+        TestSBuildAgent agent = new TestSBuildAgent().
+                environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, client.getUuid().toString()).
+                environmentVariable(DockerCloudUtils.ENV_IMAGE_ID, image.getUuid().toString()).
+                environmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, instance.getUuid().toString()).
+                hostAddress("172.17.0.1");
+
+        assertThat(buildServer.getAgentNameGenerator().generateName(agent)).isEqualTo("test_container_name/172.17.0.1");
+
+        agent.hostAddress(null);
+
+        assertThat(buildServer.getAgentNameGenerator().generateName(agent)).isEqualTo("test_container_name");
+
+        agent.hostAddress("");
+
+        assertThat(buildServer.getAgentNameGenerator().generateName(agent)).isEqualTo("test_container_name");
+    }
+
+    @Test
+    public void generateAgentNameMustIgnoreUnmanagedAgents() {
+        DefaultDockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+
+        waitUntil(() -> client.canStartNewInstance(image));
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        assertThat(buildServer.getAgentNameGenerator()).isNotNull();
+
+        TestSBuildAgent agent = new TestSBuildAgent();
+
+        assertThat(buildServer.getAgentNameGenerator().generateName(agent)).isNull();
+
+        agent = new TestSBuildAgent().
+                environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TEST_UUID.toString()).
+                environmentVariable(DockerCloudUtils.ENV_IMAGE_ID, TEST_UUID_2.toString()).
+                environmentVariable(DockerCloudUtils.ENV_INSTANCE_ID, instance.getUuid().toString()).
+                hostAddress("172.17.0.1");
+
+        assertThat(buildServer.getAgentNameGenerator().generateName(agent)).isNull();
+    }
+
+    @Test
+    public void mustSetContainerName() {
+        DefaultDockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+
+        waitUntil(() -> client.canStartNewInstance(image));
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        assertThat(instance.getContainerName()).isEqualTo("test_container_name");
+    }
+
+    @Test
+    public void mustNotResetContainerNameForExistingInstances() {
+
+        rmOnExit = false;
+
+        DefaultDockerCloudClient client = createClient();
+
+        DockerImage image = extractImage(client);
+
+        waitUntil(() -> client.canStartNewInstance(image));
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+
+        assertThat(instance.getContainerName()).isEqualTo("test_container_name");
+
+        client.terminateInstance(instance);
+
+        waitUntil(() -> instance.getStatus() == InstanceStatus.STOPPED);
+
+        dockerClientFactory.getClient().containerInspection(containerInspection("another_container_name"));
+
+        DockerInstance newInstance = client.startNewInstance(image, userData);
+
+        assertThat(newInstance).isSameAs(instance);
+
+        assertThat(instance.getContainerName()).isEqualTo("test_container_name");
+    }
+
     private DockerInstance extractInstance(DockerImage dockerImage) {
         Collection<DockerInstance> instances = dockerImage.getInstances();
 
@@ -691,6 +758,12 @@ public class DefaultDockerCloudClientTest {
         assertThat(images).hasSize(1);
 
         return images.iterator().next();
+    }
+
+    private Node containerInspection(String containerName) {
+        EditableNode containerInspection = Node.EMPTY_OBJECT.editNode();
+        containerInspection.put("Name", containerName);
+        return containerInspection.saveNode();
     }
 
     private DefaultDockerCloudClient createClient() {

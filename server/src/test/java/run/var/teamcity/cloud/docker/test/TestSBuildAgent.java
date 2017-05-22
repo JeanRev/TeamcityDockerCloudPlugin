@@ -24,6 +24,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     private String name = "";
     private boolean removable = true;
     private boolean enabled = true;
+    private String hostAddress = null;
 
     private final Map<String, String> availableParameters = new HashMap<>();
 
@@ -136,7 +137,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
 
     @Override
     public String getHostAddress() {
-        throw new UnsupportedOperationException("Not a real agent.");
+        return hostAddress;
     }
 
     @Override
@@ -409,5 +410,10 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     @Override
     public AgentPool getAgentPool() {
         throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    public TestSBuildAgent hostAddress(String hostAddress) {
+        this.hostAddress = hostAddress;
+        return this;
     }
 }
