@@ -9,12 +9,9 @@ import run.var.teamcity.cloud.docker.util.*;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
-
-import static com.intellij.openapi.util.text.StringUtil.isNotEmpty;
 
 /**
  * A Docker {@link CloudClient}.
@@ -337,7 +334,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                     String serverAddress = serverURL != null ? serverURL.toString() : tag.getServerAddress();
 
-                    Node containerSpec = authorContainerSpec(instance, image, serverAddress);
+                    Node containerSpec = authorContainerSpec(instance, tag, image, serverAddress);
 
                     if (dockerImage.getConfig().isPullOnCreate()) {
                         try (NodeStream nodeStream = dockerClient.createImage(image, null, dockerImage.getConfig()
@@ -560,11 +557,13 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
      * variables can then be queried through the TC agent API).
      *
      * @param instance      the docker instance for which the container will be created
+     * @param tag           information to be transferred to the cloud instance
      * @param resolvedImage the exact image name that was resolved
      * @param serverUrl     the TC server URL
      * @return the authored JSON node
      */
-    private Node authorContainerSpec(DockerInstance instance, String resolvedImage, String serverUrl) {
+    private Node authorContainerSpec(DockerInstance instance, CloudInstanceUserData tag, String resolvedImage,
+                                     String serverUrl) {
         DockerImage image = instance.getImage();
         DockerImageConfig config = image.getConfig();
 
@@ -573,7 +572,16 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 add(DockerCloudUtils.ENV_SERVER_URL + "=" + serverUrl).
                 add(DockerCloudUtils.ENV_CLIENT_ID + "=" + uuid).
                 add(DockerCloudUtils.ENV_IMAGE_ID + "=" + image.getUuid()).
-                add(DockerCloudUtils.ENV_INSTANCE_ID + "=" + instance.getUuid());
+                add(DockerCloudUtils.ENV_INSTANCE_ID + "=" + instance.getUuid()).
+                // CloudInstanceUserData are serialized as base64 strings (should be ok for an environment variable
+                // value). They will be sent to the client so it can publish them as configuration parameters.
+                // NOTE: we may have a problem here with reused instances (that are transiting from a STOPPED to
+                // a RUNNING state). The TC server may provides a completely different set of user data to start a new
+                // instance, but we cannot update the corresponding environment variables to reflect those changes.
+                // This does not seems highly critical at moment, because virtually all user data parameters are bound
+                // to the cloud profile and not a specific cloud instance, and because publishing these extra
+                // configuration parameters is apparently not an hard requirement anyway.
+                add(DockerCloudUtils.ENV_AGENT_PARAMS + "=" + tag.serialize());
 
         container.getOrCreateObject("Labels").
                 put(DockerCloudUtils.CLIENT_ID_LABEL, uuid.toString()).

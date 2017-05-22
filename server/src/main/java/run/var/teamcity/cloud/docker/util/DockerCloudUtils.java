@@ -129,6 +129,11 @@ public final class DockerCloudUtils {
      */
     public static final String ENV_INSTANCE_ID = ENV_PREFIX + "INSTANCE_UUID";
     /**
+     * Environment variable name to store custom cloud agent parameters. Those parameters are provided by the TC server
+     * and must be published in custom configuration parameters map of the agent.
+     */
+    public static final String ENV_AGENT_PARAMS = ENV_PREFIX + "AGENT_PARAMS";
+    /**
      * Environment variable name to store the cloud instance UUID.
      */
     public static final String ENV_TEST_INSTANCE_ID = ENV_PREFIX + "TEST_INSTANCE_UUID";

@@ -65,7 +65,7 @@ public class DefaultDockerCloudClientTest {
         buildServer = new TestSBuildServer();
         dockerImageResolver = new TestDockerImageResolver("resolved-image:latest");
         cloudState = new TestCloudState();
-        userData = new CloudInstanceUserData("", "", defaultServerURL.toString(),
+        userData = new CloudInstanceUserData("test", "", defaultServerURL.toString(),
                 null, "", "", Collections.emptyMap());
         errorInfo = null;
         maxInstanceCount = 1;
@@ -120,6 +120,7 @@ public class DefaultDockerCloudClientTest {
         Container container = containers.iterator().next();
         assertThat(instance.getContainerId()).isEqualTo(container.getId());
         assertThat(container.getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(serverURL.toString());
+        assertThat(container.getEnv().get(DockerCloudUtils.ENV_AGENT_PARAMS)).isEqualTo(userData.serialize());
 
         dockerClient.lock();
 
