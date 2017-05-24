@@ -83,6 +83,8 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
      */
     private final Map<UUID, DockerImage> images = new HashMap<>();
 
+    // IMPORTANT: access to the TeamCity API must be as much as possible be performed without locking the cloud client
+    // to prevent dead-locks.
     private final SBuildServer buildServer;
     private final BuildAgentManager agentMgr;
 
@@ -654,7 +656,9 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
             // Step 1, query the whole list of containers associated with this cloud client.
             Node containers = dockerClient.listContainersWithLabel(DockerCloudUtils.CLIENT_ID_LABEL, uuid.toString());
 
+            List<SBuildAgent> unregisteredAgents = agentMgr.getUnregisteredAgents();
             List<String> orphanedContainers = new ArrayList<>();
+            List<SBuildAgent> obsoleteAgents = new ArrayList<>();
 
             lock.lock();
             try {
@@ -670,7 +674,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 }
 
                 // Step 2: pro-actively discard unregistered agent that are no longer referenced, they are lost to us.
-                for (SBuildAgent agent : agentMgr.getUnregisteredAgents()) {
+                for (SBuildAgent agent : unregisteredAgents) {
                     if (uuid.equals(DockerCloudUtils.getClientId(agent))) {
                         UUID instanceId = DockerCloudUtils.getInstanceId(agent);
                         boolean discardAgent = false;
@@ -682,11 +686,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                             discardAgent = true;
                         }
                         if (discardAgent) {
-                            try {
-                                agentMgr.removeAgent(agent, null);
-                            } catch (AgentCannotBeRemovedException e) {
-                                LOG.warn("Failed to remove unregistered agent.", e);
-                            }
+                            obsoleteAgents.add(agent);
                         }
                     }
                 }
@@ -786,6 +786,14 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                 lock.unlock();
             }
+
+            obsoleteAgents.forEach(agent -> {
+                try {
+                    agentMgr.removeAgent(agent, null);
+                } catch (AgentCannotBeRemovedException e) {
+                    LOG.warn("Failed to remove unregistered agent.", e);
+                }
+            });
 
             if (!orphanedContainers.isEmpty()) {
                 LOG.info("The following orphaned containers will be removed: " + orphanedContainers);
