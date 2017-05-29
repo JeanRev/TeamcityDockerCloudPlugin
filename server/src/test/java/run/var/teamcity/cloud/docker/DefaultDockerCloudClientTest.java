@@ -10,11 +10,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
-import run.var.teamcity.cloud.docker.test.*;
+import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
+import run.var.teamcity.cloud.docker.test.LongRunning;
+import run.var.teamcity.cloud.docker.test.TestCloudState;
+import run.var.teamcity.cloud.docker.test.TestDockerClient;
 import run.var.teamcity.cloud.docker.test.TestDockerClient.Container;
 import run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus;
+import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
+import run.var.teamcity.cloud.docker.test.TestDockerImageResolver;
+import run.var.teamcity.cloud.docker.test.TestSBuildAgent;
+import run.var.teamcity.cloud.docker.test.TestSBuildServer;
+import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -30,7 +37,10 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static run.var.teamcity.cloud.docker.test.TestUtils.*;
+import static run.var.teamcity.cloud.docker.test.TestUtils.TEST_UUID;
+import static run.var.teamcity.cloud.docker.test.TestUtils.TEST_UUID_2;
+import static run.var.teamcity.cloud.docker.test.TestUtils.waitSec;
+import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
 
 
 /**

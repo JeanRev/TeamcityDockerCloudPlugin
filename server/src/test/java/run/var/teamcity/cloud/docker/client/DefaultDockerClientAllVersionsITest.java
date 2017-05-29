@@ -6,7 +6,11 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.test.Integration;
-import run.var.teamcity.cloud.docker.util.*;
+import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.EditableNode;
+import run.var.teamcity.cloud.docker.util.Node;
+import run.var.teamcity.cloud.docker.util.NodeStream;
+import run.var.teamcity.cloud.docker.util.Stopwatch;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;

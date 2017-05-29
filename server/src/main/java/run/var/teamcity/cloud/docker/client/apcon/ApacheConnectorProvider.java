@@ -39,10 +39,8 @@
  */
 package run.var.teamcity.cloud.docker.client.apcon;
 
-import javax.ws.rs.client.Client;
-import javax.ws.rs.core.Configurable;
-import javax.ws.rs.core.Configuration;
-
+import org.apache.http.client.CookieStore;
+import org.apache.http.client.HttpClient;
 import org.apache.http.protocol.HttpContext;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.apache.connector.LocalizationMessages;
@@ -50,8 +48,9 @@ import org.glassfish.jersey.client.Initializable;
 import org.glassfish.jersey.client.spi.Connector;
 import org.glassfish.jersey.client.spi.ConnectorProvider;
 
-import org.apache.http.client.CookieStore;
-import org.apache.http.client.HttpClient;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Configurable;
+import javax.ws.rs.core.Configuration;
 
 /**
  * Connector provider for Jersey {@link Connector connectors} that utilize

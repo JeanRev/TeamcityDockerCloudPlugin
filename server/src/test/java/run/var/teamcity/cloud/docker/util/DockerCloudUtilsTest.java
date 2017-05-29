@@ -2,8 +2,8 @@ package run.var.teamcity.cloud.docker.util;
 
 import jetbrains.buildServer.serverSide.AgentDescription;
 import org.junit.Test;
-import run.var.teamcity.cloud.docker.test.TestSBuildAgent;
 import run.var.teamcity.cloud.docker.test.TestInputStream;
+import run.var.teamcity.cloud.docker.test.TestSBuildAgent;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 
 import java.io.IOException;

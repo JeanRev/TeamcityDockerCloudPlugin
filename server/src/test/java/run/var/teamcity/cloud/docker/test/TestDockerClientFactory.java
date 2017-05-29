@@ -2,8 +2,8 @@ package run.var.teamcity.cloud.docker.test;
 
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
+import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;

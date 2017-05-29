@@ -1,6 +1,5 @@
 package run.var.teamcity.cloud.docker.web;
 
-import org.jdom.Element;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;

@@ -1,6 +1,15 @@
 package run.var.teamcity.cloud.docker.test;
 
-import run.var.teamcity.cloud.docker.client.*;
+import run.var.teamcity.cloud.docker.client.BadRequestException;
+import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
+import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
+import run.var.teamcity.cloud.docker.client.DockerClient;
+import run.var.teamcity.cloud.docker.client.DockerClientConfig;
+import run.var.teamcity.cloud.docker.client.DockerClientException;
+import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
+import run.var.teamcity.cloud.docker.client.InvocationFailedException;
+import run.var.teamcity.cloud.docker.client.NotFoundException;
+import run.var.teamcity.cloud.docker.client.TestImage;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -10,11 +19,19 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * A {@link DockerClient} made for testing. Will simulate a Docker daemon using in-memory structures.

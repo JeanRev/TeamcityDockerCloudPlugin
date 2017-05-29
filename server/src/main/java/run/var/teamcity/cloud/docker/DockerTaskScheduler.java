@@ -8,8 +8,18 @@ import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
 import run.var.teamcity.cloud.docker.util.WrappedRunnableScheduledFuture;
 
 import javax.annotation.Nonnull;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RunnableScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**

@@ -1,7 +1,11 @@
 package run.var.teamcity.cloud.docker.web.atmo;
 
 
-import org.atmosphere.cpr.*;
+import org.atmosphere.cpr.AtmosphereFramework;
+import org.atmosphere.cpr.AtmosphereHandler;
+import org.atmosphere.cpr.AtmosphereInterceptor;
+import org.atmosphere.cpr.AtmosphereRequest;
+import org.atmosphere.cpr.AtmosphereResponse;
 import org.atmosphere.interceptor.HeartbeatInterceptor;
 import org.atmosphere.websocket.WebSocketHandler;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;

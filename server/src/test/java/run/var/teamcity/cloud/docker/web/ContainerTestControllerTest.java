@@ -2,7 +2,14 @@ package run.var.teamcity.cloud.docker.web;
 
 import org.junit.Before;
 import org.junit.Test;
-import run.var.teamcity.cloud.docker.test.*;
+import run.var.teamcity.cloud.docker.test.TestAtmosphereFrameworkFacade;
+import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
+import run.var.teamcity.cloud.docker.test.TestHttpServletRequest;
+import run.var.teamcity.cloud.docker.test.TestHttpServletResponse;
+import run.var.teamcity.cloud.docker.test.TestPluginDescriptor;
+import run.var.teamcity.cloud.docker.test.TestSBuildServer;
+import run.var.teamcity.cloud.docker.test.TestUtils;
+import run.var.teamcity.cloud.docker.test.TestWebControllerManager;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.web.ContainerTestController.Action;

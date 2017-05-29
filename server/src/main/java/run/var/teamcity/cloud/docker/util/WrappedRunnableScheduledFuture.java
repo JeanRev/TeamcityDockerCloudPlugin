@@ -1,7 +1,11 @@
 package run.var.teamcity.cloud.docker.util;
 
 import javax.annotation.Nonnull;
-import java.util.concurrent.*;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RunnableScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * A {@link RunnableScheduledFuture} wrapper with a reference to a source task.
