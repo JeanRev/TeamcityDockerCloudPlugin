@@ -808,11 +808,19 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         }
     }
 
-
     private void checkReady() {
         assert lock.isHeldByCurrentThread();
         if (state != State.READY) {
             throw new CloudException("Client is not initialized yet.");
         }
+    }
+
+    /**
+     * For testing purpose. Check if a lock on the internal state of this class is held by the current thread.
+     *
+     * @return {@code true} if the lock is held, {@code false} otherwise
+     */
+    boolean isLockedByCurrentThread() {
+        return lock.isHeldByCurrentThread();
     }
 }
