@@ -3,7 +3,6 @@ package run.var.teamcity.cloud.docker;
 import com.intellij.openapi.util.text.StringUtil;
 import jetbrains.buildServer.serverSide.InvalidProperty;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import javax.annotation.Nonnull;
@@ -145,7 +144,7 @@ public class DockerCloudClientConfig {
      */
     @Nonnull
     public static DockerCloudClientConfig processParams(@Nonnull Map<String, String> properties,
-                                                        @Nonnull DockerClientFactory dockerClientFactory) {
+                                                        @Nonnull DockerClientAdapterFactory clientAdapterFactory) {
         DockerCloudUtils.requireNonNull(properties, "Properties map cannot be null.");
         DockerCloudUtils.requireNonNull(properties, "Docker client factory cannot be null.");
 
@@ -183,7 +182,7 @@ public class DockerCloudClientConfig {
                     DockerClientConfig dockerConfig = new DockerClientConfig(instanceURI,
                             DockerCloudUtils.DOCKER_API_TARGET_VERSION).usingTls(usingTls);
                     try {
-                        dockerClientFactory.createClient(dockerConfig);
+                        clientAdapterFactory.createAdapter(dockerConfig);
                     } catch (IllegalArgumentException e) {
                         invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, e.getMessage()));
                     }

@@ -71,15 +71,6 @@ public class TestDockerClientFactory extends DockerClientFactory {
         }
     }
 
-    public void removeLastConfigurator() {
-        lock.lock();
-        try {
-            configurators.removeLast();
-        } finally {
-            lock.unlock();
-        }
-    }
-
     public void setWrapper(Function<TestDockerClient, DockerClient> wrapper) {
         this.wrapper = wrapper;
     }

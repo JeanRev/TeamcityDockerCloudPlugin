@@ -1,13 +1,12 @@
 package run.var.teamcity.cloud.docker.web;
 
-import run.var.teamcity.cloud.docker.client.DockerClient;
+import run.var.teamcity.cloud.docker.ContainerInfo;
+import run.var.teamcity.cloud.docker.DockerClientAdapter;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.annotation.Nonnull;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -42,14 +41,14 @@ class StartContainerTestTask extends ContainerTestTask {
 
     @Override
     Status work() {
-        DockerClient client = testTaskHandler.getDockerClient();
+        DockerClientAdapter clientAdapter = testTaskHandler.getDockerClientAdapter();
 
         if (containerStartTime == -1) {
             // Container not started yet, doing it now.
 
             containerStartTime = System.currentTimeMillis();
 
-            client.startContainer(containerId);
+            clientAdapter.startAgentContainer(containerId);
 
             msg("Waiting for agent to connect", Phase.WAIT_FOR_AGENT);
 
@@ -58,20 +57,20 @@ class StartContainerTestTask extends ContainerTestTask {
             return SUCCESS;
         }
 
-        List<Node> containers = client.listContainersWithLabel(Collections.singletonMap(DockerCloudUtils
-                        .TEST_INSTANCE_ID_LABEL, instanceUuid.toString())).getArrayValues();
+        List<ContainerInfo> containers = clientAdapter.listActiveAgentContainers(DockerCloudUtils
+                        .TEST_INSTANCE_ID_LABEL, instanceUuid.toString());
         if (containers.isEmpty()) {
             throw new ContainerTestTaskException("Container was prematurely destroyed.");
         } else if (containers.size() == 1) {
-            final String state = containers.get(0).getAsString("State");
-            if (state.equals("running")) {
+            final ContainerInfo container = containers.get(0);
+            if (container.isRunning()) {
                 long timeElapsedSinceStart = System.currentTimeMillis() - containerStartTime;
                 if (TimeUnit.MILLISECONDS.toSeconds(timeElapsedSinceStart) > AGENT_WAIT_TIMEOUT_SEC) {
                     throw new ContainerTestTaskException("Timeout: no agent connection after " +
                             AGENT_WAIT_TIMEOUT_SEC + " seconds.");
                 }
             } else {
-                throw new ContainerTestTaskException("Container exited prematurely (" + state + ")");
+                throw new ContainerTestTaskException("Container exited prematurely (" + container.getState() + ")");
             }
         } else {
             assert false : "Multiple containers found for the test instance UUID: " + instanceUuid;

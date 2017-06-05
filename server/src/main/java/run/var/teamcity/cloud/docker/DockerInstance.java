@@ -28,7 +28,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
 
     private String containerName = null;
     private String containerId;
-    private Node containerInfo;
+    private ContainerInfo containerInfo;
     private InstanceStatus status = InstanceStatus.UNKNOWN;
     private CloudErrorInfo errorInfo;
 
@@ -177,7 +177,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      * @return the JSON node or {@code null} if not available
      */
     @Nullable
-    public Node getContainerInfo() {
+    public ContainerInfo getContainerInfo() {
         return lock.call(() -> containerInfo);
     }
 
@@ -186,7 +186,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      *
      * @param containerInfo the JSON node or {@code null} if not available
      */
-    void setContainerInfo(@Nullable Node containerInfo) {
+    void setContainerInfo(@Nullable ContainerInfo containerInfo) {
         lock.run(() -> this.containerInfo = containerInfo);
     }
 

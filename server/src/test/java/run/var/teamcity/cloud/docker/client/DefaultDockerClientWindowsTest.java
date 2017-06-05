@@ -4,6 +4,7 @@ package run.var.teamcity.cloud.docker.client;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.test.WindowsDaemon;
 import run.var.teamcity.cloud.docker.util.Node;
 

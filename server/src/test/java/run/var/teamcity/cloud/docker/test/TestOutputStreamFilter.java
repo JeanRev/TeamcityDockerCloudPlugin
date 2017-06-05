@@ -10,11 +10,11 @@ import java.io.OutputStream;
  * For test purpose only.
  * </p>
  */
-public class TestOutputStream extends FilterOutputStream {
+public class TestOutputStreamFilter extends FilterOutputStream {
 
     private boolean closed = false;
 
-    public TestOutputStream(OutputStream out) {
+    public TestOutputStreamFilter(OutputStream out) {
         super(out);
     }
 
@@ -28,8 +28,8 @@ public class TestOutputStream extends FilterOutputStream {
         closed = true;
     }
 
-    public static TestOutputStream dummy() {
-        return new TestOutputStream(new OutputStream() {
+    public static TestOutputStreamFilter dummy() {
+        return new TestOutputStreamFilter(new OutputStream() {
             @Override
             public void write(int b) throws IOException {
                 // Do nothing.

@@ -1,5 +1,6 @@
 package run.var.teamcity.cloud.docker.test;
 
+import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.client.BadRequestException;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
 import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
@@ -9,29 +10,33 @@ import run.var.teamcity.cloud.docker.client.DockerClientException;
 import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.client.InvocationFailedException;
 import run.var.teamcity.cloud.docker.client.NotFoundException;
+import run.var.teamcity.cloud.docker.client.StdioType;
 import run.var.teamcity.cloud.docker.client.TestImage;
+import run.var.teamcity.cloud.docker.client.TestStreamHandler;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
+import run.var.teamcity.cloud.docker.util.LockHandler;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 /**
  * A {@link DockerClient} made for testing. Will simulate a Docker daemon using in-memory structures.
@@ -48,11 +53,9 @@ public class TestDockerClient implements DockerClient {
     }
 
     private final Map<String, Container> containers = new HashMap<>();
-    private final Collection<Container> discardedContainers = new ArrayList<>();
     private final Set<TestImage> registryImages = new HashSet<>();
     private final Set<TestImage> localImages = new HashSet<>();
-    private final Set<String> pulledLayer = new HashSet<>();
-    private final ReentrantLock lock = new ReentrantLock();
+    private final LockHandler lock = LockHandler.newReentrantLock();
 
     /**
      * The only URI supported by this Docker client.
@@ -65,7 +68,6 @@ public class TestDockerClient implements DockerClient {
     private DockerAPIVersion apiVersion;
     private boolean lenientVersionCheck = false;
     private final DockerRegistryCredentials dockerRegistryCredentials;
-    private Node containerInspection;
 
     public TestDockerClient(DockerClientConfig config, DockerRegistryCredentials dockerRegistryCredentials) {
         this.apiVersion = config.getApiVersion();
@@ -78,29 +80,18 @@ public class TestDockerClient implements DockerClient {
     @Nonnull
     @Override
     public DockerAPIVersion getApiVersion() {
-        lock.lock();
-        try {
-            return apiVersion;
-        } finally {
-            lock.unlock();
-        }
+        return lock.call(() -> apiVersion);
     }
 
     @Override
     public void setApiVersion(@Nonnull DockerAPIVersion apiVersion) {
-        lock.lock();
-        try {
-            this.apiVersion = apiVersion;
-        } finally {
-            lock.unlock();
-        }
+        lock.run(() -> this.apiVersion = apiVersion);
     }
 
     @Nonnull
     @Override
     public Node getVersion() {
-        lock.lock();
-        try {
+        return lock.call(() -> {
             checkForFailure();
             EditableNode node = Node.EMPTY_OBJECT.editNode().
                     put("Version", "1.0").
@@ -116,9 +107,7 @@ public class TestDockerClient implements DockerClient {
                 node.put("MinAPIVersion", minAPIVersion.getVersionString());
             }
             return node.saveNode();
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Nonnull
@@ -127,19 +116,14 @@ public class TestDockerClient implements DockerClient {
 
         TestUtils.waitMillis(300);
 
-        String containerId;
-        lock.lock();
-        try {
+        String createdContainerId = lock.call(() -> {
+            String containerId;
             checkForFailure();
-            String imageName = containerSpec.getAsString("Image");
-            TestImage img = TestImage.parse(containerSpec.getAsString("Image"));
-            if (!localImages.contains(img)) {
-                throw new NotFoundException("No such image: " + imageName);
-            }
+            TestImage testImg = lookupImage(localImages, containerSpec.getAsString("Image"));
 
             Map<String, String> labels = new HashMap<>();
             containerSpec.getObject("Labels", Node.EMPTY_OBJECT).getObjectValues().
-                    forEach((key, value) -> labels.put(key, value.getAsString()));
+                    forEach((key, value) -> labels.put(key, value.isNull() ? "" : value.getAsString()));
             Map<String, String> env = new HashMap<>();
             containerSpec.getArray("Env", Node.EMPTY_ARRAY).getArrayValues().
                     forEach(val -> {
@@ -148,21 +132,25 @@ public class TestDockerClient implements DockerClient {
                         env.put(entry.substring(0, sepIndex), entry.substring(sepIndex + 1));
                     });
 
-            Container container = new Container(labels, env);
+            Container container = new Container();
+            testImg.getLabels().forEach(container::label);
+            testImg.getEnv().forEach(container::env);
+            labels.forEach(container::label);
+            env.forEach(container::env);
+            container.image(testImg);
             containerId = container.getId();
             containers.put(containerId, container);
-        } finally {
-            lock.unlock();
-        }
+            return containerId;
+        });
 
-        return Node.EMPTY_OBJECT.editNode().put("Id", containerId).saveNode();
+
+        return Node.EMPTY_OBJECT.editNode().put("Id", createdContainerId).saveNode();
     }
 
     @Override
     public void startContainer(@Nonnull String containerId) {
         TestUtils.waitMillis(300);
-        lock.lock();
-        try {
+        lock.run(() -> {
             checkForFailure();
             Container container = containers.get(containerId);
             if (container == null) {
@@ -171,11 +159,8 @@ public class TestDockerClient implements DockerClient {
                 throw new InvocationFailedException("Container already started: " + containerId);
             }
 
-            container.appliedStopTimeout = null;
             container.status = ContainerStatus.STARTED;
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override
@@ -192,16 +177,36 @@ public class TestDockerClient implements DockerClient {
     @Nonnull
     @Override
     public Node inspectContainer(@Nonnull String containerId) {
-        lock.lock();
-        try {
-            if (!containers.containsKey(containerId)) {
+        return lock.call(() -> {
+            Container container = containers.get(containerId);
+
+            if (container == null) {
                 throw new NotFoundException("Container not found: " + containerId);
             }
-            assertThat(containerInspection).isNotNull();
-            return containerInspection;
-        } finally {
-            lock.unlock();
-        }
+            return Node.EMPTY_OBJECT.editNode().
+                    put("Id", containerId).
+                    put("Name", container.getName()).
+                    saveNode();
+        });
+    }
+
+    @Nonnull
+    @Override
+    public Node inspectImage(@Nonnull String image) {
+        return lock.call(() -> {
+            TestImage testImage = lookupImage(localImages, image);
+            EditableNode inspectNode = Node.EMPTY_OBJECT.editNode();
+            EditableNode imageConfig = inspectNode.put("Id", testImage.getId()).getOrCreateObject("Config");
+            EditableNode labels = imageConfig.getOrCreateObject("Labels");
+            testImage.getLabels().forEach(labels::put);
+
+            EditableNode env = imageConfig.getOrCreateArray("Env");
+            testImage.getEnv().entrySet().stream().
+                    map(entry -> entry.getKey() + "=" + entry.getValue()).
+                    forEach(env::add);
+
+            return inspectNode.saveNode();
+        });
     }
 
     @Nonnull
@@ -238,12 +243,7 @@ public class TestDockerClient implements DockerClient {
             lock.unlock();
         }
 
-        EditableNode node = Node.EMPTY_OBJECT.editNode();
-        node.put("status", "pulling from not/a/real/registry/" + from);
-        if (tag != null) {
-            node.put("id", tag);
-        }
-        result.add(node.saveNode());
+        EditableNode node;
 
         if (!dockerRegistryCredentials.equals(credentials))
         {
@@ -257,45 +257,29 @@ public class TestDockerClient implements DockerClient {
             node.put("error", msg);
             result.add(node.saveNode());
         } else {
-            lock.lock();
-            try {
+            lock.run(() -> {
+                EditableNode pullNode;
                 for (TestImage img : toPull) {
-                    for (String layer : img.getLayers()) {
-                        node = Node.EMPTY_OBJECT.editNode();
-                        if (pulledLayer.contains(layer)) {
-                            node.put("status", "Already exists").
-                                    put("id", DockerCloudUtils.toShortId(layer)).
-                                    getOrCreateObject("progressDetail");
-                            result.add(node.saveNode());
-                        } else {
-                            node.put("status", "Pulling fs layer").
-                                    put("id", DockerCloudUtils.toShortId(layer)).
-                                    getOrCreateObject("progressDetail");
-                            result.add(node.saveNode());
-                            for (int i = 0; i <= 100; i += 10) {
-                                node = Node.EMPTY_OBJECT.editNode();
-                                node.put("status", "Downloading").
-                                        put("id", DockerCloudUtils.toShortId(layer)).
-                                        put("progress", "[===  ] 1 kB/ 100 kB").
-                                        getOrCreateObject("progressDetails").put("current", i).put("total", 100);
-                                result.add(node.saveNode());
-                            }
-                            node = Node.EMPTY_OBJECT.editNode();
-                            node.put("status", "Pull complete").
-                                    put("id", DockerCloudUtils.toShortId(layer)).
-                                    getOrCreateObject("progressDetail");
-                            result.add(node.saveNode());
-                            pulledLayer.add(layer);
+
+                    for (TestImage.PullProgress pullProgress : img.getPullProgress()) {
+                        pullNode = Node.EMPTY_OBJECT.editNode();
+                        EditableNode progressDetails = pullNode.put("status", pullProgress.getStatus()).
+                                put("id", DockerCloudUtils.toShortId(pullProgress.getLayer())).
+                                getOrCreateObject("progressDetail");
+                        if (pullProgress.getCurrent() != null && pullProgress.getTotal() != null) {
+                            progressDetails.
+                                    put("current", toBigDecimal(pullProgress.getCurrent())).
+                                    put("total",   toBigDecimal(pullProgress.getTotal()));
                         }
+
+                        result.add(pullNode.saveNode());
                     }
-                    node = Node.EMPTY_OBJECT.editNode();
-                    node.put("status", "Status: Downloaded newer image for " + img);
+
                     localImages.add(img);
                 }
-            } finally {
-                lock.unlock();
-            }
+            });
         }
+
         Iterator<Node> itr = result.iterator();
         return new NodeStream() {
             @Nullable
@@ -311,11 +295,33 @@ public class TestDockerClient implements DockerClient {
         };
     }
 
+    @Nonnull
+    @Override
+    public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, Set<StdioType> stdioTypes, boolean
+            follow) {
+        return lock.call(() -> {
+            checkForFailure();
+            Container container = containers.get(containerId);
+            if (container == null) {
+                throw new NotFoundException("No such container: " + containerId);
+            }
+            return container.getLogStreamHandler();
+        });
+    }
+
+    private BigDecimal toBigDecimal(Number number) {
+        if (number instanceof BigInteger) {
+            return new BigDecimal((BigInteger) number);
+        } else {
+            return new BigDecimal(number.longValue());
+        }
+    }
+
     @Override
     public void stopContainer(@Nonnull String containerId, long timeoutSec) {
         TestUtils.waitMillis(300);
-        lock.lock();
-        try {
+
+        lock.run(() -> {
             checkForFailure();
             Container container = containers.get(containerId);
             if (container == null) {
@@ -324,11 +330,8 @@ public class TestDockerClient implements DockerClient {
                 throw new ContainerAlreadyStoppedException("Container is not running: " + containerId);
             }
 
-            container.appliedStopTimeout = timeoutSec;
             container.status = ContainerStatus.CREATED;
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override
@@ -336,7 +339,8 @@ public class TestDockerClient implements DockerClient {
         lock.lock();
 
         TestUtils.waitMillis(300);
-        try {
+
+        lock.run(() -> {
             checkForFailure();
             Container container = containers.get(containerId);
             if (container == null) {
@@ -345,20 +349,14 @@ public class TestDockerClient implements DockerClient {
                 throw new InvocationFailedException("Container is still running: " + containerId);
             }
             containers.remove(containerId);
-            discardedContainers.add(container);
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Nonnull
     @Override
     public Node listContainersWithLabel(@Nonnull Map<String, String> labelFilters) {
 
-        EditableNode result;
-
-        lock.lock();
-        try {
+        Node list = lock.call(() -> {
             checkForFailure();
             List<Container> filtered = containers.values().stream().
                     filter(container -> {
@@ -371,98 +369,84 @@ public class TestDockerClient implements DockerClient {
                         return true;
                     }).collect(Collectors.toList());
 
-            result = Node.EMPTY_ARRAY.editNode();
+            EditableNode result = Node.EMPTY_ARRAY.editNode();
             for (Container container : filtered) {
                 EditableNode containerNode = result.addObject();
                 containerNode.put("Id", container.id);
+                if (container.image != null) {
+                    containerNode.put("ImageID", container.image.getId());
+                }
                 containerNode.put("State", container.status == ContainerStatus.STARTED ? "running" : "stopped");
                 containerNode.getOrCreateArray("Names").add(DockerCloudUtils.toShortId(container.id));
+                containerNode.put("Created", System.currentTimeMillis());
                 EditableNode labels = containerNode.getOrCreateObject("Labels");
                 for (Map.Entry<String, String> labelEntry : container.labels.entrySet()) {
                     labels.put(labelEntry.getKey(), labelEntry.getValue());
                 }
             }
-        } finally {
-            lock.unlock();
-        }
+            return result.saveNode();
+        });
 
         TestUtils.waitMillis(300);
-        return result.saveNode();
+
+        return list;
     }
 
     public TestDockerClient localImage(String repo, String tag) {
-        lock.lock();
-        try {
-            localImages.add(new TestImage(repo, tag));
-        } finally {
-            lock.unlock();
-        }
+        newLocalImage(repo, tag);
         return this;
     }
 
-    public TestDockerClient registryImage(String repo, String tag) {
-        lock.lock();
-        try {
-            registryImages.add(new TestImage(repo, tag));
-        } finally {
-            lock.unlock();
-        }
-        return this;
+    public TestImage newLocalImage(String repo, String tag) {
+        return lock.call(() ->  {
+            TestImage img = new TestImage(repo, tag);
+            localImages.add(img);
+            return img;
+        });
+    }
+
+    public TestImage newRegistryImage(String repo, String tag) {
+        return lock.call(() ->  {
+            TestImage img = new TestImage(repo, tag);
+            registryImages.add(img);
+            return img;
+        });
     }
 
     @Override
     public void close() {
-        lock.lock();
-        try {
-            closed = true;
-        } finally {
-            lock.unlock();
-        }
+        lock.run(() -> closed = true);
     }
 
-    public void setFailOnAccessException(DockerClientException exception) {
-        lock.lock();
-        try {
-            failOnAccessException = exception;
-        } finally {
-            lock.unlock();
-        }
+    public Set<TestImage> getLocalImages() {
+        return new HashSet<>(localImages)   ;
     }
 
-    public void lock() {
-        lock.lock();
+    public List<Container> getContainers() {
+        return lock.call(() -> new ArrayList<>(containers.values()));
     }
 
-    public void unlock() {
-        lock.unlock();
-    }
-
-    public Collection<Container> getContainers() {
-        return Collections.unmodifiableCollection(containers.values());
-    }
-
-    public Collection<Container> getDiscardedContainers() {
-        return Collections.unmodifiableCollection(discardedContainers);
-    }
     public boolean isClosed() {
-        return closed;
+        return lock.call(() -> closed);
     }
 
     public void setSupportedAPIVersion(DockerAPIVersion supportedAPIVersion) {
-        this.supportedAPIVersion = supportedAPIVersion;
+        lock.run(() -> this.supportedAPIVersion = supportedAPIVersion);
     }
 
     public void setMinAPIVersion(DockerAPIVersion minAPIVersion) {
-        this.minAPIVersion = minAPIVersion;
+        lock.run(() -> this.minAPIVersion = minAPIVersion);
     }
 
     public void setLenientVersionCheck(boolean lenientVersionCheck) {
-        this.lenientVersionCheck = lenientVersionCheck;
+        lock.run(() -> this.lenientVersionCheck = lenientVersionCheck);
     }
 
-    public TestDockerClient containerInspection(Node containerInspection) {
-        this.containerInspection = containerInspection;
-        return this;
+    private TestImage lookupImage(Set<TestImage> src, String image) {
+        return src.stream()
+                .filter(img -> img.getId().equals(image) || img.fqin().equals(image))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Image not found: " + image));
     }
 
     private void checkForFailure() {
@@ -495,27 +479,36 @@ public class TestDockerClient implements DockerClient {
 
     public static class Container {
         private final String id = TestUtils.createRandomSha256();
-        private final Map<String, String> labels = new HashMap<>();
-        private final Map<String, String> env = new HashMap<>();
-        private ContainerStatus status;
-        private Long appliedStopTimeout = null;
+        private final Map<String, String> labels = new ConcurrentHashMap<>();
+        private final Map<String, String> env = new ConcurrentHashMap<>();
+        private volatile String name = id;
+        private volatile TestImage image;
+        private volatile ContainerStatus status;
+        private volatile TestStreamHandler logStreamHandler = new TestStreamHandler(new OutputStream() {
+            @Override
+            public void write(int b) throws IOException {
+                fail("Read only stream handler.");
+            }
+        });
+
+        public Container() {
+            this(ContainerStatus.CREATED);
+        }
 
         public Container(ContainerStatus status) {
-            this(Collections.emptyMap(), Collections.emptyMap(), status);
-        }
-
-        public Container(Map<String, String> labels, Map<String, String> env) {
-            this(labels, env, ContainerStatus.CREATED);
-        }
-
-        public Container(Map<String, String> labels, Map<String, String> env, ContainerStatus status) {
-            this.labels.putAll(labels);
-            this.env.putAll(env);
             this.status = status;
+        }
+
+        public TestImage getImage() {
+            return image;
         }
 
         public String getId() {
             return id;
+        }
+
+        public String getName() {
+            return name;
         }
 
         public Map<String, String> getLabels() {
@@ -530,23 +523,33 @@ public class TestDockerClient implements DockerClient {
             return status;
         }
 
-        public Long getAppliedStopTimeout() {
-            return appliedStopTimeout;
+        public Container name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Container image(TestImage image) {
+            this.image = image;
+            return this;
         }
 
         public Container label(String key, String value) {
             labels.put(key, value);
             return this;
         }
+
+        public Container env(String var, String value) {
+            env.put(var, value);
+            return this;
+        }
+
+        public TestStreamHandler getLogStreamHandler() {
+            return logStreamHandler;
+        }
     }
 
     public TestDockerClient container(Container container) {
-        lock.lock();
-        try {
-            containers.put(container.getId(), container);
-        } finally {
-            lock.unlock();
-        }
+        lock.run(() -> containers.put(container.getId(), container));
         return this;
     }
 }

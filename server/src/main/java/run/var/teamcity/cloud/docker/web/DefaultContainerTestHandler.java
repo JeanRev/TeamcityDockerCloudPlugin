@@ -1,10 +1,9 @@
 package run.var.teamcity.cloud.docker.web;
 
-import com.intellij.openapi.diagnostic.Logger;
+import run.var.teamcity.cloud.docker.DockerClientAdapter;
+import run.var.teamcity.cloud.docker.DockerClientAdapterFactory;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.LockHandler;
 import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
@@ -21,11 +20,9 @@ import java.util.UUID;
  */
 public class DefaultContainerTestHandler implements ContainerTestHandler {
 
-    private final static Logger LOG = DockerCloudUtils.getLogger(DefaultContainerTestHandler.class);
-
     private final UUID uuid = UUID.randomUUID();
     private final LockHandler lock = LockHandler.newReentrantLock();
-    private final DockerClient client;
+    private final DockerClientAdapter clientAdapter;
     private final DockerClientConfig clientConfig;
     private final ContainerTestListener statusListener;
     private final StreamingController streamingController;
@@ -36,12 +33,12 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
 
     private ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTaskFuture = null;
 
-    private DefaultContainerTestHandler(DockerClientConfig clientConfig, DockerClient client,
+    private DefaultContainerTestHandler(DockerClientConfig clientConfig, DockerClientAdapter clientAdapter,
                                         ContainerTestListener statusListener, StreamingController streamingController) {
-        assert client != null && statusListener != null;
+        assert clientAdapter != null && statusListener != null;
 
         this.clientConfig = clientConfig;
-        this.client = client;
+        this.clientAdapter = clientAdapter;
         this.statusListener = statusListener;
         this.streamingController = streamingController;
 
@@ -49,15 +46,15 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
     }
 
     public static DefaultContainerTestHandler newTestInstance(@Nonnull DockerCloudClientConfig clientConfig,
-                                                              @Nonnull DockerClientFactory dockerClientFactory,
+                                                              @Nonnull DockerClientAdapterFactory clientAdapterFactory,
                                                               @Nonnull ContainerTestListener statusListener,
                                                               @Nullable StreamingController streamingController) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
-        DockerCloudUtils.requireNonNull(dockerClientFactory, "Docker client factory cannot be null.");
+        DockerCloudUtils.requireNonNull(clientAdapterFactory, "Docker client adapter factory cannot be null.");
         DockerCloudUtils.requireNonNull(statusListener, "Status listener cannot be null.");
-        DockerClient client = dockerClientFactory.createClient(clientConfig.getDockerClientConfig()
+        DockerClientAdapter clientAdapter = clientAdapterFactory.createAdapter(clientConfig.getDockerClientConfig()
                 .connectionPoolSize(1));
-        return new DefaultContainerTestHandler(clientConfig.getDockerClientConfig(), client, statusListener,
+        return new DefaultContainerTestHandler(clientConfig.getDockerClientConfig(), clientAdapter, statusListener,
                 streamingController);
     }
 
@@ -102,10 +99,15 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
         return lock.call(() -> currentTaskFuture);
     }
 
+    /**
+     * Gets the client adapter to run the test.
+     *
+     * @return the client adapter
+     */
     @Nonnull
     @Override
-    public DockerClient getDockerClient() {
-        return client;
+    public DockerClientAdapter getDockerClientAdapter() {
+        return clientAdapter;
     }
 
     /**

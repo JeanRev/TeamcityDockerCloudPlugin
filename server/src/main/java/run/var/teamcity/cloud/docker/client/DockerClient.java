@@ -1,5 +1,6 @@
 package run.var.teamcity.cloud.docker.client;
 
+import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 
@@ -7,6 +8,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * A Docker client.
@@ -41,7 +43,24 @@ public interface DockerClient extends Closeable {
     Node inspectContainer(@Nonnull String containerId);
 
     @Nonnull
+    Node inspectImage(@Nonnull String image);
+
+    @Nonnull
     NodeStream createImage(@Nonnull String from, @Nullable String tag, @Nonnull DockerRegistryCredentials credentials);
+
+    /**
+     * Stream the container logs.
+     *
+     * @param containerId the container id
+     * @param lineCount the number of line context
+     * @param stdioTypes the types of stream to be fetched
+     * @param follow {@code true} if the logs must be streamed continuously
+     *
+     * @return a stream handler to consume the logs
+     */
+    @Nonnull
+    StreamHandler streamLogs(@Nonnull String containerId, int lineCount, Set<StdioType> stdioTypes, boolean
+            follow);
 
     void stopContainer(@Nonnull String containerId, long timeoutSec);
 

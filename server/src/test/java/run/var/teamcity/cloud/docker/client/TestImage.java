@@ -2,27 +2,40 @@ package run.var.teamcity.cloud.docker.client;
 
 import run.var.teamcity.cloud.docker.test.TestUtils;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.IntStream;
 
 public class TestImage {
+    private final String id = TestUtils.createRandomSha256();
     private final String repo;
     private final String tag;
-    private final String coordinates;
-    private final Set<String> layers;
+    private final List<PullProgress> pullProgress = new CopyOnWriteArrayList<>();
+    private final Map<String, String> labels = new ConcurrentHashMap<>();
+    private final Map<String, String> env = new ConcurrentHashMap<>();
 
     public TestImage(String repo, String tag) {
         this.repo = repo;
         this.tag = tag;
-        coordinates = repo + ":" + tag;
-        layers = new HashSet<>();
-        IntStream.range(0, 3).forEach(i -> layers.add(TestUtils.createRandomSha256()));
     }
 
-    public static TestImage parse(String coordinates) {
-        int sepIndex = coordinates.lastIndexOf(':');
-        return new TestImage(coordinates.substring(0, sepIndex), coordinates.substring(sepIndex + 1));
+    public TestImage label(String key, String value) {
+        labels.put(key, value);
+        return this;
+    }
+
+    public TestImage env(String var, String value) {
+        env.put(var, value);
+        return this;
+    }
+
+    public String getId() {
+        return id;
     }
 
     public String getRepo() {
@@ -33,26 +46,71 @@ public class TestImage {
         return tag;
     }
 
-    public Set<String> getLayers() {
-        return layers;
+    public String fqin() {
+        return repo + ":" + tag;
+    }
+
+    public List<PullProgress> getPullProgress() {
+        return pullProgress;
+    }
+
+
+    public Map<String, String> getLabels() {
+        return labels;
+    }
+
+    public Map<String, String> getEnv() {
+        return env;
+    }
+
+    public TestImage pullProgress(String layer, String status, Number current, Number total) {
+        pullProgress.add(new PullProgress(layer, status, current, total));
+        return this;
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof TestImage) {
-            TestImage that = (TestImage) obj;
-            return coordinates.equals(that.coordinates);
-        }
-        return false;
+       return obj == this;
     }
 
     @Override
     public int hashCode() {
-        return coordinates.hashCode();
+        return id.hashCode();
     }
 
     @Override
     public String toString() {
-        return coordinates;
+        return id;
+    }
+
+
+    public static class PullProgress {
+        private final String layer;
+        private final String status;
+        private final Number current;
+        private final Number total;
+
+        public PullProgress(String layer, String status, Number current, Number total) {
+            this.layer = layer;
+            this.status = status;
+            this.current = current;
+            this.total = total;
+        }
+
+        public String getLayer() {
+            return layer;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public Number getCurrent() {
+            return current;
+        }
+
+        public Number getTotal() {
+            return total;
+        }
     }
 }

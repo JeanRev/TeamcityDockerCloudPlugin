@@ -19,7 +19,7 @@ class DockerCloudPropertiesProcessor implements PropertiesProcessor {
     public Collection<InvalidProperty> process(Map<String, String> properties) {
         List<InvalidProperty> invalidProperties = new ArrayList<>();
         try {
-            DockerCloudClientConfig.processParams(properties, DockerClientFactory.getDefault());
+            DockerCloudClientConfig.processParams(properties, DockerClientAdapterFactory.getDefault());
         } catch (DockerCloudClientConfigException e) {
             invalidProperties.addAll(e.getInvalidProperties());
         }

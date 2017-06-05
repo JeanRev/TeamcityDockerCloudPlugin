@@ -19,6 +19,7 @@ import org.apache.http.util.TextUtils;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
+import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.client.apcon.ApacheConnectorProvider;
 import run.var.teamcity.cloud.docker.client.npipe.NPipeSocketAddress;
 import run.var.teamcity.cloud.docker.client.npipe.NPipeSocketClientConnectionOperator;
@@ -40,7 +41,6 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.io.Closeable;
-import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
@@ -165,6 +165,14 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
     }
 
+    @Nonnull
+    @Override
+    public Node inspectImage(@Nonnull String image) {
+        DockerCloudUtils.requireNonNull(image, "Image name or ID cannot be null.");
+        return invoke(target().path("/images/{id}/json").resolveTemplate("id", image), HttpMethod.GET, null,
+                prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
+    }
+
     @Override
     @Nonnull
     public NodeStream createImage(@Nonnull String from, @Nullable String tag, @Nonnull DockerRegistryCredentials credentials) {
@@ -187,7 +195,10 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 null, hasTty(containerId));
     }
 
-    public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, Set<StdioType> stdioTypes, boolean
+    @Nonnull
+    @Override
+    public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, Set<StdioType> stdioTypes,
+                                            boolean
             follow) {
 
         return invokeStream(prepareLogsTarget(target(), containerId, lineCount, stdioTypes).queryParam("follow",
@@ -318,7 +329,8 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
     /**
      * Open a new client using the provided configuration. The Docker URI must use one of the supported scheme
-     * from the Docker CLI, either <tt>unix://<em>[absolute_path_to_unix_socket]</em> for Unix sockets or
+     * from the Docker CLI, either <tt>unix://<em>[absolute_path_to_unix_socket]</em> for Unix sockets,
+     * <tt>npipe://<em>pipe_location</em> for Windows named pipes</tt> or
      * <tt>tcp://<em>[ip_address]</em></tt> for TCP connections.
      *
      * @param clientConfig the Docker client configuration
@@ -412,7 +424,6 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
             connManager = new PoolingHttpClientConnectionManager(
                     getDefaultRegistry(clientConfig.isVerifyingHostname()), connectionFactory, null);
         }
-
 
         // We are only interested into a single route.
         connManager.setDefaultMaxPerRoute(connectionPoolSize);

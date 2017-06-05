@@ -12,7 +12,7 @@ public class DockerClientException extends RuntimeException {
      *
      * @param msg the message (may be null)
      */
-    DockerClientException(@Nullable String msg) {
+    public DockerClientException(@Nullable String msg) {
         super(msg);
     }
 
@@ -22,7 +22,7 @@ public class DockerClientException extends RuntimeException {
      * @param msg   the message (may be null)
      * @param cause the exception cause (may be null)
      */
-    DockerClientException(@Nullable String msg, @Nullable Throwable cause) {
+    public DockerClientException(@Nullable String msg, @Nullable Throwable cause) {
         super(msg, cause);
     }
 }

@@ -1,6 +1,10 @@
 package run.var.teamcity.cloud.docker.util;
 
+import org.jetbrains.annotations.NotNull;
+
 import javax.annotation.Nonnull;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
@@ -8,7 +12,7 @@ import java.util.function.Supplier;
 /**
  * A {@link Lock} wrapper providing additional lambda-friendly operations.
  */
-public class LockHandler {
+public class LockHandler implements Lock {
 
     private final ReentrantLock lock;
 
@@ -155,5 +159,36 @@ public class LockHandler {
     @Nonnull
     public static LockHandler newReentrantLock() {
         return new LockHandler(new ReentrantLock());
+    }
+
+    @Override
+    public void lock() {
+        lock.lock();
+    }
+
+    @Override
+    public void lockInterruptibly() throws InterruptedException {
+        lock.lockInterruptibly();
+    }
+
+    @Override
+    public boolean tryLock() {
+        return lock.tryLock();
+    }
+
+    @Override
+    public boolean tryLock(long time, @NotNull TimeUnit unit) throws InterruptedException {
+        return lock.tryLock();
+    }
+
+    @Override
+    public void unlock() {
+        lock.unlock();
+    }
+
+    @NotNull
+    @Override
+    public Condition newCondition() {
+        return lock.newCondition();
     }
 }

@@ -3,6 +3,7 @@
 <%@ page import="run.var.teamcity.cloud.docker.util.Node" %>
 <%@ page import="java.text.DateFormat" %>
 <%@ page import="java.util.Locale" %>
+<%@ page import="run.var.teamcity.cloud.docker.ContainerInfo" %>
 <%--
   ~ Copyright 2000-2012 JetBrains s.r.o.
   ~
@@ -43,12 +44,12 @@
             <%
                 DateFormat dateFmt = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.ENGLISH);
                 for (DockerInstance instance : image.getInstances()) {
-                    Node containerInfo = instance.getContainerInfo();
+                    ContainerInfo containerInfo = instance.getContainerInfo();
                     if (containerInfo == null) {
                         continue;
                     }
                     StringBuilder displayName = new StringBuilder();
-                    for (Node name : containerInfo.getArray("Names").getArrayValues()) {
+                    for (String name : containerInfo.getNames()) {
                         if (displayName.length() > 0) {
                             displayName.append(", ");
                         }
@@ -56,11 +57,11 @@
                     }
             %>
             <tr>
-                <td><%= DockerCloudUtils.toShortId(containerInfo.getAsString("Id")) %>
+                <td><%= DockerCloudUtils.toShortId(containerInfo.getId()) %>
                 </td>
-                <td><%= dateFmt.format(containerInfo.getAsLong("Created") * 1000) %>
+                <td><%= dateFmt.format(containerInfo.getCreationTimestamp() * 1000) %>
                 </td>
-                <td><%= containerInfo.getAsString("State") %>
+                <td><%= containerInfo.getState() %>
                 </td>
                 <td><%= displayName.toString() %>
                 </td>

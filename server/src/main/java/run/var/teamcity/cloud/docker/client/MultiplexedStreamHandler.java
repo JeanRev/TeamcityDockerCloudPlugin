@@ -13,9 +13,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
- * {@link StreamHandler} supporting multiplexed {@link StdioInputStream}s.
+ * {@link AbstractStreamHandler} supporting multiplexed {@link StdioInputStream}s.
  */
-public class MultiplexedStreamHandler extends StreamHandler {
+public class MultiplexedStreamHandler extends AbstractStreamHandler {
 
     private static final Logger LOG = DockerCloudUtils.getLogger(MultiplexedStreamHandler.class);
 

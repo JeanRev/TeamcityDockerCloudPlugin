@@ -9,7 +9,6 @@ import jetbrains.buildServer.clouds.CloudState;
 import jetbrains.buildServer.serverSide.AgentDescription;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
-import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
@@ -29,22 +28,22 @@ public class DockerCloudClientFactory implements CloudClientFactory {
 
     private final String editProfileUrl;
     private final SBuildServer buildServer;
-    private final DockerClientFactory dockerClientFactory;
+    private final DockerClientAdapterFactory clientAdapterFactory;
 
     public DockerCloudClientFactory(@Nonnull final SBuildServer buildServer,
                                     @Nonnull final CloudRegistrar cloudRegistrar,
                                     @Nonnull final PluginDescriptor pluginDescriptor) {
-        this(buildServer, cloudRegistrar, pluginDescriptor, DockerClientFactory.getDefault());
+        this(buildServer, cloudRegistrar, pluginDescriptor, DockerClientAdapterFactory.getDefault());
     }
 
     DockerCloudClientFactory(@Nonnull final SBuildServer buildServer,
                              @Nonnull final CloudRegistrar cloudRegistrar,
                              @Nonnull final PluginDescriptor pluginDescriptor,
-                             @Nonnull final DockerClientFactory dockerClientFactory) {
+                             @Nonnull final DockerClientAdapterFactory clientAdapterFactory) {
         this.editProfileUrl = pluginDescriptor.getPluginResourcesPath(DockerCloudSettingsController.EDIT_PATH);
         cloudRegistrar.registerCloudFactory(this);
         this.buildServer = buildServer;
-        this.dockerClientFactory = dockerClientFactory;
+        this.clientAdapterFactory = clientAdapterFactory;
     }
 
 
@@ -63,14 +62,14 @@ public class DockerCloudClientFactory implements CloudClientFactory {
         properties.put(CloudImageParameters.SOURCE_IMAGES_JSON,
                 CloudImageParameters.collectionToJson(params.getCloudImages()));
 
-        DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(properties, dockerClientFactory);
+        DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(properties, clientAdapterFactory);
         List<DockerImageConfig> imageConfigs = DockerImageConfig.processParams(properties);
 
         final int threadPoolSize = Math.min(imageConfigs.size() * 2, Runtime.getRuntime().availableProcessors() + 1);
         clientConfig.getDockerClientConfig()
                 .connectionPoolSize(threadPoolSize);
 
-        return new DefaultDockerCloudClient(clientConfig, dockerClientFactory, imageConfigs,
+        return new DefaultDockerCloudClient(clientConfig, clientAdapterFactory, imageConfigs,
                 OfficialAgentImageResolver.forCurrentServer(DockerRegistryClientFactory.getDefault()), state,
                 buildServer);
     }

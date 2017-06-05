@@ -8,18 +8,12 @@ import jetbrains.buildServer.serverSide.BuildServerAdapter;
 import jetbrains.buildServer.serverSide.SBuildAgent;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.WebLinks;
+import run.var.teamcity.cloud.docker.DockerClientAdapter;
+import run.var.teamcity.cloud.docker.DockerClientAdapterFactory;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
-import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
-import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
-import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientException;
-import run.var.teamcity.cloud.docker.client.DockerClientFactory;
-import run.var.teamcity.cloud.docker.client.NotFoundException;
-import run.var.teamcity.cloud.docker.client.StdioInputStream;
-import run.var.teamcity.cloud.docker.client.StdioType;
-import run.var.teamcity.cloud.docker.client.StreamHandler;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.LockHandler;
 import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
@@ -28,7 +22,6 @@ import run.var.teamcity.cloud.docker.util.WrappedRunnableScheduledFuture;
 
 import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -57,7 +50,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
     private final LockHandler lock = LockHandler.newReentrantLock();
     private final Map<UUID, DefaultContainerTestHandler> tests = new HashMap<>();
     private final DockerImageNameResolver imageNameResolver;
-    private final DockerClientFactory dockerClientFactory;
+    private final DockerClientAdapterFactory clientAdapterFactory;
     private final long testMaxIdleTimeSec;
     private final long cleanupRateSec;
     private final SBuildServer buildServer;
@@ -69,18 +62,18 @@ class DefaultContainerTestManager extends ContainerTestManager {
     private boolean disposed = false;
 
     DefaultContainerTestManager(DockerImageNameResolver imageNameResolver,
-                                DockerClientFactory dockerClientFactory, SBuildServer buildServer, WebLinks webLinks,
+                                DockerClientAdapterFactory clientAdapterFactory, SBuildServer buildServer, WebLinks webLinks,
                                 StreamingController streamingController) {
-        this(imageNameResolver, dockerClientFactory, buildServer, webLinks, TEST_DEFAULT_IDLE_TIME_SEC,
+        this(imageNameResolver, clientAdapterFactory, buildServer, webLinks, TEST_DEFAULT_IDLE_TIME_SEC,
                 CLEANUP_DEFAULT_TASK_RATE_SEC, streamingController);
     }
 
 
     DefaultContainerTestManager(DockerImageNameResolver imageNameResolver,
-                                DockerClientFactory dockerClientFactory, SBuildServer buildServer, WebLinks webLinks,
+                                DockerClientAdapterFactory clientAdapterFactory, SBuildServer buildServer, WebLinks webLinks,
                                 long testMaxIdleTimeSec, long cleanupRateSec, StreamingController streamingController) {
         this.imageNameResolver = imageNameResolver;
-        this.dockerClientFactory = dockerClientFactory;
+        this.clientAdapterFactory = clientAdapterFactory;
         this.testMaxIdleTimeSec = testMaxIdleTimeSec;
         this.cleanupRateSec = cleanupRateSec;
         this.buildServer = buildServer;
@@ -133,6 +126,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
 
     private static final Pattern VT100_ESCAPE_PTN = Pattern.compile("\u001B\\[[\\d;]*[^\\d;]");
 
+    @Nonnull
     @Override
     public String getLogs(@Nonnull UUID testUuid) {
         DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
@@ -145,19 +139,9 @@ class DefaultContainerTestManager extends ContainerTestManager {
             throw new ActionException(HttpServletResponse.SC_BAD_REQUEST, "Container not created.");
         }
 
-        StringBuilder sb = new StringBuilder(5 * 1024);
+        CharSequence logs = test.getDockerClientAdapter().getLogs(containerId);
 
-        try (StreamHandler handler = ((DefaultDockerClient) test.getDockerClient()).
-                streamLogs(containerId, 10000, StdioType.all(), false)) {
-            StdioInputStream streamFragment;
-            while ((streamFragment = handler.getNextStreamFragment()) != null) {
-                sb.append(DockerCloudUtils.readUTF8String(streamFragment));
-            }
-        } catch (IOException e) {
-            throw new ActionException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to fetch logs: " + e.getMessage());
-        }
-
-        return VT100_ESCAPE_PTN.matcher(sb).replaceAll("");
+        return VT100_ESCAPE_PTN.matcher(logs).replaceAll("");
     }
 
     @Override
@@ -212,7 +196,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
 
         LOG.info("Disposing test task: " + test.getUuid());
 
-        DockerClient client;
+        DockerClientAdapter clientAdapter;
         ContainerTestListener statusListener;
         String containerId;
 
@@ -231,7 +215,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
             cancelFutureQuietly(test.getCurrentTaskFuture());
         });
 
-        client = test.getDockerClient();
+        clientAdapter = test.getDockerClientAdapter();
         statusListener = test.getStatusListener();
         containerId = test.getContainerId();
 
@@ -243,23 +227,15 @@ class DefaultContainerTestManager extends ContainerTestManager {
 
         if (containerId != null) {
             try {
-                try {
-                    client.stopContainer(containerId, 10);
-                } catch (ContainerAlreadyStoppedException e) {
-                    // Ignore.
-                }
-                try {
-                    client.removeContainer(containerId, true, true);
-                } catch (NotFoundException e) {
-                    // Ignore
-                }
+                clientAdapter.terminateAgentContainer(containerId, 10, true);
             } catch (DockerClientException e) {
                 // Ignore;
             } catch (Exception e) {
                 LOG.error("Unexpected error while disposing test instance: " + test.getUuid(), e);
             }
         }
-        client.close();
+
+        clientAdapter.close();
 
         cleanUpTestAgents();
     }
@@ -273,7 +249,8 @@ class DefaultContainerTestManager extends ContainerTestManager {
     private DefaultContainerTestHandler newTestInstance(DockerCloudClientConfig clientConfig,
                                                         ContainerTestListener listener) {
        return lock.call(() -> {
-            DefaultContainerTestHandler test = DefaultContainerTestHandler.newTestInstance(clientConfig, dockerClientFactory, listener,
+            DefaultContainerTestHandler test = DefaultContainerTestHandler.newTestInstance(clientConfig,
+                    clientAdapterFactory, listener,
                     streamingController);
 
             boolean duplicate = tests.put(test.getUuid(), test) != null;

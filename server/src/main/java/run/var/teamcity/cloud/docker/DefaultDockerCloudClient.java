@@ -18,18 +18,10 @@ import jetbrains.buildServer.serverSide.BuildServerAdapter;
 import jetbrains.buildServer.serverSide.SBuildAgent;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.impl.AgentNameGenerator;
-import run.var.teamcity.cloud.docker.client.BadRequestException;
-import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerClientFactory;
-import run.var.teamcity.cloud.docker.client.NotFoundException;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.LockHandler;
-import run.var.teamcity.cloud.docker.util.Node;
-import run.var.teamcity.cloud.docker.util.NodeStream;
-import run.var.teamcity.cloud.docker.util.Stopwatch;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -116,13 +108,13 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     private final SBuildServer buildServer;
     private final BuildAgentManager agentMgr;
 
-    private final DockerClientFactory dockerClientFactory;
+    private final DockerClientAdapterFactory dockerClientFactory;
     private final DockerClientConfig dockerClientConfig;
 
     /**
-     * The Docker client.
+     * The Docker client adapter.
      */
-    private volatile DockerClient dockerClient;
+    private volatile DockerClientAdapter clientAdapter;
 
     private final URL serverURL;
     private final DockerImageNameResolver resolver;
@@ -133,7 +125,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     private final UUID agentNameGeneratorUuid = UUID.randomUUID();
 
     DefaultDockerCloudClient(@Nonnull DockerCloudClientConfig clientConfig,
-                             @Nonnull final DockerClientFactory dockerClientFactory,
+                             @Nonnull final DockerClientAdapterFactory clientAdapterFactory,
                              @Nonnull final List<DockerImageConfig> imageConfigs,
                              @Nonnull final DockerImageNameResolver resolver,
                              @Nonnull CloudState cloudState,
@@ -163,10 +155,8 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         }
         LOG.info(images.size() + " image definitions loaded: " + images);
 
-        this.dockerClientFactory = dockerClientFactory;
+        this.dockerClientFactory = clientAdapterFactory;
         this.dockerClientConfig = clientConfig.getDockerClientConfig();
-
-        taskScheduler.scheduleClientTask(new SyncWithDockerTask(clientConfig.getDockerSyncRateSec(), TimeUnit.SECONDS));
 
         // Register our agent name generator.
         buildServer.registerExtension(AgentNameGenerator.class, agentNameGeneratorUuid.toString(), sBuildAgent -> {
@@ -188,6 +178,8 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         });
 
         state = State.READY;
+
+        taskScheduler.scheduleClientTask(new SyncWithDockerTask(clientConfig.getDockerSyncRateSec(), TimeUnit.SECONDS));
     }
 
     /**
@@ -264,7 +256,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 // The cloud client is currently in an error status. Wait for it to be cleared.
                 return false;
             }
-            return dockerClient != null && state == State.READY && ((DockerImage) image).canStartNewInstance();
+            return clientAdapter != null && state == State.READY && ((DockerImage) image).canStartNewInstance();
         });
     }
 
@@ -344,7 +336,9 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                         });
 
                         String containerId;
+
                         if (existingContainerId == null) {
+
                             String image = resolver.resolve(dockerImage.getConfig());
 
                             if (image == null) {
@@ -352,26 +346,14 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                                         dockerImage.getUuid());
                             }
 
-                            // Makes sure the image name is actual.
                             dockerImage.setImageName(image);
 
-                            String serverAddress = serverURL != null ? serverURL.toString() : tag.getServerAddress();
+                            DockerImageConfig imageConfig = dockerImage.getConfig();
 
-                            Node containerSpec = authorContainerSpec(instance, tag, image, serverAddress);
+                            if (imageConfig.isPullOnCreate()) {
 
-                            if (dockerImage.getConfig().isPullOnCreate()) {
-                                try (NodeStream nodeStream = dockerClient
-                                        .createImage(image, null, dockerImage.getConfig()
-                                                .getRegistryCredentials())) {
-                                    Node status;
-                                    while ((status = nodeStream.next()) != null) {
-                                        String error = status.getAsString("error", null);
-                                        if (error != null) {
-                                            Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
-                                            throw new CloudException("Failed to pull image: " + error + " -- " + details
-                                                    .getAsString("message", null), null);
-                                        }
-                                    }
+                                try {
+                                    clientAdapter.pull(image, imageConfig.getRegistryCredentials());
                                 } catch (Exception e) {
                                     // Failure to pull is considered non-critical: if an image of this name exists in
                                     // the Docker
@@ -381,8 +363,17 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                                 }
                             }
 
-                            Node createNode = dockerClient.createContainer(containerSpec, null);
-                            containerId = createNode.getAsString("Id");
+                            String serverAddress = serverURL != null ? serverURL.toString() : tag.getServerAddress();
+
+                            NewContainerInfo containerInfo = clientAdapter.createAgentContainer(
+                                    imageConfig.getContainerSpec(),
+                                    image,
+                                    prepareLabelsMap(instance),
+                                    prepareEnvMap(instance, serverAddress, tag)
+                            );
+
+                            containerId = containerInfo.getId();
+
                             LOG.info("New container " + containerId + " created.");
                         } else {
                             LOG.info("Reusing existing container: " + existingContainerId);
@@ -390,14 +381,15 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                         }
 
                         // Inspect the created container to retrieve its name and other meta-data.
-                        Node containerInspect = dockerClient.inspectContainer(containerId);
-                        String instanceName = containerInspect.getAsString("Name");
+                        ContainerInspection containerInspection = clientAdapter.inspectAgentContainer(containerId);
+                        String instanceName = containerInspection.getName();
                         if (instanceName.startsWith("/")) {
                             instanceName = instanceName.substring(1);
                         }
                         instance.setContainerName(instanceName);
 
-                        dockerClient.startContainer(containerId);
+                        clientAdapter.startAgentContainer(containerId);
+
                         LOG.info("Container " + containerId + " started.");
 
                         scheduleDockerSync();
@@ -434,7 +426,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 String containerId = dockerInstance.getContainerId();
 
                 if (containerId != null) {
-                    dockerClient.restartContainer(containerId);
+                    clientAdapter.restartAgentContainer(containerId);
                     lock.runInterruptibly(() -> dockerInstance.setStatus(InstanceStatus.RUNNING));
                 } else {
                     LOG.warn("No container associated with instance " + instance + ". Ignoring restart request.");
@@ -515,33 +507,15 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     private boolean terminateContainer(String containerId, boolean clientDisposed, boolean rmContainer) {
         assert containerId != null;
         assert !clientDisposed || rmContainer;
-        try {
-            // We always try to stop the container before destroying it independently of our metadata.
-            // No stop timeout (timeout = 0s) will be observed If the whole cloud client was stopped. This is to
-            // maximize the chances to issue all stop requests when the server is shutting down, before the JVM is
-            // effectively killed. Applying no timeout has the disadvantage that the agent will not have the time
-            // to properly shutdown and the TC server will need more time to notice that it is effectively gone.
-            long stopTime = Stopwatch.measureMillis(() ->
-                    dockerClient.stopContainer(containerId, clientDisposed ? 0 : DockerClient.DEFAULT_TIMEOUT));
-            LOG.info("Container " + containerId + " stopped in " + stopTime + "ms.");
-        } catch (ContainerAlreadyStoppedException e) {
-            LOG.debug("Container " + containerId + " was already stopped.", e);
-        } catch (NotFoundException e) {
-            LOG.warn("Container " + containerId + " was destroyed prematurely.", e);
-            return false;
-        }
-        if (rmContainer) {
-            LOG.info("Destroying container: " + containerId);
-            try {
-                dockerClient.removeContainer(containerId, true, true);
-            } catch (NotFoundException | BadRequestException e) {
-                LOG.debug("Assume container already removed or removal already in progress.", e);
-            }
 
-            return false;
-        }
+        // No stop timeout (timeout = 0s) will be observed If the whole cloud client was stopped. This is to
+        // maximize the chances to issue all stop requests when the server is shutting down, before the JVM is
+        // effectively killed. Applying no timeout has the disadvantage that the agent will not have the time
+        // to properly shutdown and the TC server will need more time to notice that it is effectively gone.
 
-        return true;
+        long timeout = clientDisposed ? 0 : DockerClient.DEFAULT_TIMEOUT;
+
+        return clientAdapter.terminateAgentContainer(containerId, timeout, rmContainer);
     }
 
     private void scheduleDockerSync() {
@@ -565,47 +539,33 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         return lock.call(() -> lastDockerSyncTimeMillis);
     }
 
-    /**
-     * Prepare the JSON structure describing the container to be created. We must extend the user provided
-     * configuration with some meta-data allowing to link the Docker container to a specific cloud instance. This is
-     * currently done by publishing the corresponding UUIDs as container label and as environment variables (such
-     * variables can then be queried through the TC agent API).
-     *
-     * @param instance the docker instance for which the container will be created
-     * @param tag information to be transferred to the cloud instance
-     * @param resolvedImage the exact image name that was resolved
-     * @param serverUrl the TC server URL
-     *
-     * @return the authored JSON node
-     */
-    private Node authorContainerSpec(DockerInstance instance, CloudInstanceUserData tag, String resolvedImage,
-                                     String serverUrl) {
-        DockerImage image = instance.getImage();
-        DockerImageConfig config = image.getConfig();
+    private Map<String, String> prepareLabelsMap(DockerInstance instance) {
+        Map<String, String> labels = new HashMap<>();
+        // Mark the container ID and instance ID as container labels.
+        labels.put(DockerCloudUtils.CLIENT_ID_LABEL, uuid.toString());
+        labels.put(DockerCloudUtils.INSTANCE_ID_LABEL, instance.getUuid().toString());
+        return labels;
+    }
 
-        EditableNode container = config.getContainerSpec().editNode();
-        container.getOrCreateArray("Env").
-                add(DockerCloudUtils.ENV_SERVER_URL + "=" + serverUrl).
-                add(DockerCloudUtils.ENV_CLIENT_ID + "=" + uuid).
-                add(DockerCloudUtils.ENV_IMAGE_ID + "=" + image.getUuid()).
-                add(DockerCloudUtils.ENV_INSTANCE_ID + "=" + instance.getUuid()).
-                // CloudInstanceUserData are serialized as base64 strings (should be ok for an environment variable
-                // value). They will be sent to the client so it can publish them as configuration parameters.
-                // NOTE: we may have a problem here with reused instances (that are transiting from a STOPPED to
-                // a RUNNING state). The TC server may provides a completely different set of user data to start a new
-                // instance, but we cannot update the corresponding environment variables to reflect those changes.
-                // This does not seems highly critical at moment, because virtually all user data parameters are bound
-                // to the cloud profile and not a specific cloud instance, and because publishing these extra
-                // configuration parameters is apparently not an hard requirement anyway.
-                        add(DockerCloudUtils.ENV_AGENT_PARAMS + "=" + tag.serialize());
-
-        container.getOrCreateObject("Labels").
-                put(DockerCloudUtils.CLIENT_ID_LABEL, uuid.toString()).
-                put(DockerCloudUtils.INSTANCE_ID_LABEL, instance.getUuid().toString());
-
-        container.put("Image", resolvedImage);
-
-        return container.saveNode();
+    private Map<String, String> prepareEnvMap(DockerInstance instance, String serverAddress, CloudInstanceUserData
+            userData) {
+        Map<String, String> env = new HashMap<>();
+        env.put(DockerCloudUtils.ENV_SERVER_URL, serverAddress);
+        // Publish the client, image and instance ID as environment variable. These will be accessible through the TC
+        // API in order to link a registered agent to a container.
+        env.put(DockerCloudUtils.ENV_CLIENT_ID, uuid.toString());
+        env.put(DockerCloudUtils.ENV_IMAGE_ID, instance.getImage().getUuid().toString());
+        env.put(DockerCloudUtils.ENV_INSTANCE_ID, instance.getUuid().toString());
+        // CloudInstanceUserData are serialized as base64 strings (should be ok for an environment variable
+        // value). They will be sent to the client so it can publish them as configuration parameters.
+        // NOTE: we may have a problem here with reused instances (that are transiting from a STOPPED to
+        // a RUNNING state). The TC server may provides a completely different set of user data to start a new
+        // instance, but we cannot update the corresponding environment variables to reflect those changes.
+        // This does not seems highly critical at moment, because virtually all user data parameters are bound
+        // to the cloud profile and not a specific cloud instance, and because publishing these extra
+        // configuration parameters is apparently not an hard requirement anyway.
+        env.put(DockerCloudUtils.ENV_AGENT_PARAMS, userData.serialize());
+        return env;
     }
 
     @Override
@@ -662,13 +622,14 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
             // Creates the Docker client upon first sync. We do this here to benefit from the retry mechanism if
             // the API negotiation fails.
-            if (dockerClient == null) {
-                dockerClient = dockerClientFactory.createClientWithAPINegotiation(dockerClientConfig);
+            if (clientAdapter == null) {
+                clientAdapter = dockerClientFactory.createAdapter(dockerClientConfig);
                 LOG.info("Docker client instantiated.");
             }
 
             // Step 1, query the whole list of containers associated with this cloud client.
-            Node containers = dockerClient.listContainersWithLabel(DockerCloudUtils.CLIENT_ID_LABEL, uuid.toString());
+            List<ContainerInfo> containers = clientAdapter.listActiveAgentContainers(DockerCloudUtils.CLIENT_ID_LABEL, uuid
+                    .toString());
 
             List<SBuildAgent> unregisteredAgents = agentMgr.getUnregisteredAgents();
             List<String> orphanedContainers = new ArrayList<>();
@@ -706,8 +667,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                         }
                     }
 
-                    List<Node> containersValues = containers.getArrayValues();
-                    LOG.debug("Found " + containersValues.size() + " containers to be synched: " + containers);
+                    LOG.debug("Found " + containers.size() + " containers to be synched: " + containers);
 
                     // Step 3: remove all instance in an error status.
                     Iterator<DockerInstance> itr = instances.values().iterator();
@@ -729,11 +689,11 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                     }
 
                     // Step 3, process each found container and conciliate it with our data model.
-                    for (Node container : containersValues) {
-                        String instanceIdStr = container.getObject("Labels").getAsString(DockerCloudUtils
-                                .INSTANCE_ID_LABEL, null);
+                    for (ContainerInfo container : containers) {
+                        String instanceIdStr = container.getLabels().get(DockerCloudUtils
+                                .INSTANCE_ID_LABEL);
                         final UUID instanceUuid = DockerCloudUtils.tryParseAsUUID(instanceIdStr);
-                        final String containerId = container.getAsString("Id");
+                        final String containerId = container.getId();
                         if (instanceUuid == null) {
                             LOG.error(
                                     "Cannot resolve instance ID '" + instanceIdStr + "' for container " + containerId
@@ -756,7 +716,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                         InstanceStatus instanceStatus = instance.getStatus();
 
-                        if (container.getAsString("State").equals("running")) {
+                        if (container.isRunning()) {
                             if (instanceStatus == InstanceStatus.STOPPED) {
                                 instance.notifyFailure("Container " + containerId + " started externally.", null);
                                 LOG.error("Container " + containerId + " started externally.");

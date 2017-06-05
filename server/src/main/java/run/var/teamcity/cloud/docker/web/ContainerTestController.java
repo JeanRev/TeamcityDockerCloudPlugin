@@ -18,10 +18,10 @@ import org.atmosphere.websocket.WebSocketHandlerAdapter;
 import org.atmosphere.websocket.WebSocketProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.ModelAndView;
+import run.var.teamcity.cloud.docker.DockerClientAdapterFactory;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfigException;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
-import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
@@ -64,7 +64,7 @@ public class ContainerTestController extends BaseFormJsonController {
     private final ContainerTestManager testMgr;
     private final AtmosphereFrameworkFacade atmosphereFramework;
     private final Broadcaster statusBroadcaster;
-    private final DockerClientFactory dockerClientFactory;
+    private final DockerClientAdapterFactory clientAdapterFactory;
 
     @Autowired
     public ContainerTestController(@Nonnull DefaultAtmosphereFacade atmosphereFramework,
@@ -73,13 +73,13 @@ public class ContainerTestController extends BaseFormJsonController {
                                    @Nonnull WebControllerManager manager,
                                    @Nonnull WebLinks webLinks,
                                    @Nonnull StreamingController streamingController) {
-        this(DockerClientFactory.getDefault(), atmosphereFramework, server, pluginDescriptor, manager,
+        this(DockerClientAdapterFactory.getDefault(), atmosphereFramework, server, pluginDescriptor, manager,
                 new DefaultContainerTestManager(OfficialAgentImageResolver.forCurrentServer(DockerRegistryClientFactory.getDefault()),
-                        DockerClientFactory.getDefault(), server, webLinks, streamingController));
+                        DockerClientAdapterFactory.getDefault(), server, webLinks, streamingController));
 
     }
 
-    ContainerTestController(@Nonnull DockerClientFactory dockerClientFactory,
+    ContainerTestController(@Nonnull DockerClientAdapterFactory clientAdapterFactory,
                             @Nonnull AtmosphereFrameworkFacade atmosphereFramework,
                             @Nonnull SBuildServer buildServer,
                             @Nonnull PluginDescriptor pluginDescriptor,
@@ -87,7 +87,7 @@ public class ContainerTestController extends BaseFormJsonController {
                             @Nonnull ContainerTestManager testMgr) {
 
 
-        this.dockerClientFactory = dockerClientFactory;
+        this.clientAdapterFactory = clientAdapterFactory;
         this.testMgr = testMgr;
 
         buildServer.addListener(new BuildServerListener());
@@ -148,7 +148,7 @@ public class ContainerTestController extends BaseFormJsonController {
             DockerImageConfig imageConfig;
 
             try {
-                clientConfig = DockerCloudClientConfig.processParams(params, dockerClientFactory);
+                clientConfig = DockerCloudClientConfig.processParams(params, clientAdapterFactory);
                 // Note: we let the cloud image parameters here to "null" because the test container will actually not
                 // be started through the cloud API.
                 imageConfig = DockerImageConfig.fromJSon(Node.parse(params.get(DockerCloudUtils.TEST_IMAGE_PARAM)), null);

@@ -2,8 +2,8 @@ package run.var.teamcity.cloud.docker.web;
 
 import org.junit.Before;
 import org.junit.Test;
+import run.var.teamcity.cloud.docker.TestDockerClientAdapterFactory;
 import run.var.teamcity.cloud.docker.test.TestAtmosphereFrameworkFacade;
-import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
 import run.var.teamcity.cloud.docker.test.TestHttpServletRequest;
 import run.var.teamcity.cloud.docker.test.TestHttpServletResponse;
 import run.var.teamcity.cloud.docker.test.TestPluginDescriptor;
@@ -183,12 +183,8 @@ public class ContainerTestControllerTest {
     }
 
     private ContainerTestController createController() {
-        return new ContainerTestController(new TestDockerClientFactory(), new TestAtmosphereFrameworkFacade(),
+        return new ContainerTestController(new TestDockerClientAdapterFactory(), new TestAtmosphereFrameworkFacade(),
                 new TestSBuildServer(), new TestPluginDescriptor(), new TestWebControllerManager(), testMgr);
     }
 
-    private TestContainerStatusMsg createStatusMsg(Phase phase) {
-        return new TestContainerStatusMsg(TestUtils.TEST_UUID, phase,
-                Status.PENDING, "status msg", null, null, Collections.emptyList());
-    }
 }

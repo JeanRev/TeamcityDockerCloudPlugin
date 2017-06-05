@@ -48,6 +48,10 @@ public final class DockerCloudUtils {
      */
     public static final String INSTANCE_ID_LABEL = NS_PREFIX + "instance_id";
     /**
+     * Docker label key to store the container source image ID (hash).
+     */
+    public static final String SOURCE_IMAGE_ID_LABEL = NS_PREFIX + "source_image";
+    /**
      * Docker label key to store a demo instance UUID.
      */
     public static final String TEST_INSTANCE_ID_LABEL = NS_PREFIX + "test_instance_id";

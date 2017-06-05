@@ -1,18 +1,19 @@
 package run.var.teamcity.cloud.docker.web;
 
 import com.intellij.openapi.diagnostic.Logger;
+import run.var.teamcity.cloud.docker.DockerClientAdapter;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
-import run.var.teamcity.cloud.docker.client.DockerClient;
+import run.var.teamcity.cloud.docker.NewContainerInfo;
+import run.var.teamcity.cloud.docker.PullStatusListener;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
-import run.var.teamcity.cloud.docker.util.Node;
-import run.var.teamcity.cloud.docker.util.NodeStream;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
-import java.math.BigInteger;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -21,8 +22,6 @@ import java.util.UUID;
 class CreateContainerTestTask extends ContainerTestTask {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(CreateContainerTestTask.class);
-
-    private final static BigInteger UNKNOWN_PROGRESS = BigInteger.valueOf(-1);
 
     private final DockerImageConfig imageConfig;
     private final String serverUrl;
@@ -56,7 +55,7 @@ class CreateContainerTestTask extends ContainerTestTask {
 
         LOG.info("Creating test container for instance: " + instanceUuid + ". Server URL: " + serverUrl);
 
-        DockerClient client = testTaskHandler.getDockerClient();
+        DockerClientAdapter clientAdapter = testTaskHandler.getDockerClientAdapter();
 
         EditableNode container = imageConfig.getContainerSpec().editNode();
         container.getOrCreateArray("Env").add(DockerCloudUtils.ENV_TEST_INSTANCE_ID + "=" + instanceUuid).add
@@ -74,85 +73,58 @@ class CreateContainerTestTask extends ContainerTestTask {
         container.put("Image", image);
 
         if (imageConfig.isPullOnCreate()) {
-            pullImage(client, image);
+            msg("Pulling image " + image);
+
+            clientAdapter.pull(image, imageConfig.getRegistryCredentials(), new PullListener());
         }
 
         msg("Creating container");
-        Node containerNode = client.createContainer(container.saveNode(), null);
-        String containerId = containerNode.getAsString("Id");
 
-        Node warnings = containerNode.getArray("Warnings", Node.EMPTY_ARRAY);
-        for (Node warning : warnings.getArrayValues()) {
-            warning(warning.getAsString());
-        }
+        Map<String, String> env = new HashMap<>();
+        env.put(DockerCloudUtils.ENV_TEST_INSTANCE_ID, instanceUuid.toString());
+        env.put(DockerCloudUtils.ENV_SERVER_URL, serverUrl);
 
-        testTaskHandler.notifyContainerId(containerId);
+        Map<String, String> labels = Collections.singletonMap(DockerCloudUtils.TEST_INSTANCE_ID_LABEL,
+                instanceUuid.toString());
+
+        NewContainerInfo containerInfo = clientAdapter.createAgentContainer(imageConfig.getContainerSpec(), image,
+                labels, env);
+
+        containerInfo.getWarnings().forEach(this::warning);
+
+        testTaskHandler.notifyContainerId(containerInfo.getId());
 
         return Status.SUCCESS;
     }
 
-    private void pullImage(DockerClient client, String image) {
-        msg("Pulling image " + image);
+    private class PullListener implements PullStatusListener {
 
-        try (NodeStream nodeStream = client.createImage(image, null, imageConfig.getRegistryCredentials())) {
-            Node status;
-            String statusMsg = null;
+        String lastStatus = null;
+        int lastPercent = NO_PROGRESS;
 
-            // We currently only one line of status. So, we track the progress of one layer after another.s
-            String trackedLayer = null;
-            // Progress tracking is dependent of the size of the corresponding layer, which can be pretty huge. Using
-            // BigIngegers to be safe.
-            BigInteger progress = UNKNOWN_PROGRESS;
-            while ((status = nodeStream.next()) != null) {
-                String error = status.getAsString("error", null);
-                if (error != null) {
-                    Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
-                    throw new ContainerTestTaskException("Failed to pull image: " + error + " -- " + details.getAsString("message", null));
-                }
-                String newStatusMsg = status.getAsString("status", null);
-                if (newStatusMsg != null) {
-                    Node progressDetails = status.getObject("progressDetail", Node.EMPTY_OBJECT);
-                    boolean inProgress = status.getAsString("progress", null) != null;
-                    String id = status.getAsString("id", null);
-                    if (id == null) {
-                        continue;
-                    }
-                    if (trackedLayer == null) {
-                        trackedLayer = id;
-                    } else if (!trackedLayer.equals(id)) {
-                        continue;
-                    }
-                    if (!inProgress) {
-                        trackedLayer = null;
-                        continue;
-                    }
+        // We currently have only one line of status. So, we track the progress of one layer after another.
+        String trackedLayer = null;
 
-                    BigInteger current = progressDetails.getAsBigInt("current", UNKNOWN_PROGRESS);
-                    BigInteger total = progressDetails.getAsBigInt("total", UNKNOWN_PROGRESS);
+        @Override
+        public void pullInProgress(@Nonnull String layer, String status, int percent) {
 
-                    BigInteger newProgress = UNKNOWN_PROGRESS;
-
-                    if (validProgress(current) && validProgress(total) && total.compareTo(BigInteger.ZERO) != 0) {
-                        newProgress = current.compareTo(BigInteger.ZERO) == 0 ? BigInteger.ZERO :
-                                current.multiply(BigInteger.valueOf(100)).divide(total);
-                    }
-
-                    if (!newStatusMsg.equals(statusMsg) || (validProgress(newProgress) && newProgress
-                            .compareTo(progress) != 0)) {
-                        String progressPercent = validProgress(newProgress) ? " " + newProgress + "%" : "";
-                        msg("Pull in progress - " + id + ": " + newStatusMsg + progressPercent);
-                    }
-                    statusMsg = newStatusMsg;
-                    progress = newProgress;
-                }
-
+            if (percent == NO_PROGRESS) {
+                trackedLayer = null;
+                return;
             }
-        } catch (IOException e) {
-            throw new ContainerTestTaskException("Failed to pull image.", e);
-        }
-    }
 
-    private boolean validProgress(BigInteger progress) {
-        return progress.compareTo(BigInteger.ZERO) >= 0;
+            if (trackedLayer == null) {
+                trackedLayer = layer;
+            } else if (!trackedLayer.equals(layer)) {
+                return;
+            }
+
+            if (!lastStatus.equals(status) || lastPercent != percent) {
+                msg("Pull in progress - " + layer + ": " + percent + "%");
+            }
+
+            lastStatus = status;
+            lastPercent = percent;
+        }
     }
 }
