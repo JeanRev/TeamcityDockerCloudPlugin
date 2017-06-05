@@ -335,6 +335,14 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
             },
 
+            _writeImages: function() {
+                var tmp = [];
+                self._safeKeyValueEach(self.imagesData, function(key, value) {
+                    tmp.push(value);
+                });
+                self.$images.val(JSON.stringify(tmp));
+            },
+
             _updateTCImageDetails: function(oldSourceId, newSourceId) {
 
                 self.logDebug("Updating cloud image details (oldSourceId=" + oldSourceId + ", newSourceId=" +
@@ -1136,11 +1144,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.logDebug("Saving profile: " + newProfile + " (was: " + currentProfile + ")");
                     delete self.imagesData[currentProfile];
                     self.imagesData[newProfile] = settings;
-                    var tmp = [];
-                    self._safeKeyValueEach(self.imagesData, function(key, value) {
-                       tmp.push(value);
-                    });
-                    self.$images.val(JSON.stringify(tmp));
+                    self._writeImages();
                     self._updateTCImageDetails(currentProfile, newProfile);
                     BS.DockerImageDialog.close();
                     self._renderImagesTable();
@@ -1214,7 +1218,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     if (!confirm('Do you really want to delete this image ?')) {
                         return;
                     }
-                    delete self.imagesData[$j(this).closest('tr').data('profile')];
+                    var profile = $j(this).closest('tr').data('profile');
+                    self.logDebug('Deleting image: ' + profile);
+                    delete self.imagesData[profile];
+                    self._writeImages();
                     self._updateTCImageDetails();
                     self._renderImagesTable();
                 });
