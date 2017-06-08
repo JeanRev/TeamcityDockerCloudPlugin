@@ -10,12 +10,15 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class TestDockerClientFactory extends DockerClientFactory {
 
     private final ReentrantLock lock = new ReentrantLock();
 
     private final Deque<Consumer<TestDockerClient>> configurators = new ArrayDeque<>();
+
+    private Function<TestDockerClient, DockerClient> wrapper;
 
     private TestDockerClient client;
     private DockerRegistryCredentials dockerRegistryCredentials = DockerRegistryCredentials.ANONYMOUS;
@@ -26,22 +29,20 @@ public class TestDockerClientFactory extends DockerClientFactory {
 
         lock.lock();
         try {
-            TestDockerClient client = new TestDockerClient(config, dockerRegistryCredentials);
+            TestDockerClient testClient = new TestDockerClient(config, dockerRegistryCredentials);
             for (Consumer<TestDockerClient> configurator : configurators) {
-                configurator.accept(client);
+                configurator.accept(testClient);
             }
 
-            this.client = client;
+            DockerClient client = wrapper == null ? testClient : wrapper.apply(testClient);
+            this.client = testClient;
+
             return client;
         } finally {
             lock.unlock();
         }
     }
 
-    /**
-     * credentials used to check when pulling image from registry
-     * @param dockerRegistryCredentials
-     */
     public void setDockerRegistryCredentials(DockerRegistryCredentials dockerRegistryCredentials)
     {
         lock.lock();
@@ -77,6 +78,10 @@ public class TestDockerClientFactory extends DockerClientFactory {
         } finally {
             lock.unlock();
         }
+    }
+
+    public void setWrapper(Function<TestDockerClient, DockerClient> wrapper) {
+        this.wrapper = wrapper;
     }
 
     public void lock() {

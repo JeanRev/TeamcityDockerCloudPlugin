@@ -2,6 +2,7 @@ package run.var.teamcity.cloud.docker.test;
 
 import jetbrains.buildServer.ServiceNotFoundException;
 import jetbrains.buildServer.TeamCityExtension;
+import jetbrains.buildServer.serverSide.BuildAgentManager;
 import jetbrains.buildServer.serverSide.BuildDataFilter;
 import jetbrains.buildServer.serverSide.BuildHistory;
 import jetbrains.buildServer.serverSide.BuildQueryOptions;
@@ -39,10 +40,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Function;
 
 public class TestSBuildServer implements SBuildServer {
 
     private final TestBuildAgentManager buildAgentManager = new TestBuildAgentManager(this);
+    private BuildAgentManager wrappedBuildAgentManager;
 
     private final List<BuildServerListener> buildListeners = new CopyOnWriteArrayList<>();
     private String agentNameGeneratorUuid;
@@ -166,8 +169,8 @@ public class TestSBuildServer implements SBuildServer {
 
     @Nonnull
     @Override
-    public TestBuildAgentManager getBuildAgentManager() {
-        return buildAgentManager;
+    public BuildAgentManager getBuildAgentManager() {
+        return wrappedBuildAgentManager == null ? buildAgentManager : wrappedBuildAgentManager;
     }
 
     @Override
@@ -394,5 +397,13 @@ public class TestSBuildServer implements SBuildServer {
             listener.agentRegistered(agent, -1);
         }
         return this;
+    }
+
+    public void wrapBuildAgentManager(Function<TestBuildAgentManager, BuildAgentManager> wrapper) {
+        wrappedBuildAgentManager = wrapper.apply(buildAgentManager);
+    }
+
+    public TestBuildAgentManager getTestBuildAgentManager() {
+        return buildAgentManager;
     }
 }

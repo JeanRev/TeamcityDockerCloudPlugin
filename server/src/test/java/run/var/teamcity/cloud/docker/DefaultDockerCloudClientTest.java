@@ -4,6 +4,8 @@ import jetbrains.buildServer.clouds.CloudErrorInfo;
 import jetbrains.buildServer.clouds.CloudInstanceUserData;
 import jetbrains.buildServer.clouds.InstanceStatus;
 import jetbrains.buildServer.clouds.QuotaException;
+import jetbrains.buildServer.serverSide.BuildAgentManager;
+import jetbrains.buildServer.serverSide.SBuildServer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,6 +14,7 @@ import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
 import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
+import run.var.teamcity.cloud.docker.test.Interceptor;
 import run.var.teamcity.cloud.docker.test.LongRunning;
 import run.var.teamcity.cloud.docker.test.TestCloudState;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
@@ -258,7 +261,7 @@ public class DefaultDockerCloudClientTest {
                 removable(false);
         TestSBuildAgent otherAgent = new TestSBuildAgent();
 
-        buildServer.getBuildAgentManager().
+        buildServer.getTestBuildAgentManager().
                 unregisteredAgent(agentWithCloudAndInstanceIds).
                 unregisteredAgent(agentWithCloudIdOnly).
                 unregisteredAgent(agentWithCloudAndInstanceIdsNotRemovable).
@@ -344,7 +347,7 @@ public class DefaultDockerCloudClientTest {
         waitUntil(() -> {
             assertThat(client.getErrorInfo()).isNull();
             return dockerClient.getContainers().size() == 1;
-        });
+        }, 9999);
         assertThat(dockerClient.getContainers()).containsOnly(nonRelevantContainer);
     }
 
@@ -783,9 +786,37 @@ public class DefaultDockerCloudClientTest {
         DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2, serverURL);
         DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, pullOnCreate, rmOnExit, false,
                 DockerRegistryCredentials.ANONYMOUS, maxInstanceCount, 111);
-        return client = new DefaultDockerCloudClient(clientConfig, dockerClientFactory,
+
+        // Setup proxies to make sure that the cloud client is not accessing the docker client or the TC API when
+        // client internal state is locked, to prevent deadlocks.
+        Runnable assertClientNotLocked = () -> {
+            if (client != null) {
+                assertThat(client.isLockedByCurrentThread()).isFalse();
+            }
+        };
+
+        SBuildServer buildServerProxy = Interceptor.wrap(buildServer, SBuildServer.class)
+                .beforeInvoke(assertClientNotLocked)
+                .buildProxy();
+
+        buildServer.wrapBuildAgentManager(agtMgr -> Interceptor.wrap(agtMgr, BuildAgentManager.class)
+                .beforeInvoke(assertClientNotLocked)
+                .buildProxy());
+
+
+        DefaultDockerCloudClient client = new DefaultDockerCloudClient(clientConfig, dockerClientFactory,
                 Collections.singletonList(imageConfig), dockerImageResolver,
-                cloudState, buildServer);
+                cloudState, buildServerProxy);
+
+
+        dockerClientFactory.setWrapper(clt ->
+                Interceptor.wrap(clt, DockerClient.class)
+                        .beforeInvoke(assertClientNotLocked)
+                        .buildProxy());
+
+        this.client = client;
+
+        return client;
     }
 
 
