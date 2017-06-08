@@ -63,7 +63,7 @@ public class DefaultContainerTestManagerTest {
         pullOnCreate = true;
         containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "test-image").saveNode();
         buildServer = new TestSBuildServer();
-        agentMgr = buildServer.getBuildAgentManager();
+        agentMgr = buildServer.getTestBuildAgentManager();
 
         testMaxIdleTime = DefaultContainerTestManager.TEST_DEFAULT_IDLE_TIME_SEC;
         cleanupRateSec = DefaultContainerTestManager.CLEANUP_DEFAULT_TASK_RATE_SEC;
@@ -269,7 +269,7 @@ public class DefaultContainerTestManagerTest {
     }
 
     private DockerImageConfig createImageConfig() {
-        return new DockerImageConfig("test", containerSpec, pullOnCreate,true, false, DockerRegistryCredentials.ANONYMOUS, 1, null);
+        return new DockerImageConfig("test", containerSpec, pullOnCreate, true, false, DockerRegistryCredentials.ANONYMOUS, 1, null);
     }
 
     private ContainerTestManager createManager() {

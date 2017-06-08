@@ -94,6 +94,66 @@ describe('Migrating images data', function () {
 
         expect(image.Administration.PullOnCreate).toEqual(false);
     });
+
+    it('should fix memory unit when image V3', function () {
+
+        var legacyUnitFactors = {
+            GiB: 134217728,
+            MiB: 131072,
+            bytes: 1
+        };
+
+        var base = {Administration: {Version: 3}};
+        var settings = function (settings) {
+            return $j.extend(true, settings, base);
+        };
+
+        var imageData = settings({});
+
+        dockerCloud._migrateImagesData(imageData);
+
+        expect(imageData).toEqual({Administration: {Version: dockerCloud.IMAGE_VERSION}, Editor:{}});
+
+        var memValues = [
+            { value: 'MemorySwap', unit: 'MemorySwapUnit' },
+            { value: 'Memory', unit: 'MemoryUnit'}];
+        memValues.forEach(function (memValue) {
+            Object.keys(legacyUnitFactors).forEach(function (unit) {
+                var hostConfig;
+                var editor;
+                [1, 2, 3].forEach(function(value) {
+                    var factor = legacyUnitFactors[unit];
+                    hostConfig = {};
+                    editor = {};
+                    hostConfig[memValue.value] = value * factor;
+                    editor[memValue.unit] = unit;
+                    var imageData = settings({Editor: editor, Container: { HostConfig: hostConfig }});
+                    dockerCloud._migrateImagesData(imageData);
+
+                    expect(hostConfig[memValue.value]).toEqual(value * dockerCloud._units_multiplier[unit]);
+                });
+
+                hostConfig = {};
+                editor = {};
+                hostConfig[memValue.value] = -1;
+                editor[memValue.unit] = unit;
+
+                var imageData = settings({Editor: editor, Container: { HostConfig: hostConfig }});
+                dockerCloud._migrateImagesData(imageData);
+
+                expect(hostConfig[memValue.value]).toEqual(-1);
+
+                hostConfig = {};
+                editor = {};
+                hostConfig[memValue.value] = -1;
+
+                imageData = settings({Editor: editor, Container: { HostConfig: hostConfig }});
+                dockerCloud._migrateImagesData(imageData);
+
+                expect(hostConfig[memValue.value]).toEqual(-1);
+            });
+        });
+    });
 });
 
 describe('Applying view model', function () {
@@ -402,11 +462,11 @@ var settingsConverterFixtures = [
             viewModel: {Memory: '1', MemoryUnit: 'bytes'}
         },
         {
-            settings: {Container: {HostConfig: {Memory: 131072}}, Editor: {MemoryUnit: 'MiB'}},
+            settings: {Container: {HostConfig: {Memory: 1048576}}, Editor: {MemoryUnit: 'MiB'}},
             viewModel: {Memory: '1', MemoryUnit: 'MiB'}
         },
         {
-            settings: {Container: {HostConfig: {Memory: 1342177280}}, Editor: {MemoryUnit: 'GiB'}},
+            settings: {Container: {HostConfig: {Memory: 10737418240}}, Editor: {MemoryUnit: 'GiB'}},
             viewModel: {Memory: '10', MemoryUnit: 'GiB'}
         }
     ]
@@ -418,7 +478,7 @@ var settingsConverterFixtures = [
             viewModel: {MemorySwap: '1', MemorySwapUnit: 'bytes'}
         },
         {
-            settings: {Container: {HostConfig: {MemorySwap: 131072}}, Editor: {MemorySwapUnit: 'MiB'}},
+            settings: {Container: {HostConfig: {MemorySwap: 1048576}}, Editor: {MemorySwapUnit: 'MiB'}},
             viewModel: {MemorySwap: '1', MemorySwapUnit: 'MiB'}
         }
     ]
