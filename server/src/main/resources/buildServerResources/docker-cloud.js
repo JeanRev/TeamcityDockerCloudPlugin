@@ -5,7 +5,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
         //noinspection JSUnresolvedVariable
         var self = {
-            IMAGE_VERSION: 3,
+            IMAGE_VERSION: 4,
             selectors: {
                 editImageLink: '.editImageLink',
                 imagesTableRow: '.imagesTableRow'
@@ -278,10 +278,12 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
 
                 // Update the image details when the configuration is initially loaded.
+                self._writeImages();
                 self._updateTCImageDetails();
             },
 
             _migrateImagesData: function(imageData) {
+                var editor;
                 switch(imageData.Administration.Version) {
                     case 1:
                         // V1: 'Binds' must be exported from the container configuration into the editor configuration,
@@ -292,7 +294,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         self.logInfo("Performing migration to version 2.");
                         var container = imageData.Container || {};
                         var hostConfig = container.HostConfig || {};
-                        var editor = imageData.Editor || {};
+                        editor = imageData.Editor || {};
                         imageData.Editor = editor;
 
                         editor.Binds = [];
@@ -326,7 +328,29 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             editor.Binds.push({ PathOnHost: tokens[0], PathInContainer: tokens[1],  ReadOnly: tokens[2] });
                         });
                     case 2:
+                        self.logInfo("Performing migration to version 3.");
                         imageData.Administration.PullOnCreate = true;
+                    case 3:
+                        self.logInfo("Performing migration to version 4.");
+
+                        editor = imageData.Editor || {};
+                        self.migrationInfo = [];
+                        imageData.Editor = editor;
+                        $j([
+                            {value: 'Memory', unit: 'MemoryUnit'},
+                            {value: 'MemorySwap', unit: 'MemorySwapUnit'}]).each(function(i, mem) {
+                                var value;
+                                if (imageData.Container && imageData.Container.HostConfig) {
+                                    value = imageData.Container.HostConfig[mem.value];
+                                }
+                                var unit = editor[mem.unit];
+                                if (unit === 'MiB' || unit === 'GiB') {
+                                    self.migrationInfo.push(editor);
+                                    if (value && value !== -1) {
+                                        imageData.Container.HostConfig[mem.value] = value * 8;
+                                    }
+                                }
+                        });
                         imageData.Administration.Version = self.IMAGE_VERSION;
                     case self.IMAGE_VERSION:
                         break;
@@ -2041,8 +2065,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 return txt;
             },
             _units_multiplier:  {
-                GiB: 134217728,
-                MiB: 131072,
+                GiB: 1073741824,
+                MiB: 1048576,
                 KiB: 1024,
                 bytes: 1
             },
