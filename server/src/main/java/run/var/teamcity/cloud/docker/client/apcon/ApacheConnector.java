@@ -208,9 +208,6 @@ class ApacheConnector implements Connector {
     private final boolean preemptiveBasicAuth;
     private final RequestConfig requestConfig;
 
-    // DK_CLD: See getHttpContext()
-    private final ThreadLocal<HttpContext> localHttpContext = new ThreadLocal<>();
-
     /**
      * Create the new Apache HTTP Client connector.
      *
@@ -530,8 +527,6 @@ class ApacheConnector implements Connector {
             } catch (final IOException e) {
                 LOGGER.log(Level.SEVERE, null, e);
             }
-
-            localHttpContext.set(context);
             return responseContext;
         } catch (final Exception e) {
             throw new ProcessingException(e);
@@ -682,8 +677,6 @@ class ApacheConnector implements Connector {
 
         final InputStream inputStream;
 
-        // DK_CLD: do not forward the entity stream to Jersey if the connection has been upgraded. This prevent any
-        // component of trying to reading it, which likely result in unexpected result or even deadlock.
         if (response.getEntity() == null) {
             inputStream = new ByteArrayInputStream(new byte[0]);
         } else {
