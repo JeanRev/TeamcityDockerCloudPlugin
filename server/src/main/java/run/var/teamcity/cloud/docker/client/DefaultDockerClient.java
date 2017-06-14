@@ -396,6 +396,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
         config.property(ApacheClientProperties.CONNECTION_MANAGER, connManager);
         config.property(ClientProperties.CONNECT_TIMEOUT, clientConfig.getConnectTimeoutMillis());
+        config.property(ClientProperties.READ_TIMEOUT, clientConfig.getTransferTimeoutMillis());
         return new DefaultDockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI,
                 clientConfig.getApiVersion());
     }

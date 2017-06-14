@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 public class DockerClientConfig {
 
     private final static int DEFAULT_CONNECT_TIMEOUT_MILLIS = (int) TimeUnit.MINUTES.toMillis(1);
+    private final static int DEFAULT_TRANSFER_TIMEOUT_MILLIS = (int) TimeUnit.MINUTES.toMillis(1);
 
     private final URI instanceURI;
     private final DockerAPIVersion apiVersion;
@@ -24,6 +25,7 @@ public class DockerClientConfig {
     private boolean verifyingHostname = true;
     private int connectionPoolSize = 1;
     private int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT_MILLIS;
+    private int transferTimeoutMillis = DEFAULT_TRANSFER_TIMEOUT_MILLIS;
 
     /**
      * Creates a new configuration targeting the specified Docker URI.
@@ -84,7 +86,8 @@ public class DockerClientConfig {
     }
 
     /**
-     * Connection timeout to the Docker daemon in milliseconds.
+     * Connection timeout to the Docker daemon in milliseconds. Depending on the connection type this timeout may not
+     * be applicable.
      *
      * @param connectTimeoutMillis the timeout in milliseconds
      *
@@ -99,6 +102,24 @@ public class DockerClientConfig {
         }
 
         this.connectTimeoutMillis = connectTimeoutMillis;
+        return this;
+    }
+
+    /**
+     * Timeout for read or write operation when communicating with the Docker daemon. Depending on the connection type
+     * read or write timeouts may not be applicable.
+     *
+     * @param transferTimeoutMillis the timeout in milliseconds
+     *
+     * @return IllegalArgumentException if {@code transferTimeoutMillis} is negative
+     */
+    public DockerClientConfig transferTimeoutMillis(int transferTimeoutMillis) {
+        if (transferTimeoutMillis < 0) {
+            throw new IllegalArgumentException("Timeout specification must be positive: " + transferTimeoutMillis +
+                    ". Use 0 for no timeout.");
+        }
+
+        this.transferTimeoutMillis = transferTimeoutMillis;
         return this;
     }
 
@@ -157,5 +178,14 @@ public class DockerClientConfig {
      */
     public int getConnectTimeoutMillis() {
         return connectTimeoutMillis;
+    }
+
+    /**
+     * Gets the timeout in milliseconds when communicating with the Daemon.
+     *
+     * @return the timeout in milliseconds or {@code 0} for no timeout
+     */
+    public int getTransferTimeoutMillis() {
+        return transferTimeoutMillis;
     }
 }

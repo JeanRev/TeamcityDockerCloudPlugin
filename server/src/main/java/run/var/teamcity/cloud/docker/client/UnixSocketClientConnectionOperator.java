@@ -13,7 +13,6 @@ import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 
 /**
  * {@link HttpClientConnectionOperator} to connect to Unix sockets. We are using here our own connection operator
@@ -21,8 +20,6 @@ import java.net.Socket;
  * specifically, our unix socket instances do not allow to reconfigure some socket properties once opened.
  */
 class UnixSocketClientConnectionOperator implements HttpClientConnectionOperator {
-
-    private static final ThreadLocal<ManagedHttpClientConnection> localConnection = new ThreadLocal<>();
 
     private File socketFile;
 
@@ -38,11 +35,13 @@ class UnixSocketClientConnectionOperator implements HttpClientConnectionOperator
 
     @Override
     public void connect(ManagedHttpClientConnection conn, HttpHost host, InetSocketAddress localAddress, int connectTimeout, SocketConfig socketConfig, HttpContext context) throws IOException {
-        Socket sock = AFUNIXSocket.newInstance();
+        AFUNIXSocket sock = AFUNIXSocket.newInstance();
 
         conn.bind(sock);
-        sock.connect(new AFUNIXSocketAddress(socketFile, connectTimeout));
+        sock.connect(new AFUNIXSocketAddress(socketFile, 0));
         conn.bind(sock);
+        // Setup the read timeout. Write timeout are also available on unix domain socket, but the junixsocket API does
+        // not supports them.
         sock.setSoTimeout(socketConfig.getSoTimeout());
         sock.setTcpNoDelay(socketConfig.isTcpNoDelay());
         sock.setKeepAlive(socketConfig.isSoKeepAlive());
@@ -52,17 +51,10 @@ class UnixSocketClientConnectionOperator implements HttpClientConnectionOperator
         if (socketConfig.getSndBufSize() > 0) {
             sock.setSendBufferSize(socketConfig.getSndBufSize());
         }
-
         final int linger = socketConfig.getSoLinger();
         if (linger >= 0) {
             sock.setSoLinger(true, linger);
         }
-
-        localConnection.set(conn);
-    }
-
-    public static ManagedHttpClientConnection getLocalConnection() {
-        return localConnection.get();
     }
 
     @Override

@@ -21,13 +21,15 @@ public class DockerClientConfigTest {
                 DockerAPIVersion.parse("9.99"))
                 .usingTls(true)
                 .connectTimeoutMillis(42)
-                .connectionPoolSize(43);
+                .transferTimeoutMillis(43)
+                .connectionPoolSize(44);
 
         assertThat(config.getInstanceURI()).isEqualTo(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
         assertThat(config.getApiVersion()).isEqualTo(DockerAPIVersion.parse("9.99"));
         assertThat(config.isUsingTLS()).isTrue();
         assertThat(config.getConnectTimeoutMillis()).isEqualTo(42);
-        assertThat(config.getConnectionPoolSize()).isEqualTo(43);
+        assertThat(config.getTransferTimeoutMillis()).isEqualTo(43);
+        assertThat(config.getConnectionPoolSize()).isEqualTo(44);
 
         config.usingTls(false)
                 .connectTimeoutMillis(0)
@@ -44,6 +46,7 @@ public class DockerClientConfigTest {
         DockerClientConfig config = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerAPIVersion.DEFAULT);
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> config.connectTimeoutMillis(-1));
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> config.transferTimeoutMillis(-1));
     }
 
     @Test
