@@ -3,7 +3,11 @@ package run.var.teamcity.cloud.docker.web;
 
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
-import org.atmosphere.cpr.*;
+import org.atmosphere.cpr.AtmosphereRequest;
+import org.atmosphere.cpr.AtmosphereResource;
+import org.atmosphere.cpr.AtmosphereResourceSessionFactory;
+import org.atmosphere.cpr.AtmosphereResponse;
+import org.atmosphere.cpr.Broadcaster;
 import org.atmosphere.util.SimpleBroadcaster;
 import org.atmosphere.websocket.WebSocket;
 import org.atmosphere.websocket.WebSocketHandler;
@@ -11,6 +15,7 @@ import org.atmosphere.websocket.WebSocketProcessor;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
+import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.StdioInputStream;
 import run.var.teamcity.cloud.docker.client.StdioType;
 import run.var.teamcity.cloud.docker.client.StreamHandler;
@@ -99,7 +104,8 @@ public class StreamingController extends AbstractController {
 
         @Override
         public void run() {
-            try (DefaultDockerClient client = DefaultDockerClient.newInstance(containerCoordinates.getClientConfig())) {
+            try (DefaultDockerClient client = (DefaultDockerClient) DockerClientFactory.getDefault()
+                    .createClientWithAPINegotiation(containerCoordinates.getClientConfig())) {
                 try (StreamHandler streamHandler = openStreamHandler(client)) {
                     this.streamHandler = streamHandler;
 
@@ -125,7 +131,7 @@ public class StreamingController extends AbstractController {
                             atmosphereResource);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                LOG.error("Failed to stream container logs.", e);
             }
         }
 

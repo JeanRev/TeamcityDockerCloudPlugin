@@ -55,7 +55,7 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
         DockerCloudUtils.requireNonNull(dockerClientFactory, "Docker client factory cannot be null.");
         DockerCloudUtils.requireNonNull(statusListener, "Status listener cannot be null.");
-        DockerClient client = dockerClientFactory.createClient(clientConfig.getDockerClientConfig()
+        DockerClient client = dockerClientFactory.createClientWithAPINegotiation(clientConfig.getDockerClientConfig()
                 .connectionPoolSize(1));
         return new DefaultContainerTestHandler(clientConfig.getDockerClientConfig(), client, statusListener,
                 streamingController);
