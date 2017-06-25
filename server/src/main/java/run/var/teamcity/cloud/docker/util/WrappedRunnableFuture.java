@@ -1,24 +1,23 @@
 package run.var.teamcity.cloud.docker.util;
 
 import javax.annotation.Nonnull;
-import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.RunnableScheduledFuture;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * A {@link RunnableScheduledFuture} wrapper with a reference to a source task.
+ * A {@link RunnableFuture} wrapper with a reference to a source task.
  *
- * <p>This class permits to keep tracks of the callable associated with a {@code RunnableScheduledFuture} to which all
- * method invocations will be delegated.</p>
+ * <p>This class permits to keep tracks of the callable associated with a {@code RunnableFuture} to which all method
+ * invocations will be delegated.</p>
  *
  * @param <V> the callable return type
  */
-public class WrappedRunnableScheduledFuture<T, V> implements RunnableScheduledFuture<V> {
+public class WrappedRunnableFuture<T, V> implements RunnableFuture<V> {
 
     private final T task;
-    private final RunnableScheduledFuture<V> wrapped;
+    private final RunnableFuture<V> wrapped;
 
     /**
      * s
@@ -27,7 +26,7 @@ public class WrappedRunnableScheduledFuture<T, V> implements RunnableScheduledFu
      * @param task the source task
      * @param wrapped the object to which all invocations will be delegated
      */
-    public WrappedRunnableScheduledFuture(@Nonnull T task, @Nonnull RunnableScheduledFuture<V> wrapped) {
+    public WrappedRunnableFuture(@Nonnull T task, @Nonnull RunnableFuture<V> wrapped) {
         DockerCloudUtils.requireNonNull(task, "Source task cannot be null.");
         DockerCloudUtils.requireNonNull(wrapped, "Wrapped runnable cannot be null.");
         this.task = task;
@@ -37,21 +36,6 @@ public class WrappedRunnableScheduledFuture<T, V> implements RunnableScheduledFu
     @Nonnull
     public T getTask() {
         return task;
-    }
-
-    @Override
-    public boolean isPeriodic() {
-        return wrapped.isPeriodic();
-    }
-
-    @Override
-    public long getDelay(@Nonnull TimeUnit unit) {
-        return wrapped.getDelay(unit);
-    }
-
-    @Override
-    public int compareTo(@Nonnull Delayed o) {
-        return wrapped.compareTo(o);
     }
 
     @Override

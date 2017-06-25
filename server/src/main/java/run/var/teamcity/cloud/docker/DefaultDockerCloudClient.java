@@ -154,7 +154,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         this.buildServer = buildServer;
 
         taskScheduler = new DockerTaskScheduler(clientConfig.getDockerClientConfig().getConnectionPoolSize(),
-                clientConfig.isUsingDaemonThreads());
+                clientConfig.isUsingDaemonThreads(), clientConfig.getTaskTimeoutMillis());
 
         for (DockerImageConfig imageConfig : imageConfigs) {
             DockerImage image = new DockerImage(DefaultDockerCloudClient.this, imageConfig);
@@ -353,8 +353,8 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                 String containerId;
 
+                lock.lockInterruptibly();
                 try {
-                    lock.lock();
                     checkReady();
                     instance.updateStartedTime();
                     instance.setStatus(InstanceStatus.STARTING);
@@ -418,7 +418,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                 scheduleDockerSync();
 
-                lock.lock();
+                lock.lockInterruptibly();
                 try {
                     instance.setContainerId(containerId);
                     instance.setStatus(InstanceStatus.RUNNING);
@@ -441,7 +441,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Restart of container", dockerInstance, null) {
             @Override
             protected void callInternal() throws Exception {
-                lock.lock();
+                lock.lockInterruptibly();
                 try {
                     checkReady();
                     // We currently don't do extensive status check before restarting. Docker itself will not complain
@@ -455,7 +455,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                 if (containerId != null) {
                     dockerClient.restartContainer(containerId);
-                    lock.lock();
+                    lock.lockInterruptibly();
                     try {
                         dockerInstance.setStatus(InstanceStatus.RUNNING);
                     } finally {
@@ -508,8 +508,8 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Disposal of container", dockerInstance, InstanceStatus.SCHEDULED_TO_STOP) {
             @Override
             protected void callInternal() throws Exception {
+                lock.lockInterruptibly();
                 try {
-                    lock.lock();
                     dockerInstance.setStatus(InstanceStatus.STOPPING);
                 } finally {
                     lock.unlock();
@@ -522,8 +522,8 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                     containerAvailable = terminateContainer(containerId, clientDisposed, rmContainer);
                 }
 
+                lock.lockInterruptibly();
                 try {
-                    lock.lock();
                     dockerInstance.setStatus(InstanceStatus.STOPPED);
                     if (!containerAvailable) {
                         dockerInstance.getImage().clearInstanceId(dockerInstance.getUuid());
@@ -606,10 +606,11 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
      * currently done by publishing the corresponding UUIDs as container label and as environment variables (such
      * variables can then be queried through the TC agent API).
      *
-     * @param instance      the docker instance for which the container will be created
-     * @param tag           information to be transferred to the cloud instance
+     * @param instance the docker instance for which the container will be created
+     * @param tag information to be transferred to the cloud instance
      * @param resolvedImage the exact image name that was resolved
-     * @param serverUrl     the TC server URL
+     * @param serverUrl the TC server URL
+     *
      * @return the authored JSON node
      */
     private Node authorContainerSpec(DockerInstance instance, CloudInstanceUserData tag, String resolvedImage,
@@ -716,7 +717,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
             List<String> orphanedContainers = new ArrayList<>();
             List<SBuildAgent> obsoleteAgents = new ArrayList<>();
 
-            lock.lock();
+            lock.lockInterruptibly();
             try {
                 assert state != State.CREATED : "Cloud client is not initialized yet.";
 

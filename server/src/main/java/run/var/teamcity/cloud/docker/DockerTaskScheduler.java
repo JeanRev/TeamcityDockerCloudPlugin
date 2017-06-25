@@ -5,7 +5,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.InstanceStatus;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
-import run.var.teamcity.cloud.docker.util.WrappedRunnableScheduledFuture;
+import run.var.teamcity.cloud.docker.util.WrappedRunnableFuture;
 
 import javax.annotation.Nonnull;
 import java.util.HashSet;
@@ -15,9 +15,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.RunnableScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -39,6 +42,9 @@ import java.util.concurrent.locks.ReentrantLock;
  * execution.</li>
  * </ul>
  * </p>
+ * <p>The size of the thread pool used to process tasks is configurable as constructor parameter. In addition a
+ * dedicated thread will also be used to manage the scheduler internal state.
+ * </p>
  *
  * <p>Instances of this class are thread safe.</p>
  */
@@ -56,53 +62,78 @@ class DockerTaskScheduler {
     private boolean shutdownRequested = false;
 
     /**
-     * Our {@link ExecutorService}. We use a "<i>scheduled</i>" thread pool to handle repeatable tasks.
+     * Executor service for externally submitted tasks.
      */
-    private final ScheduledThreadPoolExecutor executor;
+    private final ExecutorService executor;
+    /**
+     * Executor service for maintenance tasks.
+     */
+    private final ScheduledExecutorService mngExecutor;
 
     /**
      * Creates a new scheduler instance.
      *
-     * @param threadPoolSize    the size of the thread pool
+     * @param threadPoolSize    the size of the thread pool for processing task
      * @param usingDaemonThread {@code true} to use daemon threads
+     * @param taskTimeoutMillis timeout in milliseconds after which a running task will be cancelled
      *
      * @throws IllegalArgumentException if {@code connectionPoolSize} is smaller than 1
      */
-    DockerTaskScheduler(int threadPoolSize, boolean usingDaemonThread) {
+    DockerTaskScheduler(int threadPoolSize, boolean usingDaemonThread, long taskTimeoutMillis) {
         if (threadPoolSize < 1) {
             throw new IllegalArgumentException("Thread pool size must be strictly greater than 1.");
         }
-        executor = new ScheduledThreadPoolExecutor(threadPoolSize,
-                new NamedThreadFactory("DockerTaskScheduler", usingDaemonThread)) {
+        if (taskTimeoutMillis < 0) {
+            throw new IllegalArgumentException("Task timeout must be a positive integer.");
+        }
+
+        // Creates the single-thread scheduled executor use for managing the scheduler internal state.
+        mngExecutor = Executors.newScheduledThreadPool(1, new NamedThreadFactory("DockerTaskSchedulerMngt"));
+
+        // Creates the main task executor (same default settings as Executors.newFixedThreadPool()).
+        executor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 0, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(), new NamedThreadFactory("DockerTaskScheduler", usingDaemonThread)) {
+
             @Override
-            protected <V> RunnableScheduledFuture<V> decorateTask(Callable<V> callable, RunnableScheduledFuture<V> task) {
-                return new WrappedRunnableScheduledFuture<>(callable, task);
+            protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
+                // Wrap the provided callable in our own runnable-future so we may retrieve the underlying task in the
+                // execution callback methods.
+                return new WrappedRunnableFuture<>(callable, super.newTaskFor(callable));
+            }
+
+            @Override
+            protected void beforeExecute(Thread thread, Runnable runnable) {
+                assert runnable instanceof WrappedRunnableFuture;
+
+                // Schedule a task to check for timeout.
+                mngExecutor.schedule(new TimeoutHandlingTask((Future<?>) runnable), taskTimeoutMillis,
+                        TimeUnit.MILLISECONDS);
+
+                super.beforeExecute(thread, runnable);
             }
 
             @Override
             protected void afterExecute(Runnable runnable, Throwable throwable) {
 
-                assert runnable instanceof WrappedRunnableScheduledFuture;
+                super.afterExecute(runnable, throwable);
 
-                WrappedRunnableScheduledFuture<?, ?> wrappedRunnable = (WrappedRunnableScheduledFuture<?, ?>) runnable;
+                assert runnable instanceof WrappedRunnableFuture;
+
+                WrappedRunnableFuture<?,?> wrappedRunnableFuture = (WrappedRunnableFuture<?, ?>) runnable;
                 if (throwable == null) {
                     try {
-                        wrappedRunnable.get();
+                        wrappedRunnableFuture.get();
                     } catch (Exception e) {
                         throwable = e;
                     }
                 }
 
-                Object task = wrappedRunnable.getTask();
-
-                if (task instanceof ScheduleRepetableTask) {
-                    return;
-                }
+                Object task = wrappedRunnableFuture.getTask();
 
                 assert task instanceof DockerTask;
 
+                lock.lock();
                 try {
-                    lock.lock();
                     DockerTask dockerTask = (DockerTask) task;
 
                     LOG.debug("Task execution completed.");
@@ -118,6 +149,13 @@ class DockerTaskScheduler {
                         assert unmarked : "Task " + instanceTask + " was not marked as being processed.";
                     }
 
+                    if (wrappedRunnableFuture.isCancelled() && !shutdownRequested) {
+                        // The task has been cancelled but no shutdown of the scheduler is planned. It must then have
+                        // been caused by a task timeout. The corresponding error provider will need to be notified
+                        // with a corresponding exception.
+                        throwable = new DockerTaskSchedulerException("Operation took too long to complete.", throwable);
+                    }
+
                     if (throwable == null) {
                         LOG.debug("Task " + dockerTask + " completed without error.");
                     } else {
@@ -126,17 +164,22 @@ class DockerTaskScheduler {
 
                     }
 
-                    if (dockerTask.isRepeatable()) {
+                    if (!shutdownRequested && dockerTask.isRepeatable()) {
                         // Repeatable tasks are always rescheduled, even if their last execution failed. This permits
                         // the client to recover from an error status.
                         LOG.debug("Rescheduling task: " + dockerTask);
-                        executor.schedule(new ScheduleRepetableTask(dockerTask), dockerTask.getDelay(), dockerTask.getTimeUnit());
+                        mngExecutor.schedule(new ScheduleRepetableTask(dockerTask), dockerTask.getDelay(), dockerTask.getTimeUnit());
                     }
 
                     scheduleNextTasks();
                 } finally {
                     lock.unlock();
                 }
+            }
+
+            @Override
+            protected void terminated() {
+                mngExecutor.shutdown();
             }
         };
     }
@@ -174,7 +217,7 @@ class DockerTaskScheduler {
             if (initialDelay > 0) {
                 TimeUnit timeUnit = task.getTimeUnit();
                 assert timeUnit != null;
-                executor.schedule(new ScheduleRepetableTask(task), initialDelay, task.getTimeUnit());
+                mngExecutor.schedule(new ScheduleRepetableTask(task), initialDelay, timeUnit);
                 return;
             }
         }
@@ -184,9 +227,8 @@ class DockerTaskScheduler {
 
     private void submitTask(DockerTask task) {
         assert task != null;
+        lock.lock();
         try {
-            lock.lock();
-
             if (shutdownRequested) {
                 throw new RejectedExecutionException("Scheduler will shutdown.");
             }
@@ -269,12 +311,35 @@ class DockerTaskScheduler {
     }
 
     /**
+     * Management task to cancel a future instance if it has not completed yet. This task is expected to be scheduled
+     * for execution at the time the timeout for the provided future is expiring.
+     */
+    private class TimeoutHandlingTask implements Callable<Void> {
+
+        final Future<?> future;
+
+        TimeoutHandlingTask(Future<?> future) {
+            assert future != null;
+            this.future = future;
+        }
+
+        @Override
+        public Void call() throws Exception {
+            if (!future.isDone()) {
+                LOG.warn("Timeout reached, interrupting task.");
+                future.cancel(true);
+            }
+            return null;
+        }
+    }
+
+    /**
      * Shutdown the scheduler. All already scheduled tasks will eventually submitted for execution, but no new
      * scheduling will be accepted.
      */
     void shutdown() {
+        lock.lock();
         try {
-            lock.lock();
             shutdownRequested = true;
             shutdownCheck();
         } finally {
@@ -287,6 +352,7 @@ class DockerTaskScheduler {
 
         if (shutdownRequested && instancesTask.isEmpty() && clientTasks.isEmpty()) {
             executor.shutdown();
+            // Note: mngExecutor will be shutdown when once the main executor has been terminated.
         }
     }
 }

@@ -39,16 +39,18 @@ public class DockerCloudClientConfigTest {
     public void fromConstructor() {
         DockerClientConfig dockerConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
-        DockerCloudClientConfig config = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 42, serverURL);
+        DockerCloudClientConfig config = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 42, 43, serverURL);
 
         assertThat(config.getDockerClientConfig().getApiVersion()).isEqualTo(DockerCloudUtils.DOCKER_API_TARGET_VERSION);
         assertThat(config.getUuid()).isEqualTo(TestUtils.TEST_UUID);
         assertThat(config.getDockerClientConfig()).isSameAs(dockerConfig);
         assertThat(config.isUsingDaemonThreads()).isTrue();
+        assertThat(config.getDockerSyncRateSec()).isEqualTo(42);
+        assertThat(config.getTaskTimeoutMillis()).isEqualTo(43);
 
         assertThat(config.getServerURL()).isEqualTo(serverURL);
 
-        config = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 42, null);
+        config = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 42, 43, null);
 
         assertThat(config.getServerURL()).isNull();
     }
@@ -60,18 +62,16 @@ public class DockerCloudClientConfigTest {
         DockerClientConfig dockerConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerAPIVersion.DEFAULT);
 
-        new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 2, serverURL);
+        new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 2, 10, serverURL);
 
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> new DockerCloudClientConfig(null,
-                dockerConfig, true, 2, serverURL));
+                dockerConfig, true, 2, 10, serverURL));
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> new DockerCloudClientConfig(TestUtils.TEST_UUID,
-                null, true, 2, serverURL));
+                null, true, 2, 10, serverURL));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> new DockerCloudClientConfig(TestUtils.TEST_UUID,
-                dockerConfig, true, 1, serverURL));
+                dockerConfig, true, 1, 10, serverURL));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> new DockerCloudClientConfig(TestUtils.TEST_UUID,
-                dockerConfig, true, 0, serverURL));
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> new DockerCloudClientConfig(TestUtils.TEST_UUID,
-                dockerConfig, true, -1, serverURL));
+                dockerConfig, true, 2, 9, serverURL));
     }
 
     @Test

@@ -37,6 +37,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -176,7 +177,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         client.dispose();
 
@@ -196,7 +197,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(dockerImage, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
@@ -222,7 +223,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(dockerImage, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
@@ -242,7 +243,7 @@ public class DefaultDockerCloudClientTest {
 
         client.startNewInstance(dockerImage, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         assertThat(instance.getContainerId()).isEqualTo(containerId);
         assertThat(dockerClient.getContainers()).containsOnly(container);
@@ -287,7 +288,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(dockerImage, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         TestSBuildAgent agent = new TestSBuildAgent().
                 environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, client.getUuid().toString()).
@@ -324,7 +325,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(dockerImage, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
@@ -412,7 +413,7 @@ public class DefaultDockerCloudClientTest {
         waitUntil(() -> client.canStartNewInstance(image));
 
         DockerInstance instance = client.startNewInstance(image, userData);
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         assertThat(dockerClientFactory.getClient().getContainers().iterator().next().
                 getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(defaultServerURL.toString());
@@ -447,7 +448,7 @@ public class DefaultDockerCloudClientTest {
         waitUntil(() -> client.canStartNewInstance(image));
         DockerInstance instance = client.startNewInstance(image, userData);
         //auth failure should be treated as unable to retreive remote image, will continue with local image
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
     }
 
     @Test
@@ -507,7 +508,7 @@ public class DefaultDockerCloudClientTest {
         dockerImageResolver.image("localImage:1.0");
 
         DockerInstance instance = client.startNewInstance(image, userData);
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         // Image exists in registry but not locally.
         dockerClient.registryImage("registryImage", "1.0");
@@ -530,7 +531,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
@@ -559,7 +560,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
@@ -586,7 +587,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         client.terminateInstance(instance);
 
@@ -614,7 +615,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
@@ -640,13 +641,13 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         TestDockerClient dockerClient = dockerClientFactory.getClient();
 
         client.dispose();
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.STOPPED);
+        waitForInstanceStatus(instance, InstanceStatus.STOPPED);
 
         assertThat(dockerClient.getDiscardedContainers()).hasSize(1);
         Container container = dockerClient.getDiscardedContainers().iterator().next();
@@ -665,7 +666,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         assertThat(buildServer.getAgentNameGenerator()).isNotNull();
 
@@ -696,7 +697,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         assertThat(buildServer.getAgentNameGenerator()).isNotNull();
 
@@ -723,7 +724,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         assertThat(instance.getContainerName()).isEqualTo("test_container_name");
     }
@@ -741,7 +742,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
-        waitUntil(() -> instance.getStatus() == InstanceStatus.RUNNING);
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
         assertThat(instance.getContainerName()).isEqualTo("test_container_name");
 
@@ -783,7 +784,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
-        DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2, serverURL);
+        DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2, TimeUnit.MINUTES.toMillis(10), serverURL);
         DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, pullOnCreate, rmOnExit, false,
                 DockerRegistryCredentials.ANONYMOUS, maxInstanceCount, 111);
 
@@ -817,6 +818,13 @@ public class DefaultDockerCloudClientTest {
         this.client = client;
 
         return client;
+    }
+
+    private void waitForInstanceStatus(DockerInstance instance, InstanceStatus status) {
+        waitUntil(() -> {
+            assertThat(instance.getErrorInfo()).isNull();
+            return instance.getStatus() == status;
+        });
     }
 
 

@@ -18,14 +18,20 @@ public class TestDockerCloudClient implements DockerCloudClient {
 
     private final UUID uuid = UUID.randomUUID();
 
+    private volatile CloudErrorInfo errorInfo;
+    private volatile String lastNotifiedFailureMsg;
+    private volatile Throwable lastNotifiedFailure;
+
     @Override
     public UUID getUuid() {
         return uuid;
     }
 
     @Override
-    public void notifyFailure(@Nonnull String msg, @Nullable Throwable throwable) {
-
+    public void notifyFailure(@Nonnull String msg, @Nullable Throwable throwable) {;
+        lastNotifiedFailureMsg = msg;
+        lastNotifiedFailure = throwable;
+        errorInfo = new CloudErrorInfo(msg, throwable.getMessage());
     }
 
     @NotNull
@@ -75,7 +81,7 @@ public class TestDockerCloudClient implements DockerCloudClient {
     @org.jetbrains.annotations.Nullable
     @Override
     public CloudErrorInfo getErrorInfo() {
-        throw new UnsupportedOperationException("Not a real cloud client.");
+        return errorInfo;
     }
 
     @Override
@@ -87,5 +93,13 @@ public class TestDockerCloudClient implements DockerCloudClient {
     @Override
     public String generateAgentName(@NotNull AgentDescription agent) {
         throw new UnsupportedOperationException("Not a real cloud client.");
+    }
+
+    public String getLastNotifiedFailureMsg() {
+        return lastNotifiedFailureMsg;
+    }
+
+    public Throwable getLastNotifiedFailure() {
+        return lastNotifiedFailure;
     }
 }

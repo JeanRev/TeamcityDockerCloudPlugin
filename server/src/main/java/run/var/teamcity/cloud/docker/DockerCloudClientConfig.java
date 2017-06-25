@@ -17,6 +17,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Configuration of a {@link DockerCloudClient}. Could be instantiated directly, or from a cloud parameter map.
@@ -24,12 +25,14 @@ import java.util.UUID;
  */
 public class DockerCloudClientConfig {
 
-    private static final int DEFAULT_DOCKER_SYNC_RATE_SEC = 30;
+    private static final long DEFAULT_DOCKER_SYNC_RATE_SEC = 30;
+    private static final long DEFAULT_TASK_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(10);
 
     private final UUID uuid;
     private final DockerClientConfig dockerClientConfig;
     private final boolean usingDaemonThreads;
-    private final int dockerSyncRateSec;
+    private final long dockerSyncRateSec;
+    private final long taskTimeoutMillis;
     private final URL serverURL;
 
     /**
@@ -43,7 +46,8 @@ public class DockerCloudClientConfig {
      */
     public DockerCloudClientConfig(@Nonnull UUID uuid, @Nonnull DockerClientConfig dockerClientConfig,
                                    boolean usingDaemonThreads, @Nullable URL serverURL) {
-        this(uuid, dockerClientConfig, usingDaemonThreads, DEFAULT_DOCKER_SYNC_RATE_SEC, serverURL);
+        this(uuid, dockerClientConfig, usingDaemonThreads, DEFAULT_DOCKER_SYNC_RATE_SEC, DEFAULT_TASK_TIMEOUT_MILLIS,
+                serverURL);
     }
 
     /**
@@ -58,16 +62,21 @@ public class DockerCloudClientConfig {
      * @throws IllegalArgumentException if the Docker sync rate is below 2 seconds
      */
     public DockerCloudClientConfig(@Nonnull UUID uuid, @Nonnull DockerClientConfig dockerClientConfig,
-                                   boolean usingDaemonThreads, int dockerSyncRateSec, @Nullable URL serverURL) {
+                                   boolean usingDaemonThreads, long dockerSyncRateSec, long taskTimeoutMillis,
+                                   @Nullable URL serverURL) {
         DockerCloudUtils.requireNonNull(uuid, "Client UUID cannot be null.");
         DockerCloudUtils.requireNonNull(dockerClientConfig, "Docker client configuration cannot be null.");
         if (dockerSyncRateSec < 2) {
-            throw new IllegalArgumentException("Docker sync rate must be of at least 2 second.");
+            throw new IllegalArgumentException("Docker sync rate must be of at least 2 seconds.");
+        }
+        if (taskTimeoutMillis < 10) {
+            throw new IllegalArgumentException("Task timeout must be of at least 10 seconds.");
         }
         this.uuid = uuid;
         this.dockerClientConfig = dockerClientConfig;
         this.usingDaemonThreads = usingDaemonThreads;
         this.dockerSyncRateSec = dockerSyncRateSec;
+        this.taskTimeoutMillis = taskTimeoutMillis;
         this.serverURL = serverURL;
     }
 
@@ -99,8 +108,22 @@ public class DockerCloudClientConfig {
         return usingDaemonThreads;
     }
 
-    public int getDockerSyncRateSec() {
+    /**
+     * Frequency in second at which synchronization with the Docker daemon is performed.
+     *
+     * @return the synchronisation rate
+     */
+    public long getDockerSyncRateSec() {
         return dockerSyncRateSec;
+    }
+
+    /**
+     * The maximal duration in milliseconds of cloud related operations.
+     *
+     * @return the maximal duration
+     */
+    public long getTaskTimeoutMillis() {
+        return taskTimeoutMillis;
     }
 
     /**
