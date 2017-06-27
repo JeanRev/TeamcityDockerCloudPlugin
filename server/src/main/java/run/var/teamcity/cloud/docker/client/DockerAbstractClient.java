@@ -287,7 +287,7 @@ public abstract class DockerAbstractClient implements Closeable {
     }
 
     /**
-     * Throws an exception of this client has been closed.
+     * Throws an exception if this client has been closed.
      *
      * @throws IllegalStateException if this client has been closed
      */
@@ -295,23 +295,6 @@ public abstract class DockerAbstractClient implements Closeable {
         if (closed) {
             throw new IllegalStateException("Client has been closed.");
         }
-    }
-
-    public static void main(String[] args) {
-        byte[] data = new byte[]{61, 22, 11, 57, 110, 89, -20, -1, 0, 99, 111, -120, 55, 4, -9, 10, 11, 45, 71, -89, 21, -99, 54, 51};
-        System.out.println(bytesToHex(data));
-    }
-
-    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
-
-    public static String bytesToHex(byte[] bytes) {
-        char[] hexChars = new char[bytes.length * 2];
-        for ( int j = 0; j < bytes.length; j++ ) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = hexArray[v >>> 4];
-            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
-        }
-        return new String(hexChars);
     }
 
     private MultivaluedMap<String, Object> emptyHeaders() {
