@@ -713,6 +713,21 @@
                 <tbody id="dockerCloudImage_LogConfig">
                 </tbody>
             </table>
+            <h4>Storage options:
+                <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                <span class="tooltiptext">Configuration map for the storage.</span>
+            </h4>
+            <table class="settings">
+                <thead>
+                <tr>
+                    <th class="name" style="width: 45%;">Option Key&nbsp;<l:star/></th>
+                    <th class="name" style="width: 45%;">Option Value</th>
+                    <th class="dockerCloudCtrlCell"></th>
+                </tr>
+                </thead>
+                <tbody id="dockerCloudImage_StorageOpt">
+                </tbody>
+            </table>
             <h4>Volumes:
                 <i class="icon icon16 tc-icon_help_small tooltip"></i>
                 <span class="tooltiptext">Defines volumes, and optionally, their bound location on the host file system.</span>

@@ -824,6 +824,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 }
 
+                if (self.notEmpty(viewModel.StorageOpt)) {
+                    hostConfig.StorageOpt = {};
+                    self._safeEach(viewModel.StorageOpt, function (storageOpt) {
+                        hostConfig.StorageOpt[storageOpt.Key] = storageOpt.Value;
+                    });
+                }
+
                 self.copy(viewModel, hostConfig, 'CgroupParent');
                 self.copy(viewModel, editor, 'MemoryUnit');
                 self.copy(viewModel, editor, 'MemorySwapUnit');
@@ -1022,6 +1029,14 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     if (logConfigProps.length) {
                         viewModel.LogConfig = logConfigProps;
                     }
+                }
+
+                var storageOpt = [];
+                self._safeKeyValueEach(hostConfig.StorageOpt, function(key, value) {
+                    storageOpt.push({ Key: key, Value: value});
+                });
+                if (storageOpt.length) {
+                    viewModel.StorageOpt = storageOpt;
                 }
 
                 self.copy(hostConfig, viewModel, 'CgroupParent');
@@ -1788,6 +1803,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     dockerCloudImage_Devices_IDX_PathInContainer: [requiredValidator],
                     dockerCloudImage_Env_IDX_Name: [requiredValidator],
                     dockerCloudImage_Labels_IDX_Key: [requiredValidator],
+                    dockerCloudImage_StorageOpt_IDX_Key: [requiredValidator],
                     dockerCloudImage_Memory: [function ($elt) {
                         var value = $elt.val().trim();
                         $elt.val(value);
@@ -2158,6 +2174,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
         <td><input type="text" id="dockerCloudImage_Links_IDX_Alias" /><span class="error" id="dockerCloudImage_Links_IDX_Alias_error"></span></td>',
                 dockerCloudImage_LogConfig: '<td><input type="text" id="dockerCloudImage_LogConfig_IDX_Key" /><span class="error" id="dockerCloudImage_LogConfig_IDX_Key_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_LogConfig_IDX_Value" /></td>',
+                dockerCloudImage_StorageOpt: '<td><input type="text" id="dockerCloudImage_StorageOpt_IDX_Key" /><span class="error" id="dockerCloudImage_StorageOpt_IDX_Key_error"></span></td>\
+        <td><input type="text" id="dockerCloudImage_StorageOpt_IDX_Value" /></td>',
                 dockerCloudImage_Ulimits: ' <td><input type="text" id="dockerCloudImage_Ulimits_IDX_Name" /><span class="error" id="dockerCloudImage_Ulimits_IDX_Name_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_Ulimits_IDX_Soft" /><span class="error" id="dockerCloudImage_Ulimits_IDX_Soft_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_Ulimits_IDX_Hard" /><span class="error" id="dockerCloudImage_Ulimits_IDX_Hard_error"></span></td>',
