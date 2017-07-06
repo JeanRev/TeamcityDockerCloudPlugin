@@ -62,8 +62,8 @@
 /* Main content div in the dialog. Setup vertical scrolling. */
 #dockerCloudImageContainer {
     clear: both; /* Required to clear the tabs elements. */
-    max-height: 500px;
-    min-height: 500px;
+    max-height: 530px;
+    min-height: 530px;
     overflow-y: auto
 }
 

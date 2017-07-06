@@ -727,6 +727,18 @@ var settingsConverterFixtures = [
         ]
     },
     {
+        name: 'should handle StorageOpt', fixtures: [{
+        settings: {
+            Container: {
+                HostConfig:{
+                    StorageOpt: {key1: 'value1', key2: 'value2'}
+                }
+            }
+        },
+        viewModel: {StorageOpt: [{Key: 'key1', Value: 'value1'}, {Key: 'key2', Value: 'value2'}]}
+    }]
+    },
+    {
         name: 'should handle CgroupParent', fixtures: [{
         settings: {Container: {HostConfig: {CgroupParent: '/docker'}}},
         viewModel: {CgroupParent: '/docker'}
