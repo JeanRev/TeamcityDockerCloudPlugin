@@ -102,6 +102,8 @@ public class DockerCloudClientFactory implements CloudClientFactory {
         params.put(DockerCloudUtils.CLIENT_UUID, UUID.randomUUID().toString());
         params.put(DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM,
                 String.valueOf(DockerCloudUtils.isDefaultDockerSocketAvailable()));
+        params.put(DockerCloudUtils.USE_DEFAULT_WIN_NAMED_PIPE_PARAM,
+                String.valueOf(DockerCloudUtils.isDefaultDockerNamedPipeAvailable()));
         return params;
     }
 

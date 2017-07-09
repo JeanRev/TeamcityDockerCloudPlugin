@@ -13,7 +13,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             init: function (params) {
                 self.logInfo('Initializing Docker Cloud JS support.');
 
-                self.defaultLocalSocketURI = params.defaultLocalSocketURI;
+                self.defaultLocalInstanceURI = params.defaultLocalInstanceURI;
                 self.checkConnectivityCtrlURL = params.checkConnectivityCtrlURL;
                 self.testContainerCtrlURL = params.testContainerCtrlURL;
                 self.testStatusSocketPath = params.testStatusSocketPath;
@@ -161,7 +161,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
             _instanceChange: function() {
                 var useLocalInstance = self.$useLocalInstance.is(':checked');
-                self.$dockerAddress.val(useLocalInstance ? self.defaultLocalSocketURI : "");
+                self.$dockerAddress.val(useLocalInstance ? self.defaultLocalInstanceURI : "");
                 self.$dockerAddress.prop('disabled', useLocalInstance);
                 self._scheduleConnectionCheck();
             },
@@ -1129,7 +1129,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var useLocalInstance = self.$useLocalInstance.is(':checked');
                 self.$dockerAddress.prop('disabled', useLocalInstance);
                 if (useLocalInstance) {
-                    self.$dockerAddress.val(self.defaultLocalSocketURI);
+                    self.$dockerAddress.val(self.defaultLocalInstanceURI);
                 }
 
                 self.$checkConnectionBtn.click(self._checkConnectionClickHandler);

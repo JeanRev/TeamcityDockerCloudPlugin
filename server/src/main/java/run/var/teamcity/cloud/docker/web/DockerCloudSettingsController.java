@@ -44,7 +44,16 @@ public class DockerCloudSettingsController extends BaseController {
         Map<String, Object> model = mv.getModel();
         model.put("resPath", pluginDescriptor.getPluginResourcesPath());
         model.put("debugEnabled", DockerCloudUtils.isDebugEnabled());
-        model.put("defaultUnixSocketAvailable", DockerCloudUtils.isDefaultDockerSocketAvailable());
+
+        boolean defaultUnixSocketAvailable = DockerCloudUtils.isDefaultDockerSocketAvailable();
+        boolean defaultWindowsNamedPipeAvailable = !defaultUnixSocketAvailable && DockerCloudUtils.isDefaultDockerNamedPipeAvailable();
+
+        model.put("defaultUnixSocketAvailable", defaultUnixSocketAvailable);
+        model.put("defaultWindowsNamedPipeAvailable", defaultWindowsNamedPipeAvailable);
+
+        model.put("defaultLocalInstanceURI", defaultWindowsNamedPipeAvailable ?
+                DockerCloudUtils.DOCKER_DEFAULT_NAMED_PIPE_URI : DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
+
         return mv;
     }
 }
