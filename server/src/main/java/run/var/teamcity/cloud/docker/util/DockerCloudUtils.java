@@ -81,6 +81,10 @@ public final class DockerCloudUtils {
      */
     public static final URI DOCKER_DEFAULT_SOCKET_URI;
     /**
+     * The Docker named pipe default location on Windows systems.
+     */
+    public static final URI DOCKER_DEFAULT_NAMED_PIPE_URI;
+    /**
      * Currently supported (highest) Docker API version.
      */
     public static final DockerAPIVersion DOCKER_API_TARGET_VERSION = DockerAPIVersion.parse("1.26");
@@ -88,15 +92,22 @@ public final class DockerCloudUtils {
      * Minimal Docker API version.
      */
     public static final DockerAPIVersion DOCKER_API_MIN_VERSION = DockerAPIVersion.parse("1.24");
+    /**
+     * Windows host flag. Will be {@code true} if the JVM is running on a Windows host.
+     */
+    private static final boolean WINDOWS_HOST;
 
     static {
         assert DOCKER_API_TARGET_VERSION.isGreaterThan(DOCKER_API_MIN_VERSION);
 
         try {
             DOCKER_DEFAULT_SOCKET_URI = new URI("unix:///var/run/docker.sock");
+            DOCKER_DEFAULT_NAMED_PIPE_URI = new URI("npipe:////./pipe/docker_engine");
         } catch (URISyntaxException e) {
             throw new AssertionError(e);
         }
+
+        WINDOWS_HOST = System.getProperty("os.name").toLowerCase().startsWith("windows");
     }
 
     /**
@@ -430,5 +441,24 @@ public final class DockerCloudUtils {
      */
     public static boolean isDefaultDockerSocketAvailable() {
         return Files.exists(Paths.get(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI.getPath()));
+    }
+
+    /**
+     * Checks if this default Docker named pipe is available on this host. This method will only verify the existence
+     * of the pipe file without additional check.
+     *
+     * @return {@code true} if the default Docker named pipe is available
+     */
+    public static boolean isDefaultDockerNamedPipeAvailable() {
+        return Files.exists(Paths.get(DockerCloudUtils.DOCKER_DEFAULT_NAMED_PIPE_URI.getPath()));
+    }
+
+    /**
+     * Returns {@code true} if the host for this JVM runs on Windows.
+     *
+     * @return {@code true} if the host for this JVM runs on Windows
+     */
+    public static boolean isWindowsHost() {
+        return WINDOWS_HOST;
     }
 }

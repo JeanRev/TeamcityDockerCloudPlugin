@@ -4,7 +4,10 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -12,8 +15,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
+
+import static org.assertj.core.api.Assertions.fail;
 
 /**
  * All purpose utility class for tests.
@@ -55,6 +63,46 @@ public final class TestUtils {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    public static void timeboxed(VoidCallable callable) {
+
+        CompletableFuture<Void> futur = CompletableFuture.runAsync(wrap(callable));
+
+        try {
+            futur.get(10, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            fail("Execution failed", e);
+        }
+    }
+
+    public static CompletableFuture<Void> runAsync(VoidCallable callable) {
+        return CompletableFuture.runAsync(wrap(callable));
+    }
+
+    public static void mustBlock(VoidCallable callable) {
+        CompletableFuture<Void> futur = CompletableFuture.runAsync(wrap(callable));
+
+        try {
+            futur.get(1, TimeUnit.SECONDS);
+            fail("Callable was expected to run for at least 1 second.");
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        } catch (TimeoutException e) {
+            // OK
+        } finally {
+            futur.cancel(true);
+        }
+    }
+
+    private static Runnable wrap(VoidCallable callable) {
+        return () -> {
+            try {
+                callable.call();
+            } catch (Exception e) {
+                fail("Execution failed.", e);
+            }
+        };
     }
 
     public static String createRandomSha256() {
@@ -113,6 +161,9 @@ public final class TestUtils {
         return Collections.singletonMap(prefix + DockerCloudUtils.IMAGES_PARAM, images.toString());
     }
 
+    public interface VoidCallable {
+        void call() throws Exception;
+    }
 
     public static Node getSampleImageConfigSpec() {
         return getSampleImageConfigSpec("Test");
@@ -120,6 +171,10 @@ public final class TestUtils {
 
     public static Node getSampleImageConfigSpec(String profileName) {
         return getSampleImageConfigSpec(Node.EMPTY_OBJECT.editNode(), profileName);
+    }
+
+    public static Path tempFile() throws IOException {
+        return Files.createTempFile("dck_cld_", ".tmp");
     }
 
     public static Node getSampleImageConfigSpec(EditableNode parent, String profileName) {

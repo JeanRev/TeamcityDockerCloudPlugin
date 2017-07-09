@@ -6,11 +6,7 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.test.Integration;
-import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-import run.var.teamcity.cloud.docker.util.EditableNode;
-import run.var.teamcity.cloud.docker.util.Node;
-import run.var.teamcity.cloud.docker.util.NodeStream;
-import run.var.teamcity.cloud.docker.util.Stopwatch;
+import run.var.teamcity.cloud.docker.util.*;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -32,12 +28,14 @@ import static org.assertj.core.data.Offset.offset;
 @Category(Integration.class)
 public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTestBase {
 
+    private final static String LINE_SEP = System.getProperty("line.separator");
+
     final static String TEST_IMAGE = "tc_dk_cld_plugin_test_img:1.0";
 
     private final static DockerRegistryCredentials TEST_CREDENTIALS = DockerRegistryCredentials.from("test", "abc123éà!${}_/|");
 
     private final static String TEST_LABEL_KEY = DefaultDockerClientITest.class.getName();
-    private final static String STDERR_MSG_PREFIX = "ERR";
+    protected final static String STDERR_MSG_PREFIX = "ERR";
 
     protected String containerId;
 
@@ -68,7 +66,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         assertThat(containers).hasSize(1);
         assertThat(containers.get(0).getAsString("Id")).isEqualTo(containerId);
 
-        containers = client.listContainersWithLabel(TEST_LABEL_KEY, "not an assigend label").getArrayValues();
+        containers = client.listContainersWithLabel(TEST_LABEL_KEY, "not an assigned label").getArrayValues();
 
         assertThat(containers).isEmpty();
 
@@ -176,9 +174,9 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         }
     }
 
-    private void assertFragmentContent(StdioInputStream fragment, StdioType type, String msg) throws IOException {
+    protected void assertFragmentContent(StdioInputStream fragment, StdioType type, String msg) throws IOException {
         assertThat(fragment).isNotNull();
-        assertThat(DockerCloudUtils.readUTF8String(fragment)).isEqualTo(msg + "\n");
+        assertThat(DockerCloudUtils.readUTF8String(fragment)).isEqualTo(msg + LINE_SEP);
         assertThat(fragment.getType()).isSameAs(type);
     }
 
@@ -224,7 +222,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         DockerClient client = createClient();
 
         client.close();
-        // Closing againg is a no-op.
+        // Closing again is a no-op.
         client.close();
 
         final String containerId = "not an existing container";
@@ -239,7 +237,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
 
     @Test
     public void connectWithSpecificAPIVersion() throws URISyntaxException {
-        DockerClientConfig config = createTcpClientConfig(DockerAPIVersion.parse("1.24"));
+        DockerClientConfig config = createClientConfig(DockerAPIVersion.parse("1.24"));
 
         DefaultDockerClient client = createClient(config);
 
@@ -249,7 +247,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
 
     @Test(expected = BadRequestException.class)
     public void connectWithUnsupportedAPIVersion() throws URISyntaxException {
-        DockerClientConfig config = createTcpClientConfig(DockerAPIVersion.parse("1.0"));
+        DockerClientConfig config = createClientConfig(DockerAPIVersion.parse("1.0"));
 
         DefaultDockerClient client = createClient(config);
 
@@ -260,7 +258,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
     public void registryFailedAuthPrivateRegistry() throws URISyntaxException {
         String registryAddress = getRegistryAddress();
 
-        DefaultDockerClient client = createClient(createTcpClientConfig());
+        DefaultDockerClient client = createClient(createClientConfig());
 
         Stream.of(DockerRegistryCredentials.ANONYMOUS, DockerRegistryCredentials.from("invalid", "credentials"))
                 .forEach(credentials ->
@@ -278,7 +276,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
 
         Assume.assumeNotNull(repo, user, pwd);
 
-        DefaultDockerClient client = createClient(createTcpClientConfig());
+        DefaultDockerClient client = createClient(createClientConfig());
 
         NodeStream stream = client.createImage(repo, null, DockerRegistryCredentials.from(user, pwd));
         Node node;
@@ -292,7 +290,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
     public void authentifiedPullPrivateRegistry() throws URISyntaxException, IOException {
         String registryAddress = getRegistryAddress();
 
-        DefaultDockerClient client = createClient(createTcpClientConfig());
+        DefaultDockerClient client = createClient(createClientConfig());
 
         NodeStream stream = client.createImage(registryAddress + "/" + TEST_IMAGE, null, TEST_CREDENTIALS);
         Node node;
@@ -309,26 +307,26 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
 
     protected DefaultDockerClient createClient(int connectionPoolSize) throws URISyntaxException {
 
-        DockerClientConfig config = createTcpClientConfig();
+        DockerClientConfig config = createClientConfig();
 
         config.connectionPoolSize(connectionPoolSize);
 
         return client = DefaultDockerClient.newInstance(config);
     }
 
-    private DockerClientConfig createTcpClientConfig() throws URISyntaxException {
-        return createTcpClientConfig(getApiTargetVersion());
+    private DockerClientConfig createClientConfig() throws URISyntaxException {
+        return createClientConfig(getApiTargetVersion());
     }
 
-    private DockerClientConfig createTcpClientConfig(DockerAPIVersion apiVersion) throws URISyntaxException {
-        String dockerTcpAddress = System.getProperty(getDockerAddrSysprop());
-        Assume.assumeNotNull(dockerTcpAddress);
+    private DockerClientConfig createClientConfig(DockerAPIVersion apiVersion) throws URISyntaxException {
+        String dockerAddress = System.getProperty(getDockerAddrSysprop());
 
-        return createConfig(new URI("tcp://" + dockerTcpAddress), apiVersion, false);
+        Assume.assumeNotNull(dockerAddress);
+
+        return createConfig(new URI(getConnectionScheme() + "://" + dockerAddress), apiVersion, false);
     }
 
     private DefaultDockerClient createClient(DockerClientConfig clientConfig) throws URISyntaxException {
-
         return client = DefaultDockerClient.newInstance(clientConfig);
     }
 
@@ -336,6 +334,10 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         String registryAddress = System.getProperty("docker.test.registry.address");
         Assume.assumeNotNull(registryAddress);
         return registryAddress;
+    }
+
+    protected String getConnectionScheme() {
+        return "tcp";
     }
 
     protected String getDockerAddrSysprop() {

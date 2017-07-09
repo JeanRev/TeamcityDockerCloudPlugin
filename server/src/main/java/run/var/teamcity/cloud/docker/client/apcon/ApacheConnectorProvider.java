@@ -39,14 +39,15 @@
  */
 package run.var.teamcity.cloud.docker.client.apcon;
 
+import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.HttpClient;
-import org.apache.http.protocol.HttpContext;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.apache.connector.LocalizationMessages;
 import org.glassfish.jersey.client.Initializable;
 import org.glassfish.jersey.client.spi.Connector;
 import org.glassfish.jersey.client.spi.ConnectorProvider;
+import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.core.Configurable;
@@ -118,8 +119,13 @@ import javax.ws.rs.core.Configuration;
  */
 public class ApacheConnectorProvider implements ConnectorProvider {
 
-    // DK_CLD: See getHttpContext()
-    private final ThreadLocal<HttpContext> localHttpContext = new ThreadLocal<>();
+    // DK_CLD
+    /**
+     * Property key for configurable connection reuse strategy. Must have a {@link ConnectionReuseStrategy} instance as
+     * value.
+     */
+    public static final String CONNECTION_REUSE_STRATEGY_PROP = DockerCloudUtils.NS_PREFIX
+            + "connector.connection_reuse_strategy";
 
     @Override
     public Connector getConnector(final Client client, final Configuration runtimeConfig) {

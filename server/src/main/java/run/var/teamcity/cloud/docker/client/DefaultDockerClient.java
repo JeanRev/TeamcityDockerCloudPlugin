@@ -2,6 +2,7 @@ package run.var.teamcity.cloud.docker.client;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.text.StringUtil;
+import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.HttpStatus;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
@@ -12,12 +13,15 @@ import org.apache.http.conn.ssl.DefaultHostnameVerifier;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.util.PublicSuffixMatcherLoader;
+import org.apache.http.impl.NoConnectionReuseStrategy;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.TextUtils;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
 import run.var.teamcity.cloud.docker.client.apcon.ApacheConnectorProvider;
+import run.var.teamcity.cloud.docker.client.npipe.NPipeSocketAddress;
+import run.var.teamcity.cloud.docker.client.npipe.NPipeSocketClientConnectionOperator;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -43,6 +47,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -77,7 +82,8 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
      */
     private enum SupportedScheme {
         UNIX,
-        TCP;
+        TCP,
+        NPIPE;
 
         String part() {
             return name().toLowerCase();
@@ -337,6 +343,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         // some problem encountered with the default connection operator 2) it dispense us from implementing a custom
         // ConnectionSocketFactory which is oriented toward internet sockets.
         HttpClientConnectionOperator connectionOperator = null;
+        ConnectionReuseStrategy connectionReuseStrategy = new UpgradeAwareConnectionReuseStrategy();
         final URI effectiveURI;
 
         switch (scheme) {
@@ -360,19 +367,17 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 }
                 break;
             case UNIX:
-                if (dockerURI.getHost() != null || dockerURI.getPort() != -1 || dockerURI.getUserInfo() != null ||
-                        dockerURI.getQuery() != null || dockerURI.getFragment() != null) {
-                    throw new IllegalArgumentException("Only path can be provided for unix scheme.");
-                }
-                if (usingTLS) {
-                    throw new IllegalArgumentException("TLS not available with Unix sockets.");
-                }
-                try {
-                    effectiveURI = new URI(SupportedScheme.UNIX.part(), null, "localhost", 80, null, null, null);
-                } catch (URISyntaxException e) {
-                    throw new IllegalArgumentException("Failed to build effective URI for Unix socket.", e);
-                }
-                connectionOperator = new UnixSocketClientConnectionOperator(new File(dockerURI.getPath()));
+                effectiveURI = validatePathBasedURI(dockerURI, usingTLS, SupportedScheme.UNIX, "Unix sockets");
+                connectionOperator = new UnixSocketClientConnectionOperator(Paths.get(dockerURI.getPath()));
+                break;
+            case NPIPE:
+                effectiveURI = validatePathBasedURI(dockerURI, usingTLS, SupportedScheme.NPIPE, "named pipes.");
+                NPipeSocketAddress pipeAddress = NPipeSocketAddress.fromPath(Paths.get(dockerURI.getPath()));
+                connectionOperator = new NPipeSocketClientConnectionOperator(pipeAddress);
+                // Some dysfunctions have been noticed when keeping connections alive between requests for named pipes:
+                // the daemon sometimes fails to send HTTP headers when reusing connections, or truncate the payload.
+                // Disabling connection reuse for now.
+                connectionReuseStrategy = NoConnectionReuseStrategy.INSTANCE;
                 break;
             default:
                 throw new AssertionError("Unknown enum member: " + scheme);
@@ -397,8 +402,25 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         config.property(ApacheClientProperties.CONNECTION_MANAGER, connManager);
         config.property(ClientProperties.CONNECT_TIMEOUT, clientConfig.getConnectTimeoutMillis());
         config.property(ClientProperties.READ_TIMEOUT, clientConfig.getTransferTimeoutMillis());
+        config.property(ApacheConnectorProvider.CONNECTION_REUSE_STRATEGY_PROP, connectionReuseStrategy);
+
         return new DefaultDockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI,
                 clientConfig.getApiVersion());
+    }
+
+    private static URI validatePathBasedURI(URI dockerURI, boolean usingTLS, SupportedScheme scheme, String schemeLabel) {
+        if (dockerURI.getHost() != null || dockerURI.getPort() != -1 || dockerURI.getUserInfo() != null ||
+                dockerURI.getQuery() != null || dockerURI.getFragment() != null) {
+            throw new IllegalArgumentException("Only path can be provided for " + schemeLabel + ".");
+        }
+        if (usingTLS) {
+            throw new IllegalArgumentException("TLS not available with " + schemeLabel + ".");
+        }
+        try {
+            return  new URI(scheme.part(), null, "localhost", 80, null, null, null);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Failed to build effective URI for " + schemeLabel + ".", e);
+        }
     }
 
     private static Registry<ConnectionSocketFactory> getDefaultRegistry(boolean verifyHostname) {

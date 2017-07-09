@@ -27,12 +27,13 @@ val unixSocketInstanceProp = "docker.test.unix.socket"
 val tcpInstance_1_12Prop = "docker_1_12.test.tcp.address"
 val tcpInstanceLatestProp = "docker.test.tcp.address"
 val tcpTlsInstanceProp = "docker.test.tcp.ssl.address"
+val npipeInstanceProp = "docker.test.npipe.address"
 val registryInstanceProp = "docker.test.registry.address"
 val dockerCertPath = "docker.test.tcp.ssl.certpath"
 
 val dockerTestInstancesProps = mutableMapOf<String, String>()
 listOf(dockerHubTestRepo, dockerHubTestUser, dockerHubTestPwd, unixSocketInstanceProp, tcpInstance_1_12Prop,
-        tcpInstanceLatestProp, tcpTlsInstanceProp, registryInstanceProp, dockerCertPath)
+        tcpInstanceLatestProp, tcpTlsInstanceProp, npipeInstanceProp, registryInstanceProp, dockerCertPath)
         .filter { project.hasProperty(it) }
         .forEach { dockerTestInstancesProps.put(it, project.properties[it] as String) }
 
@@ -113,6 +114,20 @@ task<Test>("dockerIT") {
     }
 
     include("run/var/teamcity/cloud/docker/test/DockerTestSuite.class")
+}
+
+task<Test>("windowsDaemonTest") {
+    group = "Verification"
+    description = "Docker integration tests for the Windows daemon."
+
+    useJUnit()
+    mustRunAfter(":server:setupTestImages")
+
+    maxParallelForks = cpuCountForTest
+
+    dockerTestInstancesProps.forEach { k, v -> systemProperty(k, v) }
+
+    include("run/var/teamcity/cloud/docker/test/WindowsDaemonTestSuite.class")
 }
 
 task("karmaTest").doFirst({

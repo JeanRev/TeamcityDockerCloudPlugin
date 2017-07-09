@@ -40,6 +40,7 @@
 package run.var.teamcity.cloud.docker.client.apcon;
 
 import jersey.repackaged.com.google.common.util.concurrent.MoreExecutors;
+import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpException;
@@ -308,7 +309,17 @@ class ApacheConnector implements Connector {
         clientBuilder.setDefaultRequestConfig(requestConfig);
 
         /* DK_CLD: Add our connection reuse strategy. */
+        Object reuseStrategy = config.getProperties().get(ApacheConnectorProvider.CONNECTION_REUSE_STRATEGY_PROP);
+        if (reuseStrategy != null) {
+            if (reuseStrategy instanceof ConnectionReuseStrategy) {
+                clientBuilder.setConnectionReuseStrategy((ConnectionReuseStrategy) reuseStrategy);
+            } else {
+                LOGGER.severe("Not an connection reuse strategy instance: " + reuseStrategy.getClass());
+            }
+        }
+
         clientBuilder.setConnectionReuseStrategy(new UpgradeAwareConnectionReuseStrategy());
+        clientBuilder.setKeepAliveStrategy((response, context) -> 0);
         clientBuilder.setRequestExecutor(new HttpRequestExecutor() {
             protected HttpResponse doReceiveResponse(
                     final HttpRequest request,

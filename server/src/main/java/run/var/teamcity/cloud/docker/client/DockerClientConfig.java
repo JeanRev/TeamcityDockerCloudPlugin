@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 public class DockerClientConfig {
 
     private final static int DEFAULT_CONNECT_TIMEOUT_MILLIS = (int) TimeUnit.MINUTES.toMillis(1);
-    private final static int DEFAULT_TRANSFER_TIMEOUT_MILLIS = (int) TimeUnit.MINUTES.toMillis(1);
+    private final static int DEFAULT_TRANSFER_TIMEOUT_MILLIS = (int) TimeUnit.MINUTES.toMillis(5);
 
     private final URI instanceURI;
     private final DockerAPIVersion apiVersion;
