@@ -1,8 +1,6 @@
 package run.var.teamcity.cloud.docker.test;
 
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
 public class Interceptor<I> {
@@ -31,8 +29,6 @@ public class Interceptor<I> {
             }
             try {
                 return method.invoke(wrappedObject, args);
-            } catch (IllegalAccessException e) {
-                throw e;
             } catch (InvocationTargetException e) {
                 throw e.getTargetException();
             }

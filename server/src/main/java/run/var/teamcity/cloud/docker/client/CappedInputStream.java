@@ -82,7 +82,7 @@ class CappedInputStream extends FilterInputStream {
             checkNotClosed();
             int available = available();
             if (available > 0) {
-                int n = super.read(b, off, Math.min(available(), len - off));
+                int n = super.read(b, off, Math.min(available, len - off));
                 readSoFar += n;
                 return n;
             }

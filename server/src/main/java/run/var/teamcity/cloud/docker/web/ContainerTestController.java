@@ -153,6 +153,7 @@ public class ContainerTestController extends BaseFormJsonController {
                 // be started through the cloud API.
                 imageConfig = DockerImageConfig.fromJSon(Node.parse(params.get(DockerCloudUtils.TEST_IMAGE_PARAM)), null);
             } catch (DockerCloudClientConfigException e) {
+                LOG.error("Invalid cloud client configuration.", e);
                 sendErrorQuietly(response, HttpServletResponse.SC_BAD_REQUEST, "Invalid configuration. Please check your connection settings.");
                 return;
             } catch (Exception e) {

@@ -199,8 +199,6 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        TestDockerClient dockerClient = dockerClientFactory.getClient();
-
         client.restartInstance(instance);
 
         waitUntil(() -> {
