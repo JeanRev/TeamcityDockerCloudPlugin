@@ -339,9 +339,9 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid scheme: " + dockerURI.getScheme() + ". Only 'tcp' or 'unix' supported.", e);
         }
-        // Note: we use a custom connection operator here to handle Unix sockets because 1) it allows use to circumvent
-        // some problem encountered with the default connection operator 2) it dispense us from implementing a custom
-        // ConnectionSocketFactory which is oriented toward internet sockets.
+        // Note: we use a custom connection operator here to handle Unix sockets and named pipes because 1) it gives
+        // us the required flexibility to deal with these specific types of socket 2) it dispense us from implementing
+        // a custom ConnectionSocketFactory which is oriented toward internet sockets.
         HttpClientConnectionOperator connectionOperator = null;
         ConnectionReuseStrategy connectionReuseStrategy = new UpgradeAwareConnectionReuseStrategy();
         final URI effectiveURI;
@@ -367,10 +367,16 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 }
                 break;
             case UNIX:
+                if (DockerCloudUtils.isWindowsHost()) {
+                    throw new IllegalArgumentException("Unix sockets are not supported on Windows hosts.");
+                }
                 effectiveURI = validatePathBasedURI(dockerURI, usingTLS, SupportedScheme.UNIX, "Unix sockets");
                 connectionOperator = new UnixSocketClientConnectionOperator(Paths.get(dockerURI.getPath()));
                 break;
             case NPIPE:
+                if (!DockerCloudUtils.isWindowsHost()) {
+                    throw new IllegalArgumentException("Named pipes are only supported on Windows hosts.");
+                }
                 effectiveURI = validatePathBasedURI(dockerURI, usingTLS, SupportedScheme.NPIPE, "named pipes.");
                 NPipeSocketAddress pipeAddress = NPipeSocketAddress.fromPath(Paths.get(dockerURI.getPath()));
                 connectionOperator = new NPipeSocketClientConnectionOperator(pipeAddress);
