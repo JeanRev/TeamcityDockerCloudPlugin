@@ -53,7 +53,7 @@ public class DockerCloudSettingsController extends BaseController {
 
         model.put("defaultLocalInstanceURI", defaultWindowsNamedPipeAvailable ?
                 DockerCloudUtils.DOCKER_DEFAULT_NAMED_PIPE_URI : DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
-
+        model.put("windowsHost", DockerCloudUtils.isWindowsHost());
         return mv;
     }
 }

@@ -6,10 +6,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
         //noinspection JSUnresolvedVariable
         var self = {
             IMAGE_VERSION: 4,
-            selectors: {
-                editImageLink: '.editImageLink',
-                imagesTableRow: '.imagesTableRow'
-            },
+            IP_V4_OR_V6_REGEX: /((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))/,
             init: function (params) {
                 self.logInfo('Initializing Docker Cloud JS support.');
 
@@ -23,6 +20,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.debugEnabled = params.debugEnabled;
                 self.daemonTargetVersion = params.daemonTargetVersion;
                 self.daemonMinVersion = params.daemonMinVersion;
+                self.windowsHost = params.windowsHost;
 
                 var useTlsParam = params.useTlsParam;
                 var imagesParam = params.imagesParam;
@@ -1139,31 +1137,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     // Normalize the Docker address and do some auto-correction regarding count of slashes after the
                     // scheme.
                     var address = self.$dockerAddress.val();
-                    var match = address.match(/([a-zA-Z]+?):\/*(.*)/);
-                    var scheme;
-                    var schemeSpecificPart;
-                    var ignore = false;
-                    if (match) {
-                        // Some scheme detected.
-                        scheme = match[1].toLowerCase();
-                        schemeSpecificPart = match[2];
-                    } else if (address.match(/[0-9].*/)) {
-                        scheme = 'tcp';
-                        schemeSpecificPart = address;
-                    } else {
-                        match = address.match(/\/+(.*)/);
-                        if (match) {
-                            scheme = 'unix';
-                            schemeSpecificPart = match[1];
-                        } else {
-                            // Most certainly invalid, but let the server complain about it.
-                            ignore = true;
-                        }
-                    }
-
-                    if (!ignore) {
-                        self.$dockerAddress.val(scheme + ':' + (scheme === 'unix' ? '///' : '//') + schemeSpecificPart);
-                    }
+                    address = self.sanitizeURI(address, self.windowsHost);
+                    self.$dockerAddress.val(address);
 
                     self._scheduleConnectionCheck();
                 });
@@ -1193,7 +1168,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     BS.DockerImageDialog.close();
                 });
 
-                var editDelegates = self.selectors.imagesTableRow + ' .highlight, ' + self.selectors.editImageLink;
+                var editDelegates = '.imagesTableRow .highlight, .editImageLink';
                 self.$imagesTable.on('click', editDelegates, function () {
                     self.showEditDialog($j(this));
                     return false;
@@ -1465,7 +1440,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 if (responseMap.status == 'PENDING') {
                     if (responseMap.phase == "WAIT_FOR_AGENT") {
                         if (self.hasXTermSupport && !self.logStreamingSocket) {
-                            console.log('Opening live logs sockt now.');
+                            self.logInfo('Opening live logs socket now.');
 
                             var url =self.resolveWebSocketURL(self.streamSocketPath + '?correlationId=' + self.testUuid);
                             self.$dockerTestContainerOutputTitle.fadeIn(400);
@@ -1653,10 +1628,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 };
 
                 var ipv4OrIpv6Validator = function (elt) {
-                    var regex = /((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))/;
                     var value = elt.val().trim();
                     elt.val(value);
-                    if (value && !regex.test(value)) {
+                    if (value && !self.IP_V4_OR_V6_REGEX.test(value)) {
                         return {msg: "Please specify a valid IPv4 or IPv6 address."};
                     }
                 };
@@ -2145,6 +2119,56 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 } catch (e) {
                     self.logError("Failed to decode base64 string.");
                 }
+            },
+
+            sanitizeURI: function(uri, windowsHost) {
+                uri = uri && uri.trim();
+                if (!uri) {
+                    return uri;
+                }
+                var match = uri.match(windowsHost ? /^([a-zA-Z]+?):[/\\]+(.*)/ : /^([a-zA-Z]+?):\/+(.*)/);
+                var scheme;
+                var schemeSpecificPart;
+                var ignore = false;
+
+                // Default: assume TCP hostname.
+                scheme = 'tcp';
+                schemeSpecificPart = uri;
+
+                if (match) {
+                    // Some scheme detected, use it instead.
+                    scheme = match[1].toLowerCase();
+                    schemeSpecificPart = match[2];
+                } if (!self.IP_V4_OR_V6_REGEX.test(uri)) {
+                    // Not an IP address, does it look like a file path ?
+                    if (windowsHost) {
+                        match = uri.match(/^[/\\]+(.*)/);
+                        if (match) {
+                            scheme = 'npipe';
+                            schemeSpecificPart = match[1];
+                        }
+                    } else {
+                        match = uri.match(/^\/+(.*)/);
+                        if (match) {
+                            scheme = 'unix';
+                            schemeSpecificPart = match[1];
+                        }
+                    }
+                }
+
+                var leadingSlashes;
+                if (scheme === 'unix') {
+                    leadingSlashes = '///';
+                } else if (scheme === 'npipe') {
+                    leadingSlashes = '////';
+                    schemeSpecificPart = schemeSpecificPart.replace(/\\/g, '/');
+                } else {
+                    leadingSlashes = '//';
+                }
+
+                uri = scheme + ':' + leadingSlashes + schemeSpecificPart;
+
+                return uri;
             },
 
             arrayTemplates: {

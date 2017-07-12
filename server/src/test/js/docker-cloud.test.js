@@ -789,3 +789,67 @@ describe('Converting settings to view model', function () {
         });
     });
 });
+
+describe('Sanitizing Daemon URI', function() {
+
+    it('should preserve the given scheme if any', function () {
+        expect(dockerCloud.sanitizeURI('tpc://hostname', false)).toEqual('tpc://hostname');
+        expect(dockerCloud.sanitizeURI('unix:///some_socket', true)).toEqual('unix:///some_socket');
+        expect(dockerCloud.sanitizeURI('blah://this is completely wrong', true)).toEqual('blah://this is completely wrong');
+
+    });
+
+    it('should auto-detect IPv4 address', function() {
+        expect(dockerCloud.sanitizeURI('127.0.0.1', false)).toEqual('tcp://127.0.0.1');
+        expect(dockerCloud.sanitizeURI('127.0.0.1', true)).toEqual('tcp://127.0.0.1');
+    });
+
+    it('should auto-detect IPv6 address', function() {
+        expect(dockerCloud.sanitizeURI('0000:0000:0000:0000:0000:0000:0000:0001', false)).toEqual('tcp://0000:0000:0000:0000:0000:0000:0000:0001');
+        expect(dockerCloud.sanitizeURI('::1', true)).toEqual('tcp://::1');
+    });
+
+    it('should auto detect unix scheme when not on windows host', function() {
+        expect(dockerCloud.sanitizeURI('/some/path', false)).toEqual('unix:///some/path');
+    });
+
+    it('should auto correct the count of leading slashes in the scheme specific part for unix sockets', function() {
+        expect(dockerCloud.sanitizeURI('unix:/some/path', false)).toEqual('unix:///some/path');
+        expect(dockerCloud.sanitizeURI('unix://some/path', false)).toEqual('unix:///some/path');
+        expect(dockerCloud.sanitizeURI('unix://////some/path', false)).toEqual('unix:///some/path');
+
+        expect(dockerCloud.sanitizeURI('//some/path', false)).toEqual('unix:///some/path');
+        expect(dockerCloud.sanitizeURI('//////some/path', false)).toEqual('unix:///some/path');
+    });
+
+    it('should auto detect npipe scheme when on windows host', function() {
+        expect(dockerCloud.sanitizeURI('//server/pipe/pipename', true)).toEqual('npipe:////server/pipe/pipename');
+    });
+
+    it('should auto correct the count of leading slashes in the scheme specific part for named pipes', function() {
+        expect(dockerCloud.sanitizeURI('/server/pipe/pipename', true)).toEqual('npipe:////server/pipe/pipename');
+        expect(dockerCloud.sanitizeURI('//////server/pipe/pipename', true)).toEqual('npipe:////server/pipe/pipename');
+        expect(dockerCloud.sanitizeURI('npipe:/server/pipe/pipename', false)).toEqual('npipe:////server/pipe/pipename');
+        expect(dockerCloud.sanitizeURI('npipe://////server/pipe/pipename', false)).toEqual('npipe:////server/pipe/pipename');
+    });
+
+    it('should replace all backlashes with slashes for named pipes', function() {
+        expect(dockerCloud.sanitizeURI('\\server\\pipe\\pipename', true)).toEqual('npipe:////server/pipe/pipename');
+        expect(dockerCloud.sanitizeURI('npipe:\\\\server\\pipe\\pipename', true)).toEqual('npipe:////server/pipe/pipename');
+        expect(dockerCloud.sanitizeURI('npipe:\\/server\\pipe/pipename', true)).toEqual('npipe:////server/pipe/pipename');
+        expect(dockerCloud.sanitizeURI('/some\\path', false)).toEqual('unix:///some\\path');
+    });
+
+    it('should trim paths', function() {
+        expect(dockerCloud.sanitizeURI(null, true)).toEqual(null);
+        expect(dockerCloud.sanitizeURI('', false)).toEqual('');
+        expect(dockerCloud.sanitizeURI('  ', false)).toEqual('');
+        expect(dockerCloud.sanitizeURI('  tcp://127.0.0.1', false)).toEqual('tcp://127.0.0.1');
+        expect(dockerCloud.sanitizeURI('tcp://127.0.0.1  ', false)).toEqual('tcp://127.0.0.1');
+        expect(dockerCloud.sanitizeURI('  tcp://127.0.0.1  ', false)).toEqual('tcp://127.0.0.1');
+    });
+
+    it('should default to tcp', function() {
+        expect(dockerCloud.sanitizeURI('somehostname:2375', false)).toEqual('tcp://somehostname:2375');
+    });
+});

@@ -12,6 +12,7 @@
 <%--@elvariable id="defaultUnixSocketAvailable" type="java.lang.Boolean"--%>
 <%--@elvariable id="defaultWindowsNamedPipeAvailable" type="java.lang.Boolean"--%>
 <%--@elvariable id="defaultLocalInstanceURI" type="java.net.URI"--%>
+<%--@elvariable id="windowsHost" type="java.lang.Boolean"--%>
 <c:set var="paramName" value="<%=DockerCloudUtils.IMAGES_PARAM%>"/>
 
 <jsp:useBean id="serverUrl" scope="request" type="java.lang.String"/>
@@ -887,7 +888,7 @@
                             warnIconURL: '<c:url value="/img/attentionComment.png"/>',
                             testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>',
                             streamSocketPath: '<c:url value="/app/docker-cloud/streaming/logs"/>',
-                            defaultUnixSocketAvailable: ${defaultUnixSocketAvailable},
+                            windowsHost: ${windowsHost},
                             debugEnabled: ${debugEnabled}
                         });
                     }
