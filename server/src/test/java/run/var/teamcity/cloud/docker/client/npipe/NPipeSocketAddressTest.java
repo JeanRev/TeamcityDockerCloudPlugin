@@ -17,19 +17,25 @@ public class NPipeSocketAddressTest {
 
     @Test
     public void illegalConstructorArg() {
-
         Arrays.asList(
                 "C:\\docker_engine",
-                "/tmp/docker_engine",
-                "docker_engine",
-                "//host/share/docker_engine",
-                "//./pipe/docker_engine/subdir",
-                "/./pipe/docker_engine"
+                "\\tmp\\docker_engine",
+                "\\docker_engine",
+                "\\\\host\\share\\docker_engine",
+                "\\.\\pipe\\docker_engine",
+                "\\\\.\\pipe\\docker_engine\\"
         ).forEach(location -> assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() -> NPipeSocketAddress.fromPath(Paths.get(location)))
         );
         assertThatExceptionOfType(NullPointerException.class)
                 .isThrownBy(() -> NPipeSocketAddress.fromPath(null));
+    }
+
+    @Test
+    public void legalConstructorArg() {
+        NPipeSocketAddress.fromPath(Paths.get("\\\\.\\pipe\\docker_engine"));
+        NPipeSocketAddress.fromPath(Paths.get("\\\\.\\pipe\\docker_engine\\subdir"));
+        NPipeSocketAddress.fromPath(Paths.get("\\\\.\\pipe\\docker_engine\\subdir1\\subdir2"));
     }
 
     @Test
