@@ -9,8 +9,8 @@
 <%--@elvariable id="resPath" type="java.lang.String"--%>
 <%--@elvariable id="defaultTCUrl" type="java.net.URL"--%>
 <%--@elvariable id="debugEnabled" type="java.lang.Boolean"--%>
-<%--@elvariable id="defaultUnixSocketAvailable" type="java.lang.Boolean"--%>
-<%--@elvariable id="defaultWindowsNamedPipeAvailable" type="java.lang.Boolean"--%>
+<%--@elvariable id="defaultLocalInstanceAvailable" type="java.lang.Boolean"--%>
+<%--@elvariable id="defaultLocalInstanceParam" type="java.lang.String"--%>
 <%--@elvariable id="defaultLocalInstanceURI" type="java.net.URI"--%>
 <%--@elvariable id="windowsHost" type="java.lang.Boolean"--%>
 <c:set var="paramName" value="<%=DockerCloudUtils.IMAGES_PARAM%>"/>
@@ -40,44 +40,21 @@
             <th>Docker instance:&nbsp;<l:star/></th>
             <td>
 
-                <c:choose>
-                    <c:when test="${defaultUnixSocketAvailable}">
-                        <p>
-                            <props:radioButtonProperty name="<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>"
-                                                       id="dockerCloudUseLocalInstance"
-                                                       value="true"/>
-                            <label for="dockerCloudUseLocalInstance">Use local Docker instance</label>
-                        </p>
-                        <p>
-                            <props:radioButtonProperty name="<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>"
-                                                       id="dockerCloudUseCustomInstance"
-                                                       value="false"/>
-                            <label for="dockerCloudUseCustomInstance">Use custom Docker instance URL</label>
-                        </p>
-                        <span class="error" id="error_<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>"></span>
-                        <props:hiddenProperty name="<%=DockerCloudUtils.USE_DEFAULT_WIN_NAMED_PIPE_PARAM%>" value="false"/>
-                    </c:when>
-                    <c:when test="${defaultWindowsNamedPipeAvailable}">
-                        <p>
-                            <props:radioButtonProperty name="<%=DockerCloudUtils.USE_DEFAULT_WIN_NAMED_PIPE_PARAM%>"
-                                                       id="dockerCloudUseLocalInstance"
-                                                       value="true"/>
-                            <label for="dockerCloudUseLocalInstance">Use local Docker instance</label>
-                        </p>
-                        <p>
-                            <props:radioButtonProperty name="<%=DockerCloudUtils.USE_DEFAULT_WIN_NAMED_PIPE_PARAM%>"
-                                                       id="dockerCloudUseCustomInstance"
-                                                       value="false"/>
-                            <label for="dockerCloudUseCustomInstance">Use custom Docker instance URL</label>
-                        </p>
-                        <span class="error" id="error_<%=DockerCloudUtils.USE_DEFAULT_WIN_NAMED_PIPE_PARAM%>"></span>
-                        <props:hiddenProperty name="<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>" value="false"/>
-                    </c:when>
-                    <c:otherwise>
-                        <props:hiddenProperty name="<%=DockerCloudUtils.USE_DEFAULT_WIN_NAMED_PIPE_PARAM%>" value="false"/>
-                        <props:hiddenProperty name="<%=DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM%>" value="false"/>
-                    </c:otherwise>
-                </c:choose>
+                <c:if test="${defaultLocalInstanceAvailable}">
+                    <p>
+                        <props:radioButtonProperty name="${defaultLocalInstanceParam}"
+                                                   id="dockerCloudUseLocalInstance"
+                                                   value="true"/>
+                        <label for="dockerCloudUseLocalInstance">Use local Docker instance</label>
+                    </p>
+                    <p>
+                        <props:radioButtonProperty name="${defaultLocalInstanceParam}"
+                                                   id="dockerCloudUseCustomInstance"
+                                                   value="false"/>
+                        <label for="dockerCloudUseCustomInstance">Use custom Docker instance URL</label>
+                    </p>
+                    <span class="error" id="error_${defaultLocalInstanceParam}"></span>
+                </c:if>
 
                 <p>
                     <label for="dockerCloudDockerAddress">Address:&nbsp;<span id="addressStar"><l:star/></span>&nbsp;
@@ -85,8 +62,18 @@
                     <props:textProperty name="<%=DockerCloudUtils.INSTANCE_URI%>" id="dockerCloudDockerAddress"
                                         className="longField"/>
                     <a href="#/" class="btn" id="dockerCloudCheckConnectionBtn">Check connection</a>
-                    <span class="smallNote">Daemon URI, starting either with a <code>tcp:</code>, <code>unix:</code>
-                        or <code>npipe:</code> (<span style="font-variant: all-small-caps;">EXPERIMENTAL</span>) scheme.</span>
+                    <c:choose>
+                        <c:when test="${windowsHost}">
+                            <span class="smallNote">Daemon URI, starting either with a <code>tcp:</code> or <code>
+                                npipe:</code> (<span style="font-variant: all-small-caps;">EXPERIMENTAL</span>)
+                                scheme.</span>
+                        </c:when>
+                        <c:otherwise>
+                            <span class="smallNote">Daemon URI, starting either with a <code>tcp:</code> or <code>unix
+                                :</code> scheme.</span>
+                        </c:otherwise>
+                    </c:choose>
+
                     <span class="error" id="error_<%=DockerCloudUtils.INSTANCE_URI%>"></span>
                 </p>
                 <p>

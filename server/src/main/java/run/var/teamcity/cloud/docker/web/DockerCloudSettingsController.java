@@ -11,6 +11,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.net.URI;
 import java.util.Map;
 
 public class DockerCloudSettingsController extends BaseController {
@@ -45,15 +46,24 @@ public class DockerCloudSettingsController extends BaseController {
         model.put("resPath", pluginDescriptor.getPluginResourcesPath());
         model.put("debugEnabled", DockerCloudUtils.isDebugEnabled());
 
-        boolean defaultUnixSocketAvailable = DockerCloudUtils.isDefaultDockerSocketAvailable();
-        boolean defaultWindowsNamedPipeAvailable = !defaultUnixSocketAvailable && DockerCloudUtils.isDefaultDockerNamedPipeAvailable();
+        boolean defaultLocalInstanceAvailable;
+        String defaultLocalInstanceParam;
+        URI defaultLocalInstanceURI;
+        boolean windowsHost;
+        if (windowsHost = DockerCloudUtils.isWindowsHost()) {
+            defaultLocalInstanceAvailable = DockerCloudUtils.isDefaultDockerNamedPipeAvailable();
+            defaultLocalInstanceParam = DockerCloudUtils.USE_DEFAULT_WIN_NAMED_PIPE_PARAM;
+            defaultLocalInstanceURI = DockerCloudUtils.DOCKER_DEFAULT_NAMED_PIPE_URI;
+        } else {
+            defaultLocalInstanceAvailable = DockerCloudUtils.isDefaultDockerSocketAvailable();
+            defaultLocalInstanceParam = DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM;
+            defaultLocalInstanceURI = DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI;
+        }
 
-        model.put("defaultUnixSocketAvailable", defaultUnixSocketAvailable);
-        model.put("defaultWindowsNamedPipeAvailable", defaultWindowsNamedPipeAvailable);
-
-        model.put("defaultLocalInstanceURI", defaultWindowsNamedPipeAvailable ?
-                DockerCloudUtils.DOCKER_DEFAULT_NAMED_PIPE_URI : DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
-        model.put("windowsHost", DockerCloudUtils.isWindowsHost());
+        model.put("defaultLocalInstanceAvailable", defaultLocalInstanceAvailable);
+        model.put("defaultLocalInstanceParam", defaultLocalInstanceParam);
+        model.put("defaultLocalInstanceURI", defaultLocalInstanceURI);
+        model.put("windowsHost", windowsHost);
         return mv;
     }
 }

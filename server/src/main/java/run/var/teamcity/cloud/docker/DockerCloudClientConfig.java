@@ -25,8 +25,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class DockerCloudClientConfig {
 
-    private static final long DEFAULT_DOCKER_SYNC_RATE_SEC = 30;
-    private static final long DEFAULT_TASK_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(10);
+    static final long DEFAULT_DOCKER_SYNC_RATE_SEC = 30;
+    static final long DEFAULT_TASK_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(10);
 
     private final UUID uuid;
     private final DockerClientConfig dockerClientConfig;
@@ -162,15 +162,20 @@ public class DockerCloudClientConfig {
             }
         }
 
-        boolean usingTls = Boolean.valueOf(properties.get(DockerCloudUtils.USE_TLS));
+        boolean usingTls = optionalFlag(DockerCloudUtils.USE_TLS, properties);
 
-        String useDefaultInstanceStr = notEmpty("Select an instance type", DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, properties,
-                invalidProperties);
-        boolean useDefaultUnixSocket = Boolean.parseBoolean(useDefaultInstanceStr);
         URI instanceURI = null;
-        if (useDefaultUnixSocket) {
-            instanceURI = DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI;
-        } else if (useDefaultInstanceStr != null) {
+        if (DockerCloudUtils.isWindowsHost()) {
+            if (optionalFlag(DockerCloudUtils.USE_DEFAULT_WIN_NAMED_PIPE_PARAM, properties)) {
+                instanceURI = DockerCloudUtils.DOCKER_DEFAULT_NAMED_PIPE_URI;
+            }
+        } else {
+            if (optionalFlag(DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, properties)) {
+                instanceURI = DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI;
+            }
+        }
+
+        if (instanceURI == null) {
             String instanceURLStr = notEmpty("Instance URL ist not set", DockerCloudUtils.INSTANCE_URI, properties, invalidProperties);
             if (instanceURLStr != null) {
                 try {
@@ -210,6 +215,11 @@ public class DockerCloudClientConfig {
                 new DockerClientConfig(instanceURI, DockerCloudUtils.DOCKER_API_TARGET_VERSION).usingTls(usingTls);
 
         return new DockerCloudClientConfig(clientUuid, dockerClientConfig, true, serverURL);
+    }
+
+    private static boolean optionalFlag(String key, Map<String, String> properties) {
+        String value = properties.get(key);
+        return Boolean.parseBoolean(value);
     }
 
     /**
