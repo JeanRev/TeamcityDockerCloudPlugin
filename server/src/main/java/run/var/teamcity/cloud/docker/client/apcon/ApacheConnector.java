@@ -318,7 +318,6 @@ class ApacheConnector implements Connector {
             }
         }
 
-        clientBuilder.setConnectionReuseStrategy(new UpgradeAwareConnectionReuseStrategy());
         clientBuilder.setKeepAliveStrategy((response, context) -> 0);
         clientBuilder.setRequestExecutor(new HttpRequestExecutor() {
             protected HttpResponse doReceiveResponse(
