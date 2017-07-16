@@ -727,6 +727,18 @@ var settingsConverterFixtures = [
         ]
     },
     {
+        name: 'should handle SecurityOpt', fixtures: [{
+        settings: {
+            Container: {
+                HostConfig:{
+                    SecurityOpt: ['label 1', 'label 2', 'label 3']
+                }
+            }
+        },
+        viewModel: {SecurityOpt: ['label 1', 'label 2', 'label 3']}
+    }]
+    },
+    {
         name: 'should handle StorageOpt', fixtures: [{
         settings: {
             Container: {

@@ -331,7 +331,7 @@
                 </tbody>
             </table>
         </div>
-        <div id="dockerCloudImageTab_privileges">
+        <div id="dockerCloudImageTab_security">
             <table class="dockerCloudSettings runnerFormTable">
                 <tr>
                     <th>
@@ -387,6 +387,27 @@
                     </tr>
                     </thead>
                     <tbody id="dockerCloudImage_CapDrop">
+                    </tbody>
+                </table>
+            </div>
+            <h4>Security options:</h4>
+                <%-- Note: security options are usually always key-value pairs, with so far a single exception: the
+                 'no-new-privileges' flag for the Linux daemon. It is therefore handled as list of strings instead of a
+                 map, unlike for example the storage options. --%>
+            <div class="dockerCloudSimpleTables" style="text-align: center;">
+                <table class="settings">
+                    <thead>
+                    <tr>
+                        <th class="name" style="width: 82%;">
+                            Values&nbsp;<l:star/>
+                            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                            <span class="tooltiptext">List of security options. Equivalent to the <code>--security
+                                -opt</code> CLI flag.</span>
+                        </th>
+                        <th class="dockerCloudCtrlCell"></th>
+                    </tr>
+                    </thead>
+                    <tbody id="dockerCloudImage_SecurityOpt">
                     </tbody>
                 </table>
             </div>
@@ -724,7 +745,8 @@
             </table>
             <h4>Storage options:
                 <i class="icon icon16 tc-icon_help_small tooltip"></i>
-                <span class="tooltiptext">Configuration map for the storage.</span>
+                <span class="tooltiptext">Configuration map for the storage. Equivalent to the
+                    <code>--storage-opt</code> CLI flag.</span>
             </h4>
             <table class="settings">
                 <thead>
@@ -819,11 +841,6 @@
         <p id="dockerTestExecInfo">
         </p>
         <div class="dockerCloudBtnBlock">
-            <!--
-            <input type="button" class="btn" id="dockerCloudTestContainerShellBtn" value="Start a shell"/>
-            <input type="button" class="btn" id="dockerCloudTestContainerCopyLogsBtn" value="Copy logs"/>
-            <input type="button" class="btn" id="dockerCloudTestContainerDisposeBtn" value="Dispose container"/>
-            -->
             <input type="button" class="btn" id="dockerCreateImageTest" value="Create container"/>
             <input type="button" class="btn" id="dockerStartImageTest" value="Start container"/>
             <input type="button" class="btn" id="dockerCloudTestContainerContainerLogsBtn" value="Container logs"/>
