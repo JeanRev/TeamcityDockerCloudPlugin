@@ -1653,24 +1653,16 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 };
 
-                var portNumberValidator = function (elt) {
-                    var value = elt.val().trim();
-                    elt.val(value);
-                    if (!value) {
+                var portNumberValidator = function ($elt) {
+                    var number = parseInt($elt.val());
+                    if (number >= 1 && number <= 65535) {
                         return;
                     }
-                    if (!positiveIntegerValidator(elt)) {
-                        var number = parseInt(elt.val());
-                        if (number >= 1 && number <= 65535) {
-                            return;
-                        }
-                    }
-
                     return {msg: "Port number must be between 1 and 65535."};
                 };
 
-                var cpusValidator = function(elt) {
-                    var value = elt.val().trim().replace(/^0+\B/, '');
+                var cpusValidator = function($elt) {
+                    var value = autoTrim($elt).replace(/^0+\B/, '');
                     if (!value) {
                         return;
                     }
@@ -1687,33 +1679,39 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 };
 
-                var cpuSetValidator = function(elt) {
-                    var value = elt.val().trim();
-                    elt.val(value);
-                    if (!value) {
-                        return;
-                    }
-
-                    if (!/^[0-9]+(?:[-,][0-9]+)*$/.test(value)) {
+                var cpuSetValidator = function($elt) {
+                    var value = autoTrim($elt);
+                    if (value && !/^[0-9]+(?:[-,][0-9]+)*$/.test(value)) {
                         return {msg: "Invalid Cpuset specification."};
                     }
                 };
 
-                var versionValidator = function(targetVersion, elt) {
-                    if (!self.effectiveApiVersion) {
-                        return;
-                    }
-                    var value = elt.val().trim();
-                    elt.val(value);
-                    if (!value) {
-                        return;
-                    }
-
+                var versionValidator = function(targetVersion, $elt) {
                     var daemonVersion = self.effectiveApiVersion;
+                    if (!daemonVersion) {
+                        return;
+                    }
+                    if (isEmptyInput($elt)) {
+                        return;
+                    }
 
                     if (self.compareVersionNumbers(daemonVersion, targetVersion) < 0) {
                         return {msg: 'The daemon API version (v' + daemonVersion + ') is lower than required for ' +
                         'this configuration field (v' + targetVersion + ').', warning: true};
+                    }
+                };
+
+                var autoTrim = function($elt) {
+                    var value = $elt.val().trim();
+                    $elt.val(value);
+                    return value;
+                };
+
+                var isEmptyInput = function($elt) {
+                    if ($elt.is(':checkbox') || $elt.is(':radio')) {
+                        return !$elt.is(':checked');
+                    } else {
+                        return !$elt.val();
                     }
                 };
 
@@ -1762,8 +1760,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }],
                     dockerCloudImage_Volumes_IDX_PathInContainer: [requiredValidator],
                     dockerCloudImage_Ports_IDX_HostIp: [ipv4OrIpv6Validator],
-                    dockerCloudImage_Ports_IDX_HostPort: [portNumberValidator],
-                    dockerCloudImage_Ports_IDX_ContainerPort: [requiredValidator, portNumberValidator],
+                    dockerCloudImage_Ports_IDX_HostPort: [positiveIntegerValidator, portNumberValidator],
+                    dockerCloudImage_Ports_IDX_ContainerPort: [requiredValidator, positiveIntegerValidator, portNumberValidator],
                     dockerCloudImage_Dns_IDX: [requiredValidator],
                     dockerCloudImage_DnsSearch_IDX: [requiredValidator],
                     dockerCloudImage_ExtraHosts_IDX_Name: [requiredValidator],
@@ -1782,78 +1780,37 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     dockerCloudImage_Labels_IDX_Key: [requiredValidator],
                     dockerCloudImage_SecurityOpt_IDX: [requiredValidator],
                     dockerCloudImage_StorageOpt_IDX_Key: [requiredValidator],
-                    dockerCloudImage_Memory: [function ($elt) {
-                        var value = $elt.val().trim();
-                        $elt.val(value);
-                        if (!value) {
-                            return;
+                    dockerCloudImage_Memory: [positiveIntegerValidator, function ($elt) {
+                        var number = parseInt($elt.val());
+                        var multiplier = self._units_multiplier[self.$memoryUnit.val()];
+                        if ((number * multiplier) < 524288) {
+                            return {msg: "Memory must be at least 4Mb."}
                         }
-                        var result = positiveIntegerValidator($elt);
-                        if (!result) {
-                            var number = parseInt(value);
-                            var multiplier = self._units_multiplier[self.$memoryUnit.val()];
-                            if ((number * multiplier) < 524288) {
-                                result = {msg: "Memory must be at least 4Mb."}
-                            }
-                        }
-                        return result;
                     }],
                     dockerCloudImage_CPUs: [cpusValidator, versionValidator.bind(this, '1.25')],
-                    dockerCloudImage_CpuQuota: [function($elt) {
-                        var value = $elt.val().trim();
-                        $elt.val(value);
-                        if (!value) {
-                            return;
+                    dockerCloudImage_CpuQuota: [positiveIntegerValidator, function($elt) {
+                        var number = parseInt($elt.val());
+                        if (number < 1000) {
+                            return {msg: "CPU Quota must be at least of 1000μs (1ms)."}
                         }
-                        var result = positiveIntegerValidator($elt);
-                        if (!result) {
-                            var number = parseInt(value);
-                            if (number < 1000) {
-                                result = {msg: "CPU Quota must be at least of 1000μs (1ms)."}
-                            }
-                        }
-                        return result;
                     }],
                     dockerCloudImage_CpusetCpus: [cpuSetValidator],
                     dockerCloudImage_CpusetMems: [cpuSetValidator],
                     dockerCloudImage_CpuShares: [positiveIntegerValidator],
-                    dockerCloudImage_CpuPeriod: [function($elt) {
-                        var value = $elt.val().trim();
-                        $elt.val(value);
-                        if (!value) {
-                            return;
+                    dockerCloudImage_CpuPeriod: [positiveIntegerValidator, function($elt) {
+                        var number = parseInt($elt.val());
+                        if (number < 1000 || number > 1000000) {
+                            return {msg: "CPU period must be between 1000μs (1ms) and 1000000μs (1s)"}
                         }
-                        var result = positiveIntegerValidator($elt);
-                        if (!result) {
-                            var number = parseInt(value);
-                            if (number < 1000 || number > 1000000) {
-                                result = {msg: "CPU period must be between 1000μs (1ms) and 1000000μs (1s)"}
-                            }
-                        }
-                        return result;
                     }],
-                    dockerCloudImage_BlkioWeight: [function ($elt) {
-                        var value = $elt.val().trim();
-                        $elt.val(value);
-                        if (!value) {
-                            return;
+                    dockerCloudImage_BlkioWeight: [positiveIntegerValidator, function ($elt) {
+                        var number = parseInt($elt.val());
+                        if (number < 10 || number > 1000) {
+                            return {msg: "IO weight must be between 10 and 1000"}
                         }
-                        var result = positiveIntegerValidator($elt);
-                        if (!result) {
-                            var number = parseInt(value);
-                            if (number < 10 || number > 1000) {
-                                result = {msg: "IO weight must be between 10 and 1000"}
-                            }
-                        }
-                        return result;
                     }],
-                    dockerCloudImage_MemorySwap: [
+                    dockerCloudImage_MemorySwap: [positiveIntegerValidator,
                         function ($elt) {
-                            var value = $elt.val().trim();
-                            $elt.val(value);
-                            if (!value) {
-                                return;
-                            }
                             if (self.$swapUnlimited.is(":checked")) {
                                 return;
                             }
@@ -1861,18 +1818,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             if (!memoryVal) {
                                 return {msg: "Swap limitation can only be used in conjunction with the memory limit."};
                             }
-                            if (!positiveIntegerValidator(self.$memory)) {
-                                var memory = parseInt(memoryVal);
-                                var result = positiveIntegerValidator($elt);
-                                if (!result) {
-                                    var swap = parseInt(value);
-                                    var memoryUnitMultiplier = self._units_multiplier[self.$memoryUnit.val()];
-                                    var swapUnitMultiplier = self._units_multiplier[self.$swapUnit.val()];
-                                    if (swap * swapUnitMultiplier <= memory * memoryUnitMultiplier) {
-                                        result = {msg: "Swap limit must be strictly greater than the memory limit."}
-                                    }
-                                }
-                                return result;
+                            var memory = parseInt(memoryVal);
+                            if (isNaN(memory)) {
+                                return;
+                            }
+                            var swap = parseInt($elt.val());
+                            var memoryUnitMultiplier = self._units_multiplier[self.$memoryUnit.val()];
+                            var swapUnitMultiplier = self._units_multiplier[self.$swapUnit.val()];
+                            if (swap * swapUnitMultiplier <= memory * memoryUnitMultiplier) {
+                                return {msg: "Swap limit must be strictly greater than the memory limit."}
                             }
                         }
                     ]
