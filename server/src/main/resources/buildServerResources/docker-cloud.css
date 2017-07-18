@@ -6,7 +6,7 @@
 
 /* Prevent huge margins in paragraph inside of table cells. */
 .dockerCloudSettings td p {
-    margin: 2px;
+    margin: 2px 0px;
 }
 
 /* Force error messages in H2 to be inlined. */
@@ -205,6 +205,12 @@ aligned on the RHS of the screen. */
 .dockerCloudSettings .warning {
     color: #c89400;
 }
+.dockerCloudSettings .warning p {
+    /* Warning messages must be tightly adjusted to their corresponding input field, just like error message that
+     are currently span-based. */
+    margin: 0px;
+}
+
 /* H4 header. Used for settings label outside of the main table. */
 #DockerCloudImageDialog h4 {
     margin: 0;

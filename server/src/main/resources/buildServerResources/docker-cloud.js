@@ -1623,24 +1623,23 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _initValidators: function () {
                 self.logDebug("Validators setup.");
 
-                var requiredValidator = function (elt) {
-                    var value = elt.val().trim();
-                    elt.val(value);
+                var requiredValidator = function ($elt) {
+                    var value = autoTrim($elt);
                     if (!value) {
                         return {msg: "This field is required."};
                     }
                 };
 
-                var ipv4OrIpv6Validator = function (elt) {
-                    var value = elt.val().trim();
-                    elt.val(value);
+                var ipv4OrIpv6Validator = function ($elt) {
+                    var value = autoTrim($elt);
                     if (value && !self.IP_V4_OR_V6_REGEX.test(value)) {
                         return {msg: "Please specify a valid IPv4 or IPv6 address."};
                     }
                 };
 
-                var positiveIntegerValidator = function (elt) {
-                    var value = elt.val().trim().replace(/^0+/, '');
+                var positiveIntegerValidator = function ($elt) {
+                    var value = $elt.val().trim().replace(/^0+/, '');
+                    $elt.val(value);
                     if (!value) {
                         return;
                     }
@@ -1920,6 +1919,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     vals = self.validators[eltId.replace(/[0-9]+/, "IDX")];
                 }
 
+                var error = null;
+                var warnings = [];
                 // Only validate fields that are not disabled.
                 // Note: fields that are not visible must always be validated in order to perform cross-tabs
                 // validation.
@@ -1927,20 +1928,32 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     $j.each(vals, function (i, validator) {
                         result = validator(elt);
                         if (result) {
-                            return false;
+                            if (result.warning) {
+                                warnings.push(result.msg);
+                            } else if (!error) {
+                                error = result.msg;
+                            }
                         }
                     });
                 }
+
                 var tab = self._getElementTab(elt);
                 var errorMsg = $j("#" + eltId + "_error").empty();
                 var warningMsg = $j("#" + eltId + "_warning").empty();
-                if (result) {
-                    var msg = result.warning ? warningMsg : errorMsg;
-                    msg.append(result.msg);
-                    tab.addMessage(eltId, result.warning);
-                } else {
-                    tab.clearMessages(eltId);
+
+                tab.clearMessages(eltId);
+
+                if (warnings.length) {
+                    $j.each(warnings, function(i, warning) {
+                        warningMsg.append('<p>' + warning + '</p>');
+                    });
+                    tab.addMessage(eltId, true)
                 }
+                if (error) {
+                    errorMsg.append(error);
+                    tab.addMessage(eltId, false)
+                }
+
                 return true;
             },
 

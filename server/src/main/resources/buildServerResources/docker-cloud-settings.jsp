@@ -268,7 +268,7 @@
                     <td>
                         <input type="text" id="dockerCloudImage_StopTimeout"/>
                         <span class="error" id="dockerCloudImage_StopTimeout_error"></span>
-                        <span class="warning" id="dockerCloudImage_StopTimeout_warning"></span>
+                        <div class="warning" id="dockerCloudImage_StopTimeout_warning"></div>
                     </td>
                 </tr>
             </table>
@@ -618,7 +618,7 @@
                     <td>
                         <input type="text" id="dockerCloudImage_CPUs" class="textField"/>
                         <span class="error" id="dockerCloudImage_CPUs_error"></span>
-                        <span class="warning" id="dockerCloudImage_CPUs_warning"></span>
+                        <div class="warning" id="dockerCloudImage_CPUs_warning"></div>
                     </td>
                 </tr>
                 <tr>
