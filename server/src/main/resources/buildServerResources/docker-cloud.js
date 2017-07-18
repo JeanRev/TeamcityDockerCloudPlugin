@@ -194,6 +194,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }).
                 done(function(daemonInfo) {
                     var effectiveApiVersion = daemonInfo.meta.effectiveApiVersion;
+                    var daemonOs = daemonInfo.Os;
 
                     self.$checkConnectionResult.addClass('infoMessage');
                     self.$checkConnectionResult.text('Connection successful to Docker v' + daemonInfo.info.Version
@@ -211,6 +212,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
 
                     self.effectiveApiVersion = effectiveApiVersion;
+                    self.daemonOs = daemonOs;
                 }).
                 always(function () {
                     self.$checkConnectionLoader.hide();
@@ -1701,6 +1703,23 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 };
 
+                var osExclusionValidator = function(excludedOs, elt) {
+                    var daemonOs = self.daemonOs;
+                    if (!daemonOs) {
+                        return;
+                    }
+                    self.logInfo("The val: " + elt.val());
+                    if (isEmptyInput(elt)) {
+                        return;
+                    }
+                    if (daemonOs.toLowerCase() === excludedOs.toLowerCase()) {
+                        return {msg: 'This configuration field is not compatible with the daemon operating system ('
+                        + excludedOs + ').', warning: true};
+                    }
+                };
+
+                var noWindowsValidator = osExclusionValidator.bind(this, 'windows');
+
                 var autoTrim = function($elt) {
                     var value = $elt.val().trim();
                     $elt.val(value);
@@ -1794,22 +1813,22 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             return {msg: "CPU Quota must be at least of 1000μs (1ms)."}
                         }
                     }],
-                    dockerCloudImage_CpusetCpus: [cpuSetValidator],
-                    dockerCloudImage_CpusetMems: [cpuSetValidator],
+                    dockerCloudImage_CpusetCpus: [noWindowsValidator, cpuSetValidator],
+                    dockerCloudImage_CpusetMems: [noWindowsValidator, cpuSetValidator],
                     dockerCloudImage_CpuShares: [positiveIntegerValidator],
-                    dockerCloudImage_CpuPeriod: [positiveIntegerValidator, function($elt) {
+                    dockerCloudImage_CpuPeriod: [noWindowsValidator, positiveIntegerValidator, function($elt) {
                         var number = parseInt($elt.val());
                         if (number < 1000 || number > 1000000) {
                             return {msg: "CPU period must be between 1000μs (1ms) and 1000000μs (1s)"}
                         }
                     }],
-                    dockerCloudImage_BlkioWeight: [positiveIntegerValidator, function ($elt) {
+                    dockerCloudImage_BlkioWeight: [noWindowsValidator, positiveIntegerValidator, function ($elt) {
                         var number = parseInt($elt.val());
                         if (number < 10 || number > 1000) {
                             return {msg: "IO weight must be between 10 and 1000"}
                         }
                     }],
-                    dockerCloudImage_MemorySwap: [positiveIntegerValidator,
+                    dockerCloudImage_MemorySwap: [noWindowsValidator, positiveIntegerValidator,
                         function ($elt) {
                             if (self.$swapUnlimited.is(":checked")) {
                                 return;
@@ -1829,7 +1848,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                                 return {msg: "Swap limit must be strictly greater than the memory limit."}
                             }
                         }
-                    ]
+                    ],
+                    dockerCloudImage_OomKillDisable: [noWindowsValidator],
+                    dockerCloudImage_CgroupParent: [noWindowsValidator]
                 };
             },
 

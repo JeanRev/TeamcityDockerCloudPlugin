@@ -356,6 +356,7 @@
                     </th>
                     <td>
                         <input type="text" id="dockerCloudImage_CgroupParent"/>
+                        <div class="warning" id="dockerCloudImage_CgroupParent_warning"></div>
                     </td>
                 </tr>
             </table>
@@ -639,6 +640,7 @@
                     <td>
                         <input type="text" class="textField" id="dockerCloudImage_CpuPeriod"/>
                         <span class="error" id="dockerCloudImage_CpuPeriod_error"></span>
+                        <div class="warning" id="dockerCloudImage_CpuPeriod_warning"></div>
                     </td>
                 </tr>
                 <tr>
@@ -649,6 +651,7 @@
                     <td>
                         <input type="text" id="dockerCloudImage_CpusetCpus" class="textField"/>
                         <span class="error" id="dockerCloudImage_CpusetCpus_error"></span>
+                        <div class="warning" id="dockerCloudImage_CpusetCpus_warning"></div>
                     </td>
                 </tr>
                 <tr>
@@ -661,6 +664,7 @@
                         <input type="text" class="textField" id="dockerCloudImage_CpusetMems"/>
 
                         <span class="error" id="dockerCloudImage_CpusetMems_error"></span>
+                        <div class="warning" id="dockerCloudImage_CpusetMems_warning"></div>
                     </td>
                 </tr>
                 <tr>
@@ -680,6 +684,7 @@
                     <td>
                         <input type="text" id="dockerCloudImage_BlkioWeight" class="textField"/>
                         <span class="error" id="dockerCloudImage_BlkioWeight_error"></span>
+                        <div class="warning" id="dockerCloudImage_BlkioWeight_warning"></div>
                     </td>
                 </tr>
             </table>
@@ -715,6 +720,7 @@
                         <input type="checkbox" id="dockerCloudImage_OomKillDisable"
                                data-bind="checked: oom_kill_disable"/>
                         <label for="dockerCloudImage_OomKillDisable">Disable OOM killer.</label>
+                        <div class="warning" id="dockerCloudImage_OomKillDisable_warning"></div>
                     </td>
                 </tr>
                 <tr>
