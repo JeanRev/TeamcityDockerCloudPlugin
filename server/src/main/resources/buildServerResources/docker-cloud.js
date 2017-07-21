@@ -519,11 +519,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         .removeData('profile');
                 }
 
-                BS.DockerImageDialog.showCentered();
-
-                // Update validation status and all other kinds of handler. This must be done after showing the dialog
-                // since validation will skip elements that are not visible.
+                // Update validation status and all other kinds of handler.
                 self._triggerAllFields(existingImage);
+
+                BS.DockerImageDialog.showCentered();
             },
             _showImageDialogClickHandler: function () {
                 if (!self.$newImageBtn.attr('disabled')) {
@@ -1231,8 +1230,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     $swap.blur();
                 });
 
-                self.$dialog.on("blur", 'input:text', self.validate);
-                self.$dialog.on("change", 'input:not(input:text):not(input:button), select', self.validate);
+                self.$dialog.on("blur", 'input:text', self.validateHandler);
+                self.$dialog.on("change", 'input:not(input:text):not(input:button), select', self.validateHandler);
 
                 self.$imagesTable.on('click', ".dockerCloudDeleteBtn", function() {
                     if (!confirm('Do you really want to delete this image ?')) {
@@ -1883,25 +1882,46 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.testCancelled = false;
             },
 
-            validate: function () {
+            validateHandler: function() {
+                var $elt = $j(this);
+                var eltId = $elt.attr("id") || $elt.attr("name");
 
-                var result;
-                var elt = $j(this);
-                var eltId = elt.attr("id") || elt.attr("name");
-
-                var vals = self.validators[eltId];
-                if (!vals) {
-                    vals = self.validators[eltId.replace(/[0-9]+/, "IDX")];
+                var validators = self.validators[eltId];
+                if (!validators) {
+                    validators = self.validators[eltId.replace(/[0-9]+/, "IDX")];
                 }
+
+                var validation = self.validate($elt, validators);
+
+                var tab = self._getElementTab($elt);
+                var errorMsg = $j("#" + eltId + "_error").empty();
+                var warningMsg = $j("#" + eltId + "_warning").empty();
+
+                tab.clearMessages(eltId);
+
+                if (validation.warnings.length) {
+                    $j.each(validation.warnings.warnings, function(i, warning) {
+                        warningMsg.append('<p>' + warning + '</p>');
+                    });
+                    tab.addMessage(eltId, true)
+                }
+                if (validation.error) {
+                    errorMsg.append(validation.error);
+                    tab.addMessage(eltId, false)
+                }
+            },
+
+            validate: function ($elt, validators) {
+                var result;
 
                 var error = null;
                 var warnings = [];
                 // Only validate fields that are not disabled.
                 // Note: fields that are not visible must always be validated in order to perform cross-tabs
                 // validation.
-                if (vals && !elt.is(':disabled')) {
-                    $j.each(vals, function (i, validator) {
-                        result = validator(elt);
+                if (validators && !$elt.is(':disabled')) {
+                    $j.each(validators, function (i, validator) {
+                        result = validator($elt);
                         if (result) {
                             if (result.warning) {
                                 warnings.push(result.msg);
@@ -1912,24 +1932,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     });
                 }
 
-                var tab = self._getElementTab(elt);
-                var errorMsg = $j("#" + eltId + "_error").empty();
-                var warningMsg = $j("#" + eltId + "_warning").empty();
-
-                tab.clearMessages(eltId);
-
-                if (warnings.length) {
-                    $j.each(warnings, function(i, warning) {
-                        warningMsg.append('<p>' + warning + '</p>');
-                    });
-                    tab.addMessage(eltId, true)
-                }
-                if (error) {
-                    errorMsg.append(error);
-                    tab.addMessage(eltId, false)
-                }
-
-                return true;
+                return { warnings: warnings || [], error: error};
             },
 
             /* UTILS */

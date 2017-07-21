@@ -865,3 +865,66 @@ describe('Sanitizing Daemon URI', function() {
         expect(dockerCloud.sanitizeURI('somehostname:2375', false)).toEqual('tcp://somehostname:2375');
     });
 });
+
+describe('Field validation', function() {
+
+    var Validator = function(result) {
+        var self = this;
+        self.invoked = false;
+        self.run = function() {
+            self.invoked = true;
+            return result;
+        }
+    };
+
+    var emptyValidationResult = { warnings: [], error: null };
+    
+    it('should work with no validators defined', function() {
+        expect(dockerCloud.validate($j('<input/>', null))).toEqual(emptyValidationResult);
+        expect(dockerCloud.validate($j('<input/>', []))).toEqual(emptyValidationResult);
+    });
+
+    it('should return empty result for successful validation', function() {
+        var validator = new Validator();
+        expect(dockerCloud.validate($j('<input/>'), [ validator.run ])).toEqual(emptyValidationResult);
+        expect(validator.invoked).toEqual(true);
+    });
+
+    it('should handle validation error', function() {
+        var okValidator1 = new Validator();
+        var errorValidator1 = new Validator({ msg: 'error1' });
+        var errorValidator2 = new Validator({ msg: 'error2' });
+        var okValidator2 = new Validator();
+
+        expect(dockerCloud.validate($j('<input/>'), [ okValidator1.run, errorValidator1.run, errorValidator2.run,
+            okValidator2.run ])).toEqual({ warnings: [], error: 'error1' });
+        expect(okValidator1.invoked).toEqual(true);
+        expect(errorValidator1.invoked).toEqual(true);
+        expect(errorValidator2.invoked).toEqual(true);
+        expect(okValidator2.invoked).toEqual(true);
+    });
+
+    it('should handle validation warnings', function() {
+        var errorValidator1 = new Validator({ msg: 'error1' });
+        var warnValidator1 = new Validator({ msg: 'warn1', warning: true });
+        var errorValidator2 = new Validator({ msg: 'error1' });
+        var warnValidator2 = new Validator({ msg: 'warn2', warning: true });
+
+        expect(dockerCloud.validate($j('<input/>'), [ errorValidator1.run, warnValidator1.run, errorValidator2.run,
+            warnValidator2.run ])).toEqual({ warnings: [ 'warn1', 'warn2' ], error: 'error1' });
+        expect(errorValidator1.invoked).toEqual(true);
+        expect(warnValidator1.invoked).toEqual(true);
+        expect(errorValidator2.invoked).toEqual(true);
+        expect(warnValidator2.invoked).toEqual(true);
+    });
+
+    it('should ignore disabled fields', function() {
+        var warnValidator = new Validator({ msg: 'warn1', warning: true });
+        var errorValidator = new Validator({ msg: 'error1' });
+
+        expect(dockerCloud.validate($j('<input/>').prop('disabled', true),
+            [ warnValidator.run, errorValidator.run ])).toEqual(emptyValidationResult);
+        expect(warnValidator.invoked).toEqual(false);
+        expect(errorValidator.invoked).toEqual(false);
+    });
+});
