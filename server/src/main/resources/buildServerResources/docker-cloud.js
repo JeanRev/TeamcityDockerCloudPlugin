@@ -399,6 +399,28 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$tcImagesDetails.val(json);
             },
 
+            _addTableRow: function($tableBody) {
+                var key = $tableBody.attr("id");
+                var index = $j.data($tableBody.get(0), "index") || 0;
+                index++;
+                self.logDebug("Adding row #" + index + " to table " + key + ".");
+
+                var newRow = '<tr>' + self.arrayTemplates[key].replace(/IDX/g, index) + '<td' +
+                    ' class="center dockerCloudCtrlCell">' + self.arrayTemplates.deleteCell + '</td></tr>';
+
+                var $table = $tableBody.closest("table");
+                // Add the new line as the last line before the table controls, or as the last table line if no
+                // controls are available.
+                var $lastRow = $tableBody.children('tr').last();
+                if ($lastRow.hasClass('dockerCloudAddItem')) {
+                    $lastRow.before(newRow);
+                } else {
+                    $tableBody.append(newRow)
+                }
+                $j.data($tableBody.get(0), "index", index);
+                self._updateTableMandoryStarsVisibility($table);
+            },
+
             _updateAllTablesMandoryStarsVisibility: function() {
                 self.$dialogTables.each(function(i, table) {
                     self._updateTableMandoryStarsVisibility($j(table));
@@ -1277,15 +1299,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                     // Fetch closest table.
                     var $tableBody = $elt.closest("tbody");
-                    var key = $tableBody.attr("id");
-                    var index = $j.data($tableBody.get(0), "index") || 0;
-                    index++;
-                    self.logDebug("Adding row #" + index + " to table " + key + ".");
-                    var $table = $elt.closest("table");
-                    $elt.closest("tr").before('<tr>' + self.arrayTemplates[key].replace(/IDX/g, index) + '<td' +
-                    ' class="center dockerCloudCtrlCell">' + self.arrayTemplates.deleteCell + '</td></tr>');
-                    $j.data($tableBody.get(0), "index", index);
-                    self._updateTableMandoryStarsVisibility($table);
+
+                    self._addTableRow($tableBody);
                 });
 
                 self.$swapUnlimited.change(function() {
@@ -1639,14 +1654,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 };
 
                 var positiveIntegerValidator = function ($elt) {
-                    var value = $elt.val().trim().replace(/^0+/, '');
+                    var value = $elt.val().trim().replace(/^0+(.+)/, '$1');
                     $elt.val(value);
                     if (!value) {
                         return;
                     }
                     if (/^[0-9]+$/.test(value)) {
-                        // Check that we are in the positive range of a golang int64 max value.
-                        if (parseInt(value) > 9223372036854775807) {
+                        // Check that we are in the positive range of a golang int64 max value, which is
+                        // 9223372036854775807 minus a safety marge due to comparison rounding errors.
+                        if (parseInt(value) > 9000000000000000000) {
                             return {msg: "Value out of bound."};
                         }
                     } else {
@@ -1655,6 +1671,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 };
 
                 var portNumberValidator = function ($elt) {
+                    var value = $elt.val();
+                    if (!value) {
+                        return;
+                    }
                     var number = parseInt($elt.val());
                     if (number >= 1 && number <= 65535) {
                         return;
@@ -1664,12 +1684,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 var cpusValidator = function($elt) {
                     var value = autoTrim($elt).replace(/^0+\B/, '');
+                    $elt.val(value);
                     if (!value) {
                         return;
                     }
                     if (/^[0-9]+(\.[0-9]+)?$/.test(value)) {
                         var number = parseFloat(value) * 1e9;
-                        if (number > 9223372036854775807) {
+                        if (number > 9000000000000000000) {
                             return {msg: "Value out of bound."};
                         }
                         if (number % 1 !== 0) { // Should have no decimal part left.
@@ -1707,7 +1728,6 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     if (!daemonOs) {
                         return;
                     }
-                    self.logInfo("The val: " + elt.val());
                     if (isEmptyInput(elt)) {
                         return;
                     }
@@ -1736,7 +1756,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.validators = {
                     dockerCloudImage_Profile: [requiredValidator, function($elt) {
                         if (!/^\w+$/.test($elt.val())) {
-                            return {msg: 'Only alphanumerical characters without diacritic and underscores allowed.'}
+                            return {msg: 'Only alphanumerical characters (without diacritic) and underscores' +
+                            ' allowed.'}
                         }
                     }, function($elt) {
                         var newProfile = $elt.val();
@@ -1747,20 +1768,22 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }],
                     dockerCloudImage_Image: [requiredValidator],
                     dockerCloudImage_MaxInstanceCount: [positiveIntegerValidator, function($elt) {
-                        if (parseInt($elt.val()) < 1) {
+                        var value = $elt.val();
+                        if (value && parseInt(value) < 1) {
                             return {msg: "At least one instance must be permitted."};
                         }
                     }],
                     dockerCloudImage_RegistryUser: [function ($elt){
-                        var pass = self.$registryPassword.val().trim();
-                        var user = $elt.val().trim();
+                        autoTrim($elt);
+                        var pass = self.$registryPassword.val();
+                        var user = $elt.val();
                         if (pass && !user) {
                             return {msg: 'Must specify user if password set.'}
                         }
                     }],
                     dockerCloudImage_RegistryPassword: [function ($elt){
                         var user = self.$registryUser.val().trim();
-                        var pass = $elt.val().trim();
+                        var pass = $elt.val();
                         if (user && !pass) {
                             return {msg: 'Must specify password if user set.'}
                         }
@@ -1769,8 +1792,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     dockerCloudImage_Entrypoint_IDX: [function ($elt) {
                         var row = $elt.closest("tr");
                         if (row.index() === 0) {
-                            var value = $elt.val().trim();
-                            $elt.val(value);
+                            var value = autoTrim($elt);
                             if (!value) {
                                 return {msg: "The first entry point argument must point to an executable."};
                             }
@@ -1798,16 +1820,24 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     dockerCloudImage_Labels_IDX_Key: [requiredValidator],
                     dockerCloudImage_SecurityOpt_IDX: [requiredValidator],
                     dockerCloudImage_StorageOpt_IDX_Key: [requiredValidator],
-                    dockerCloudImage_Memory: [positiveIntegerValidator, function ($elt) {
-                        var number = parseInt($elt.val());
+                        dockerCloudImage_Memory: [positiveIntegerValidator, function ($elt) {
+                        var value = $elt.val();
+                        if (!value) {
+                            return;
+                        }
+                        var number = parseInt(value);
                         var multiplier = self._units_multiplier[self.$memoryUnit.val()];
-                        if ((number * multiplier) < 524288) {
+                        if ((number * multiplier) < 4194304) {
                             return {msg: "Memory must be at least 4Mb."}
                         }
                     }],
                     dockerCloudImage_CPUs: [cpusValidator, versionValidator.bind(this, '1.25')],
                     dockerCloudImage_CpuQuota: [positiveIntegerValidator, function($elt) {
-                        var number = parseInt($elt.val());
+                        var value = $elt.val();
+                        if (!value) {
+                            return;
+                        }
+                        var number = parseInt(value);
                         if (number < 1000) {
                             return {msg: "CPU Quota must be at least of 1000μs (1ms)."}
                         }
@@ -1816,19 +1846,31 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     dockerCloudImage_CpusetMems: [noWindowsValidator, cpuSetValidator],
                     dockerCloudImage_CpuShares: [positiveIntegerValidator],
                     dockerCloudImage_CpuPeriod: [noWindowsValidator, positiveIntegerValidator, function($elt) {
-                        var number = parseInt($elt.val());
+                        var value = $elt.val();
+                        if (!value) {
+                            return;
+                        }
+                        var number = parseInt(value);
                         if (number < 1000 || number > 1000000) {
                             return {msg: "CPU period must be between 1000μs (1ms) and 1000000μs (1s)"}
                         }
                     }],
                     dockerCloudImage_BlkioWeight: [noWindowsValidator, positiveIntegerValidator, function ($elt) {
-                        var number = parseInt($elt.val());
+                        var value = $elt.val();
+                        if (!value) {
+                            return;
+                        }
+                        var number = parseInt(value);
                         if (number < 10 || number > 1000) {
                             return {msg: "IO weight must be between 10 and 1000"}
                         }
                     }],
                     dockerCloudImage_MemorySwap: [noWindowsValidator, positiveIntegerValidator,
                         function ($elt) {
+                            var value = $elt.val();
+                            if (!value) {
+                                return;
+                            }
                             if (self.$swapUnlimited.is(":checked")) {
                                 return;
                             }
@@ -1840,7 +1882,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             if (isNaN(memory)) {
                                 return;
                             }
-                            var swap = parseInt($elt.val());
+                            var swap = parseInt(value);
                             var memoryUnitMultiplier = self._units_multiplier[self.$memoryUnit.val()];
                             var swapUnitMultiplier = self._units_multiplier[self.$swapUnit.val()];
                             if (swap * swapUnitMultiplier <= memory * memoryUnitMultiplier) {
@@ -1878,7 +1920,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testExecInfo.empty();
                 self.$testExecInfo.hide();
                 self.$testContainerLabel.removeClass('containerTestError');
-                self.$testContainerCancelBtn.attr('disabled', false)
+                self.$testContainerCancelBtn.attr('disabled', false);
                 self.testCancelled = false;
             },
 
