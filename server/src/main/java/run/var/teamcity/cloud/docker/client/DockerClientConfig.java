@@ -35,10 +35,8 @@ public class DockerClientConfig {
      * @throws NullPointerException if {@code instanceURI} is {@code null}
      */
     public DockerClientConfig(@Nonnull URI instanceURI, DockerAPIVersion apiVersion) {
-        DockerCloudUtils.requireNonNull(instanceURI, "Docker instance URI cannot be null.");
-        DockerCloudUtils.requireNonNull(apiVersion, "Docker version API cannot be null.");
-        this.instanceURI = instanceURI;
-        this.apiVersion = apiVersion;
+        this.instanceURI = DockerCloudUtils.requireNonNull(instanceURI, "Docker instance URI cannot be null.");
+        this.apiVersion = DockerCloudUtils.requireNonNull(apiVersion, "Docker version API cannot be null.");
     }
 
     /**

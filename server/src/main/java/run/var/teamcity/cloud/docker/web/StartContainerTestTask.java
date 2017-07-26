@@ -35,10 +35,8 @@ class StartContainerTestTask extends ContainerTestTask {
     StartContainerTestTask(@Nonnull ContainerTestHandler testTaskHandler, @Nonnull String containerId,
                            @Nonnull UUID instanceUuid) {
         super(testTaskHandler, Phase.START);
-        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
-        DockerCloudUtils.requireNonNull(instanceUuid, "Test instance UUID cannot be null.");
-        this.containerId = containerId;
-        this.instanceUuid = instanceUuid;
+        this.containerId = DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
+        this.instanceUuid = DockerCloudUtils.requireNonNull(instanceUuid, "Test instance UUID cannot be null.");
     }
 
     @Override

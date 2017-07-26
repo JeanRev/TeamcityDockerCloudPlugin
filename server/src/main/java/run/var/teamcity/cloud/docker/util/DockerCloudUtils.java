@@ -18,9 +18,12 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.IllegalFormatException;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 /**
@@ -162,17 +165,37 @@ public final class DockerCloudUtils {
      * Test for argument nullity.
      *
      * @param obj the object to test
-     * @param msg the error message to be thrown
+     * @param msg the error message
+     * notation)
+     *
+     * @return {@code obj} when non null
      *
      * @throws NullPointerException if any argument is {@code null}
      */
-    public static void requireNonNull(@Nonnull Object obj, @Nonnull String msg) {
-        if (msg == null) {
-            throw new NullPointerException("Error message cannot be null.");
+    @Nonnull
+    public static <T> T requireNonNull(T obj, @Nonnull String msg) {
+        return requireNonNull(obj, () -> msg);
+    }
+
+    /**
+     * Test for argument nullity.
+     *
+     * @param obj the object to test
+     * @param msgSupplier the error message supplier
+     *
+     * @return {@code obj} when non null
+     *
+     * @throws NullPointerException if any argument is {@code null}
+     */
+    @Nonnull
+    public static <T> T requireNonNull(T obj, @Nonnull Supplier<String> msgSupplier) {
+        if (msgSupplier == null) {
+            throw new NullPointerException("Error message supplier cannot be null.");
         }
         if (obj == null) {
-            throw new NullPointerException(msg);
+            throw new NullPointerException(msgSupplier.get());
         }
+        return obj;
     }
 
     /**

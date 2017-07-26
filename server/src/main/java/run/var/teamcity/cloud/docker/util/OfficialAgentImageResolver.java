@@ -61,11 +61,8 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
      */
     public OfficialAgentImageResolver(String version, DockerRegistryClientFactory registryClientFty) {
         super(new DockerImageDefaultResolver());
-        DockerCloudUtils.requireNonNull(version, "Version string cannot be null.");
-        DockerCloudUtils.requireNonNull(registryClientFty, "Registry client factory cannot be null.");
-
-        this.version = version;
-        this.registryClientFty = registryClientFty;
+        this.version = DockerCloudUtils.requireNonNull(version, "Version string cannot be null.");
+        this.registryClientFty = DockerCloudUtils.requireNonNull(registryClientFty, "Registry client factory cannot be null.");
     }
 
     /**

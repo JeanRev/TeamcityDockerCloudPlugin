@@ -71,17 +71,13 @@ public class TestContainerStatusMsg {
      */
     public TestContainerStatusMsg(@Nonnull UUID uuid, @Nonnull Phase phase, @Nonnull Status status, @Nullable String msg,
                                   @Nullable String containerId, @Nullable Throwable failure, List<String> warnings) {
-        DockerCloudUtils.requireNonNull(uuid, "Test UUID cannot be null.");
-        DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
-        DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
-        DockerCloudUtils.requireNonNull(warnings, "Warnings list cannot be null.");
-        this.taskUuid = uuid;
-        this.phase = phase;
-        this.status = status;
+        this.taskUuid = DockerCloudUtils.requireNonNull(uuid, "Test UUID cannot be null.");
+        this.phase = DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
+        this.status = DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
         this.msg = msg;
         this.containerId = containerId;
         this.throwable = failure;
-        this.warnings = warnings;
+        this.warnings = DockerCloudUtils.requireNonNull(warnings, "Warnings list cannot be null.");
     }
 
     /**

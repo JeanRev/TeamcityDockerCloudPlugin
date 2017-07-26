@@ -14,10 +14,8 @@ public class ContainerCoordinates {
     private final DockerClientConfig clientConfig;
 
     public ContainerCoordinates(@Nonnull String containerId, @Nonnull DockerClientConfig clientConfig) {
-        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
-        DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
-        this.containerId = containerId;
-        this.clientConfig = clientConfig;
+        this.containerId = DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
+        this.clientConfig = DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
     }
 
     @Nonnull

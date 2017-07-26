@@ -40,9 +40,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      * @throws NullPointerException if {@code img} is {@code null}
      */
     DockerInstance(@Nonnull DockerImage img) {
-        DockerCloudUtils.requireNonNull(img, "Docker image cannot be null.");
-
-        this.img = img;
+        this.img = DockerCloudUtils.requireNonNull(img, "Docker image cannot be null.");
 
         // The instance is expected to be started immediately (we must do this to ensure that getStartedTime() always
         // return some meaningful value).

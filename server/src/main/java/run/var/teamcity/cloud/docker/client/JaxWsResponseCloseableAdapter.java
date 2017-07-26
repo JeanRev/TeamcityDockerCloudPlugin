@@ -24,8 +24,7 @@ public class JaxWsResponseCloseableAdapter implements Closeable {
      * @throws NullPointerException if {@code response} is {@code null}
      */
     public JaxWsResponseCloseableAdapter(@Nonnull Response response) {
-        DockerCloudUtils.requireNonNull(response, "Response cannot be null.");
-        this.response = response;
+        this.response = DockerCloudUtils.requireNonNull(response, "Response cannot be null.");
     }
 
     @Override

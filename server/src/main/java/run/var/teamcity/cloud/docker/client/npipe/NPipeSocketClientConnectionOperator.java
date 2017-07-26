@@ -25,8 +25,7 @@ public class NPipeSocketClientConnectionOperator implements HttpClientConnection
      * @throws NullPointerException if {@code pipeAddress} is {@code null}
      */
     public NPipeSocketClientConnectionOperator(NPipeSocketAddress pipeAddress) {
-        DockerCloudUtils.requireNonNull(pipeAddress, "Pipe address cannot be null.");
-        this.pipeAddress = pipeAddress;
+        this.pipeAddress = DockerCloudUtils.requireNonNull(pipeAddress, "Pipe address cannot be null.");
     }
 
     @Override

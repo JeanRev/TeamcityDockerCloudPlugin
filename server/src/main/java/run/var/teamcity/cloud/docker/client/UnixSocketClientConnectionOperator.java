@@ -30,8 +30,7 @@ class UnixSocketClientConnectionOperator implements HttpClientConnectionOperator
      * @param socketFile the Unix socket file
      */
     UnixSocketClientConnectionOperator(@Nonnull Path socketFile) {
-        DockerCloudUtils.requireNonNull(socketFile, "Socket file cannot be null.");
-        this.socketFile = socketFile;
+        this.socketFile = DockerCloudUtils.requireNonNull(socketFile, "Socket file cannot be null.");
     }
 
     @Override

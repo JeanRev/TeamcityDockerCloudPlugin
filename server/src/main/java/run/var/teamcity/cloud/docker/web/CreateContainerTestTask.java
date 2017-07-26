@@ -45,14 +45,10 @@ class CreateContainerTestTask extends ContainerTestTask {
                             @Nonnull String serverUrl, @Nonnull UUID instanceUuid,
                             @Nonnull DockerImageNameResolver imageResolver) {
         super(testTaskHandler, TestContainerStatusMsg.Phase.CREATE);
-        DockerCloudUtils.requireNonNull(imageConfig, "Cloud image configuration cannot be null.");
-        DockerCloudUtils.requireNonNull(serverUrl, "Server URL cannot be null.");
-        DockerCloudUtils.requireNonNull(instanceUuid, "Test instance UUID cannot be null.");
-        DockerCloudUtils.requireNonNull(imageResolver, "Image resolver cannot be null.");
-        this.imageConfig = imageConfig;
-        this.serverUrl = serverUrl;
-        this.instanceUuid = instanceUuid;
-        this.imageResolver = imageResolver;
+        this.imageConfig = DockerCloudUtils.requireNonNull(imageConfig, "Cloud image configuration cannot be null.");
+        this.serverUrl = DockerCloudUtils.requireNonNull(serverUrl, "Server URL cannot be null.");
+        this.instanceUuid = DockerCloudUtils.requireNonNull(instanceUuid, "Test instance UUID cannot be null.");
+        this.imageResolver = DockerCloudUtils.requireNonNull(imageResolver, "Image resolver cannot be null.");
     }
 
     @Override

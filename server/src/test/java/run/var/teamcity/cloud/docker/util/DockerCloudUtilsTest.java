@@ -27,6 +27,14 @@ public class DockerCloudUtilsTest {
     }
 
     @Test
+    public void requireNotNullMessageSupplier() {
+        String errorMsg = "Blah blah";
+        DockerCloudUtils.requireNonNull(new Object(), () -> errorMsg);
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> DockerCloudUtils.requireNonNull(null,
+                () -> errorMsg)).withMessage("Blah blah");
+    }
+
+    @Test
     public void getClientId() {
         AgentDescription description = new TestSBuildAgent().
                 environmentVariable(DockerCloudUtils.ENV_CLIENT_ID, TestUtils.TEST_UUID.toString());

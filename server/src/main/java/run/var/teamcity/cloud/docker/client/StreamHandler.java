@@ -33,12 +33,9 @@ public abstract class StreamHandler implements AutoCloseable {
      * @throws NullPointerException if any argument is {@code null}
      */
     StreamHandler(@Nonnull Closeable closeHandle, @Nonnull InputStream inputStream, @Nonnull OutputStream outputStream) {
-        DockerCloudUtils.requireNonNull(closeHandle, "Close handle cannot be null.");
-        DockerCloudUtils.requireNonNull(inputStream, "Source input stream cannot be null.");
-        DockerCloudUtils.requireNonNull(outputStream, "Source output stream cannot be null.");
-        this.closeHandle = closeHandle;
-        this.inputStream = inputStream;
-        this.outputStream = outputStream;
+        this.closeHandle = DockerCloudUtils.requireNonNull(closeHandle, "Close handle cannot be null.");
+        this.inputStream = DockerCloudUtils.requireNonNull(inputStream, "Source input stream cannot be null.");
+        this.outputStream = DockerCloudUtils.requireNonNull(outputStream, "Source output stream cannot be null.");
     }
 
     /**

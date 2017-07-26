@@ -27,10 +27,8 @@ public class WrappedRunnableFuture<T, V> implements RunnableFuture<V> {
      * @param wrapped the object to which all invocations will be delegated
      */
     public WrappedRunnableFuture(@Nonnull T task, @Nonnull RunnableFuture<V> wrapped) {
-        DockerCloudUtils.requireNonNull(task, "Source task cannot be null.");
-        DockerCloudUtils.requireNonNull(wrapped, "Wrapped runnable cannot be null.");
-        this.task = task;
-        this.wrapped = wrapped;
+        this.task = DockerCloudUtils.requireNonNull(task, "Source task cannot be null.");
+        this.wrapped = DockerCloudUtils.requireNonNull(wrapped, "Wrapped runnable cannot be null.");
     }
 
     @Nonnull

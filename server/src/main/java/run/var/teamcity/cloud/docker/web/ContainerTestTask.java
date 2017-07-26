@@ -45,10 +45,8 @@ abstract class ContainerTestTask implements Runnable {
      * @throws NullPointerException if any argument is {@code null}
      */
     ContainerTestTask(@Nonnull ContainerTestHandler testTaskHandler, @Nonnull Phase initialPhase) {
-        DockerCloudUtils.requireNonNull(testTaskHandler, "Test task handler cannot be null.");
-        DockerCloudUtils.requireNonNull(initialPhase, "Initial phase cannot be null.");
-        this.testTaskHandler = testTaskHandler;
-        this.phase = initialPhase;
+        this.testTaskHandler = DockerCloudUtils.requireNonNull(testTaskHandler, "Test task handler cannot be null.");
+        this.phase = DockerCloudUtils.requireNonNull(initialPhase, "Initial phase cannot be null.");
     }
 
     /**
