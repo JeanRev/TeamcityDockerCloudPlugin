@@ -25,6 +25,7 @@ import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
+import run.var.teamcity.cloud.docker.util.LockHandler;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
 import run.var.teamcity.cloud.docker.web.atmo.DefaultAtmosphereFacade;
@@ -40,7 +41,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Spring controller to manage lifecycle of container tests.
@@ -59,7 +59,7 @@ public class ContainerTestController extends BaseFormJsonController {
 
     public static final String PATH = "test-container.html";
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final LockHandler lock = LockHandler.newReentrantLock();
     private final Map<UUID, TestListener> listeners = new HashMap<>();
     private final ContainerTestManager testMgr;
     private final AtmosphereFrameworkFacade atmosphereFramework;
@@ -164,12 +164,8 @@ public class ContainerTestController extends BaseFormJsonController {
 
             TestListener listener = new TestListener();
             UUID testUuid = testMgr.createNewTestContainer(clientConfig, imageConfig, listener);
-            lock.lock();
-            try {
-                listeners.put(testUuid, listener);
-            } finally {
-                lock.unlock();
-            }
+
+            lock.run(() -> listeners.put(testUuid, listener));
 
             responseNode.put("testUuid", testUuid);
             return;
@@ -300,12 +296,7 @@ public class ContainerTestController extends BaseFormJsonController {
                 }
             }
 
-            lock.lock();
-            try {
-                listeners.values().remove(this);
-            } finally {
-                lock.unlock();
-            }
+            lock.run(() -> listeners.values().remove(this));
         }
     }
 }

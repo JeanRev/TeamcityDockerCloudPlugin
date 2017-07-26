@@ -19,6 +19,7 @@ import run.var.teamcity.cloud.docker.client.StdioInputStream;
 import run.var.teamcity.cloud.docker.client.StdioType;
 import run.var.teamcity.cloud.docker.client.StreamHandler;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.LockHandler;
 import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
 import run.var.teamcity.cloud.docker.web.atmo.DefaultAtmosphereFacade;
 
@@ -31,7 +32,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class StreamingController extends AbstractController {
 
@@ -39,7 +39,7 @@ public class StreamingController extends AbstractController {
 
     private final DefaultAtmosphereFacade atmosphereFramework;
     private final Broadcaster streamingBroadcaster;
-    private final ReentrantLock lock = new ReentrantLock();
+    private final LockHandler lock = LockHandler.newReentrantLock();
 
     private Map<UUID, ContainerCoordinates> containerMaps = new HashMap<>();
 
@@ -60,26 +60,17 @@ public class StreamingController extends AbstractController {
     public void registerContainer(@Nonnull UUID correlationId, @Nonnull ContainerCoordinates containerCoordinates) {
         DockerCloudUtils.requireNonNull(correlationId, "ID cannot be null.");
         DockerCloudUtils.requireNonNull(containerCoordinates, "Container coordinates cannot be null.");
-        try {
-            lock.lock();
-            containerMaps.put(correlationId, containerCoordinates);
-        } finally {
-            lock.unlock();
-        }
+        lock.run(() -> containerMaps.put(correlationId, containerCoordinates));
     }
 
     public void clearConfiguration(@Nonnull UUID correlationId) {
         DockerCloudUtils.requireNonNull(correlationId, "ID cannot be null.");
-        try {
-            lock.lock();
-            containerMaps.remove(correlationId);
-        } finally {
-            lock.unlock();
-        }
+        lock.run(() -> containerMaps.remove(correlationId));
     }
 
     @Override
-    protected ModelAndView handleRequestInternal(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    protected ModelAndView handleRequestInternal(HttpServletRequest request, HttpServletResponse response) throws
+            Exception {
         WebUtils.configureRequestForAtmosphere(request);
 
         atmosphereFramework.doCometSupport(AtmosphereRequest.wrap(request), AtmosphereResponse.wrap(response));
@@ -125,8 +116,9 @@ public class StreamingController extends AbstractController {
                     }
                     streamingBroadcaster.broadcast("Connection with container lost.", atmosphereResource);
                 } catch (IOException e) {
-                    streamingBroadcaster.broadcast("Connection with server failed:\n" + DockerCloudUtils.getStackTrace(e),
-                            atmosphereResource);
+                    streamingBroadcaster
+                            .broadcast("Connection with server failed:\n" + DockerCloudUtils.getStackTrace(e),
+                                    atmosphereResource);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -176,14 +168,8 @@ public class StreamingController extends AbstractController {
                 throw new IllegalArgumentException("Invalid correlation ID: " + correlationIdParam);
             }
 
-            ContainerCoordinates containerCoordinates;
+            ContainerCoordinates containerCoordinates = lock.call(() -> containerMaps.get(correlationId));
 
-            try {
-                lock.lock();
-                containerCoordinates = containerMaps.get(correlationId);
-            } finally {
-                lock.unlock();
-            }
             containerMaps.get(correlationId);
             if (containerCoordinates == null) {
                 throw new IllegalArgumentException("Bad or expired correlation ID.");
@@ -233,7 +219,8 @@ public class StreamingController extends AbstractController {
                     .getAttribute(WORKER_ATTRIBUTE);
         }
 
-        abstract StreamWorker createWorker(ContainerCoordinates containerCoordinates, AtmosphereResource atmosphereResource);
+        abstract StreamWorker createWorker(ContainerCoordinates containerCoordinates, AtmosphereResource
+                atmosphereResource);
     }
 
     private class LogsHandler extends StreamWebSocketHandler {

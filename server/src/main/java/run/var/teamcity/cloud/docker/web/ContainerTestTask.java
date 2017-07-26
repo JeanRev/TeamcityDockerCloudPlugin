@@ -2,12 +2,12 @@ package run.var.teamcity.cloud.docker.web;
 
 import com.intellij.openapi.diagnostic.Logger;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.LockHandler;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
@@ -28,7 +28,7 @@ abstract class ContainerTestTask implements Runnable {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(ContainerTestTask.class);
 
-    final ReentrantLock lock = new ReentrantLock();
+    private final LockHandler lock = LockHandler.newReentrantLock();
 
     private final List<String> warnings = new ArrayList<>();
     private Status status = Status.PENDING;
@@ -40,7 +40,7 @@ abstract class ContainerTestTask implements Runnable {
      * Creates a new task instance.
      *
      * @param testTaskHandler the test task handler
-     * @param initialPhase    the initial phase of the test
+     * @param initialPhase the initial phase of the test
      *
      * @throws NullPointerException if any argument is {@code null}
      */
@@ -63,15 +63,11 @@ abstract class ContainerTestTask implements Runnable {
     /**
      * Notify a user message and new phase.
      *
-     * @param msg   the message to be notified
+     * @param msg the message to be notified
      * @param phase the new phase to be notified
      */
     void msg(@Nonnull String msg, @Nonnull Phase phase) {
         msg(msg, phase, status);
-    }
-
-    void fail(String msg) {
-        throw new ContainerTestTaskException(msg);
     }
 
     void warning(@Nonnull String warning) {
@@ -127,8 +123,7 @@ abstract class ContainerTestTask implements Runnable {
 
     @Override
     public final void run() {
-        lock.lock();
-        try {
+        lock.run(() -> {
             Exception error = null;
             try {
                 if (status != Status.PENDING) {
@@ -147,9 +142,7 @@ abstract class ContainerTestTask implements Runnable {
             // listener open when WebSockets are in use. The latter case is especially when behind a proxy such as
             // nginx, since it may allow only.
             testTaskHandler.notifyStatus(phase, status, msg, error, warnings);
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
 

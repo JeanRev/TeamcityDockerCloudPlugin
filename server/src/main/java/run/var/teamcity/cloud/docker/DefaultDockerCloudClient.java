@@ -26,6 +26,7 @@ import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.NotFoundException;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
+import run.var.teamcity.cloud.docker.util.LockHandler;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 import run.var.teamcity.cloud.docker.util.Stopwatch;
@@ -35,13 +36,13 @@ import javax.annotation.Nullable;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A Docker {@link CloudClient}.
@@ -63,7 +64,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     /**
      * Lock to synchronize the mutable state of this class.
      */
-    private final ReentrantLock lock = new ReentrantLock();
+    private final LockHandler lock = LockHandler.newReentrantLock();
 
     /**
      * Indicates if a sync with Docker was explicitly scheduled. This flag permits to ignore spurious sync requests.
@@ -207,28 +208,20 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
     @Override
     public boolean isInitialized() {
-        lock.lock();
-        try {
-            return state != State.CREATED;
-        } finally {
-            lock.unlock();
-        }
+        return lock.call(() -> state != State.CREATED);
     }
 
     @Nullable
     @Override
     public DockerImage findImageById(@Nonnull String id) throws CloudException {
-        lock.lock();
-        try {
+        return lock.call(() -> {
             for (DockerImage img : images.values()) {
                 if (img.getId().equals(id)) {
                     return img;
                 }
             }
-        } finally {
-            lock.unlock();
-        }
-        return null;
+            return null;
+        });
     }
 
 
@@ -239,15 +232,13 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
         if (instanceId != null) {
             UUID imageId = DockerCloudUtils.getImageId(agent);
-            lock.lock();
-            try {
+            return lock.call(() -> {
                 DockerImage image = imageId != null ? images.get(imageId) : null;
                 if (image != null) {
                     return image.findInstanceById(instanceId);
                 }
-            } finally {
-                lock.unlock();
-            }
+                return null;
+            });
         }
 
         return null;
@@ -256,12 +247,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     @Nonnull
     @Override
     public Collection<DockerImage> getImages() throws CloudException {
-        lock.lock();
-        try {
-            return images.values();
-        } finally {
-            lock.unlock();
-        }
+        return lock.call(() -> Collections.unmodifiableCollection(images.values()));
     }
 
     @Nullable
@@ -272,17 +258,14 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
     @Override
     public boolean canStartNewInstance(@Nonnull CloudImage image) {
-        lock.lock();
-        try {
+        return lock.call(() -> {
             if (errorInfo != null) {
                 LOG.debug("Cloud client in error state, cannot start new instance.");
                 // The cloud client is currently in an error status. Wait for it to be cleared.
                 return false;
             }
             return dockerClient != null && state == State.READY && ((DockerImage) image).canStartNewInstance();
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Nullable
@@ -304,16 +287,17 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
     @Nonnull
     @Override
-    public DockerInstance startNewInstance(@Nonnull final CloudImage image, @Nonnull final CloudInstanceUserData tag) throws
+    public DockerInstance startNewInstance(@Nonnull final CloudImage image, @Nonnull final CloudInstanceUserData tag)
+            throws
             QuotaException {
 
         LOG.info("Creating new instance from image: " + image);
 
         final DockerImage dockerImage = (DockerImage) image;
 
-        DockerInstance instance = null;
-        lock.lock();
-        try {
+        DockerInstance instance = lock.call(() -> {
+            DockerInstance instanceToStart = null;
+
             if (!canStartNewInstance(image)) {
                 // The Cloud API explicitly gives the possibility to reject a start request if we are not willing to
                 // do so, with a corresponding exception.
@@ -322,20 +306,20 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
             for (DockerInstance existingInstance : dockerImage.getInstances()) {
                 if (existingInstance.getStatus() == InstanceStatus.STOPPED) {
-                    instance = existingInstance;
+                    instanceToStart = existingInstance;
                     break;
                 }
             }
 
-            if (instance == null) {
-                instance = dockerImage.createInstance();
-                LOG.info("Created cloud instance " + instance.getUuid() + ".");
+            if (instanceToStart == null) {
+                instanceToStart = dockerImage.createInstance();
+                LOG.info("Created cloud instance " + instanceToStart.getUuid() + ".");
             } else {
-                LOG.info("Reusing cloud instance " + instance.getUuid() + ".");
+                LOG.info("Reusing cloud instance " + instanceToStart.getUuid() + ".");
             }
-        } finally {
-            lock.unlock();
-        }
+
+            return instanceToStart;
+        });
 
         assert instance != null;
 
@@ -343,92 +327,89 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         // under some circumstances to have orphaned build agents displayed in the TC UI for some time.
         tag.setAgentRemovePolicy(CloudConstants.AgentRemovePolicyValue.RemoveAgent);
 
-        taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Start of container", instance, InstanceStatus.SCHEDULED_TO_START) {
-            @Override
-            protected void callInternal() throws Exception {
+        taskScheduler.scheduleInstanceTask(
+                new DockerInstanceTask("Start of container", instance, InstanceStatus.SCHEDULED_TO_START) {
+                    @Override
+                    protected void callInternal() throws Exception {
 
-                DockerInstance instance = getInstance();
+                        DockerInstance instance = getInstance();
 
-                LOG.info("Starting container " + instance.getUuid());
+                        LOG.info("Starting container " + instance.getUuid());
 
-                String containerId;
+                        String existingContainerId = lock.callInterruptibly(() -> {
+                            checkReady();
+                            instance.updateStartedTime();
+                            instance.setStatus(InstanceStatus.STARTING);
+                            return instance.getContainerId();
+                        });
 
-                lock.lockInterruptibly();
-                try {
-                    checkReady();
-                    instance.updateStartedTime();
-                    instance.setStatus(InstanceStatus.STARTING);
-                    containerId = instance.getContainerId();
-                } finally {
-                    lock.unlock();
-                }
+                        String containerId;
+                        if (existingContainerId == null) {
+                            String image = resolver.resolve(dockerImage.getConfig());
 
-                if (containerId == null) {
-                    String image = resolver.resolve(dockerImage.getConfig());
+                            if (image == null) {
+                                throw new CloudException("No valid image name can be resolved for image " +
+                                        dockerImage.getUuid());
+                            }
 
-                    if (image == null) {
-                        throw new CloudException("No valid image name can be resolved for image " +
-                                dockerImage.getUuid());
-                    }
+                            // Makes sure the image name is actual.
+                            dockerImage.setImageName(image);
 
-                    // Makes sure the image name is actual.
-                    dockerImage.setImageName(image);
+                            String serverAddress = serverURL != null ? serverURL.toString() : tag.getServerAddress();
 
-                    String serverAddress = serverURL != null ? serverURL.toString() : tag.getServerAddress();
+                            Node containerSpec = authorContainerSpec(instance, tag, image, serverAddress);
 
-                    Node containerSpec = authorContainerSpec(instance, tag, image, serverAddress);
-
-                    if (dockerImage.getConfig().isPullOnCreate()) {
-                        try (NodeStream nodeStream = dockerClient.createImage(image, null, dockerImage.getConfig()
-                                .getRegistryCredentials())) {
-                            Node status;
-                            while ((status = nodeStream.next()) != null) {
-                                String error = status.getAsString("error", null);
-                                if (error != null) {
-                                    Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
-                                    throw new CloudException("Failed to pull image: " + error + " -- " + details
-                                            .getAsString("message", null), null);
+                            if (dockerImage.getConfig().isPullOnCreate()) {
+                                try (NodeStream nodeStream = dockerClient
+                                        .createImage(image, null, dockerImage.getConfig()
+                                                .getRegistryCredentials())) {
+                                    Node status;
+                                    while ((status = nodeStream.next()) != null) {
+                                        String error = status.getAsString("error", null);
+                                        if (error != null) {
+                                            Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
+                                            throw new CloudException("Failed to pull image: " + error + " -- " + details
+                                                    .getAsString("message", null), null);
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    // Failure to pull is considered non-critical: if an image of this name exists in
+                                    // the Docker
+                                    // daemon local repository but is potentially outdated we will use it anyway.
+                                    LOG.warn("Failed to pull image " + image + " for instance " + instance.getUuid() +
+                                            ", proceeding anyway.", e);
                                 }
                             }
-                        } catch (Exception e) {
-                            // Failure to pull is considered non-critical: if an image of this name exists in the Docker
-                            // daemon local repository but is potentially outdated we will use it anyway.
-                            LOG.warn("Failed to pull image " + image + " for instance " + instance.getUuid() +
-                                    ", proceeding anyway.", e);
+
+                            Node createNode = dockerClient.createContainer(containerSpec, null);
+                            containerId = createNode.getAsString("Id");
+                            LOG.info("New container " + containerId + " created.");
+                        } else {
+                            LOG.info("Reusing existing container: " + existingContainerId);
+                            containerId = existingContainerId;
                         }
+
+                        // Inspect the created container to retrieve its name and other meta-data.
+                        Node containerInspect = dockerClient.inspectContainer(containerId);
+                        String instanceName = containerInspect.getAsString("Name");
+                        if (instanceName.startsWith("/")) {
+                            instanceName = instanceName.substring(1);
+                        }
+                        instance.setContainerName(instanceName);
+
+                        dockerClient.startContainer(containerId);
+                        LOG.info("Container " + containerId + " started.");
+
+                        scheduleDockerSync();
+
+                        lock.runInterruptibly(() -> {
+                            instance.setContainerId(containerId);
+                            instance.setStatus(InstanceStatus.RUNNING);
+                        });
+
+                        cloudState.registerRunningInstance(instance.getImageId(), instance.getInstanceId());
                     }
-
-                    Node createNode = dockerClient.createContainer(containerSpec, null);
-                    containerId = createNode.getAsString("Id");
-                    LOG.info("New container " + containerId + " created.");
-                } else {
-                    LOG.info("Reusing existing container: " + containerId);
-                }
-
-                // Inspect the created container to retrieve its name and other meta-data.
-                Node containerInspect = dockerClient.inspectContainer(containerId);
-                String instanceName = containerInspect.getAsString("Name");
-                if (instanceName.startsWith("/")) {
-                    instanceName = instanceName.substring(1);
-                }
-                instance.setContainerName(instanceName);
-
-                dockerClient.startContainer(containerId);
-                LOG.info("Container " + containerId + " started.");
-
-                scheduleDockerSync();
-
-                lock.lockInterruptibly();
-                try {
-                    instance.setContainerId(containerId);
-                    instance.setStatus(InstanceStatus.RUNNING);
-                } finally {
-                    lock.unlock();
-                }
-
-                cloudState.registerRunningInstance(instance.getImageId(), instance.getInstanceId());
-            }
-        });
+                });
         return instance;
     }
 
@@ -441,26 +422,20 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Restart of container", dockerInstance, null) {
             @Override
             protected void callInternal() throws Exception {
-                lock.lockInterruptibly();
-                try {
+
+                lock.runInterruptibly(() -> {
                     checkReady();
                     // We currently don't do extensive status check before restarting. Docker itself will not complain
                     // if we try to restart a stopped instance.
                     dockerInstance.updateStartedTime();
                     dockerInstance.setStatus(InstanceStatus.RESTARTING);
-                } finally {
-                    lock.unlock();
-                }
+                });
+
                 String containerId = dockerInstance.getContainerId();
 
                 if (containerId != null) {
                     dockerClient.restartContainer(containerId);
-                    lock.lockInterruptibly();
-                    try {
-                        dockerInstance.setStatus(InstanceStatus.RUNNING);
-                    } finally {
-                        lock.unlock();
-                    }
+                    lock.runInterruptibly(() -> dockerInstance.setStatus(InstanceStatus.RUNNING));
                 } else {
                     LOG.warn("No container associated with instance " + instance + ". Ignoring restart request.");
                 }
@@ -477,15 +452,17 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     @Override
     public void dispose() {
 
-        lock.lock();
-        try {
+        boolean alreadyDisposed = lock.call(() -> {
             if (state == State.DISPOSED) {
                 LOG.debug("Client already disposed, ignoring request.");
-                return;
+                return true;
             }
             state = State.DISPOSED;
-        } finally {
-            lock.unlock();
+            return false;
+        });
+
+        if (alreadyDisposed) {
+            return;
         }
 
         buildServer.unregisterExtension(AgentNameGenerator.class, agentNameGeneratorUuid.toString());
@@ -505,38 +482,34 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         assert instance != null;
         LOG.info("Scheduling cloud instance termination: " + instance + " (client disposed: " + clientDisposed + ").");
         final DockerInstance dockerInstance = ((DockerInstance) instance);
-        taskScheduler.scheduleInstanceTask(new DockerInstanceTask("Disposal of container", dockerInstance, InstanceStatus.SCHEDULED_TO_STOP) {
-            @Override
-            protected void callInternal() throws Exception {
-                lock.lockInterruptibly();
-                try {
-                    dockerInstance.setStatus(InstanceStatus.STOPPING);
-                } finally {
-                    lock.unlock();
-                }
-                String containerId = dockerInstance.getContainerId();
+        taskScheduler.scheduleInstanceTask(
+                new DockerInstanceTask("Disposal of container", dockerInstance, InstanceStatus.SCHEDULED_TO_STOP) {
+                    @Override
+                    protected void callInternal() throws Exception {
+                        lock.runInterruptibly(() -> dockerInstance.setStatus(InstanceStatus.STOPPING));
+                        String containerId = dockerInstance.getContainerId();
 
-                boolean containerAvailable = false;
-                if (containerId != null) {
-                    boolean rmContainer = clientDisposed || dockerInstance.getImage().getConfig().isRmOnExit();
-                    containerAvailable = terminateContainer(containerId, clientDisposed, rmContainer);
-                }
+                        boolean containerAvailable;
+                        if (containerId != null) {
+                            boolean rmContainer = clientDisposed || dockerInstance.getImage().getConfig().isRmOnExit();
+                            containerAvailable = terminateContainer(containerId, clientDisposed, rmContainer);
+                        } else {
+                            containerAvailable = false;
+                        }
 
-                lock.lockInterruptibly();
-                try {
-                    dockerInstance.setStatus(InstanceStatus.STOPPED);
-                    if (!containerAvailable) {
-                        dockerInstance.getImage().clearInstanceId(dockerInstance.getUuid());
+                        lock.runInterruptibly(() -> {
+                            dockerInstance.setStatus(InstanceStatus.STOPPED);
+                            if (!containerAvailable) {
+                                dockerInstance.getImage().clearInstanceId(dockerInstance.getUuid());
+                            }
+                        });
+
+                        if (!clientDisposed) {
+                            cloudState.registerTerminatedInstance(dockerInstance.getImageId(),
+                                    dockerInstance.getInstanceId());
+                        }
                     }
-                } finally {
-                    lock.unlock();
-                }
-
-                if (!clientDisposed) {
-                    cloudState.registerTerminatedInstance(dockerInstance.getImageId(), dockerInstance.getInstanceId());
-                }
-            }
-        });
+                });
     }
 
     private boolean terminateContainer(String containerId, boolean clientDisposed, boolean rmContainer) {
@@ -572,17 +545,14 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     }
 
     private void scheduleDockerSync() {
-        lock.lock();
-        try {
+        lock.run(() -> {
             if (dockerSyncScheduled) {
                 return;
             }
 
             taskScheduler.scheduleClientTask(new SyncWithDockerTask());
             dockerSyncScheduled = true;
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     /**
@@ -592,12 +562,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
      * @return the timestamp of the last Docker sync or -1
      */
     public long getLastDockerSyncTimeMillis() {
-        lock.lock();
-        try {
-            return lastDockerSyncTimeMillis;
-        } finally {
-            lock.unlock();
-        }
+        return lock.call(() -> lastDockerSyncTimeMillis);
     }
 
     /**
@@ -632,7 +597,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 // This does not seems highly critical at moment, because virtually all user data parameters are bound
                 // to the cloud profile and not a specific cloud instance, and because publishing these extra
                 // configuration parameters is apparently not an hard requirement anyway.
-                add(DockerCloudUtils.ENV_AGENT_PARAMS + "=" + tag.serialize());
+                        add(DockerCloudUtils.ENV_AGENT_PARAMS + "=" + tag.serialize());
 
         container.getOrCreateObject("Labels").
                 put(DockerCloudUtils.CLIENT_ID_LABEL, uuid.toString()).
@@ -645,17 +610,13 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
     @Override
     public void notifyFailure(@Nonnull String msg, @Nullable Throwable throwable) {
-        lock.lock();
-        try {
+        lock.run(() -> {
             if (throwable != null) {
                 errorInfo = new CloudErrorInfo(msg, msg, throwable);
             } else {
                 errorInfo = new CloudErrorInfo(msg, msg);
             }
-
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     private class SyncWithDockerTask extends DockerClientTask {
@@ -676,9 +637,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         }
 
         private boolean reschedule() {
-
-            lock.lock();
-            try {
+            return lock.call(() -> {
                 long delay = super.getDelay();
                 long delaySinceLastExec = System.currentTimeMillis() - lastDockerSyncTimeMillis;
                 long remainingDelay = delay - delaySinceLastExec;
@@ -689,9 +648,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                     nextDelay = delay;
                     return false;
                 }
-            } finally {
-                lock.unlock();
-            }
+            });
         }
 
         @Override
@@ -717,126 +674,132 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
             List<String> orphanedContainers = new ArrayList<>();
             List<SBuildAgent> obsoleteAgents = new ArrayList<>();
 
-            lock.lockInterruptibly();
-            try {
-                assert state != State.CREATED : "Cloud client is not initialized yet.";
+            lock.runInterruptibly(() -> {
+                try {
+                    assert state != State.CREATED : "Cloud client is not initialized yet.";
 
-                // Step 1, gather all instances.
-                Map<UUID, DockerInstance> instances = new HashMap<>();
-                for (DockerImage image : images.values()) {
-                    for (DockerInstance instance : image.getInstances()) {
-                        boolean unique = instances.put(instance.getUuid(), instance) == null;
-                        assert unique : "Found instance " + instance.getUuid() + " across several images.";
-                    }
-                }
-
-                // Step 2: pro-actively discard unregistered agent that are no longer referenced, they are lost to us.
-                for (SBuildAgent agent : unregisteredAgents) {
-                    if (uuid.equals(DockerCloudUtils.getClientId(agent))) {
-                        UUID instanceId = DockerCloudUtils.getInstanceId(agent);
-                        boolean discardAgent = false;
-                        if (instanceId == null) {
-                            LOG.warn("No instance UUID associated with cloud agent " + agent + ".");
-                            discardAgent = true;
-                        } else if (!instances.containsKey(instanceId)) {
-                            LOG.info("Discarding orphan agent: " + agent);
-                            discardAgent = true;
-                        }
-                        if (discardAgent) {
-                            obsoleteAgents.add(agent);
+                    // Step 1, gather all instances.
+                    Map<UUID, DockerInstance> instances = new HashMap<>();
+                    for (DockerImage image : images.values()) {
+                        for (DockerInstance instance : image.getInstances()) {
+                            boolean unique = instances.put(instance.getUuid(), instance) == null;
+                            assert unique : "Found instance " + instance.getUuid() + " across several images.";
                         }
                     }
-                }
 
-                List<Node> containersValues = containers.getArrayValues();
-                LOG.debug("Found " + containersValues.size() + " containers to be synched: " + containers);
+                    // Step 2: pro-actively discard unregistered agent that are no longer referenced, they are lost
+                    // to us.
+                    for (SBuildAgent agent : unregisteredAgents) {
+                        if (uuid.equals(DockerCloudUtils.getClientId(agent))) {
+                            UUID instanceId = DockerCloudUtils.getInstanceId(agent);
+                            boolean discardAgent = false;
+                            if (instanceId == null) {
+                                LOG.warn("No instance UUID associated with cloud agent " + agent + ".");
+                                discardAgent = true;
+                            } else if (!instances.containsKey(instanceId)) {
+                                LOG.info("Discarding orphan agent: " + agent);
+                                discardAgent = true;
+                            }
+                            if (discardAgent) {
+                                obsoleteAgents.add(agent);
+                            }
+                        }
+                    }
 
-                // Step 3: remove all instance in an error status.
-                Iterator<DockerInstance> itr = instances.values().iterator();
-                while (itr.hasNext()) {
-                    DockerInstance instance = itr.next();
-                    InstanceStatus status = instance.getStatus();
-                    if (status == InstanceStatus.ERROR || status == InstanceStatus.ERROR_CANNOT_STOP) {
-                        String containerId = instance.getContainerId();
-                        instance.getImage().clearInstanceId(instance.getUuid());
-                        if (containerId != null) {
+                    List<Node> containersValues = containers.getArrayValues();
+                    LOG.debug("Found " + containersValues.size() + " containers to be synched: " + containers);
+
+                    // Step 3: remove all instance in an error status.
+                    Iterator<DockerInstance> itr = instances.values().iterator();
+                    while (itr.hasNext()) {
+                        DockerInstance instance = itr.next();
+                        InstanceStatus status = instance.getStatus();
+                        if (status == InstanceStatus.ERROR || status == InstanceStatus.ERROR_CANNOT_STOP) {
+                            String containerId = instance.getContainerId();
+                            instance.getImage().clearInstanceId(instance.getUuid());
+                            if (containerId != null) {
+                                orphanedContainers.add(containerId);
+                            }
+                            itr.remove();
+                        } else if (status == InstanceStatus.UNKNOWN || status == InstanceStatus.SCHEDULED_TO_START
+                                || status == InstanceStatus.STARTING) {
+                            // Instance is currently starting, container may not be available yet, skip sync.
+                            itr.remove();
+                        }
+                    }
+
+                    // Step 3, process each found container and conciliate it with our data model.
+                    for (Node container : containersValues) {
+                        String instanceIdStr = container.getObject("Labels").getAsString(DockerCloudUtils
+                                .INSTANCE_ID_LABEL, null);
+                        final UUID instanceUuid = DockerCloudUtils.tryParseAsUUID(instanceIdStr);
+                        final String containerId = container.getAsString("Id");
+                        if (instanceUuid == null) {
+                            LOG.error(
+                                    "Cannot resolve instance ID '" + instanceIdStr + "' for container " + containerId
+                                            + ".");
                             orphanedContainers.add(containerId);
+                            continue;
                         }
-                        itr.remove();
-                    } else if (status == InstanceStatus.UNKNOWN || status == InstanceStatus.SCHEDULED_TO_START
-                            || status == InstanceStatus.STARTING) {
-                        // Instance is currently starting, container may not be available yet, skip sync.
-                        itr.remove();
-                    }
-                }
 
-                // Step 3, process each found container and conciliate it with our data model.
-                for (Node container : containersValues) {
-                    String instanceIdStr = container.getObject("Labels").getAsString(DockerCloudUtils
-                            .INSTANCE_ID_LABEL, null);
-                    final UUID instanceUuid = DockerCloudUtils.tryParseAsUUID(instanceIdStr);
-                    final String containerId = container.getAsString("Id");
-                    if (instanceUuid == null) {
-                        LOG.error("Cannot resolve instance ID '" + instanceIdStr + "' for container " + containerId + ".");
-                        orphanedContainers.add(containerId);
-                        continue;
-                    }
+                        assert instanceIdStr != null;
 
-                    assert instanceIdStr != null;
+                        DockerInstance instance = instances.remove(instanceUuid);
 
-                    DockerInstance instance = instances.remove(instanceUuid);
-
-                    if (instance == null) {
-                        LOG.warn("Schedule removal of container " + containerId + " with unknown instance id " + instanceUuid + ".");
-                        orphanedContainers.add((containerId));
-                        continue;
-                    }
-
-                    InstanceStatus instanceStatus = instance.getStatus();
-
-                    if (container.getAsString("State").equals("running")) {
-                        if (instanceStatus == InstanceStatus.STOPPED) {
-                            instance.notifyFailure("Container " + containerId + " started externally.", null);
-                            LOG.error("Container " + containerId + " started externally.");
+                        if (instance == null) {
+                            LOG.warn(
+                                    "Schedule removal of container " + containerId + " with unknown instance id " +
+                                            instanceUuid + ".");
+                            orphanedContainers.add((containerId));
+                            continue;
                         }
-                    } else {
-                        if (instanceStatus == InstanceStatus.RUNNING) {
-                            instance.notifyFailure("Container " + containerId + " exited prematurely.", null);
-                            LOG.error("Container " + containerId + " exited prematurely.");
+
+                        InstanceStatus instanceStatus = instance.getStatus();
+
+                        if (container.getAsString("State").equals("running")) {
+                            if (instanceStatus == InstanceStatus.STOPPED) {
+                                instance.notifyFailure("Container " + containerId + " started externally.", null);
+                                LOG.error("Container " + containerId + " started externally.");
+                            }
+                        } else {
+                            if (instanceStatus == InstanceStatus.RUNNING) {
+                                instance.notifyFailure("Container " + containerId + " exited prematurely.", null);
+                                LOG.error("Container " + containerId + " exited prematurely.");
+                            }
+                        }
+
+                        instance.setContainerInfo(container);
+                    }
+
+                    // Step 4, process destroyed containers.
+                    if (!instances.isEmpty()) {
+                        LOG.warn("Found " + instances
+                                .size() + " instance(s) without containers, unregistering them now: " + instances);
+                        for (DockerInstance instance : instances.values()) {
+                            if (instance.getStatus() == InstanceStatus.RUNNING) {
+                                cloudState.registerTerminatedInstance(instance.getImageId(), instance.getInstanceId());
+                            }
+                            instance.notifyFailure("Container was destroyed.", null);
+                            instance.setContainerInfo(null);
                         }
                     }
 
-                    instance.setContainerInfo(container);
-                }
+                    // Sync is successful.
 
-                // Step 4, process destroyed containers.
-                if (!instances.isEmpty()) {
-                    LOG.warn("Found " + instances.size() + " instance(s) without containers, unregistering them now: " + instances);
-                    for (DockerInstance instance : instances.values()) {
-                        if (instance.getStatus() == InstanceStatus.RUNNING) {
-                            cloudState.registerTerminatedInstance(instance.getImageId(), instance.getInstanceId());
-                        }
-                        instance.notifyFailure("Container was destroyed.", null);
-                        instance.setContainerInfo(null);
+                    if (errorInfo != null) {
+                        LOG.info("Sync successful, clearing error: " + errorInfo);
+                        errorInfo = null;
+                    }
+
+                    lastDockerSyncTimeMillis = System.currentTimeMillis();
+                } finally {
+                    // If this task was explicitly scheduled (not automatically fired) then clear the corresponding
+                    // flag.
+                    if (!isRepeatable()) {
+                        dockerSyncScheduled = false;
                     }
                 }
-
-                // Sync is successful.
-
-                if (errorInfo != null) {
-                    LOG.info("Sync successful, clearing error: " + errorInfo);
-                    errorInfo = null;
-                }
-
-                lastDockerSyncTimeMillis = System.currentTimeMillis();
-            } finally {
-                // If this task was explicitly scheduled (not automatically fired) then clear the corresponding flag.
-                if (!isRepeatable()) {
-                    dockerSyncScheduled = false;
-                }
-
-                lock.unlock();
-            }
+            });
 
             obsoleteAgents.forEach(agent -> {
                 try {

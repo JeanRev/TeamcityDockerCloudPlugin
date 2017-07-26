@@ -1,12 +1,12 @@
 package run.var.teamcity.cloud.docker.client;
 
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.LockHandler;
 
 import javax.annotation.Nonnull;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * An input stream filter with a fixed capacity. Invoking {@code close()} on this filter will not close the
@@ -17,7 +17,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 class CappedInputStream extends FilterInputStream {
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final LockHandler lock = LockHandler.newReentrantLock();
 
     private final long capacity;
     private long readSoFar = 0;
@@ -26,10 +26,10 @@ class CappedInputStream extends FilterInputStream {
     /**
      * Creates a new stream filter.
      *
-     * @param in       the stream to wrap
+     * @param in the stream to wrap
      * @param capacity the stream capacity
      *
-     * @throws NullPointerException     if {@code in} is {@code null}
+     * @throws NullPointerException if {@code in} is {@code null}
      * @throws IllegalArgumentException if {@code capacity} is smaller than 0
      */
     CappedInputStream(@Nonnull InputStream in, long capacity) {
@@ -43,8 +43,7 @@ class CappedInputStream extends FilterInputStream {
 
     @Override
     public int read() throws IOException {
-        lock.lock();
-        try {
+        return lock.callChecked(() -> {
             checkNotClosed();
             if (readSoFar < capacity) {
                 int b = super.read();
@@ -52,15 +51,12 @@ class CappedInputStream extends FilterInputStream {
                 return b;
             }
             return -1;
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override
     public int available() {
-        lock.lock();
-        try {
+        return lock.call(() -> {
             if (closed) {
                 return 0;
             }
@@ -69,16 +65,13 @@ class CappedInputStream extends FilterInputStream {
             assert available >= 0;
 
             return (int) Math.min((long) Integer.MAX_VALUE, available);
-        } finally {
-            lock.unlock();
-        }
+        });
 
     }
 
     @Override
     public int read(@Nonnull byte[] b, int off, int len) throws IOException {
-        lock.lock();
-        try {
+        return lock.callChecked(() -> {
             checkNotClosed();
             int available = available();
             if (available > 0) {
@@ -87,10 +80,7 @@ class CappedInputStream extends FilterInputStream {
                 return n;
             }
             return -1;
-        } finally {
-            lock.unlock();
-        }
-
+        });
     }
 
     @Override
@@ -105,8 +95,7 @@ class CappedInputStream extends FilterInputStream {
      * @throws IOException if an error occurred while exhausting or closing the stream
      */
     void exhaustAndClose() throws IOException {
-        lock.lock();
-        try {
+        lock.runChecked(() -> {
             long toSkip = capacity - readSoFar;
             assert toSkip >= 0;
 
@@ -115,9 +104,7 @@ class CappedInputStream extends FilterInputStream {
             }
 
             close();
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override

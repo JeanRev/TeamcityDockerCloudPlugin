@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker.client.npipe;
 
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.LockHandler;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,14 +12,13 @@ import java.net.SocketException;
 import java.net.SocketImpl;
 import java.net.SocketOptions;
 import java.nio.file.Path;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * {@link SocketImpl} for {@link NPipeSocket}.
  */
 class NPipeSocketImpl extends SocketImpl {
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final LockHandler lock = LockHandler.newReentrantLock();
 
     private PipeChannel pipeChannel;
     private PipeChannelInputStream input;
@@ -29,26 +29,20 @@ class NPipeSocketImpl extends SocketImpl {
 
     @Override
     protected void shutdownInput() throws IOException {
-        lock.lock();
-        try {
+        lock.run(() -> {
             if (input != null) {
                 input.shutdown();
             }
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override
     protected void shutdownOutput() throws IOException {
-        lock.lock();
-        try {
+        lock.run(() -> {
             if (output != null) {
                 output.shutdown();
             }
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override
@@ -74,13 +68,10 @@ class NPipeSocketImpl extends SocketImpl {
         }
 
         Path pipe = ((NPipeSocketAddress) address).getPipe();
-        lock.lock();
-        try {
+        lock.runChecked(() -> {
             pipeChannel = DefaultPipeChannel.open(pipe);
             connected = true;
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override
@@ -100,51 +91,37 @@ class NPipeSocketImpl extends SocketImpl {
 
     @Override
     protected InputStream getInputStream() throws IOException {
-        lock.lock();
-        try {
+        return lock.call(() -> {
             if (input == null) {
                 input = new PipeChannelInputStream(pipeChannel, timeout);
             }
             return input;
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override
     protected OutputStream getOutputStream() throws IOException {
-        lock.lock();
-        try {
+        return lock.call(() -> {
             if (output == null) {
                 output = new PipeChannelOutputStream(pipeChannel, timeout);
             }
             return output;
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override
     protected int available() throws IOException {
-        lock.lock();
-        try {
-            return pipeChannel.available();
-        } finally {
-            lock.unlock();
-        }
+        return lock.callChecked(pipeChannel::available);
     }
 
     @Override
     protected void close() throws IOException {
-        lock.lock();
-        try {
+        lock.runChecked(() -> {
             if (pipeChannel != null) {
                 pipeChannel.close();
                 closed = true;
             }
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override
@@ -154,8 +131,7 @@ class NPipeSocketImpl extends SocketImpl {
 
     @Override
     public void setOption(int optID, Object value) throws SocketException {
-        lock.lock();
-        try {
+        lock.runChecked(() -> {
             if (closed) {
                 throw new SocketException("Socket is closed.");
             }
@@ -173,15 +149,12 @@ class NPipeSocketImpl extends SocketImpl {
             } else {
                 throw new SocketException("Unsupported socket option: " + optID);
             }
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override
     public Object getOption(int optID) throws SocketException {
-        lock.lock();
-        try {
+        return lock.callChecked(() -> {
             if (closed) {
                 throw new SocketException("Socket is closed.");
             }
@@ -189,9 +162,7 @@ class NPipeSocketImpl extends SocketImpl {
                 return timeout;
             }
             return null;
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     boolean isConnected() {

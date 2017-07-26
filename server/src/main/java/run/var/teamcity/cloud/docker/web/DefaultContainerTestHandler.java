@@ -6,6 +6,7 @@ import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.LockHandler;
 import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
@@ -14,7 +15,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Default {@link ContainerTestHandler} implementation.
@@ -24,7 +24,7 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
     private final static Logger LOG = DockerCloudUtils.getLogger(DefaultContainerTestHandler.class);
 
     private final UUID uuid = UUID.randomUUID();
-    private final ReentrantLock lock = new ReentrantLock();
+    private final LockHandler lock = LockHandler.newReentrantLock();
     private final DockerClient client;
     private final DockerClientConfig clientConfig;
     private final ContainerTestListener statusListener;
@@ -79,12 +79,7 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
      */
     @Nullable
     public String getContainerId() {
-        lock.lock();
-        try {
-            return containerId;
-        } finally {
-            lock.unlock();
-        }
+        return lock.call(() -> containerId);
     }
 
     /**
@@ -94,12 +89,7 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
      */
     @Nullable
     public ContainerTestListener getStatusListener() {
-        lock.lock();
-        try {
-            return statusListener;
-        } finally {
-            lock.unlock();
-        }
+        return lock.call(() -> statusListener);
     }
 
     /**
@@ -109,12 +99,7 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
      */
     @Nullable
     public ScheduledFutureWithRunnable<? extends ContainerTestTask> getCurrentTaskFuture() {
-        lock.lock();
-        try {
-            return currentTaskFuture;
-        } finally {
-            lock.unlock();
-        }
+        return lock.call(() -> currentTaskFuture);
     }
 
     @Nonnull
@@ -149,25 +134,18 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
     public void setCurrentTask(@Nonnull ScheduledFutureWithRunnable<? extends ContainerTestTask>
                                        currentTask) {
         DockerCloudUtils.requireNonNull(currentTask, "Current task cannot be null.");
-        lock.lock();
-        try {
+        lock.run(() -> {
             this.currentTaskFuture = currentTask;
             statusListener.notifyStatus(null);
             notifyInteraction();
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override
     public void notifyContainerId(@Nonnull String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
-        lock.lock();
-        try {
-            this.containerId = containerId;
-        } finally {
-            lock.unlock();
-        }
+
+        lock.run(() -> this.containerId = containerId);
 
         if (streamingController != null) {
             streamingController.registerContainer(uuid, new ContainerCoordinates(containerId, clientConfig));
@@ -186,21 +164,10 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
 
     @Override
     public boolean isBuildAgentDetected() {
-        lock.lock();
-        try {
-            return buildAgentDetected;
-        } finally {
-            lock.unlock();
-        }
-
+        return lock.call(() -> buildAgentDetected);
     }
 
     public void setBuildAgentDetected(boolean buildAgentDetected) {
-        lock.lock();
-        try {
-            this.buildAgentDetected = buildAgentDetected;
-        } finally {
-            lock.unlock();
-        }
+        lock.run(() ->  this.buildAgentDetected = buildAgentDetected);
     }
 }

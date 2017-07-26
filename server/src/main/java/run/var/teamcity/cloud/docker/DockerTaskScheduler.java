@@ -4,6 +4,7 @@ package run.var.teamcity.cloud.docker;
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.clouds.InstanceStatus;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.LockHandler;
 import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
 import run.var.teamcity.cloud.docker.util.WrappedRunnableFuture;
 
@@ -23,7 +24,6 @@ import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Task scheduler for a {@link DefaultDockerCloudClient}. The scheduler ensure the sequential execution of tasks that may
@@ -53,7 +53,7 @@ class DockerTaskScheduler {
     private final static Logger LOG = DockerCloudUtils.getLogger(DockerTaskScheduler.class);
 
     // This lock ensure a thread-safe usage of all the variables below.
-    private final ReentrantLock lock = new ReentrantLock();
+    private final LockHandler lock = LockHandler.newReentrantLock();
 
     private final Set<UUID> submittedInstancesUUID = new HashSet<>();
     private final LinkedList<DockerClientTask> clientTasks = new LinkedList<>();
@@ -120,6 +120,7 @@ class DockerTaskScheduler {
                 assert runnable instanceof WrappedRunnableFuture;
 
                 WrappedRunnableFuture<?,?> wrappedRunnableFuture = (WrappedRunnableFuture<?, ?>) runnable;
+
                 if (throwable == null) {
                     try {
                         wrappedRunnableFuture.get();
@@ -128,12 +129,13 @@ class DockerTaskScheduler {
                     }
                 }
 
+                Throwable effectiveThrowable = throwable;
+
                 Object task = wrappedRunnableFuture.getTask();
 
                 assert task instanceof DockerTask;
 
-                lock.lock();
-                try {
+                lock.run(() -> {
                     DockerTask dockerTask = (DockerTask) task;
 
                     LOG.debug("Task execution completed.");
@@ -149,18 +151,22 @@ class DockerTaskScheduler {
                         assert unmarked : "Task " + instanceTask + " was not marked as being processed.";
                     }
 
+                    Throwable throwableToReport;
                     if (wrappedRunnableFuture.isCancelled() && !shutdownRequested) {
                         // The task has been cancelled but no shutdown of the scheduler is planned. It must then have
                         // been caused by a task timeout. The corresponding error provider will need to be notified
                         // with a corresponding exception.
-                        throwable = new DockerTaskSchedulerException("Operation took too long to complete.", throwable);
+                        throwableToReport = new DockerTaskSchedulerException("Operation took too long to complete.",
+                                effectiveThrowable);
+                    } else {
+                        throwableToReport = effectiveThrowable;
                     }
 
-                    if (throwable == null) {
+                    if (throwableToReport == null) {
                         LOG.debug("Task " + dockerTask + " completed without error.");
                     } else {
-                        LOG.error("Task " + dockerTask + " execution failed.", throwable);
-                        dockerTask.getErrorProvider().notifyFailure(dockerTask.getOperationName() + " failed.", throwable);
+                        LOG.error("Task " + dockerTask + " execution failed.", throwableToReport);
+                        dockerTask.getErrorProvider().notifyFailure(dockerTask.getOperationName() + " failed.", throwableToReport);
 
                     }
 
@@ -172,9 +178,8 @@ class DockerTaskScheduler {
                     }
 
                     scheduleNextTasks();
-                } finally {
-                    lock.unlock();
-                }
+                });
+
             }
 
             @Override
@@ -227,8 +232,7 @@ class DockerTaskScheduler {
 
     private void submitTask(DockerTask task) {
         assert task != null;
-        lock.lock();
-        try {
+        lock.run(() -> {
             if (shutdownRequested) {
                 throw new RejectedExecutionException("Scheduler will shutdown.");
             }
@@ -240,9 +244,7 @@ class DockerTaskScheduler {
                 instancesTask.add((DockerInstanceTask) task);
             }
             scheduleNextTasks();
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     private void scheduleNextTasks() {
@@ -338,13 +340,10 @@ class DockerTaskScheduler {
      * scheduling will be accepted.
      */
     void shutdown() {
-        lock.lock();
-        try {
+        lock.run(() -> {
             shutdownRequested = true;
             shutdownCheck();
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     private void shutdownCheck() {
