@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,6 +22,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.fail;
 
@@ -204,5 +206,31 @@ public final class TestUtils {
 
         parent.getOrCreateObject("Container").put("Image", "test-image");
         return parent.saveNode();
+    }
+
+    @SafeVarargs
+    public static <K,V> Map<K,V> mapOf(Pair<K,V>... pairs) {
+        return Arrays.stream(pairs).collect(Collectors.toMap(Pair::getKey, Pair::getValue));
+    }
+
+    public static <K,V> Pair<K,V> pair(K key, V value) {
+        return new Pair<>(key, value);
+    }
+
+    public static class Pair<K,V> {
+        private final K key;
+        private final V value;
+        private Pair(K key, V value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        private K getKey() {
+            return key;
+        }
+
+        private V getValue() {
+            return value;
+        }
     }
 }

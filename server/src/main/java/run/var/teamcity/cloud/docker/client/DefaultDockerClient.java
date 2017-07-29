@@ -49,6 +49,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Base64;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -247,14 +248,26 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
     @Nonnull
     @Override
-    public Node listContainersWithLabel(@Nonnull String key, @Nonnull String value) {
-        DockerCloudUtils.requireNonNull(key, "Label key cannot be null.");
-        DockerCloudUtils.requireNonNull(value, "Label value cannot be null.");
-        return invoke(target().path("/containers/json").
-                queryParam("all", true).
-                queryParam("filters", "%7B\"label\": " +
-                        "[\"" + key + "=" + value + "\"]%7D"), HttpMethod.GET, null,
-                prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
+    public Node listContainersWithLabel(@Nonnull Map<String, String> labelFilters) {
+        DockerCloudUtils.requireNonNull(labelFilters, "Label filters map cannot be null.");
+
+        StringBuilder filter = new StringBuilder();
+        for (Map.Entry<String, String> labelFilter : labelFilters.entrySet()) {
+            String key = labelFilter.getKey();
+            String value = labelFilter.getValue();
+            DockerCloudUtils.requireNonNull(key, () -> "Invalid null key: " + labelFilters);
+            DockerCloudUtils.requireNonNull(value, () -> "Invalid null value: " + labelFilters);
+            if (filter.length() > 0) {
+                filter.append(",");
+            }
+            filter.append("\"").append(labelFilter.getKey()).append("=").append(labelFilter.getValue()).append("\"");
+        }
+        WebTarget target = target().path("/containers/json").queryParam("all", true);
+
+        if (filter.length() > 0) {
+            target = target.queryParam("filters", "%7B\"label\": [" + filter+ "]%7D");
+        }
+        return invoke(target, HttpMethod.GET, null, prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
     }
     
     private boolean hasTty(String containerId) {

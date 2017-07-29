@@ -353,7 +353,7 @@ public class TestDockerClient implements DockerClient {
 
     @Nonnull
     @Override
-    public Node listContainersWithLabel(@Nonnull String key, @Nonnull String value) {
+    public Node listContainersWithLabel(@Nonnull Map<String, String> labelFilters) {
 
         EditableNode result;
 
@@ -362,8 +362,13 @@ public class TestDockerClient implements DockerClient {
             checkForFailure();
             List<Container> filtered = containers.values().stream().
                     filter(container -> {
-                        String labelValue = container.labels.get(key);
-                        return labelValue != null && value.equals(labelValue);
+                        for (Map.Entry<String, String> labelFilter : labelFilters.entrySet()) {
+                            String labelValue = container.labels.get(labelFilter.getKey());
+                            if (labelValue == null || !labelValue.equals(labelFilter.getValue())) {
+                                return false;
+                            }
+                        }
+                        return true;
                     }).collect(Collectors.toList());
 
             result = Node.EMPTY_ARRAY.editNode();

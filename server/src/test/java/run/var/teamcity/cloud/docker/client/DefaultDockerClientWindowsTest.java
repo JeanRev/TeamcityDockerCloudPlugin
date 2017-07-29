@@ -55,7 +55,7 @@ public class DefaultDockerClientWindowsTest extends DefaultDockerClientAllVersio
         Node createNode = client.createContainer(containerSpec, null);
         String containerId = createNode.getAsString("Id", null);
 
-        this.containerId = containerId;
+        containerIdsForCleanup.add(containerId);
 
         assertThat(containerId).isNotNull().isNotEmpty();
 

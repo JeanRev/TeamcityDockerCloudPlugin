@@ -3,10 +3,15 @@ package run.var.teamcity.cloud.docker.client;
 
 import org.junit.After;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.test.Integration;
-import run.var.teamcity.cloud.docker.util.*;
+import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.EditableNode;
+import run.var.teamcity.cloud.docker.util.Node;
+import run.var.teamcity.cloud.docker.util.NodeStream;
+import run.var.teamcity.cloud.docker.util.Stopwatch;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -15,15 +20,21 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.data.Offset.offset;
+import static run.var.teamcity.cloud.docker.test.TestUtils.mapOf;
+import static run.var.teamcity.cloud.docker.test.TestUtils.pair;
 
 @Category(Integration.class)
 public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTestBase {
@@ -37,13 +48,18 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
     private final static String TEST_LABEL_KEY = DefaultDockerClientITest.class.getName();
     protected final static String STDERR_MSG_PREFIX = "ERR";
 
-    protected String containerId;
+    protected Set<String> containerIdsForCleanup;
 
     private DefaultDockerClient client;
 
+    @Before
+    public void init() {
+        containerIdsForCleanup = new HashSet<>();
+    }
+
 
     @Test
-    public void fullTest() throws URISyntaxException {
+    public void startStopRemove() throws URISyntaxException {
         DefaultDockerClient client = createClient();
 
         EditableNode containerSpec = Node.EMPTY_OBJECT.editNode().
@@ -54,27 +70,63 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         containerSpec.getOrCreateObject("Labels").
                 put(TEST_LABEL_KEY, test.toString());
         Node createNode = client.createContainer(containerSpec.saveNode(), null);
-        String containerId = createNode.getAsString("Id", null);
+        String containerId = createNode.getAsString("Id");
 
-        this.containerId = containerId;
-
-        assertThat(containerId).isNotNull().isNotEmpty();
-
-        List<Node> containers = client.listContainersWithLabel(TEST_LABEL_KEY, test.toString())
-                .getArrayValues();
-
-        assertThat(containers).hasSize(1);
-        assertThat(containers.get(0).getAsString("Id")).isEqualTo(containerId);
-
-        containers = client.listContainersWithLabel(TEST_LABEL_KEY, "not an assigned label").getArrayValues();
-
-        assertThat(containers).isEmpty();
+        containerIdsForCleanup.add(containerId);
 
         client.startContainer(containerId);
 
         client.stopContainer(containerId, 0);
 
         client.removeContainer(containerId, true, true);
+    }
+
+    @Test
+    public void listContainersWithLabels() throws URISyntaxException {
+        DefaultDockerClient client = createClient();
+
+        final String labelA = TEST_LABEL_KEY + ".A";
+        final String labelB = TEST_LABEL_KEY + ".B";
+        final String labelC = TEST_LABEL_KEY + ".C";
+
+        EditableNode containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", TEST_IMAGE);
+        containerSpec.getOrCreateObject("Labels").put(labelA, "A").put(labelB, "B");
+
+        Node createNode = client.createContainer(containerSpec.saveNode(), null);
+        String containerId1 = createNode.getAsString("Id");
+
+        containerIdsForCleanup.add(containerId1);
+
+        containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", TEST_IMAGE);
+        containerSpec.getOrCreateObject("Labels").put(labelA, "A");
+
+        createNode = client.createContainer(containerSpec.saveNode(), null);
+        String containerId2 = createNode.getAsString("Id");
+
+        containerIdsForCleanup.add(containerId2);
+
+        List<Node> containers = client.listContainersWithLabel(mapOf()).getArrayValues();
+        Set<String> returnedIds = containers.stream().map(container -> container.getAsString("Id")).collect(Collectors
+                .toSet());
+
+        assertThat(returnedIds).contains(containerId1, containerId2);
+
+        containers = client.listContainersWithLabel(mapOf(pair(labelA, "A"))).getArrayValues();
+        returnedIds = containers.stream().map(container -> container.getAsString("Id")).collect(Collectors
+                .toSet());
+
+        assertThat(returnedIds).containsExactlyInAnyOrder(containerId1, containerId2);
+
+        containers = client.listContainersWithLabel(mapOf(pair(labelA, "A"), pair(labelB, "B"))).getArrayValues();
+        returnedIds = containers.stream().map(container -> container.getAsString("Id")).collect(Collectors
+                .toSet());
+
+        assertThat(returnedIds).containsExactly(containerId1);
+
+        containers = client.listContainersWithLabel(mapOf(pair(labelA, "A"), pair(labelB, "B"), pair(labelC, "C")))
+                .getArrayValues();
+
+        assertThat(containers.isEmpty());
     }
 
     @Test
@@ -89,7 +141,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         Node createNode = client.createContainer(containerSpec, null);
         String containerId = createNode.getAsString("Id", null);
 
-        this.containerId = containerId;
+        containerIdsForCleanup.add(containerId);
 
         assertThat(containerId).isNotNull().isNotEmpty();
 
@@ -120,7 +172,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         Node createNode = client.createContainer(containerSpec, null);
         String containerId = createNode.getAsString("Id", null);
 
-        this.containerId = containerId;
+        containerIdsForCleanup.add(containerId);
 
         assertThat(containerId).isNotNull().isNotEmpty();
 
@@ -232,7 +284,8 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.stopContainer(containerId, 0));
         assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.removeContainer(containerId,
                 true, true));
-        assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.listContainersWithLabel("", ""));
+        assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.listContainersWithLabel(
+                Collections.emptyMap()));
     }
 
     @Test
@@ -346,13 +399,15 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
 
     @After
     public void tearDown() throws URISyntaxException {
-        if (containerId != null) {
+
+        containerIdsForCleanup.forEach(container -> {
             try {
-                createClient().removeContainer(containerId, true, true);
-            } catch (NotFoundException e) {
-                // OK
+                createClient().removeContainer(container, true, true);
+            } catch (Exception e) {
+                // Ignore
             }
-        }
+        });
+
         if (client != null) {
             client.close();
         }

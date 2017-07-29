@@ -6,6 +6,7 @@ import run.var.teamcity.cloud.docker.util.NodeStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.util.Map;
 
 /**
  * A Docker client.
@@ -46,8 +47,18 @@ public interface DockerClient extends Closeable {
 
     void removeContainer(@Nonnull String containerId, boolean removeVolumes, boolean force);
 
+    /**
+     * List the containers filtered using the given sets of labels. For a container to be included in the list, all of
+     * the labels from the filter map will need to be set with the corresponding value.
+     *
+     * @param labelFilters the label filter map
+     *
+     * @return the list of containers
+     *
+     * @throws NullPointerException if {@code labelFilters}, or any of its keys or values, are {@code null}
+     */
     @Nonnull
-    Node listContainersWithLabel(@Nonnull String key, @Nonnull String value);
+    Node listContainersWithLabel(@Nonnull Map<String, String> labelFilters);
 
     @Override
     void close();

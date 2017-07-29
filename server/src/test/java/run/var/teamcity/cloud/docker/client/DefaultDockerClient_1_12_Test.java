@@ -24,7 +24,7 @@ public class DefaultDockerClient_1_12_Test extends DefaultDockerClientAllVersion
         Node createNode = client.createContainer(containerSpec, null);
         String containerId = createNode.getAsString("Id", null);
 
-        this.containerId = containerId;
+        containerIdsForCleanup.add(containerId);
 
         assertThat(containerId).isNotNull().isNotEmpty();
 

@@ -7,6 +7,7 @@ import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.annotation.Nonnull;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -57,8 +58,8 @@ class StartContainerTestTask extends ContainerTestTask {
             return SUCCESS;
         }
 
-        List<Node> containers = client.listContainersWithLabel(DockerCloudUtils.TEST_INSTANCE_ID_LABEL, instanceUuid
-                .toString()).getArrayValues();
+        List<Node> containers = client.listContainersWithLabel(Collections.singletonMap(DockerCloudUtils
+                        .TEST_INSTANCE_ID_LABEL, instanceUuid.toString())).getArrayValues();
         if (containers.isEmpty()) {
             throw new ContainerTestTaskException("Container was prematurely destroyed.");
         } else if (containers.size() == 1) {
