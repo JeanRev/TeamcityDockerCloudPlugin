@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.math.BigDecimal;
 
 /**
  * An editable JSON node. Each editable node has a reference to the root of the edition tree, which is the place where
@@ -45,6 +46,13 @@ public class EditableNode extends AbstractNode<EditableNode> {
     }
 
     @Nonnull
+    public EditableNode put(@Nonnull String key, BigDecimal value) {
+        DockerCloudUtils.requireNonNull(key, "Key cannot be null.");
+        getObjectNode().put(key, value);
+        return this;
+    }
+
+    @Nonnull
     public EditableNode put(@Nonnull String key, Long value) {
         DockerCloudUtils.requireNonNull(key, "Key cannot be null.");
         getObjectNode().put(key, value);
@@ -77,7 +85,8 @@ public class EditableNode extends AbstractNode<EditableNode> {
         ObjectNode objectNode = getObjectNode();
         JsonNode childNode = objectNode.get(fieldName);
         if (childNode != null && !(childNode instanceof ArrayNode)) {
-            throw new UnsupportedOperationException("Child node exists but is not an array: " + node + " / " + fieldName);
+            throw new UnsupportedOperationException(
+                    "Child node exists but is not an array: " + node + " / " + fieldName);
         }
         return newNode(node.withArray(fieldName));
     }
