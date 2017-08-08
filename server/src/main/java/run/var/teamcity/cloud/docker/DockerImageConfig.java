@@ -157,7 +157,7 @@ public class DockerImageConfig {
 
         Set<String> profileNames = new HashSet<>();
 
-        List<DockerImageConfig> images = null;
+        List<DockerImageConfig> images = Collections.emptyList();
         if (imagesJSon != null && !imagesJSon.isEmpty()) {
             try {
                 Node imagesNode = Node.parse(imagesJSon);
@@ -175,7 +175,9 @@ public class DockerImageConfig {
                 LOG.error("Failed to parse image configuration.", e);
                 invalidProperties.add(new InvalidProperty(DockerCloudUtils.IMAGES_PARAM, "Cannot parse image data."));
             }
-        } else {
+        }
+
+        if (images.isEmpty()){
             invalidProperties.add(new InvalidProperty(DockerCloudUtils.IMAGES_PARAM, "No image provided."));
         }
 
