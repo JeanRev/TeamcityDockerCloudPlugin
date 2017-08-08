@@ -257,7 +257,7 @@ public final class DockerCloudUtils {
     @Nullable
     public static UUID tryParseAsUUID(@Nullable String value) {
         try {
-            return value != null ? UUID.fromString(value) : null;
+            return value != null && value.length() > 0 ? UUID.fromString(value) : null;
         } catch (IllegalArgumentException e) {
             // Ignore.
         }

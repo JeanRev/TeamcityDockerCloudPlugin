@@ -75,6 +75,40 @@ public class DefaultDockerClientAdapterTest {
     }
 
     @Test
+    public void trimPreviousManagedLabels() {
+        TestImage img = dockerClient.newLocalImage("resolved-image", "latest");
+
+        img.label(DockerCloudUtils.NS_PREFIX + "foo1", "bar1");
+        img.label("foo2", "bar2");
+
+        DefaultDockerClientAdapter adapter = new DefaultDockerClientAdapter(dockerClient);
+
+        adapter.createAgentContainer(Node.EMPTY_OBJECT, "resolved-image:latest", emptyMap(), emptyMap());
+
+        Container container = dockerClient.getContainers().get(0);
+
+        assertThat(container.getLabels()).containsEntry(DockerCloudUtils.NS_PREFIX + "foo1", "").containsEntry
+                ("foo2", "bar2");
+    }
+
+    @Test
+    public void trimPreviousManagedEnv() {
+        TestImage img = dockerClient.newLocalImage("resolved-image", "latest");
+
+        img.env(DockerCloudUtils.ENV_PREFIX + "FOO1", "bar1");
+        img.env("FOO2", "bar2");
+
+        DefaultDockerClientAdapter adapter = new DefaultDockerClientAdapter(dockerClient);
+
+        adapter.createAgentContainer(Node.EMPTY_OBJECT, "resolved-image:latest", emptyMap(), emptyMap());
+
+        Container container = dockerClient.getContainers().get(0);
+
+        assertThat(container.getEnv()).containsEntry(DockerCloudUtils.ENV_PREFIX + "FOO1", "").containsEntry
+                ("FOO2", "bar2");
+    }
+
+    @Test
     public void successfulPull() {
         TestImage img = dockerClient.newRegistryImage("resolved-image", "latest");
 

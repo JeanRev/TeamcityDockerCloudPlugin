@@ -21,6 +21,7 @@ import java.math.BigInteger;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -207,10 +208,29 @@ public class DefaultDockerClientAdapter implements DockerClientAdapter {
     private void inspectImage(String image, EditableNode containerSpec) {
         Node imageInspect = client.inspectImage(image);
 
+        clearExistingPluginProperties(imageInspect, containerSpec);
         markContainer(imageInspect, containerSpec);
     }
 
     private final static Pattern ENV_PTN = Pattern.compile("(" + DockerCloudUtils.ENV_PREFIX + ".+)=.*");
+
+    private void clearExistingPluginProperties(Node imageInspect, EditableNode containerSpec) {
+        Node imageConfig = imageInspect.getObject("Config", Node.EMPTY_OBJECT);
+        Node labels = imageConfig.getObject("Labels", Node.EMPTY_OBJECT);
+
+        labels.getObjectValues().keySet().stream()
+                .filter(key -> key.startsWith(DockerCloudUtils.NS_PREFIX))
+                .forEach(key -> containerSpec.getOrCreateObject("Labels").put(key, (Object) null));
+
+        Node env = imageConfig.getArray("Env", Node.EMPTY_ARRAY);
+
+        env.getArrayValues().stream()
+                .map(Node::getAsString)
+                .map(ENV_PTN::matcher)
+                .filter(Matcher::matches)
+                .map(matcher -> matcher.group(1))
+                .forEach(var -> containerSpec.getOrCreateArray("Env").add(var + "="));
+    }
 
     private void markContainer(Node imageInspect, EditableNode editableContainerSpec) {
         String imageId = imageInspect.getAsString("Id");
