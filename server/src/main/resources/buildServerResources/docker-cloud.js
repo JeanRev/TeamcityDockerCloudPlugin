@@ -1099,13 +1099,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         self.updateOkBtnState();
                     };
                     tab.clearMessages = function (id) {
-                        self._removeFromArray(tab.errors, id);
-                        self._removeFromArray(tab.warnings, id);
+                        self.removeFromArray(tab.errors, id);
+                        self.removeFromArray(tab.warnings, id);
                         tab._updateTabIcon();
                         self.updateOkBtnState();
                     };
                     tab.addMessage = function (id, warning) {
-                        self._addToArrayIfAbsent(warning ? tab.warnings : tab.errors, id);
+                        self.addToArrayIfAbsent(warning ? tab.warnings : tab.errors, id);
                         tab._updateTabIcon();
                         self.updateOkBtnState();
                     };
@@ -2087,39 +2087,25 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
                 return digits;
             },
-            _padLeft: function(txt, padChar, minSize) {
-                txt = txt.toString();
-                while (txt.length < minSize) txt = padChar + txt;
-                return txt;
-            },
             _units_multiplier:  {
                 GiB: 1073741824,
                 MiB: 1048576,
                 KiB: 1024,
                 bytes: 1
             },
-
-            _resolveUnit: function(value) {
-                var resolved = null;
-                $j.each(self._units_multiplier, function(unit, multiplier) {
-                    if (value % multiplier === 0) {
-                        resolved = unit;
-                    }
-                });
-                return resolved || 'bytes';
-            },
-            _removeFromArray: function (array, value) {
+            removeFromArray: function (array, value) {
                 var i = array.indexOf(value);
                 if (i != -1) {
                     return array.splice(i, 1);
                 }
             },
-            _addToArrayIfAbsent: function (array, value) {
+            addToArrayIfAbsent: function (array, value) {
                 var i = array.indexOf(value);
                 if (i == -1) {
                     array.push(value);
                 }
             },
+
 
             // Base-64 encoding/decoding is tricky to achieve in an unicode-safe way (especially when using the atob
             // and btoa standard functions). We leverage here an all-purpose binary-based Base64 encoder and do the
