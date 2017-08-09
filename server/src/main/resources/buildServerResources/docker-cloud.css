@@ -310,6 +310,7 @@ aligned on the RHS of the screen. */
     font-size: 90%;
     font-weight: normal;
     text-indent: 0;
+    word-wrap: break-word;
 }
 #dockerTestExecInfo p {
     padding: 5px;
@@ -350,6 +351,7 @@ aligned on the RHS of the screen. */
 
 #dockerCloudTestContainerErrorDetailsMsg {
     margin-bottom: 10px;
+    word-wrap: break-word;
 }
 
 #dockerCloudTestContainerErrorDetailsStackTrace {

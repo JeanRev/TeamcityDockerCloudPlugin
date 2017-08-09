@@ -1383,3 +1383,27 @@ describe('Validators', function() {
     });
 });
 
+
+describe('shortenString', function() {
+
+    it('should shorten string to the desired length', function() {
+        expect(dockerCloud.shortenString('hello world', 10)).toEqual('hello worl…')
+    });
+
+    it('should not affect strings shorter or of maximal length', function() {
+        expect(dockerCloud.shortenString('', 100)).toEqual('');
+        expect(dockerCloud.shortenString('hello world', 100)).toEqual('hello world');
+        expect(dockerCloud.shortenString('hello world', 11)).toEqual('hello world')
+    });
+
+    it('should trim whitespaces when shortening strings', function() {
+        expect(dockerCloud.shortenString('hello world ', 100)).toEqual('hello world ');
+        expect(dockerCloud.shortenString('hello world ', 6)).toEqual('hello…');
+        expect(dockerCloud.shortenString('hello world ', 5)).toEqual('hello…');
+    });
+
+    it('should be resilient to null or undefined values', function() {
+        expect(dockerCloud.shortenString(null, 100)).toEqual('');
+        expect(dockerCloud.shortenString(undefined, 100)).toEqual('');
+    });
+});

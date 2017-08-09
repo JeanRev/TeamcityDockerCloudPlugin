@@ -1454,7 +1454,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     responseMap.msg + ' Container ID: ' + responseMap.containerId + ' Uuid: ' + responseMap.testUuid +
                     ' Warnings: ' + responseMap.warnings.length);
 
-                self.$testContainerLabel.text(responseMap.msg);
+                self.$testContainerLabel.text(self.shortenString(responseMap.msg, 300));
 
 
                 if (responseMap.status == 'PENDING') {
@@ -2006,7 +2006,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
 
             prepareDiagnosticDialog: function(msg, details) {
-                self.$diagnosticMsg.text(msg);
+                self.$diagnosticMsg.text(self.shortenString(msg, 300));
                 self.$diagnosticLogs.text(details);
 
                 if (!self.clipboard && typeof Clipboard !== 'undefined') {
@@ -2193,6 +2193,16 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 uri = scheme + ':' + leadingSlashes + schemeSpecificPart;
 
                 return uri;
+            },
+
+            shortenString: function(str, maxLen) {
+                if (!str) {
+                    return "";
+                }
+                if (str.length <= maxLen) {
+                    return str;
+                }
+                return str.substring(0, maxLen).trim() + "…";
             },
 
             arrayTemplates: {
