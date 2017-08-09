@@ -12,6 +12,7 @@ import run.var.teamcity.cloud.docker.client.StdioType;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
+import run.var.teamcity.cloud.docker.util.NodeProcessingException;
 import run.var.teamcity.cloud.docker.util.NodeStream;
 import run.var.teamcity.cloud.docker.util.Stopwatch;
 
@@ -175,7 +176,7 @@ public class DefaultDockerClientAdapter implements DockerClientAdapter {
                         percent = NO_PROGRESS;
                     }
 
-                } catch (UnsupportedOperationException e) {
+                } catch (NodeProcessingException e) {
                     LOG.error("Failed to parse server response.", e);
                     continue;
                 }

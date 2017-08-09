@@ -85,7 +85,7 @@ public class EditableNode extends AbstractNode<EditableNode> {
         ObjectNode objectNode = getObjectNode();
         JsonNode childNode = objectNode.get(fieldName);
         if (childNode != null && !(childNode instanceof ArrayNode)) {
-            throw new UnsupportedOperationException(
+            throw new NodeProcessingException(
                     "Child node exists but is not an array: " + node + " / " + fieldName);
         }
         return newNode(node.withArray(fieldName));

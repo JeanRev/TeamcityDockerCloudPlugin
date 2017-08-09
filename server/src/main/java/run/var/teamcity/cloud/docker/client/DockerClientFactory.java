@@ -3,6 +3,7 @@ package run.var.teamcity.cloud.docker.client;
 import com.intellij.openapi.diagnostic.Logger;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
+import run.var.teamcity.cloud.docker.util.NodeProcessingException;
 
 import javax.annotation.Nonnull;
 
@@ -83,7 +84,7 @@ public abstract class DockerClientFactory {
             daemonAPIVersion = DockerAPIVersion.parse(version.getAsString("ApiVersion"));
             String minAPIVersionStr = version.getAsString("MinAPIVersion", null);
             minAPIVersion = minAPIVersionStr != null ? DockerAPIVersion.parse(minAPIVersionStr) : null;
-        } catch (IllegalArgumentException | UnsupportedOperationException e) {
+        } catch (IllegalArgumentException | NodeProcessingException e) {
             throw new DockerClientProcessingException("Failed to parse version node from server:\n" + version, e);
         }
 

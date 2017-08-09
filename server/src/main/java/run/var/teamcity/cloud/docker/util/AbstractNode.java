@@ -43,7 +43,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @return the list of children nodes
      *
-     * @throws UnsupportedOperationException if this node is not an array
+     * @throws NodeProcessingException if this node is not an array
      */
     @Nonnull
     public List<N> getArrayValues() {
@@ -61,7 +61,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @return the key/node mappings
      *
-     * @throws UnsupportedOperationException if this node is not an object
+     * @throws NodeProcessingException if this node is not an object
      */
     @Nonnull
     public Map<String, N> getObjectValues() {
@@ -81,7 +81,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @return the backend node as an object node
      *
-     * @throws UnsupportedOperationException if this node is not an object
+     * @throws NodeProcessingException if this node is not an object
      */
     @Nonnull
     final ObjectNode getObjectNode() {
@@ -94,7 +94,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      *
      * @return the backend node as an array node
      *
-     * @throws UnsupportedOperationException if this node is not an array
+     * @throws NodeProcessingException if this node is not an array
      */
     final ArrayNode getArrayNode() {
         checkArray();
@@ -109,7 +109,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @return the child node
      *
      * @throws NullPointerException if {@code fieldName} is {@code null}
-     * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists or is
+     * @throws NodeProcessingException if this node is not an object, or if the child node does not exists or is
      * not an object
      */
     @Nonnull
@@ -118,7 +118,7 @@ abstract class AbstractNode<N extends AbstractNode> {
         checkObject();
         JsonNode object = node.get(fieldName);
         if (!(object instanceof ObjectNode)) {
-            throw new UnsupportedOperationException("Child field not found or not an object: " + node + " / " +
+            throw new NodeProcessingException("Child field not found or not an object: " + node + " / " +
                     fieldName);
         }
         return newNode(object);
@@ -133,7 +133,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @return the child node or the provided default value
      *
      * @throws NullPointerException if {@code fieldName} is {@code null}
-     * @throws UnsupportedOperationException if this node or the child node is not an object
+     * @throws NodeProcessingException if this node or the child node is not an object
      */
     public N getObject(@Nonnull String fieldName, @Nullable N def) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
@@ -156,7 +156,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @return the child node
      *
      * @throws NullPointerException if {@code fieldName} is {@code null}
-     * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists or is
+     * @throws NodeProcessingException if this node is not an object, or if the child node does not exists or is
      * not an array
      */
     public N getArray(@Nonnull String fieldName) {
@@ -164,7 +164,7 @@ abstract class AbstractNode<N extends AbstractNode> {
         checkObject();
         JsonNode object = node.get(fieldName);
         if (!(object instanceof ArrayNode)) {
-            throw new UnsupportedOperationException("Child field not found or not an array: " + node + " / " +
+            throw new NodeProcessingException("Child field not found or not an array: " + node + " / " +
                     fieldName);
         }
         return newNode(object);
@@ -179,7 +179,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @return the child node or the provided default value
      *
      * @throws NullPointerException if {@code fieldName} is {@code null}
-     * @throws UnsupportedOperationException if this node is not an object, or if the child node is not an array
+     * @throws NodeProcessingException if this node is not an object, or if the child node is not an array
      */
     public N getArray(@Nonnull String fieldName, @Nullable N def) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
@@ -203,7 +203,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @return the integer value
      *
      * @throws NullPointerException if {@code fieldName} is {@code null}
-     * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
+     * @throws NodeProcessingException if this node is not an object, or if the child node does not exists
      * or is not an integer value node
      */
     public int getAsInt(@Nonnull String fieldName) {
@@ -214,7 +214,7 @@ abstract class AbstractNode<N extends AbstractNode> {
             // without fractional part, including integer field in scientific notations.
             return getAsBigInt(fieldName).intValueExact();
         } catch (ArithmeticException e) {
-            throw new UnsupportedOperationException("Child field not found or is not an integer value node: " +
+            throw new NodeProcessingException("Child field not found or is not an integer value node: " +
                     node + " / " + fieldName);
         }
     }
@@ -228,7 +228,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @return the child node or the provided default value
      *
      * @throws NullPointerException if {@code fieldName} is {@code null}
-     * @throws UnsupportedOperationException if this node is not an object, or if the child node is not an integer
+     * @throws NodeProcessingException if this node is not an object, or if the child node is not an integer
      * value node
      */
     public int getAsInt(@Nonnull String fieldName, int def) {
@@ -250,7 +250,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @return the integer value
      *
      * @throws NullPointerException if {@code fieldName} is {@code null}
-     * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
+     * @throws NodeProcessingException if this node is not an object, or if the child node does not exists
      * or is not an integer value node
      */
     public BigInteger getAsBigInt(@Nonnull String fieldName) {
@@ -276,7 +276,7 @@ abstract class AbstractNode<N extends AbstractNode> {
             }
         }
         if (bigInt == null) {
-            throw new UnsupportedOperationException("Child field not found or is not an integer value node: " +
+            throw new NodeProcessingException("Child field not found or is not an integer value node: " +
                     node + " / " + fieldName);
         }
         return bigInt;
@@ -291,7 +291,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @return the child node or the provided default value
      *
      * @throws NullPointerException if {@code fieldName} is {@code null}
-     * @throws UnsupportedOperationException if this node is not an object, or if the child node is not an integer
+     * @throws NodeProcessingException if this node is not an object, or if the child node is not an integer
      * value node
      */
     public BigInteger getAsBigInt(@Nonnull String fieldName, BigInteger def) {
@@ -313,7 +313,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @return the integer value
      *
      * @throws NullPointerException if {@code fieldName} is {@code null}
-     * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
+     * @throws NodeProcessingException if this node is not an object, or if the child node does not exists
      * or is not an integer value node
      */
     public long getAsLong(@Nonnull String fieldName) {
@@ -324,7 +324,7 @@ abstract class AbstractNode<N extends AbstractNode> {
             // without fractional part, including integer field in scientific notations.
             return getAsBigInt(fieldName).longValueExact();
         } catch (ArithmeticException e) {
-            throw new UnsupportedOperationException("Child field not found or is not an integer value node: " +
+            throw new NodeProcessingException("Child field not found or is not an integer value node: " +
                     node + " / " + fieldName);
         }
     }
@@ -338,7 +338,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @return the boolean value
      *
      * @throws NullPointerException if {@code fieldName} is {@code null}
-     * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
+     * @throws NodeProcessingException if this node is not an object, or if the child node does not exists
      * or is not an boolean value node
      */
     public boolean getAsBoolean(@Nonnull String fieldName) {
@@ -346,7 +346,7 @@ abstract class AbstractNode<N extends AbstractNode> {
         checkObject();
         JsonNode value = node.get(fieldName);
         if (value == null || !value.isBoolean()) {
-            throw new UnsupportedOperationException("Child field not found or is not an boolean value node: " +
+            throw new NodeProcessingException("Child field not found or is not an boolean value node: " +
                     node + " / " + fieldName);
         }
 
@@ -363,7 +363,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @return the child node or the provided default value
      *
      * @throws NullPointerException if {@code fieldName} is {@code null}
-     * @throws UnsupportedOperationException if this node is not an object, or if the child node is not a boolean
+     * @throws NodeProcessingException if this node is not an object, or if the child node is not a boolean
      * value node
      */
     @Nullable
@@ -386,7 +386,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @return the boolean value
      *
      * @throws NullPointerException if {@code fieldName} is {@code null}
-     * @throws UnsupportedOperationException if this node is not an object, or if the child node does not exists
+     * @throws NodeProcessingException if this node is not an object, or if the child node does not exists
      * or is not a string value node
      */
     @Nonnull
@@ -395,7 +395,7 @@ abstract class AbstractNode<N extends AbstractNode> {
         checkObject();
         JsonNode value = node.get(fieldName);
         if (value == null || !value.isTextual()) {
-            throw new UnsupportedOperationException("Child field not found or is not a string value node: " +
+            throw new NodeProcessingException("Child field not found or is not a string value node: " +
                     node + " / " + fieldName);
         }
         return value.asText();
@@ -410,7 +410,7 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @return the child node or the provided default value
      *
      * @throws NullPointerException if {@code fieldName} is {@code null}
-     * @throws UnsupportedOperationException if this node is not an object, or if the child node is not a text
+     * @throws NodeProcessingException if this node is not an object, or if the child node is not a text
      * value node
      */
     @Nullable
@@ -433,20 +433,20 @@ abstract class AbstractNode<N extends AbstractNode> {
     @Nonnull
     public String getAsString() {
         if (!node.isTextual()) {
-            throw new UnsupportedOperationException("Not a text node: " + node);
+            throw new NodeProcessingException("Not a text node: " + node);
         }
         return node.asText();
     }
 
     private void checkArray() {
         if (!isArray()) {
-            throw new UnsupportedOperationException("Not an array: " + node);
+            throw new NodeProcessingException("Not an array: " + node);
         }
     }
 
     private void checkObject() {
         if (!isObject()) {
-            throw new UnsupportedOperationException("Not an object: " + node);
+            throw new NodeProcessingException("Not an object: " + node);
         }
     }
 
