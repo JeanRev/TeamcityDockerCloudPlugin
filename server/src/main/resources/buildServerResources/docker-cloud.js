@@ -1202,9 +1202,14 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
 
                 self.$useOfficialDockerImage.change(function () {
-                    self.$image.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
-                    self.$registryUser.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
-                    self.$registryPassword.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
+                    var useOfficialAgentImage = self.$useOfficialDockerImage.is(':checked');
+                    self.$image.prop('disabled', useOfficialAgentImage);
+                    self.$registryUser.prop('disabled', useOfficialAgentImage);
+                    self.$registryPassword.prop('disabled', useOfficialAgentImage);
+                    if (useOfficialAgentImage) {
+                        self.$registryUser.val('');
+                        self.$registryPassword.val('');
+                    }
                     self.$image.blur();
                 }).change();
 
