@@ -16,6 +16,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
+import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.StdioInputStream;
 import run.var.teamcity.cloud.docker.client.StdioType;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
@@ -94,7 +95,8 @@ public class StreamingController extends AbstractController {
 
         @Override
         public void run() {
-            try (DefaultDockerClient client = DefaultDockerClient.newInstance(containerCoordinates.getClientConfig())) {
+            try (DefaultDockerClient client = (DefaultDockerClient) DockerClientFactory.getDefault()
+                    .createClientWithAPINegotiation(containerCoordinates.getClientConfig())) {
                 try (StreamHandler streamHandler = openStreamHandler(client)) {
                     this.streamHandler = streamHandler;
 
@@ -121,7 +123,7 @@ public class StreamingController extends AbstractController {
                                     atmosphereResource);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                LOG.error("Failed to stream container logs.", e);
             }
         }
 
