@@ -14,6 +14,7 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -211,6 +212,11 @@ public final class TestUtils {
     @SafeVarargs
     public static <K,V> Map<K,V> mapOf(Pair<K,V>... pairs) {
         return Arrays.stream(pairs).collect(Collectors.toMap(Pair::getKey, Pair::getValue));
+    }
+
+    @SafeVarargs
+    public static <V> List<V> listOf(V... elts) {
+        return Arrays.stream(elts).collect(Collectors.toList());
     }
 
     public static <K,V> Pair<K,V> pair(K key, V value) {
