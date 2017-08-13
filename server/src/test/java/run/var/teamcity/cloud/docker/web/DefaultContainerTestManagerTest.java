@@ -28,6 +28,7 @@ import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,8 +42,8 @@ import static run.var.teamcity.cloud.docker.web.ContainerTestManager.ActionExcep
 @Category(LongRunning.class)
 public class DefaultContainerTestManagerTest {
 
-    private long testMaxIdleTime;
-    private long cleanupRateSec;
+    private Duration testMaxIdleTime;
+    private Duration cleanupRate;
 
     private TestDockerClientAdapterFactory clientAdapterFactory;
     private DockerClientConfig dockerClientConfig;
@@ -74,8 +75,8 @@ public class DefaultContainerTestManagerTest {
         buildServer = new TestSBuildServer();
         agentMgr = buildServer.getTestBuildAgentManager();
 
-        testMaxIdleTime = DefaultContainerTestManager.TEST_DEFAULT_IDLE_TIME_SEC;
-        cleanupRateSec = DefaultContainerTestManager.CLEANUP_DEFAULT_TASK_RATE_SEC;
+        testMaxIdleTime = DefaultContainerTestManager.TEST_DEFAULT_IDLE_TIME;
+        cleanupRate = DefaultContainerTestManager.CLEANUP_DEFAULT_TASK_RATE;
         imageResolver = new TestDockerImageResolver("resolved-image:1.0");
         testListener = new TestContainerTestStatusListener();
     }
@@ -233,8 +234,8 @@ public class DefaultContainerTestManagerTest {
     }
 
     private void setupFastCleanupRate() {
-        cleanupRateSec = 2;
-        testMaxIdleTime = 3;
+        cleanupRate = Duration.ofSeconds(2);
+        testMaxIdleTime = Duration.ofSeconds(3);
     }
 
     private void queryUntilSuccess(Phase... allowedPhases) {
@@ -283,6 +284,6 @@ public class DefaultContainerTestManagerTest {
 
     private ContainerTestManager createManager() {
         return new DefaultContainerTestManager(imageResolver, clientAdapterFactory,
-                buildServer, new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRateSec, null);
+                buildServer, new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRate, null);
     }
 }

@@ -23,6 +23,8 @@ import run.var.teamcity.cloud.docker.util.WrappedRunnableScheduledFuture;
 import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletResponse;
 import java.net.URL;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,16 +45,16 @@ class DefaultContainerTestManager extends ContainerTestManager {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(ContainerTestManager.class);
 
-    private final static long REFRESH_TASK_RATE_SEC = 10;
-    final static long CLEANUP_DEFAULT_TASK_RATE_SEC = 10;
-    final static long TEST_DEFAULT_IDLE_TIME_SEC = TimeUnit.MINUTES.toSeconds(10);
+    private final static Duration REFRESH_TASK_RATE = Duration.ofSeconds(10);
+    final static Duration CLEANUP_DEFAULT_TASK_RATE = Duration.ofSeconds(10);
+    final static Duration TEST_DEFAULT_IDLE_TIME = Duration.ofMinutes(10);
 
     private final LockHandler lock = LockHandler.newReentrantLock();
     private final Map<UUID, DefaultContainerTestHandler> tests = new HashMap<>();
     private final DockerImageNameResolver imageNameResolver;
     private final DockerClientAdapterFactory clientAdapterFactory;
-    private final long testMaxIdleTimeSec;
-    private final long cleanupRateSec;
+    private final Duration testMaxIdleTime;
+    private final Duration cleanupRate;
     private final SBuildServer buildServer;
     private final WebLinks webLinks;
     private final StreamingController streamingController;
@@ -64,18 +66,19 @@ class DefaultContainerTestManager extends ContainerTestManager {
     DefaultContainerTestManager(DockerImageNameResolver imageNameResolver,
                                 DockerClientAdapterFactory clientAdapterFactory, SBuildServer buildServer, WebLinks webLinks,
                                 StreamingController streamingController) {
-        this(imageNameResolver, clientAdapterFactory, buildServer, webLinks, TEST_DEFAULT_IDLE_TIME_SEC,
-                CLEANUP_DEFAULT_TASK_RATE_SEC, streamingController);
+        this(imageNameResolver, clientAdapterFactory, buildServer, webLinks, TEST_DEFAULT_IDLE_TIME,
+                CLEANUP_DEFAULT_TASK_RATE, streamingController);
     }
 
 
     DefaultContainerTestManager(DockerImageNameResolver imageNameResolver,
                                 DockerClientAdapterFactory clientAdapterFactory, SBuildServer buildServer, WebLinks webLinks,
-                                long testMaxIdleTimeSec, long cleanupRateSec, StreamingController streamingController) {
+                                Duration testMaxIdleTime, Duration cleanupRate, StreamingController
+                                        streamingController) {
         this.imageNameResolver = imageNameResolver;
         this.clientAdapterFactory = clientAdapterFactory;
-        this.testMaxIdleTimeSec = testMaxIdleTimeSec;
-        this.cleanupRateSec = cleanupRateSec;
+        this.testMaxIdleTime = testMaxIdleTime;
+        this.cleanupRate = cleanupRate;
         this.buildServer = buildServer;
         this.webLinks = webLinks;
         this.streamingController = streamingController;
@@ -177,8 +180,8 @@ class DefaultContainerTestManager extends ContainerTestManager {
         if (executorService == null) {
             lock.run(() -> {
                 executorService = createScheduledExecutor();
-                executorService.scheduleWithFixedDelay(new CleanupTask(), cleanupRateSec, cleanupRateSec,
-                        TimeUnit.SECONDS);
+                executorService.scheduleWithFixedDelay(new CleanupTask(), cleanupRate.toNanos(), cleanupRate.toNanos(),
+                        TimeUnit.NANOSECONDS);
             });
         }
     }
@@ -227,7 +230,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
 
         if (containerId != null) {
             try {
-                clientAdapter.terminateAgentContainer(containerId, 10, true);
+                clientAdapter.terminateAgentContainer(containerId, Duration.ofSeconds(10), true);
             } catch (DockerClientException e) {
                 // Ignore;
             } catch (Exception e) {
@@ -291,7 +294,7 @@ class DefaultContainerTestManager extends ContainerTestManager {
                     }
                     if (t == null) {
                         if (containerTestTask.getStatus() == TestContainerStatusMsg.Status.PENDING) {
-                            schedule(task, REFRESH_TASK_RATE_SEC, TimeUnit.SECONDS);
+                            schedule(task, REFRESH_TASK_RATE.getNano(), TimeUnit.NANOSECONDS);
                         }
                     } else if (t instanceof InterruptedException || t instanceof CancellationException) {
                         // Cancelled task, ignore.
@@ -328,20 +331,20 @@ class DefaultContainerTestManager extends ContainerTestManager {
         @Override
         public void run() {
 
-            List<DefaultContainerTestHandler> tests = new ArrayList<>();
+            List<DefaultContainerTestHandler> toDispose = new ArrayList<>();
 
             lock.run(() -> {
                 for (DefaultContainerTestHandler test : DefaultContainerTestManager.this.tests.values()) {
                     if (test.getCurrentTaskFuture() != null) {
-                        if (Math.abs(System.nanoTime() - test.getLastInteraction()) > TimeUnit.SECONDS.toNanos
-                                (testMaxIdleTimeSec)) {
-                            tests.add(test);
+                        if (Duration.between(test.getLastInteraction(), Instant.now()).compareTo
+                                (testMaxIdleTime) > 0) {
+                            toDispose.add(test);
                         }
                     }
                 }
             });
 
-            for (DefaultContainerTestHandler test : tests) {
+            for (DefaultContainerTestHandler test : toDispose) {
                 dispose(test);
             }
 

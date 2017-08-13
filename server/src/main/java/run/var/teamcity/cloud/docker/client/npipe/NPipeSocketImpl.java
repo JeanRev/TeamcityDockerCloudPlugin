@@ -12,6 +12,7 @@ import java.net.SocketException;
 import java.net.SocketImpl;
 import java.net.SocketOptions;
 import java.nio.file.Path;
+import java.time.Duration;
 
 /**
  * {@link SocketImpl} for {@link NPipeSocket}.
@@ -23,7 +24,7 @@ class NPipeSocketImpl extends SocketImpl {
     private PipeChannel pipeChannel;
     private PipeChannelInputStream input;
     private PipeChannelOutputStream output;
-    private long timeout;
+    private Duration timeout = Duration.ZERO;
     private boolean connected;
     private boolean closed;
 
@@ -139,12 +140,12 @@ class NPipeSocketImpl extends SocketImpl {
                 if (!(value instanceof Integer || value instanceof Long)) {
                     throw new SocketException("Unsupported timeout value: " + value);
                 }
-                timeout = ((Number) value).longValue();
+                timeout = Duration.ofMillis(((Number) value).longValue());
                 if (input != null) {
-                    input.setReadTimeoutMillis(timeout);
+                    input.setReadTimeout(timeout);
                 }
                 if (output != null) {
-                    output.setWriteTimeoutMillis(timeout);
+                    output.setWriteTimeout(timeout);
                 }
             } else {
                 throw new SocketException("Unsupported socket option: " + optID);
@@ -159,7 +160,7 @@ class NPipeSocketImpl extends SocketImpl {
                 throw new SocketException("Socket is closed.");
             }
             if (optID == SocketOptions.SO_TIMEOUT) {
-                return timeout;
+                return timeout.toMillis();
             }
             return null;
         });

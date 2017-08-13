@@ -9,6 +9,7 @@ import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
 import run.var.teamcity.cloud.docker.util.WrappedRunnableFuture;
 
 import javax.annotation.Nonnull;
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -75,15 +76,16 @@ class DockerTaskScheduler {
      *
      * @param threadPoolSize    the size of the thread pool for processing task
      * @param usingDaemonThread {@code true} to use daemon threads
-     * @param taskTimeoutMillis timeout in milliseconds after which a running task will be cancelled
+     * @param taskTimeout timeout duration after which a running task will be cancelled
      *
-     * @throws IllegalArgumentException if {@code connectionPoolSize} is smaller than 1
+     * @throws IllegalArgumentException if {@code connectionPoolSize} is smaller than 1 or if {@code taskTimeout} is
+     * negative
      */
-    DockerTaskScheduler(int threadPoolSize, boolean usingDaemonThread, long taskTimeoutMillis) {
+    DockerTaskScheduler(int threadPoolSize, boolean usingDaemonThread, Duration taskTimeout) {
         if (threadPoolSize < 1) {
             throw new IllegalArgumentException("Thread pool size must be strictly greater than 1.");
         }
-        if (taskTimeoutMillis < 0) {
+        if (taskTimeout.isNegative()) {
             throw new IllegalArgumentException("Task timeout must be a positive integer.");
         }
 
@@ -106,8 +108,8 @@ class DockerTaskScheduler {
                 assert runnable instanceof WrappedRunnableFuture;
 
                 // Schedule a task to check for timeout.
-                mngExecutor.schedule(new TimeoutHandlingTask((Future<?>) runnable), taskTimeoutMillis,
-                        TimeUnit.MILLISECONDS);
+                mngExecutor.schedule(new TimeoutHandlingTask((Future<?>) runnable), taskTimeout.toNanos(),
+                        TimeUnit.NANOSECONDS);
 
                 super.beforeExecute(thread, runnable);
             }
@@ -170,11 +172,14 @@ class DockerTaskScheduler {
 
                     }
 
-                    if (!shutdownRequested && dockerTask.isRepeatable()) {
+                    Duration rescheduleDelay = dockerTask.getRescheduleDelay();
+
+                    if (!shutdownRequested && !rescheduleDelay.isNegative()) {
                         // Repeatable tasks are always rescheduled, even if their last execution failed. This permits
                         // the client to recover from an error status.
                         LOG.debug("Rescheduling task: " + dockerTask);
-                        mngExecutor.schedule(new ScheduleRepetableTask(dockerTask), dockerTask.getDelay(), dockerTask.getTimeUnit());
+                        mngExecutor.schedule(new ScheduleRepetableTask(dockerTask), rescheduleDelay.toNanos(),
+                                TimeUnit.NANOSECONDS);
                     }
 
                     scheduleNextTasks();
@@ -217,17 +222,14 @@ class DockerTaskScheduler {
 
     private void submitTaskWithInitialDelay(DockerTask task) {
         assert task != null;
-        if (task.isRepeatable()) {
-            long initialDelay = task.getInitialDelay();
-            if (initialDelay > 0) {
-                TimeUnit timeUnit = task.getTimeUnit();
-                assert timeUnit != null;
-                mngExecutor.schedule(new ScheduleRepetableTask(task), initialDelay, timeUnit);
-                return;
-            }
-        }
 
-        submitTask(task);
+        Duration initialDelay = task.getInitialDelay();
+
+        if (!initialDelay.isNegative() && !initialDelay.isZero()) {
+            mngExecutor.schedule(new ScheduleRepetableTask(task), initialDelay.toNanos(), TimeUnit.NANOSECONDS);
+        } else {
+            submitTask(task);
+        }
     }
 
     private void submitTask(DockerTask task) {
@@ -301,7 +303,7 @@ class DockerTaskScheduler {
         final DockerTask task;
 
         ScheduleRepetableTask(DockerTask task) {
-            assert task != null && task.isRepeatable();
+            assert task != null;
             this.task = task;
         }
 

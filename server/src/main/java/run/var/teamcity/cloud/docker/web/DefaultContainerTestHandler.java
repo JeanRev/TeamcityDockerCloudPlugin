@@ -12,6 +12,7 @@ import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,7 +28,7 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
     private final ContainerTestListener statusListener;
     private final StreamingController streamingController;
 
-    private long lastInteraction;
+    private Instant lastInteraction;
     private String containerId;
     private boolean buildAgentDetected = false;
 
@@ -114,15 +115,16 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
      * Notify a user interaction for this test.
      */
     public void notifyInteraction() {
-        lastInteraction = System.nanoTime();
+        lastInteraction = Instant.now();
     }
 
     /**
-     * Gets the last user interaction for this test as a nano timestamp.
+     * Gets the last user interaction timestamp for this test.
      *
-     * @return a nano timestamp
+     * @return the timestamp
      */
-    public long getLastInteraction() {
+    @Nonnull
+    public Instant getLastInteraction() {
         return lastInteraction;
     }
 

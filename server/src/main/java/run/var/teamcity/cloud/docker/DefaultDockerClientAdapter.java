@@ -19,6 +19,8 @@ import run.var.teamcity.cloud.docker.util.Stopwatch;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +36,7 @@ public class DefaultDockerClientAdapter implements DockerClientAdapter {
 
     private final DockerClient client;
 
-    public DefaultDockerClientAdapter(DockerClient client) {
+    DefaultDockerClientAdapter(DockerClient client) {
         this.client = client;
     }
 
@@ -102,11 +104,11 @@ public class DefaultDockerClientAdapter implements DockerClientAdapter {
     }
 
     @Override
-    public boolean terminateAgentContainer(@Nonnull String containerId, long timeout, boolean removeContainer) {
+    public boolean terminateAgentContainer(@Nonnull String containerId, Duration timeout, boolean removeContainer) {
         try {
-            long stopTime = Stopwatch.measureMillis(() ->
+            Duration stopTime = Stopwatch.measure(() ->
                     client.stopContainer(containerId, timeout));
-            LOG.info("Container " + containerId + " stopped in " + stopTime + "ms.");
+            LOG.info("Container " + containerId + " stopped in " + stopTime.toMillis() + "ms.");
         } catch (ContainerAlreadyStoppedException e) {
             LOG.debug("Container " + containerId + " was already stopped.", e);
         } catch (NotFoundException e) {
@@ -267,7 +269,7 @@ public class DefaultDockerClientAdapter implements DockerClientAdapter {
         String state = container.getAsString("State");
         List<String> names = container.getArray("Names").getArrayValues().stream().map(Node::getAsString).collect(
                 Collectors.toList());
-        long creationTimestamp = container.getAsLong("Created");
+        Instant creationTimestamp = Instant.ofEpochSecond(container.getAsLong("Created"));
         return new ContainerInfo(id, labels, state, names, creationTimestamp);
     }
 

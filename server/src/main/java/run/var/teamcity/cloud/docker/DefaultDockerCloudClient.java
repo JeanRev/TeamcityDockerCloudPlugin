@@ -26,6 +26,8 @@ import run.var.teamcity.cloud.docker.util.LockHandler;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URL;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,8 +35,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /**
  * A Docker {@link CloudClient}.
@@ -74,9 +76,9 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     private final CloudState cloudState;
 
     /**
-     * Timestamp of the last sync with Docker. Initially -1.
+     * Timestamp of the last sync with Docker. Initially {@code null}.
      */
-    private long lastDockerSyncTimeMillis = -1;
+    private Instant lastDockerSyncTime = null;
 
     private enum State {
         /**
@@ -147,7 +149,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         this.buildServer = buildServer;
 
         taskScheduler = new DockerTaskScheduler(clientConfig.getDockerClientConfig().getConnectionPoolSize(),
-                clientConfig.isUsingDaemonThreads(), clientConfig.getTaskTimeoutMillis());
+                clientConfig.isUsingDaemonThreads(), clientConfig.getTaskTimeout());
 
         for (DockerImageConfig imageConfig : imageConfigs) {
             DockerImage image = new DockerImage(DefaultDockerCloudClient.this, imageConfig);
@@ -179,7 +181,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
         state = State.READY;
 
-        taskScheduler.scheduleClientTask(new SyncWithDockerTask(clientConfig.getDockerSyncRateSec(), TimeUnit.SECONDS));
+        taskScheduler.scheduleClientTask(new SyncWithDockerTask(clientConfig.getDockerSyncRate()));
     }
 
     /**
@@ -513,7 +515,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         // effectively killed. Applying no timeout has the disadvantage that the agent will not have the time
         // to properly shutdown and the TC server will need more time to notice that it is effectively gone.
 
-        long timeout = clientDisposed ? 0 : DockerClient.DEFAULT_TIMEOUT;
+        Duration timeout = clientDisposed ? Duration.ZERO : DockerClient.DEFAULT_TIMEOUT;
 
         return clientAdapter.terminateAgentContainer(containerId, timeout, rmContainer);
     }
@@ -535,8 +537,8 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
      *
      * @return the timestamp of the last Docker sync or -1
      */
-    public long getLastDockerSyncTimeMillis() {
-        return lock.call(() -> lastDockerSyncTimeMillis);
+    public Optional<Instant> getLastDockerSyncTime() {
+        return Optional.of(lock.call(() -> lastDockerSyncTime));
     }
 
     private Map<String, String> prepareLabelsMap(DockerInstance instance) {
@@ -581,32 +583,37 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
     private class SyncWithDockerTask extends DockerClientTask {
 
-        private long nextDelay;
+        private Duration nextDelay;
 
         SyncWithDockerTask() {
             super("Synchronization with Docker daemon", DefaultDockerCloudClient.this);
         }
 
-        SyncWithDockerTask(long delaySec, TimeUnit timeUnit) {
-            super("Synchronization with Docker daemon", DefaultDockerCloudClient.this, 0, delaySec, timeUnit);
+        SyncWithDockerTask(Duration rescheduleDelay) {
+            super("Synchronization with Docker daemon", DefaultDockerCloudClient.this, Duration.ZERO, rescheduleDelay);
         }
 
+        @Nonnull
         @Override
-        public long getDelay() {
-            return nextDelay;
+        public Duration getRescheduleDelay() {
+            return nextDelay == null ? super.getRescheduleDelay() : nextDelay;
         }
 
         private boolean reschedule() {
             return lock.call(() -> {
-                long delay = super.getDelay();
-                long delaySinceLastExec = System.currentTimeMillis() - lastDockerSyncTimeMillis;
-                long remainingDelay = delay - delaySinceLastExec;
-                if (remainingDelay > 0) {
+                Duration rescheduleDelay = super.getRescheduleDelay();
+                nextDelay = rescheduleDelay;
+                if (lastDockerSyncTime == null) {
+                    // No sync performed yet.
+                    return false;
+                }
+                Duration delaySinceLastExec = Duration.between(lastDockerSyncTime, Instant.now());
+                Duration remainingDelay = rescheduleDelay.minus(delaySinceLastExec);
+                if (remainingDelay.isNegative() || remainingDelay.isZero()) {
+                    return false;
+                } else {
                     nextDelay = remainingDelay;
                     return true;
-                } else {
-                    nextDelay = delay;
-                    return false;
                 }
             });
         }
@@ -751,11 +758,11 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                         errorInfo = null;
                     }
 
-                    lastDockerSyncTimeMillis = System.currentTimeMillis();
+                    lastDockerSyncTime = Instant.now();
                 } finally {
                     // If this task was explicitly scheduled (not automatically fired) then clear the corresponding
                     // flag.
-                    if (!isRepeatable()) {
+                    if (!getRescheduleDelay().isZero()) {
                         dockerSyncScheduled = false;
                     }
                 }

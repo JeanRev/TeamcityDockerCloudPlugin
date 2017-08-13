@@ -3,6 +3,7 @@ package run.var.teamcity.cloud.docker.util;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -53,7 +54,7 @@ public class LockHandlerTest {
 
         ctrl1.release();
 
-        assertThat(Stopwatch.measureMillis(ctrl2::awaitExecution)).isBetween(0L, 100L);
+        assertThat(Stopwatch.measure(ctrl2::awaitExecution)).isBetween(Duration.ZERO, Duration.ofMillis(100));
 
         ctrl2.release();
     }
@@ -91,7 +92,7 @@ public class LockHandlerTest {
 
         ctrl1.release();
 
-        assertThat(Stopwatch.measureMillis(ctrl2::awaitExecution)).isBetween(0L, 100L);
+        assertThat(Stopwatch.measure(ctrl2::awaitExecution)).isBetween(Duration.ZERO, Duration.ofMillis(100));
 
         ctrl2.release();
     }
@@ -144,7 +145,7 @@ public class LockHandlerTest {
 
         ctrl1.release();
 
-        assertThat(Stopwatch.measureMillis(ctrl2::awaitExecution)).isBetween(0L, 100L);
+        assertThat(Stopwatch.measure(ctrl2::awaitExecution)).isBetween(Duration.ZERO, Duration.ofMillis(100));
 
         ctrl2.release();
     }
@@ -182,13 +183,13 @@ public class LockHandlerTest {
 
         ctrl2.executingThread.interrupt();
 
-        assertThat(Stopwatch.measureMillis(() -> {
+        assertThat(Stopwatch.measure(() -> {
             try {
                 future.get();
             } catch (InterruptedException | ExecutionException e) {
                 fail("Unexpected exception.", e);
             }
-        })).isBetween(0L, 200L);
+        })).isBetween(Duration.ZERO, Duration.ofMillis(200));
 
         ctrl1.release();
     }
@@ -229,7 +230,7 @@ public class LockHandlerTest {
         ctrl1.release();
 
         assertThat(future.get()).isEqualTo(42);
-        assertThat(Stopwatch.measureMillis(ctrl2::awaitExecution)).isBetween(0L, 100L);
+        assertThat(Stopwatch.measure(ctrl2::awaitExecution)).isBetween(Duration.ZERO, Duration.ofMillis(100));
 
         ctrl2.release();
     }
@@ -270,7 +271,7 @@ public class LockHandlerTest {
         ctrl1.release();
 
         assertThat(future.get()).isEqualTo(42);
-        assertThat(Stopwatch.measureMillis(ctrl2::awaitExecution)).isBetween(0L, 100L);
+        assertThat(Stopwatch.measure(ctrl2::awaitExecution)).isBetween(Duration.ZERO, Duration.ofMillis(100));
 
         ctrl2.release();
     }
@@ -325,7 +326,7 @@ public class LockHandlerTest {
         ctrl1.release();
 
         assertThat(future.get()).isEqualTo(42);
-        assertThat(Stopwatch.measureMillis(ctrl2::awaitExecution)).isBetween(0L, 100L);
+        assertThat(Stopwatch.measure(ctrl2::awaitExecution)).isBetween(Duration.ZERO, Duration.ofMillis(100));
 
         ctrl2.release();
     }
@@ -335,7 +336,7 @@ public class LockHandlerTest {
 
         LockHandler lock = LockHandler.newReentrantLock();
 
-        assertThat(Stopwatch.measureMillis(() -> runAsync(() ->  {
+        assertThat(Stopwatch.measure(() -> runAsync(() ->  {
             Thread.currentThread().interrupt();
             try {
                 lock.callInterruptibly(() -> {
@@ -346,7 +347,7 @@ public class LockHandlerTest {
             } catch (InterruptedException e){
                 // OK
             }
-        }))).isBetween(0L, 200L);
+        }))).isBetween(Duration.ZERO, Duration.ofMillis(200));
     }
 
     @Test(timeout = 5000)

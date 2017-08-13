@@ -8,7 +8,9 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -18,16 +20,16 @@ import java.util.concurrent.TimeoutException;
 class PipeChannelOutputStream extends OutputStream {
 
     private final PipeChannel pipeChannel;
-    private volatile long writeTimeoutMillis;
+    private volatile Duration writeTimeout;
     private volatile boolean shutdown;
 
-    PipeChannelOutputStream(@Nonnull PipeChannel pipeChannel, long writeTimeoutMillis) {
+    PipeChannelOutputStream(@Nonnull PipeChannel pipeChannel, Duration writeTimeout) {
         DockerCloudUtils.requireNonNull(pipeChannel, "File channel cannot be null.");
-        if (writeTimeoutMillis < 0) {
+        if (writeTimeout.isNegative()) {
             throw new IllegalArgumentException("Write timeout must be a positive integer.");
         }
         this.pipeChannel = pipeChannel;
-        this.writeTimeoutMillis = writeTimeoutMillis;
+        this.writeTimeout = writeTimeout;
     }
 
     @Override
@@ -59,8 +61,13 @@ class PipeChannelOutputStream extends OutputStream {
         bb.position(off);
 
         while (bb.remaining() > 0) {
+            Future<Integer> futur = pipeChannel.write(bb);
             try {
-                pipeChannel.write(bb).get(writeTimeoutMillis, TimeUnit.MILLISECONDS);
+                if (writeTimeout.isZero()) {
+                    futur.get();
+                } else {
+                    futur.get(writeTimeout.toNanos(), TimeUnit.NANOSECONDS);
+                }
             } catch (InterruptedException | ExecutionException e) {
                 throw new IOException(e);
             } catch (TimeoutException e) {
@@ -81,12 +88,12 @@ class PipeChannelOutputStream extends OutputStream {
         return pipeChannel.isOpen();
     }
 
-    long getWriteTimeoutMillis() {
-        return writeTimeoutMillis;
+    Duration getWriteTimeout() {
+        return writeTimeout;
     }
 
-    void setWriteTimeoutMillis(long writeTimeoutMillis) {
-        this.writeTimeoutMillis = writeTimeoutMillis;
+    void setWriteTimeout(Duration writeTimeout) {
+        this.writeTimeout = writeTimeout;
     }
 
     @Override

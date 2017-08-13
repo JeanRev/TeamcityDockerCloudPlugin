@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -167,7 +168,7 @@ public class TestDockerClient implements DockerClient {
     public void restartContainer(@Nonnull String containerId) {
         // Virtually no difference with a simple start from a test perspective.
         try {
-            stopContainer(containerId, 0);
+            stopContainer(containerId, Duration.ZERO);
         } catch (ContainerAlreadyStoppedException e) {
             // Ignore.
         }
@@ -318,7 +319,7 @@ public class TestDockerClient implements DockerClient {
     }
 
     @Override
-    public void stopContainer(@Nonnull String containerId, long timeoutSec) {
+    public void stopContainer(@Nonnull String containerId, Duration timeout) {
         TestUtils.waitMillis(300);
 
         lock.run(() -> {

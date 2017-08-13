@@ -11,12 +11,12 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Configuration of a {@link DockerCloudClient}. Could be instantiated directly, or from a cloud parameter map.
@@ -24,14 +24,14 @@ import java.util.concurrent.TimeUnit;
  */
 public class DockerCloudClientConfig {
 
-    static final long DEFAULT_DOCKER_SYNC_RATE_SEC = 30;
-    static final long DEFAULT_TASK_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(10);
+    static final Duration DEFAULT_DOCKER_SYNC_RATE = Duration.ofSeconds(30);
+    static final Duration DEFAULT_TASK_TIMEOUT_MILLIS = Duration.ofMinutes(10);
 
     private final UUID uuid;
     private final DockerClientConfig dockerClientConfig;
     private final boolean usingDaemonThreads;
-    private final long dockerSyncRateSec;
-    private final long taskTimeoutMillis;
+    private final Duration dockerSyncRate;
+    private final Duration taskTimeout;
     private final URL serverURL;
 
     /**
@@ -45,7 +45,7 @@ public class DockerCloudClientConfig {
      */
     public DockerCloudClientConfig(@Nonnull UUID uuid, @Nonnull DockerClientConfig dockerClientConfig,
                                    boolean usingDaemonThreads, @Nullable URL serverURL) {
-        this(uuid, dockerClientConfig, usingDaemonThreads, DEFAULT_DOCKER_SYNC_RATE_SEC, DEFAULT_TASK_TIMEOUT_MILLIS,
+        this(uuid, dockerClientConfig, usingDaemonThreads, DEFAULT_DOCKER_SYNC_RATE, DEFAULT_TASK_TIMEOUT_MILLIS,
                 serverURL);
     }
 
@@ -55,27 +55,27 @@ public class DockerCloudClientConfig {
      * @param uuid               the cloud client UUID
      * @param dockerClientConfig the Docker client configuration
      * @param usingDaemonThreads {@code true} if the client must use daemon threads to manage containers
-     * @param dockerSyncRateSec  the rate at which the client is synchronized with the Docker daemon, in seconds
+     * @param dockerSyncRate  the rate at which the client is synchronized with the Docker daemon, in seconds
      * @param serverURL          the server URL to be configured on the agents
      * @throws NullPointerException     if any argument is {@code null}
      * @throws IllegalArgumentException if the Docker sync rate is below 2 seconds
      */
     public DockerCloudClientConfig(@Nonnull UUID uuid, @Nonnull DockerClientConfig dockerClientConfig,
-                                   boolean usingDaemonThreads, long dockerSyncRateSec, long taskTimeoutMillis,
+                                   boolean usingDaemonThreads, Duration dockerSyncRate, Duration taskTimeout,
                                    @Nullable URL serverURL) {
         DockerCloudUtils.requireNonNull(uuid, "Client UUID cannot be null.");
         DockerCloudUtils.requireNonNull(dockerClientConfig, "Docker client configuration cannot be null.");
-        if (dockerSyncRateSec < 2) {
+        if (dockerSyncRate.getSeconds() < 2) {
             throw new IllegalArgumentException("Docker sync rate must be of at least 2 seconds.");
         }
-        if (taskTimeoutMillis < 10) {
+        if (taskTimeout.getSeconds() < 10) {
             throw new IllegalArgumentException("Task timeout must be of at least 10 seconds.");
         }
         this.uuid = uuid;
         this.dockerClientConfig = dockerClientConfig;
         this.usingDaemonThreads = usingDaemonThreads;
-        this.dockerSyncRateSec = dockerSyncRateSec;
-        this.taskTimeoutMillis = taskTimeoutMillis;
+        this.dockerSyncRate = dockerSyncRate;
+        this.taskTimeout = taskTimeout;
         this.serverURL = serverURL;
     }
 
@@ -108,21 +108,23 @@ public class DockerCloudClientConfig {
     }
 
     /**
-     * Frequency in second at which synchronization with the Docker daemon is performed.
+     * Frequency at which synchronization with the Docker daemon is performed.
      *
      * @return the synchronisation rate
      */
-    public long getDockerSyncRateSec() {
-        return dockerSyncRateSec;
+    @Nonnull
+    public Duration getDockerSyncRate() {
+        return dockerSyncRate;
     }
 
     /**
-     * The maximal duration in milliseconds of cloud related operations.
+     * The maximal duration of a cloud related operations.
      *
      * @return the maximal duration
      */
-    public long getTaskTimeoutMillis() {
-        return taskTimeoutMillis;
+    @Nonnull
+    public Duration getTaskTimeout() {
+        return taskTimeout;
     }
 
     /**

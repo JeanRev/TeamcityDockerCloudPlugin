@@ -48,6 +48,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Set;
@@ -227,16 +228,16 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     }
 
     @Override
-    public void stopContainer(@Nonnull String containerId, long timeoutSec) {
+    public void stopContainer(@Nonnull String containerId, Duration timeout) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
 
         WebTarget target = target().path("/containers/{id}/stop").resolveTemplate("id", containerId);
-        if (timeoutSec != DockerClient.DEFAULT_TIMEOUT) {
-            if (timeoutSec < 0) {
+        if (!timeout.equals(DockerClient.DEFAULT_TIMEOUT)) {
+            if (timeout.isNegative()) {
                 throw new IllegalArgumentException("Timeout must be a positive integer.");
             }
 
-            target = target.queryParam("t", timeoutSec);
+            target = target.queryParam("t", timeout.getSeconds());
         }
 
 
@@ -430,8 +431,9 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         connManager.setMaxTotal(connectionPoolSize);
 
         config.property(ApacheClientProperties.CONNECTION_MANAGER, connManager);
-        config.property(ClientProperties.CONNECT_TIMEOUT, clientConfig.getConnectTimeoutMillis());
-        config.property(ClientProperties.READ_TIMEOUT, clientConfig.getTransferTimeoutMillis());
+        // NB: caution with those, they must strictly be set as integers (not long).
+        config.property(ClientProperties.CONNECT_TIMEOUT, (int) clientConfig.getConnectTimeout().toMillis());
+        config.property(ClientProperties.READ_TIMEOUT, (int) clientConfig.getTransferTimeout().toMillis());
         config.property(ApacheConnectorProvider.CONNECTION_REUSE_STRATEGY_PROP, connectionReuseStrategy);
 
         return new DefaultDockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI,

@@ -9,9 +9,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -30,7 +34,7 @@ public class PipeChannelInputStreamTest {
     public void available() throws IOException {
         testChannel = new TestPipeChannel();
 
-        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, 2000);
+        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, Duration.ofSeconds(2));
 
         assertThat(input.available()).isZero();
 
@@ -49,7 +53,7 @@ public class PipeChannelInputStreamTest {
     public void simpleRead() throws IOException {
         testChannel = new TestPipeChannel();
 
-        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, 2000);
+        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, Duration.ofSeconds(2));
 
         String msg = "Hello world!";
 
@@ -68,7 +72,7 @@ public class PipeChannelInputStreamTest {
     public void readSmallBuffer() throws IOException {
         testChannel = new TestPipeChannel();
 
-        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, 2000);
+        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, Duration.ofSeconds(2));
 
         String msg = "Hello world!";
         byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
@@ -95,7 +99,7 @@ public class PipeChannelInputStreamTest {
     public void readSingleByte() throws IOException {
         testChannel = new TestPipeChannel();
 
-        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, 2000);
+        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, Duration.ofSeconds(2));
 
         String msg = "Hello world!";
         byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
@@ -118,7 +122,7 @@ public class PipeChannelInputStreamTest {
     public void readWithOffsetUndLength() throws IOException {
         testChannel = new TestPipeChannel();
 
-        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, 2000);
+        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, Duration.ofSeconds(2));
 
         byte[] msgBytes = new byte[]{1, 2, 3};
 
@@ -153,12 +157,12 @@ public class PipeChannelInputStreamTest {
     }
 
     @Test(timeout = 10000)
-    public void timeoutRead() throws IOException {
+    public void readTimeout() throws IOException {
         testChannel = new TestPipeChannel();
 
-        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, 1000);
+        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, Duration.ofSeconds(1));
 
-        assertThat(Stopwatch.measureMillis(() -> {
+        assertThat(Stopwatch.measure(() -> {
             try {
                 input.read();
                 fail("Read operation must not complete.");
@@ -167,14 +171,40 @@ public class PipeChannelInputStreamTest {
             } catch (IOException e) {
                 fail("Read failed.", e);
             }
-        })).isCloseTo(1000, Offset.offset(150L));
+        }).toMillis()).isCloseTo(1000, Offset.offset(150L));
+    }
+
+    @Test(timeout = 10000)
+    public void infiniteReadTimeout() throws IOException {
+        testChannel = new TestPipeChannel();
+
+        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, Duration.ofSeconds(0));
+
+        Future<Void> future = runAsync(() -> {
+            try {
+                input.read();
+                fail("Read operation must not complete.");
+            } catch (SocketTimeoutException e) {
+                fail("Unexpected timeout.", e);
+            } catch (IOException e) {
+                fail("Read failed.", e);
+            }
+        });
+
+        try {
+            future.get(2, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException e) {
+            fail("Unexpected failure.", e);
+        } catch (TimeoutException e) {
+            // OK
+        }
     }
 
     @Test(timeout = 10000)
     public void targetChannelClosed() throws Exception {
         testChannel = new TestPipeChannel();
 
-        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, 1000);
+        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, Duration.ofSeconds(1));
 
         CompletableFuture<Void> futur = runAsync(() -> {
             int n = input.read();
@@ -191,16 +221,16 @@ public class PipeChannelInputStreamTest {
         testChannel = new TestPipeChannel();
 
         assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new PipeChannelInputStream(null, 1000));
+                .isThrownBy(() -> new PipeChannelInputStream(null, Duration.ofSeconds(1)));
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> new PipeChannelInputStream(testChannel, -1));
+                .isThrownBy(() -> new PipeChannelInputStream(testChannel, Duration.ofMillis(-1)));
     }
 
     @Test(timeout = 10000)
     public void invalidReadParameter() throws IOException {
         testChannel = new TestPipeChannel();
 
-        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, 1000);
+        PipeChannelInputStream input = new PipeChannelInputStream(testChannel, Duration.ofSeconds(1));
 
         assertThatExceptionOfType(IndexOutOfBoundsException.class)
                 .isThrownBy(() -> input.read(new byte[10], -1, 5));

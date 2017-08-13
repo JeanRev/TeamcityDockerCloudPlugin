@@ -7,6 +7,7 @@ import run.var.teamcity.cloud.docker.util.NodeStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 
@@ -20,7 +21,7 @@ public interface DockerClient extends Closeable {
      * specified in the container configuration (for Docker <= 12.x) if any, or the Docker daemon default timeout
      * (10 seconds).
      */
-    long DEFAULT_TIMEOUT = -1;
+    Duration DEFAULT_TIMEOUT = Duration.ofSeconds(-1);
 
     // Api version: must be settable after instantiation to handle with API version negotiation.
 
@@ -62,7 +63,7 @@ public interface DockerClient extends Closeable {
     StreamHandler streamLogs(@Nonnull String containerId, int lineCount, Set<StdioType> stdioTypes, boolean
             follow);
 
-    void stopContainer(@Nonnull String containerId, long timeoutSec);
+    void stopContainer(@Nonnull String containerId, Duration timeout);
 
     void removeContainer(@Nonnull String containerId, boolean removeVolumes, boolean force);
 

@@ -5,6 +5,7 @@ import org.junit.Test;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import java.net.URISyntaxException;
+import java.time.Duration;
 import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,24 +21,24 @@ public class DockerClientConfigTest {
         DockerClientConfig config = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerAPIVersion.parse("9.99"))
                 .usingTls(true)
-                .connectTimeoutMillis(42)
-                .transferTimeoutMillis(43)
+                .connectTimeout(Duration.ofSeconds(42))
+                .transferTimeout(Duration.ofSeconds(43))
                 .connectionPoolSize(44);
 
         assertThat(config.getInstanceURI()).isEqualTo(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
         assertThat(config.getApiVersion()).isEqualTo(DockerAPIVersion.parse("9.99"));
         assertThat(config.isUsingTLS()).isTrue();
-        assertThat(config.getConnectTimeoutMillis()).isEqualTo(42);
-        assertThat(config.getTransferTimeoutMillis()).isEqualTo(43);
+        assertThat(config.getConnectTimeout()).isEqualTo(Duration.ofSeconds(42));
+        assertThat(config.getTransferTimeout()).isEqualTo(Duration.ofSeconds(43));
         assertThat(config.getConnectionPoolSize()).isEqualTo(44);
 
         config.usingTls(false)
-                .connectTimeoutMillis(0)
+                .connectTimeout(Duration.ZERO)
                 .connectionPoolSize(1);
 
         assertThat(config.getInstanceURI()).isEqualTo(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI);
         assertThat(config.isUsingTLS()).isFalse();
-        assertThat(config.getConnectTimeoutMillis()).isEqualTo(0);
+        assertThat(config.getConnectTimeout()).isEqualTo(Duration.ZERO);
         assertThat(config.getConnectionPoolSize()).isEqualTo(1);
     }
 
@@ -45,8 +46,10 @@ public class DockerClientConfigTest {
     public void invalidTimeout() {
         DockerClientConfig config = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerAPIVersion.DEFAULT);
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> config.connectTimeoutMillis(-1));
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> config.transferTimeoutMillis(-1));
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> config.connectTimeout(Duration
+                .ofMillis(-1)));
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> config.transferTimeout(Duration
+                .ofMillis(-1)));
     }
 
     @Test

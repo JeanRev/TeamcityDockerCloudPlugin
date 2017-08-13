@@ -31,12 +31,12 @@ import run.var.teamcity.cloud.docker.util.Node;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Date;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -256,7 +256,7 @@ public class DefaultDockerCloudClientTest {
 
         DefaultDockerCloudClient client = createClient();
 
-        waitUntil(() -> client.getLastDockerSyncTimeMillis() != -1);
+        waitUntil(() -> client.getLastDockerSyncTime().isPresent());
 
         List<TestSBuildAgent> unregisteredAgents = buildServer.getBuildAgentManager().getUnregisteredAgents();
 
@@ -339,7 +339,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerImage image = waitForImage(client);
 
-        waitUntil(() -> (client.getLastDockerSyncTimeMillis()) != -1);
+        waitUntil(() -> (client.getLastDockerSyncTime().isPresent()));
 
         assertThat(client.getErrorInfo()).isNull();
         assertThat(client.canStartNewInstance(image)).isTrue();
@@ -375,7 +375,7 @@ public class DefaultDockerCloudClientTest {
 
         waitUntil(() -> client.getErrorInfo() == null);
 
-        assertThat(client.getLastDockerSyncTimeMillis()).isNotEqualTo(-1);
+        assertThat(client.getLastDockerSyncTime()).isPresent();
     }
 
     @Test
@@ -667,7 +667,7 @@ public class DefaultDockerCloudClientTest {
         assertThat(clientAdapter.getTerminationInfos()).hasSize(1);
         TerminationInfo terminationInfo = clientAdapter.getTerminationInfos().get(0);
 
-        assertThat(terminationInfo.getTimeout()).isEqualTo(0);
+        assertThat(terminationInfo.getTimeout()).isEqualTo(Duration.ZERO);
     }
 
     @Test
@@ -800,7 +800,8 @@ public class DefaultDockerCloudClientTest {
 
         DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
-        DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, 2, TimeUnit.MINUTES.toMillis(10), serverURL);
+        DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig,
+                false, Duration.ofSeconds(2), Duration.ofMinutes(10), serverURL);
         DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, pullOnCreate, rmOnExit, false,
                 registryCredentials, maxInstanceCount, 111);
 

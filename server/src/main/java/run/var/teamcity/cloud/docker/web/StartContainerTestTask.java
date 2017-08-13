@@ -7,9 +7,10 @@ import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.annotation.Nonnull;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status.PENDING;
 import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status.SUCCESS;
@@ -19,11 +20,11 @@ import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status.SU
  */
 class StartContainerTestTask extends ContainerTestTask {
 
-    private final static int AGENT_WAIT_TIMEOUT_SEC = 120;
+    private final static Duration AGENT_WAIT_TIMEOUT = Duration.ofSeconds(120);
 
     private final String containerId;
     private final UUID instanceUuid;
-    private long containerStartTime = -1;
+    private Instant containerStartTime = null;
 
     /**
      * Creates a new task instance.
@@ -43,10 +44,10 @@ class StartContainerTestTask extends ContainerTestTask {
     Status work() {
         DockerClientAdapter clientAdapter = testTaskHandler.getDockerClientAdapter();
 
-        if (containerStartTime == -1) {
+        if (containerStartTime == null) {
             // Container not started yet, doing it now.
 
-            containerStartTime = System.currentTimeMillis();
+            containerStartTime = Instant.now();
 
             clientAdapter.startAgentContainer(containerId);
 
@@ -64,10 +65,10 @@ class StartContainerTestTask extends ContainerTestTask {
         } else if (containers.size() == 1) {
             final ContainerInfo container = containers.get(0);
             if (container.isRunning()) {
-                long timeElapsedSinceStart = System.currentTimeMillis() - containerStartTime;
-                if (TimeUnit.MILLISECONDS.toSeconds(timeElapsedSinceStart) > AGENT_WAIT_TIMEOUT_SEC) {
+                Duration timeElapsedSinceStart = Duration.between(containerStartTime, Instant.now());
+                if (timeElapsedSinceStart.compareTo(AGENT_WAIT_TIMEOUT) > 0) {
                     throw new ContainerTestTaskException("Timeout: no agent connection after " +
-                            AGENT_WAIT_TIMEOUT_SEC + " seconds.");
+                            AGENT_WAIT_TIMEOUT + " seconds.");
                 }
             } else {
                 throw new ContainerTestTaskException("Container exited prematurely (" + container.getState() + ")");

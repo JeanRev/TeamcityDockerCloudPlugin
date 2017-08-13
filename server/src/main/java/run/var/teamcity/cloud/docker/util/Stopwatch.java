@@ -1,18 +1,18 @@
 package run.var.teamcity.cloud.docker.util;
 
 import javax.annotation.Nonnull;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
+import java.time.Instant;
 
 /**
- * A simple stopwatch implementation with nano-seconds precision. Any time conversion will be performed according to
- * the {@link TimeUnit} contract.
+ * A simple stopwatch implementation based on {@code java.time}.
  * <p>
  *     This implementation is thread safe.
  * </p>
  */
 public class Stopwatch {
 
-    private volatile long startTimeNanos;
+    private volatile Instant startTime;
 
     private Stopwatch() {
         reset();
@@ -22,7 +22,7 @@ public class Stopwatch {
      * Reset this stopwatch. Bring this stopwatch back to 0, and start counting immediately.
      */
     public void reset() {
-        startTimeNanos = System.nanoTime();
+        startTime = Instant.now();
     }
 
     /**
@@ -43,44 +43,14 @@ public class Stopwatch {
      *
      * @throws NullPointerException if {@code runnable} is {@code null}
      */
-    public static long measureMillis(@Nonnull Runnable runnable) {
+    public static Duration measure(@Nonnull Runnable runnable) {
         DockerCloudUtils.requireNonNull(runnable, "Runnable cannot be null.");
-        return measure(runnable, TimeUnit.MILLISECONDS);
-    }
-
-    private static long measure(Runnable runnable, TimeUnit unit) {
-        assert runnable != null && unit != null;
         Stopwatch sw = start();
         runnable.run();
-        return unit.convert(sw.nanos(), TimeUnit.NANOSECONDS);
+        return sw.getDuration();
     }
 
-    /**
-     * Returns the elapsed time in nanoseconds.
-     *
-     * @return the elapsed time in nanoseconds
-     */
-    public long nanos() {
-        // Compute the elapsed time.
-        // Note that nanoTime may returns negative values if the origin time is in the future.
-        return Math.abs(System.nanoTime() - startTimeNanos);
-    }
-
-    /**
-     * Returns the elapsed time in milliseconds.
-     *
-     * @return the elapsed time in milliseconds
-     */
-    public long millis() {
-        return TimeUnit.NANOSECONDS.toMillis(nanos());
-    }
-
-    /**
-     * Returns the elapsed time in seconds.
-     *
-     * @return the elapsed time in second
-     */
-    public long seconds() {
-        return TimeUnit.NANOSECONDS.toSeconds(nanos());
+    public Duration getDuration() {
+        return Duration.between(startTime, Instant.now());
     }
 }

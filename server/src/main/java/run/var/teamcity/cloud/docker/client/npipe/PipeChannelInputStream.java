@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -18,16 +20,16 @@ import java.util.concurrent.TimeoutException;
 class PipeChannelInputStream extends InputStream {
 
     private final PipeChannel pipeChannel;
-    private volatile long readTimeoutMillis;
+    private volatile Duration readTimeout;
     private volatile boolean shutdown;
 
-    PipeChannelInputStream(PipeChannel pipeChannel, long readTimeoutMillis) {
+    PipeChannelInputStream(PipeChannel pipeChannel, Duration readTimeout) {
         DockerCloudUtils.requireNonNull(pipeChannel, "Channel cannot be null.");
-        if (readTimeoutMillis < 0) {
-            throw new IllegalArgumentException("Read timeout must be a positive integer.");
+        if (readTimeout.isNegative()) {
+            throw new IllegalArgumentException("Read timeout must be a positive duration.");
         }
         this.pipeChannel = pipeChannel;
-        this.readTimeoutMillis = readTimeoutMillis;
+        this.readTimeout = readTimeout;
     }
 
     @Override
@@ -58,9 +60,14 @@ class PipeChannelInputStream extends InputStream {
         bb.position(off);
         bb.limit(Math.min(off + len, bb.capacity()));
 
-        int n;
+        Future<Integer> futur = pipeChannel.read(bb);
+        final int n;
         try {
-            n = pipeChannel.read(bb).get(readTimeoutMillis, TimeUnit.MILLISECONDS);
+            if (readTimeout.isZero()) {
+                n = futur.get();
+            } else {
+                n = futur.get(readTimeout.toNanos(), TimeUnit.NANOSECONDS);
+            }
         } catch (InterruptedException | ExecutionException e) {
             throw new IOException(e);
         } catch (TimeoutException e) {
@@ -77,12 +84,12 @@ class PipeChannelInputStream extends InputStream {
         return pipeChannel.isOpen();
     }
 
-    long getReadTimeoutMillis() {
-        return readTimeoutMillis;
+    Duration getReadTimeout() {
+        return readTimeout;
     }
 
-    void setReadTimeoutMillis(long readTimeoutMillis) {
-        this.readTimeoutMillis = readTimeoutMillis;
+    void setReadTimeout(Duration readTimeout) {
+        this.readTimeout = readTimeout;
     }
 
     public void shutdown() {

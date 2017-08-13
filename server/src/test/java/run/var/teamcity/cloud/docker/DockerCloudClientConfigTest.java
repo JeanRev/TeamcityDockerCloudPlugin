@@ -6,13 +6,13 @@ import org.junit.Test;
 import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
-import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -42,17 +42,18 @@ public class DockerCloudClientConfigTest {
         DockerClientConfig dockerConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
-        DockerCloudClientConfig config = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 42,
-                43,  serverURL);
+        DockerCloudClientConfig config = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true,
+                Duration.ofSeconds(42), Duration.ofSeconds(43),  serverURL);
 
         assertThat(config.getUuid()).isEqualTo(TestUtils.TEST_UUID);
         assertThat(config.getDockerClientConfig()).isSameAs(dockerConfig);
         assertThat(config.isUsingDaemonThreads()).isTrue();
-        assertThat(config.getDockerSyncRateSec()).isEqualTo(42);
-        assertThat(config.getTaskTimeoutMillis()).isEqualTo(43);
+        assertThat(config.getDockerSyncRate()).isEqualTo(Duration.ofSeconds(42));
+        assertThat(config.getTaskTimeout()).isEqualTo(Duration.ofSeconds(43));
         assertThat(config.getServerURL()).isEqualTo(serverURL);
 
-        config = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, 42, 43, null);
+        config = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerConfig, true, Duration.ofSeconds(42),
+                Duration.ofSeconds(43),null);
 
         assertThat(config.getServerURL()).isNull();
     }
@@ -65,13 +66,13 @@ public class DockerCloudClientConfigTest {
                 DockerAPIVersion.DEFAULT);
 
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> new DockerCloudClientConfig(null,
-                dockerConfig, true, 2, 10, serverURL));
+                dockerConfig, true, Duration.ofSeconds(2), Duration.ofSeconds(10), serverURL));
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> new DockerCloudClientConfig(TestUtils.TEST_UUID,
-                null, true, 2, 10, serverURL));
+                null, true, Duration.ofSeconds(2), Duration.ofSeconds(10), serverURL));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> new DockerCloudClientConfig(TestUtils.TEST_UUID,
-                dockerConfig, true, 1, 10, serverURL));
+                dockerConfig, true, Duration.ofSeconds(1), Duration.ofSeconds(10), serverURL));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> new DockerCloudClientConfig(TestUtils.TEST_UUID,
-                dockerConfig, true, 2, 9, serverURL));
+                dockerConfig, true, Duration.ofSeconds(2), Duration.ofSeconds(9), serverURL));
     }
 
     @Test
@@ -84,8 +85,8 @@ public class DockerCloudClientConfigTest {
         DockerClientConfig dockerConfig = config.getDockerClientConfig();
 
         assertThat(config.getUuid()).isEqualTo(TestUtils.TEST_UUID);
-        assertThat(config.getTaskTimeoutMillis()).isEqualTo(DockerCloudClientConfig.DEFAULT_TASK_TIMEOUT_MILLIS);
-        assertThat(config.getDockerSyncRateSec()).isEqualTo(DockerCloudClientConfig.DEFAULT_DOCKER_SYNC_RATE_SEC);
+        assertThat(config.getTaskTimeout()).isEqualTo(DockerCloudClientConfig.DEFAULT_TASK_TIMEOUT_MILLIS);
+        assertThat(config.getDockerSyncRate()).isEqualTo(DockerCloudClientConfig.DEFAULT_DOCKER_SYNC_RATE);
         assertThat(dockerConfig.getInstanceURI()).isEqualTo(TestDockerClient.TEST_CLIENT_URI);
     }
 

@@ -6,9 +6,14 @@ import org.junit.Test;
 import run.var.teamcity.cloud.docker.util.Stopwatch;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -26,7 +31,7 @@ public class PipeChannelOutputStreamTest {
     public void simpleWrite() throws IOException {
         testChannel = new TestPipeChannel(4096);
 
-        PipeChannelOutputStream output = new PipeChannelOutputStream(testChannel, 2000);
+        PipeChannelOutputStream output = new PipeChannelOutputStream(testChannel, Duration.ofSeconds(2));
 
         String msg = "Hello world!";
 
@@ -39,7 +44,7 @@ public class PipeChannelOutputStreamTest {
     public void writeSingleByte() throws IOException {
         testChannel = new TestPipeChannel(4096);
 
-        PipeChannelOutputStream output = new PipeChannelOutputStream(testChannel, 2000);
+        PipeChannelOutputStream output = new PipeChannelOutputStream(testChannel, Duration.ofSeconds(2));
 
         String msg = "Hello world!";
 
@@ -54,7 +59,7 @@ public class PipeChannelOutputStreamTest {
     public void writeWithOffsetUndLength() throws IOException {
         testChannel = new TestPipeChannel(4096);
 
-        PipeChannelOutputStream output = new PipeChannelOutputStream(testChannel, 2000);
+        PipeChannelOutputStream output = new PipeChannelOutputStream(testChannel, Duration.ofSeconds(2));
 
         byte[] msgBytes = new byte[]{1, 2, 3};
 
@@ -80,17 +85,49 @@ public class PipeChannelOutputStreamTest {
 
         testChannel = new TestPipeChannel(writeBufferSize);
 
-        PipeChannelOutputStream output = new PipeChannelOutputStream(testChannel, 1000);
+        PipeChannelOutputStream output = new PipeChannelOutputStream(testChannel, Duration.ofSeconds(1));
 
-        assertThat(Stopwatch.measureMillis(() -> {
+        assertThat(Stopwatch.measure(() -> {
             try {
                 output.write(msgBytes);
+                fail("Write operation must not complete.");
             } catch (WriteTimeoutIOException e) {
                 // OK
             } catch (IOException e) {
                 fail("Unexpected exception.", e);
             }
-        })).isCloseTo(1000, Offset.offset(150L));
+        }).toMillis()).isCloseTo(1000, Offset.offset(150L));
+    }
+
+    @Test(timeout = 10000)
+    public void infiniteWriteTimeout() throws IOException {
+        int writeBufferSize = 4;
+        byte[] msgBytes = "Hello world!".getBytes(StandardCharsets.UTF_8);
+
+        assertThat(msgBytes.length).isGreaterThan(writeBufferSize);
+
+        testChannel = new TestPipeChannel(writeBufferSize);
+
+        PipeChannelOutputStream output = new PipeChannelOutputStream(testChannel, Duration.ofSeconds(0));
+
+        Future<Void> future = runAsync(() -> {
+            try {
+                output.write(msgBytes);
+                fail("Write operation must not complete.");
+            } catch (SocketTimeoutException e) {
+                fail("Unexpected timeout.", e);
+            } catch (IOException e) {
+                fail("Read failed.", e);
+            }
+        });
+
+        try {
+            future.get(2, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException e) {
+            fail("Unexpected failure.", e);
+        } catch (TimeoutException e) {
+            // OK
+        }
     }
 
     @Test(timeout = 10000)
@@ -102,7 +139,7 @@ public class PipeChannelOutputStreamTest {
 
         testChannel = new TestPipeChannel(writeBufferSize);
 
-        PipeChannelOutputStream output = new PipeChannelOutputStream(testChannel, 1000);
+        PipeChannelOutputStream output = new PipeChannelOutputStream(testChannel, Duration.ofSeconds(1));
 
         CompletableFuture<Void> futur = runAsync(() -> {
             try {
@@ -122,16 +159,16 @@ public class PipeChannelOutputStreamTest {
         testChannel = new TestPipeChannel();
 
         assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new PipeChannelOutputStream(null, 1000));
+                .isThrownBy(() -> new PipeChannelOutputStream(null, Duration.ofSeconds(1)));
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> new PipeChannelOutputStream(testChannel, -1));
+                .isThrownBy(() -> new PipeChannelOutputStream(testChannel, Duration.ofMillis(-1)));
     }
 
     @Test(timeout = 10000)
     public void invalidWriteParameter() throws IOException {
         testChannel = new TestPipeChannel();
 
-        PipeChannelOutputStream output = new PipeChannelOutputStream(testChannel, 1000);
+        PipeChannelOutputStream output = new PipeChannelOutputStream(testChannel, Duration.ofSeconds(1));
 
         assertThatExceptionOfType(IndexOutOfBoundsException.class)
                 .isThrownBy(() -> output.write(new byte[10], -1, 5));

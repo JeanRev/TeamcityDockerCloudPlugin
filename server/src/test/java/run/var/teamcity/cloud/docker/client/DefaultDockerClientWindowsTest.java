@@ -13,6 +13,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -78,7 +79,7 @@ public class DefaultDockerClientWindowsTest extends DefaultDockerClientAllVersio
 
                 assertFragmentContent(attachHandler.getNextStreamFragment(), StdioType.STDOUT, stderrMsg);
 
-                client.stopContainer(containerId, 0);
+                client.stopContainer(containerId, Duration.ZERO);
 
                 assertThat(attachHandler.getNextStreamFragment()).isNull();
             }

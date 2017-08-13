@@ -11,6 +11,7 @@ import java.net.SocketException;
 import java.net.SocketOptions;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -59,13 +60,15 @@ public class NPipeSocketImplTest {
         connect(impl);
 
         assertThat(impl.getOption(SocketOptions.SO_TIMEOUT)).isEqualTo(42L);
-        assertThat(((PipeChannelInputStream) impl.getInputStream()).getReadTimeoutMillis()).isEqualTo(42L);
-        assertThat(((PipeChannelOutputStream) impl.getOutputStream()).getWriteTimeoutMillis()).isEqualTo(42L);
+        assertThat(((PipeChannelInputStream) impl.getInputStream()).getReadTimeout()).isEqualTo(Duration.ofMillis(42));
+        assertThat(((PipeChannelOutputStream) impl.getOutputStream()).getWriteTimeout()).isEqualTo(Duration.ofMillis
+                (42));
 
         impl.setOption(SocketOptions.SO_TIMEOUT, 43);
         assertThat(impl.getOption(SocketOptions.SO_TIMEOUT)).isEqualTo(43L);
-        assertThat(((PipeChannelInputStream) impl.getInputStream()).getReadTimeoutMillis()).isEqualTo(43L);
-        assertThat(((PipeChannelOutputStream) impl.getOutputStream()).getWriteTimeoutMillis()).isEqualTo(43L);
+        assertThat(((PipeChannelInputStream) impl.getInputStream()).getReadTimeout()).isEqualTo(Duration.ofMillis(43));
+        assertThat(((PipeChannelOutputStream) impl.getOutputStream()).getWriteTimeout()).isEqualTo(Duration.ofMillis
+                (43L));
 
         assertThatExceptionOfType(SocketException.class)
                 .isThrownBy(() -> impl.setOption(SocketOptions.SO_TIMEOUT, "string"));

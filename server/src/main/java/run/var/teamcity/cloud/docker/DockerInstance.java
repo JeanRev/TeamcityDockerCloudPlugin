@@ -6,10 +6,10 @@ import jetbrains.buildServer.clouds.InstanceStatus;
 import jetbrains.buildServer.serverSide.AgentDescription;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.LockHandler;
-import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 
@@ -21,7 +21,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     private final UUID uuid = UUID.randomUUID();
     private final DockerImage img;
 
-    private long startedTimeMillis;
+    private Instant startedTime;
 
     // This lock ensure a thread-safe usage of all the variables below.
     private final LockHandler lock = LockHandler.newReentrantLock();
@@ -95,7 +95,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     }
 
     @Nullable
-    public String getContainerName() {
+    String getContainerName() {
         return lock.call(() -> containerName);
     }
 
@@ -127,7 +127,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     @Nonnull
     @Override
     public Date getStartedTime() {
-        return new Date(startedTimeMillis);
+        return Date.from(startedTime);
     }
 
     @Nullable
@@ -159,8 +159,8 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
 
     }
 
-    void updateStartedTime() {
-        lock.run(() -> startedTimeMillis = System.currentTimeMillis());
+    final void updateStartedTime() {
+        lock.run(() -> startedTime = Instant.now());
     }
 
     @Nullable

@@ -4,6 +4,7 @@ import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.annotation.Nonnull;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -26,7 +27,7 @@ public interface DockerClientAdapter extends AutoCloseable {
     @Nonnull
     List<ContainerInfo> listActiveAgentContainers(@Nonnull String labelFilter, @Nonnull String valueFilter);
 
-    boolean terminateAgentContainer(@Nonnull String containerId, long timeout, boolean removeContainer);
+    boolean terminateAgentContainer(@Nonnull String containerId, Duration timeout, boolean removeContainer);
 
 
     default void pull(String image, DockerRegistryCredentials credentials) {

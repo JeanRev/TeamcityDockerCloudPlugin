@@ -1,9 +1,14 @@
+<%@ page import="run.var.teamcity.cloud.docker.ContainerInfo" %>
 <%@ page import="run.var.teamcity.cloud.docker.DockerInstance" %>
 <%@ page import="run.var.teamcity.cloud.docker.util.DockerCloudUtils" %>
-<%@ page import="run.var.teamcity.cloud.docker.util.Node" %>
 <%@ page import="java.text.DateFormat" %>
+<%@ page import="java.time.Instant" %>
+<%@ page import="java.time.format.DateTimeFormatter" %>
+<%@ page import="java.time.format.FormatStyle" %>
 <%@ page import="java.util.Locale" %>
-<%@ page import="run.var.teamcity.cloud.docker.ContainerInfo" %>
+<%@ page import="java.util.Optional" %>
+<%@ page import="org.joda.time.DateTime" %>
+<%@ page import="java.time.ZoneId" %>
 <%--
   ~ Copyright 2000-2012 JetBrains s.r.o.
   ~
@@ -42,7 +47,9 @@
             </thead>
             <tbody>
             <%
-                DateFormat dateFmt = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.ENGLISH);
+                DateTimeFormatter dateFmt = DateTimeFormatter.
+                        ofLocalizedDateTime(FormatStyle.LONG, FormatStyle.SHORT).
+                        withLocale(Locale.ENGLISH);
                 for (DockerInstance instance : image.getInstances()) {
                     ContainerInfo containerInfo = instance.getContainerInfo();
                     if (containerInfo == null) {
@@ -59,7 +66,7 @@
             <tr>
                 <td><%= DockerCloudUtils.toShortId(containerInfo.getId()) %>
                 </td>
-                <td><%= dateFmt.format(containerInfo.getCreationTimestamp() * 1000) %>
+                <td><%= dateFmt.format(containerInfo.getCreationTimestamp().atZone(ZoneId.systemDefault())) %>
                 </td>
                 <td><%= containerInfo.getState() %>
                 </td>
@@ -73,14 +80,17 @@
         </table>
     </div>
     <%
+        Optional<Instant> lastDockerSyncTime = image.getCloudClient().getLastDockerSyncTime();
         String lastSync;
-        long lastDockerSyncTimeMillis = image.getCloudClient().getLastDockerSyncTimeMillis();
-        if (lastDockerSyncTimeMillis != -1) {
-            lastSync = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.SHORT, Locale.ENGLISH).format(lastDockerSyncTimeMillis);
+        //noinspection OptionalIsPresent
+        if (lastDockerSyncTime.isPresent()) {
+            //noinspection unchecked
+            lastSync = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG, FormatStyle.SHORT).
+                            withLocale(Locale.ENGLISH).
+                            format(lastDockerSyncTime.get().atZone(ZoneId.systemDefault()));
         } else {
             lastSync = "not performed yet.";
         }
-
     %>
     Last sync with docker: <%= lastSync %>
 </div>

@@ -11,6 +11,8 @@ import run.var.teamcity.cloud.docker.util.LockHandler;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.annotation.Nonnull;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -108,13 +110,14 @@ public class TestDockerClientAdapter implements DockerClientAdapter {
             return containers.values().stream().
                     filter(container -> valueFilter.equals(container.getLabels().get(labelFilter))).
                     map(container -> new ContainerInfo(container.getId(), container.getLabels(), container.running ?
-                            ContainerInfo.RUNNING_STATE : "", Collections.singletonList(container.getName()), 0)).
+                            ContainerInfo.RUNNING_STATE : "", Collections.singletonList(container.getName()),
+                            Instant.MIN)).
                     collect(Collectors.toList());
         });
     }
 
     @Override
-    public boolean terminateAgentContainer(@Nonnull String containerId, long timeout, boolean removeContainer) {
+    public boolean terminateAgentContainer(@Nonnull String containerId, Duration timeout, boolean removeContainer) {
         return lock.call(() -> {
             if (removeContainer) {
                 AgentContainer agentContainer = containers.remove(containerId);
@@ -286,10 +289,10 @@ public class TestDockerClientAdapter implements DockerClientAdapter {
 
     public static class TerminationInfo {
         private final String containerId;
-        private final long timeout;
+        private final Duration timeout;
         private final boolean removed;
 
-        public TerminationInfo(String containerId, long timeout, boolean removed) {
+        public TerminationInfo(String containerId, Duration timeout, boolean removed) {
             this.containerId = containerId;
             this.timeout = timeout;
             this.removed = removed;
@@ -299,7 +302,7 @@ public class TestDockerClientAdapter implements DockerClientAdapter {
             return containerId;
         }
 
-        public long getTimeout() {
+        public Duration getTimeout() {
             return timeout;
         }
 

@@ -20,6 +20,7 @@ import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -27,7 +28,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -77,7 +77,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
 
         client.startContainer(containerId);
 
-        client.stopContainer(containerId, 0);
+        client.stopContainer(containerId, Duration.ZERO);
 
         client.removeContainer(containerId, true, true);
     }
@@ -149,16 +149,16 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         client.startContainer(containerId);
 
         Stopwatch sw = Stopwatch.start();
-        client.stopContainer(containerId, 2);
+        client.stopContainer(containerId, Duration.ofSeconds(2));
 
-        assertThat(sw.millis()).isCloseTo(TimeUnit.SECONDS.toMillis(2), offset(400L));
+        assertThat(sw.getDuration().toMillis()).isCloseTo(2000, offset(400L));
 
         client.startContainer(containerId);
 
         sw.reset();
         client.stopContainer(containerId, DockerClient.DEFAULT_TIMEOUT);
 
-        assertThat(sw.millis()).isCloseTo(TimeUnit.SECONDS.toMillis(3), offset(400L));
+        assertThat(sw.getDuration().toMillis()).isCloseTo(3000, offset(400L));
     }
 
     @Test
@@ -201,7 +201,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
                         assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDERR, stderrMsg);
                     }
 
-                    client.stopContainer(containerId, 0);
+                    client.stopContainer(containerId, Duration.ZERO);
 
                     assertThat(attachHandler.getNextStreamFragment()).isNull();
                     assertThat(logHandler.getNextStreamFragment()).isNull();
@@ -282,7 +282,8 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.createContainer(Node
                 .EMPTY_OBJECT, null));
         assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.startContainer(containerId));
-        assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.stopContainer(containerId, 0));
+        assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.stopContainer(containerId,
+                Duration.ZERO));
         assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.removeContainer(containerId,
                 true, true));
         assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.listContainersWithLabel(

@@ -1,5 +1,7 @@
 package run.var.teamcity.cloud.docker;
 
+import javax.annotation.Nonnull;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -11,10 +13,10 @@ public class ContainerInfo {
     private final Map<String, String> labels;
     private final String state;
     private final List<String> names;
-    private final long creationTimestamp;
+    private final Instant creationTimestamp;
 
-    public ContainerInfo(String id, Map<String, String> labels, String state, List<String> names, long
-            creationTimestamp) {
+    public ContainerInfo(@Nonnull String id, @Nonnull Map<String, String> labels, @Nonnull String state,
+                         @Nonnull List<String> names, @Nonnull Instant creationTimestamp) {
         this.id = id;
         this.labels = labels;
         this.state = state;
@@ -22,23 +24,28 @@ public class ContainerInfo {
         this.creationTimestamp = creationTimestamp;
     }
 
+    @Nonnull
     public String getId() {
         return id;
     }
 
+    @Nonnull
     public Map<String, String> getLabels() {
         return labels;
     }
 
+    @Nonnull
     public String getState() {
         return state;
     }
 
+    @Nonnull
     public List<String> getNames() {
         return names;
     }
 
-    public long getCreationTimestamp() {
+    @Nonnull
+    public Instant getCreationTimestamp() {
         return creationTimestamp;
     }
 
