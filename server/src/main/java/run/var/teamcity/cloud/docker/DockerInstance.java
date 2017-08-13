@@ -11,6 +11,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.Date;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -170,21 +171,19 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     }
 
     /**
-     * Gets the JSON node describing the associated container if available. The node structure is described in the
-     * <a href="https://docs.docker.com/engine/reference/api/docker_remote_api_v1.24/#/list-containers"><i>list
-     * containers</i></a> command of the remote API documentation.
+     * Gets the additional container meta-data retrieved from the Docker daemon.
      *
-     * @return the JSON node or {@code null} if not available
+     * @return the additional container meta-data or {@code null} if not available
      */
-    @Nullable
-    public ContainerInfo getContainerInfo() {
-        return lock.call(() -> containerInfo);
+    @Nonnull
+    public Optional<ContainerInfo> getContainerInfo() {
+        return Optional.ofNullable(lock.call(() -> containerInfo));
     }
 
     /**
-     * Sets the JSON node holding the container description.
+     * Sets the additional container meta-data.
      *
-     * @param containerInfo the JSON node or {@code null} if not available
+     * @param containerInfo the container meta-data or {@code null} if not available
      */
     void setContainerInfo(@Nullable ContainerInfo containerInfo) {
         lock.run(() -> this.containerInfo = containerInfo);

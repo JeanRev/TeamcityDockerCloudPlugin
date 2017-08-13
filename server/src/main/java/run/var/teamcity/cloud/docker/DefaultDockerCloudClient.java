@@ -538,7 +538,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
      * @return the timestamp of the last Docker sync or -1
      */
     public Optional<Instant> getLastDockerSyncTime() {
-        return Optional.of(lock.call(() -> lastDockerSyncTime));
+        return Optional.ofNullable(lock.call(() -> lastDockerSyncTime));
     }
 
     private Map<String, String> prepareLabelsMap(DockerInstance instance) {
