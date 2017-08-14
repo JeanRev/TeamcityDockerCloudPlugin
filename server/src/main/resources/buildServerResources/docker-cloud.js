@@ -1948,7 +1948,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 tab.clearMessages(eltId);
 
                 if (validation.warnings.length) {
-                    $j.each(validation.warnings.warnings, function(i, warning) {
+                    $j.each(validation.warnings, function(i, warning) {
                         warningMsg.append('<p>' + warning + '</p>');
                     });
                     tab.addMessage(eltId, true)

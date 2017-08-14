@@ -935,7 +935,6 @@ describe('Validators', function() {
         jasmine.getFixtures().fixturesPath = 'base/src/main/resources/buildServerResources';
         jasmine.getFixtures().load('image-settings.html');
 
-
         dockerCloud.$imageDialogSubmitBtn = $j('<input/>');
         dockerCloud._initValidators();
     });
@@ -1387,7 +1386,6 @@ describe('Validators', function() {
     });
 });
 
-
 describe('shortenString', function() {
 
     it('should shorten string to the desired length', function() {
@@ -1409,5 +1407,179 @@ describe('shortenString', function() {
     it('should be resilient to null or undefined values', function() {
         expect(dockerCloud.shortenString(null, 100)).toEqual('');
         expect(dockerCloud.shortenString(undefined, 100)).toEqual('');
+    });
+});
+
+describe('validateHandler', function() {
+
+    var emptyValidation;
+
+    beforeEach(function() {
+        emptyValidation = {
+            error: null,
+            warnings: []
+        };
+    });
+
+    var createFixture = function(tabId, fieldId, error, warnings) {
+        var errorStr = error ? error : '';
+        var warningsStr = warnings && warnings.length ? '<p>' + warnings.join('</p><p>') + '</p>' : '';
+
+        jasmine.getFixtures().set('<div id="dockerCloudImageTab_anotherTab1"></div>' +
+            '<div id="dockerCloudImageTab_' + tabId + '">' +
+            '<input id="' + fieldId + '"/>' +
+            '<span id="' + fieldId + '_error">' + errorStr + '</span>"' +
+            '<div id="' + fieldId + '_warning">' + warningsStr + '</div>' +
+            '</div>' +
+            '<div id="dockerCloudImageTab_anotherTab2"></div>');
+        return document.getElementById(fieldId);
+    };
+
+    var TestTabbedPane = function() {
+        this._tabs = {};
+        this.addTab = function(id) {
+            return this._tabs[id] = new TestTab();
+        };
+        this.getTab = function (id) {
+            return this._tabs[id];
+        };
+    };
+
+    var TestTab = function() {
+        this.warningMessages = [];
+        this.errorMessages = [];
+
+        this.addMessage = function(msg, warning) {
+            if (warning) {
+                dockerCloud.addToArrayIfAbsent(this.warningMessages, msg);
+            } else {
+                dockerCloud.addToArrayIfAbsent(this.errorMessages, msg)
+            }
+        };
+        this.clearMessages = function(id) {
+            dockerCloud.removeFromArray(this.warningMessages, id);
+            dockerCloud.removeFromArray(this.errorMessages, id);
+        }
+    };
+
+    it('should invoke validate with corresponding validators', function() {
+        var field = createFixture('myTab', 'myField');
+
+        dockerCloud.imageDataTabbedPane = new TestTabbedPane();
+        dockerCloud.imageDataTabbedPane.addTab('dockerCloudImageTab_myTab');
+
+        var dummyValidator = [];
+
+        dockerCloud.validators['myField'] = dummyValidator;
+
+        spyOn(dockerCloud, 'validate').and.returnValue(emptyValidation);
+
+        dockerCloud.validateHandler.bind(field)();
+
+        expect(dockerCloud.validate).toHaveBeenCalledWith($j(field), dummyValidator);
+    });
+
+    it('should clear previous warnings and error messages', function() {
+        var field = createFixture('myTab', 'myField');
+
+        dockerCloud.imageDataTabbedPane = new TestTabbedPane();
+        var tab = dockerCloud.imageDataTabbedPane.addTab('dockerCloudImageTab_myTab');
+        tab.warningMessages.push('some_field_id_a');
+        tab.warningMessages.push('myField');
+        tab.errorMessages.push('some_field_id_b');
+        tab.errorMessages.push('myField');
+
+        spyOn(dockerCloud, 'validate').and.returnValue(emptyValidation);
+
+        dockerCloud.validateHandler.bind(field)();
+
+        expect(tab.warningMessages).toEqual(['some_field_id_a']);
+        expect(tab.errorMessages).toEqual(['some_field_id_b']);
+    });
+
+    it('should clear previous warnings and error messages on tab', function() {
+        var field = createFixture('myTab', 'myField');
+
+        dockerCloud.imageDataTabbedPane = new TestTabbedPane();
+        var tab = dockerCloud.imageDataTabbedPane.addTab('dockerCloudImageTab_myTab');
+        tab.warningMessages.push('some_field_id_a');
+        tab.warningMessages.push('myField');
+        tab.errorMessages.push('some_field_id_b');
+        tab.errorMessages.push('myField');
+
+        spyOn(dockerCloud, 'validate').and.returnValue(emptyValidation);
+
+        dockerCloud.validateHandler.bind(field)();
+
+        expect(tab.warningMessages).toEqual(['some_field_id_a']);
+        expect(tab.errorMessages).toEqual(['some_field_id_b']);
+    });
+
+    it('should clear previous warnings and error messages on field', function() {
+        var field = createFixture('myTab', 'myField', 'some_error', ['some_warning_1', 'some_warning_2']);
+
+        dockerCloud.imageDataTabbedPane = new TestTabbedPane();
+        dockerCloud.imageDataTabbedPane.addTab('dockerCloudImageTab_myTab');
+
+        spyOn(dockerCloud, 'validate').and.returnValue(emptyValidation);
+
+        dockerCloud.validateHandler.bind(field)();
+
+        expect($j('#myField_error').is(':empty')).toEqual(true);
+        expect($j('#myField_warning').is(':empty')).toEqual(true);
+    });
+
+    it('should set notify warnings messages on tab', function() {
+        var field = createFixture('myTab', 'myField');
+
+        dockerCloud.imageDataTabbedPane = new TestTabbedPane();
+        var tab = dockerCloud.imageDataTabbedPane.addTab('dockerCloudImageTab_myTab');
+
+        spyOn(dockerCloud, 'validate').and.returnValue({ warnings: ['some_warning_1', 'some_warning_2']});
+
+        dockerCloud.validateHandler.bind(field)();
+
+        expect(tab.warningMessages).toEqual(['myField']);
+        expect(tab.errorMessages).toEqual([]);
+    });
+
+    it('should set notify error messages on tab', function() {
+        var field = createFixture('myTab', 'myField');
+
+        dockerCloud.imageDataTabbedPane = new TestTabbedPane();
+        var tab = dockerCloud.imageDataTabbedPane.addTab('dockerCloudImageTab_myTab');
+
+        spyOn(dockerCloud, 'validate').and.returnValue({ error: 'some_error', warnings: []});
+
+        dockerCloud.validateHandler.bind(field)();
+
+        expect(tab.warningMessages).toEqual([]);
+        expect(tab.errorMessages).toEqual(['myField']);
+    });
+
+    it('should set warning messages on field', function() {
+        var field = createFixture('myTab', 'myField');
+
+        dockerCloud.imageDataTabbedPane = new TestTabbedPane();
+        var tab = dockerCloud.imageDataTabbedPane.addTab('dockerCloudImageTab_myTab');
+
+        spyOn(dockerCloud, 'validate').and.returnValue({ warnings: ['some_warning_1', 'some_warning_2']});
+
+        dockerCloud.validateHandler.bind(field)();
+
+        expect($j('#myField_warning').get(0).innerHTML).toEqual('<p>some_warning_1</p><p>some_warning_2</p>');
+    });
+
+    it('should set error message on field', function() {
+        var field = createFixture('myTab', 'myField');
+
+        dockerCloud.imageDataTabbedPane = new TestTabbedPane();
+        var tab = dockerCloud.imageDataTabbedPane.addTab('dockerCloudImageTab_myTab');
+
+        spyOn(dockerCloud, 'validate').and.returnValue({ error: 'some_error', warnings: [] });
+
+        dockerCloud.validateHandler.bind(field)();
+
+        expect($j('#myField_error').get(0).innerHTML).toEqual('some_error');
     });
 });
