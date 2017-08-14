@@ -28,12 +28,12 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
 public class DockerCloudClientConfigTest {
 
-    private TestDockerClientAdapterFactory clientAdapterFactory;
+    private TestDockerClientFacadeFactory clientFacadeFactory;
     private URL serverURL;
 
     @Before
     public void init() throws MalformedURLException {
-        clientAdapterFactory = new TestDockerClientAdapterFactory();
+        clientFacadeFactory = new TestDockerClientFacadeFactory();
         serverURL = new URL("http://not.a.real.server:8111");
     }
 
@@ -81,7 +81,7 @@ public class DockerCloudClientConfigTest {
         params.put(DockerCloudUtils.CLIENT_UUID, TestUtils.TEST_UUID.toString());
         params.put(DockerCloudUtils.INSTANCE_URI, TestDockerClient.TEST_CLIENT_URI.toString());
 
-        DockerCloudClientConfig config = DockerCloudClientConfig.processParams(params, clientAdapterFactory);
+        DockerCloudClientConfig config = DockerCloudClientConfig.processParams(params, clientFacadeFactory);
         DockerClientConfig dockerConfig = config.getDockerClientConfig();
 
         assertThat(config.getUuid()).isEqualTo(TestUtils.TEST_UUID);
@@ -96,13 +96,13 @@ public class DockerCloudClientConfigTest {
         params.put(DockerCloudUtils.CLIENT_UUID, TestUtils.TEST_UUID.toString());
         params.put(DockerCloudUtils.INSTANCE_URI, TestDockerClient.TEST_CLIENT_URI.toString());
 
-        DockerCloudClientConfig config = DockerCloudClientConfig.processParams(params, clientAdapterFactory);
+        DockerCloudClientConfig config = DockerCloudClientConfig.processParams(params, clientFacadeFactory);
 
         assertThat(config.getServerURL()).isNull();
 
         params.put(DockerCloudUtils.SERVER_URL_PARAM, serverURL.toExternalForm());
 
-        config = DockerCloudClientConfig.processParams(params, clientAdapterFactory);
+        config = DockerCloudClientConfig.processParams(params, clientFacadeFactory);
 
         assertThat(config.getServerURL()).isEqualTo(serverURL);
 
@@ -117,14 +117,14 @@ public class DockerCloudClientConfigTest {
         params.put(DockerCloudUtils.CLIENT_UUID, TestUtils.TEST_UUID.toString());
         params.put(DockerCloudUtils.INSTANCE_URI, TestDockerClient.TEST_CLIENT_URI.toString());
 
-        DockerCloudClientConfig config = DockerCloudClientConfig.processParams(params, clientAdapterFactory);
+        DockerCloudClientConfig config = DockerCloudClientConfig.processParams(params, clientFacadeFactory);
         DockerClientConfig dockerConfig = config.getDockerClientConfig();
 
         assertThat(dockerConfig.isUsingTLS()).isFalse();
 
         params.put(DockerCloudUtils.USE_TLS, Boolean.TRUE.toString());
 
-        config = DockerCloudClientConfig.processParams(params, clientAdapterFactory);
+        config = DockerCloudClientConfig.processParams(params, clientFacadeFactory);
         dockerConfig = config.getDockerClientConfig();
 
         assertThat(dockerConfig.isUsingTLS()).isTrue();
@@ -152,7 +152,7 @@ public class DockerCloudClientConfigTest {
         // Default local instance flag must have precedence over explicitly set URI.
         params.put(defaultLocalInstanceParam, "true");
 
-        DockerCloudClientConfig config = DockerCloudClientConfig.processParams(params, clientAdapterFactory);
+        DockerCloudClientConfig config = DockerCloudClientConfig.processParams(params, clientFacadeFactory);
         DockerClientConfig dockerConfig = config.getDockerClientConfig();
 
         assertThat(dockerConfig.getInstanceURI()).isEqualTo(defaultLocalInstanceURI);
@@ -160,7 +160,7 @@ public class DockerCloudClientConfigTest {
         // Default local instance flag must be ignored when the flag is not supported on the host system.
         params.put(unsupportedInstanceParam, "true");
 
-        config = DockerCloudClientConfig.processParams(params, clientAdapterFactory);
+        config = DockerCloudClientConfig.processParams(params, clientFacadeFactory);
         dockerConfig = config.getDockerClientConfig();
 
         assertThat(dockerConfig.getInstanceURI()).isEqualTo(defaultLocalInstanceURI);
@@ -169,7 +169,7 @@ public class DockerCloudClientConfigTest {
         // the other unsupported flag.
         params.remove(defaultLocalInstanceParam);
 
-        config = DockerCloudClientConfig.processParams(params, clientAdapterFactory);
+        config = DockerCloudClientConfig.processParams(params, clientFacadeFactory);
         dockerConfig = config.getDockerClientConfig();
 
         assertThat(dockerConfig.getInstanceURI()).isEqualTo(TestDockerClient.TEST_CLIENT_URI);
@@ -182,7 +182,7 @@ public class DockerCloudClientConfigTest {
         params.put(DockerCloudUtils.CLIENT_UUID, TestUtils.TEST_UUID.toString());
         params.put(DockerCloudUtils.INSTANCE_URI, TestDockerClient.TEST_CLIENT_URI.toString());
 
-        DockerCloudClientConfig.processParams(params, clientAdapterFactory);
+        DockerCloudClientConfig.processParams(params, clientFacadeFactory);
 
         assertInvalidProperty(Collections.singletonMap(DockerCloudUtils.CLIENT_UUID, TestUtils.TEST_UUID.toString()),
                 DockerCloudUtils.INSTANCE_URI);
@@ -191,7 +191,7 @@ public class DockerCloudClientConfigTest {
     }
 
     private void assertInvalidProperty(Map<String, String> params, String name) {
-        Throwable throwable = catchThrowable(() -> DockerCloudClientConfig.processParams(params, clientAdapterFactory));
+        Throwable throwable = catchThrowable(() -> DockerCloudClientConfig.processParams(params, clientFacadeFactory));
         assertThat(throwable).isInstanceOf(DockerCloudClientConfigException.class);
 
         List<InvalidProperty> invalidProperties = ((DockerCloudClientConfigException) throwable).getInvalidProperties();

@@ -146,7 +146,7 @@ public class DockerCloudClientConfig {
      */
     @Nonnull
     public static DockerCloudClientConfig processParams(@Nonnull Map<String, String> properties,
-                                                        @Nonnull DockerClientAdapterFactory clientAdapterFactory) {
+                                                        @Nonnull DockerClientFacadeFactory clientFacadeFactory) {
         DockerCloudUtils.requireNonNull(properties, "Properties map cannot be null.");
         DockerCloudUtils.requireNonNull(properties, "Docker client factory cannot be null.");
 
@@ -184,7 +184,7 @@ public class DockerCloudClientConfig {
                     DockerClientConfig dockerConfig = new DockerClientConfig(instanceURI,
                             DockerCloudUtils.DOCKER_API_TARGET_VERSION).usingTls(usingTls);
                     try {
-                        clientAdapterFactory.createAdapter(dockerConfig);
+                        clientFacadeFactory.createFacade(dockerConfig);
                     } catch (IllegalArgumentException e) {
                         invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, e.getMessage()));
                     }

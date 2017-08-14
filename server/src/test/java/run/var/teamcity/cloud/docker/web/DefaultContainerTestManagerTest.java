@@ -6,9 +6,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
-import run.var.teamcity.cloud.docker.TestDockerClientAdapter;
-import run.var.teamcity.cloud.docker.TestDockerClientAdapter.AgentContainer;
-import run.var.teamcity.cloud.docker.TestDockerClientAdapterFactory;
+import run.var.teamcity.cloud.docker.TestDockerClientFacade;
+import run.var.teamcity.cloud.docker.TestDockerClientFacade.AgentContainer;
+import run.var.teamcity.cloud.docker.TestDockerClientFacadeFactory;
 import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
@@ -45,7 +45,7 @@ public class DefaultContainerTestManagerTest {
     private Duration testMaxIdleTime;
     private Duration cleanupRate;
 
-    private TestDockerClientAdapterFactory clientAdapterFactory;
+    private TestDockerClientFacadeFactory clientFacadeFactory;
     private DockerClientConfig dockerClientConfig;
     private DockerCloudClientConfig clientConfig;
     private boolean pullOnCreate;
@@ -58,9 +58,9 @@ public class DefaultContainerTestManagerTest {
 
     @Before
     public void init() throws MalformedURLException {
-        clientAdapterFactory = new TestDockerClientAdapterFactory();
-        clientAdapterFactory.addConfigurator(clientAdapter ->
-                clientAdapter
+        clientFacadeFactory = new TestDockerClientFacadeFactory();
+        clientFacadeFactory.addConfigurator(clientFacade ->
+                clientFacade
                         .localImage("resolved-image:1.0")
                         .registryImage("resolved-image:1.0"));
 
@@ -88,12 +88,12 @@ public class DefaultContainerTestManagerTest {
 
         UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
 
-        TestDockerClientAdapter clientAdapter = clientAdapterFactory.getClientAdapter();
+        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
 
         queryUntilSuccess(Phase.CREATE);
 
-        assertThat(clientAdapter.getContainers()).hasSize(1);
-        AgentContainer container = clientAdapter.getContainers().iterator().next();
+        assertThat(clientFacade.getContainers()).hasSize(1);
+        AgentContainer container = clientFacade.getContainers().iterator().next();
         assertThat(container.isRunning()).isFalse();
         assertThat(container.getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(serverURL.toString());
 
@@ -101,8 +101,8 @@ public class DefaultContainerTestManagerTest {
 
         queryUntilPhase(Phase.WAIT_FOR_AGENT);
 
-        assertThat(clientAdapter.getContainers()).hasSize(1);
-        assertThat(clientAdapter.getContainers().get(0).isRunning()).isTrue();
+        assertThat(clientFacade.getContainers()).hasSize(1);
+        assertThat(clientFacade.getContainers().get(0).isRunning()).isTrue();
 
         TestSBuildAgent agent = new TestSBuildAgent().
                 environmentVariable(DockerCloudUtils.ENV_TEST_INSTANCE_ID, testUuid.toString());
@@ -113,7 +113,7 @@ public class DefaultContainerTestManagerTest {
 
         mgr.dispose(testUuid);
 
-        assertThat(clientAdapter.getContainers()).isEmpty();
+        assertThat(clientFacade.getContainers()).isEmpty();
 
         mgr.dispose();
     }
@@ -124,7 +124,7 @@ public class DefaultContainerTestManagerTest {
 
         ContainerTestManager mgr = createManager();
         imageResolver.image("local-only:1.0");
-        clientAdapterFactory.addConfigurator(clientAdapter -> clientAdapter.localImage("local-only:1.0"));
+        clientFacadeFactory.addConfigurator(clientFacade -> clientFacade.localImage("local-only:1.0"));
 
         UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
 
@@ -141,7 +141,7 @@ public class DefaultContainerTestManagerTest {
 
         ContainerTestManager mgr = createManager();
         imageResolver.image("local-only:1.0");
-        clientAdapterFactory.addConfigurator(clientAdapter -> clientAdapter.localImage("local-only:1.0"));
+        clientFacadeFactory.addConfigurator(clientFacade -> clientFacade.localImage("local-only:1.0"));
 
         mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
 
@@ -158,29 +158,29 @@ public class DefaultContainerTestManagerTest {
 
         queryUntilSuccess(Phase.CREATE);
 
-        TestDockerClientAdapter clientAdapter = clientAdapterFactory.getClientAdapter();
+        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
 
-        assertThat(clientAdapter.getContainers()).hasSize(1);
+        assertThat(clientFacade.getContainers()).hasSize(1);
 
         mgr.dispose(testUuid);
 
-        assertThat(clientAdapter.getContainers()).isEmpty();
-        assertThat(clientAdapter.isClosed()).isTrue();
+        assertThat(clientFacade.getContainers()).isEmpty();
+        assertThat(clientFacade.isClosed()).isTrue();
 
         // Cancelling a test related to an already removed container.
         testListener = new TestContainerTestStatusListener();
 
         testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
 
-        clientAdapter = clientAdapterFactory.getClientAdapter();
+        clientFacade = clientFacadeFactory.createFacade();
 
         queryUntilSuccess(Phase.CREATE);
 
-        clientAdapter.removeContainer(clientAdapter.getContainers().get(0).getId());
+        clientFacade.removeContainer(clientFacade.getContainers().get(0).getId());
 
         mgr.dispose(testUuid);
 
-        assertThat(clientAdapter.isClosed()).isTrue();
+        assertThat(clientFacade.isClosed()).isTrue();
     }
 
     @Test
@@ -217,7 +217,7 @@ public class DefaultContainerTestManagerTest {
 
         queryUntilSuccess();
 
-        assertThat(clientAdapterFactory.getClientAdapter().getContainers().get(0).
+        assertThat(clientFacadeFactory.createFacade().getContainers().get(0).
                 getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(TestRootUrlHolder.HOLDER_URL);
 
     }
@@ -283,7 +283,7 @@ public class DefaultContainerTestManagerTest {
     }
 
     private ContainerTestManager createManager() {
-        return new DefaultContainerTestManager(imageResolver, clientAdapterFactory,
+        return new DefaultContainerTestManager(imageResolver, clientFacadeFactory,
                 buildServer, new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRate, null);
     }
 }

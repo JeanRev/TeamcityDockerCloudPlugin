@@ -1,6 +1,6 @@
 package run.var.teamcity.cloud.docker.web;
 
-import run.var.teamcity.cloud.docker.DockerClientAdapter;
+import run.var.teamcity.cloud.docker.DockerClientFacade;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
@@ -14,12 +14,12 @@ import java.util.List;
 public interface ContainerTestHandler {
 
     /**
-     * Retrieves the Docker client adapter instance to be used for the test.
+     * Retrieves the Docker client facade instance to be used for the test.
      *
-     * @return the client adapter instance
+     * @return the client facade instance
      */
     @Nonnull
-    DockerClientAdapter getDockerClientAdapter();
+    DockerClientFacade getDockerClientFacade();
 
     /**
      * Notify the handler that the test container ID is available. This callback is not expected to be called more

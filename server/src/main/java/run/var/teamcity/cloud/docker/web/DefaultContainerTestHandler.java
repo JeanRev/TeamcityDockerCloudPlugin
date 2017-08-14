@@ -1,7 +1,7 @@
 package run.var.teamcity.cloud.docker.web;
 
-import run.var.teamcity.cloud.docker.DockerClientAdapter;
-import run.var.teamcity.cloud.docker.DockerClientAdapterFactory;
+import run.var.teamcity.cloud.docker.DockerClientFacade;
+import run.var.teamcity.cloud.docker.DockerClientFacadeFactory;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
@@ -23,7 +23,7 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
 
     private final UUID uuid = UUID.randomUUID();
     private final LockHandler lock = LockHandler.newReentrantLock();
-    private final DockerClientAdapter clientAdapter;
+    private final DockerClientFacade clientFacade;
     private final DockerClientConfig clientConfig;
     private final ContainerTestListener statusListener;
     private final StreamingController streamingController;
@@ -34,12 +34,12 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
 
     private ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTaskFuture = null;
 
-    private DefaultContainerTestHandler(DockerClientConfig clientConfig, DockerClientAdapter clientAdapter,
+    private DefaultContainerTestHandler(DockerClientConfig clientConfig, DockerClientFacade clientFacade,
                                         ContainerTestListener statusListener, StreamingController streamingController) {
-        assert clientAdapter != null && statusListener != null;
+        assert clientFacade != null && statusListener != null;
 
         this.clientConfig = clientConfig;
-        this.clientAdapter = clientAdapter;
+        this.clientFacade = clientFacade;
         this.statusListener = statusListener;
         this.streamingController = streamingController;
 
@@ -47,15 +47,15 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
     }
 
     public static DefaultContainerTestHandler newTestInstance(@Nonnull DockerCloudClientConfig clientConfig,
-                                                              @Nonnull DockerClientAdapterFactory clientAdapterFactory,
+                                                              @Nonnull DockerClientFacadeFactory clientFacadeFactory,
                                                               @Nonnull ContainerTestListener statusListener,
                                                               @Nullable StreamingController streamingController) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
-        DockerCloudUtils.requireNonNull(clientAdapterFactory, "Docker client adapter factory cannot be null.");
+        DockerCloudUtils.requireNonNull(clientFacadeFactory, "Docker client facade factory cannot be null.");
         DockerCloudUtils.requireNonNull(statusListener, "Status listener cannot be null.");
-        DockerClientAdapter clientAdapter = clientAdapterFactory.createAdapter(clientConfig.getDockerClientConfig()
+        DockerClientFacade clientFacade = clientFacadeFactory.createFacade(clientConfig.getDockerClientConfig()
                 .connectionPoolSize(1));
-        return new DefaultContainerTestHandler(clientConfig.getDockerClientConfig(), clientAdapter, statusListener,
+        return new DefaultContainerTestHandler(clientConfig.getDockerClientConfig(), clientFacade, statusListener,
                 streamingController);
     }
 
@@ -101,14 +101,14 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
     }
 
     /**
-     * Gets the client adapter to run the test.
+     * Gets the client facade to run the test.
      *
-     * @return the client adapter
+     * @return the client facade
      */
     @Nonnull
     @Override
-    public DockerClientAdapter getDockerClientAdapter() {
-        return clientAdapter;
+    public DockerClientFacade getDockerClientFacade() {
+        return clientFacade;
     }
 
     /**

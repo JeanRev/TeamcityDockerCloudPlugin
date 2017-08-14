@@ -110,13 +110,13 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     private final SBuildServer buildServer;
     private final BuildAgentManager agentMgr;
 
-    private final DockerClientAdapterFactory dockerClientFactory;
+    private final DockerClientFacadeFactory dockerClientFactory;
     private final DockerClientConfig dockerClientConfig;
 
     /**
-     * The Docker client adapter.
+     * The Docker client facade.
      */
-    private volatile DockerClientAdapter clientAdapter;
+    private volatile DockerClientFacade clientFacade;
 
     private final URL serverURL;
     private final DockerImageNameResolver resolver;
@@ -127,7 +127,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     private final UUID agentNameGeneratorUuid = UUID.randomUUID();
 
     DefaultDockerCloudClient(@Nonnull DockerCloudClientConfig clientConfig,
-                             @Nonnull final DockerClientAdapterFactory clientAdapterFactory,
+                             @Nonnull final DockerClientFacadeFactory clientFacadeFactory,
                              @Nonnull final List<DockerImageConfig> imageConfigs,
                              @Nonnull final DockerImageNameResolver resolver,
                              @Nonnull CloudState cloudState,
@@ -157,7 +157,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         }
         LOG.info(images.size() + " image definitions loaded: " + images);
 
-        this.dockerClientFactory = clientAdapterFactory;
+        this.dockerClientFactory = clientFacadeFactory;
         this.dockerClientConfig = clientConfig.getDockerClientConfig();
 
         // Register our agent name generator.
@@ -258,7 +258,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 // The cloud client is currently in an error status. Wait for it to be cleared.
                 return false;
             }
-            return clientAdapter != null && state == State.READY && ((DockerImage) image).canStartNewInstance();
+            return clientFacade != null && state == State.READY && ((DockerImage) image).canStartNewInstance();
         });
     }
 
@@ -355,7 +355,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                             if (imageConfig.isPullOnCreate()) {
 
                                 try {
-                                    clientAdapter.pull(image, imageConfig.getRegistryCredentials());
+                                    clientFacade.pull(image, imageConfig.getRegistryCredentials());
                                 } catch (Exception e) {
                                     // Failure to pull is considered non-critical: if an image of this name exists in
                                     // the Docker
@@ -367,7 +367,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                             String serverAddress = serverURL != null ? serverURL.toString() : tag.getServerAddress();
 
-                            NewContainerInfo containerInfo = clientAdapter.createAgentContainer(
+                            NewContainerInfo containerInfo = clientFacade.createAgentContainer(
                                     imageConfig.getContainerSpec(),
                                     image,
                                     prepareLabelsMap(instance),
@@ -383,14 +383,14 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                         }
 
                         // Inspect the created container to retrieve its name and other meta-data.
-                        ContainerInspection containerInspection = clientAdapter.inspectAgentContainer(containerId);
+                        ContainerInspection containerInspection = clientFacade.inspectAgentContainer(containerId);
                         String instanceName = containerInspection.getName();
                         if (instanceName.startsWith("/")) {
                             instanceName = instanceName.substring(1);
                         }
                         instance.setContainerName(instanceName);
 
-                        clientAdapter.startAgentContainer(containerId);
+                        clientFacade.startAgentContainer(containerId);
 
                         LOG.info("Container " + containerId + " started.");
 
@@ -428,7 +428,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                 String containerId = dockerInstance.getContainerId();
 
                 if (containerId != null) {
-                    clientAdapter.restartAgentContainer(containerId);
+                    clientFacade.restartAgentContainer(containerId);
                     lock.runInterruptibly(() -> dockerInstance.setStatus(InstanceStatus.RUNNING));
                 } else {
                     LOG.warn("No container associated with instance " + instance + ". Ignoring restart request.");
@@ -517,7 +517,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
         Duration timeout = clientDisposed ? Duration.ZERO : DockerClient.DEFAULT_TIMEOUT;
 
-        return clientAdapter.terminateAgentContainer(containerId, timeout, rmContainer);
+        return clientFacade.terminateAgentContainer(containerId, timeout, rmContainer);
     }
 
     private void scheduleDockerSync() {
@@ -629,13 +629,13 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
             // Creates the Docker client upon first sync. We do this here to benefit from the retry mechanism if
             // the API negotiation fails.
-            if (clientAdapter == null) {
-                clientAdapter = dockerClientFactory.createAdapter(dockerClientConfig);
+            if (clientFacade == null) {
+                clientFacade = dockerClientFactory.createFacade(dockerClientConfig);
                 LOG.info("Docker client instantiated.");
             }
 
             // Step 1, query the whole list of containers associated with this cloud client.
-            List<ContainerInfo> containers = clientAdapter.listActiveAgentContainers(DockerCloudUtils.CLIENT_ID_LABEL, uuid
+            List<ContainerInfo> containers = clientFacade.listActiveAgentContainers(DockerCloudUtils.CLIENT_ID_LABEL, uuid
                     .toString());
 
             List<SBuildAgent> unregisteredAgents = agentMgr.getUnregisteredAgents();

@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class TestDockerClientAdapter implements DockerClientAdapter {
+public class TestDockerClientFacade implements DockerClientFacade {
 
     private final LockHandler lock = LockHandler.newReentrantLock();
 
@@ -214,27 +214,27 @@ public class TestDockerClientAdapter implements DockerClientAdapter {
         lock.unlock();
     }
 
-    public TestDockerClientAdapter localImage(String image) {
+    public TestDockerClientFacade localImage(String image) {
         lock.run(() -> localImages.add(image));
         return this;
     }
 
-    public TestDockerClientAdapter registryImage(String image) {
+    public TestDockerClientFacade registryImage(String image) {
         lock.run(() -> registryImages.add(image));
         return this;
     }
 
-    public TestDockerClientAdapter registryCredentials(DockerRegistryCredentials registryCredentials) {
+    public TestDockerClientFacade registryCredentials(DockerRegistryCredentials registryCredentials) {
         lock.run(() -> this.registryCredentials = registryCredentials);
         return this;
     }
 
-    public TestDockerClientAdapter container(AgentContainer container) {
+    public TestDockerClientFacade container(AgentContainer container) {
         lock.run(() -> containers.put(container.getId(), container));
         return this;
     }
 
-    public TestDockerClientAdapter agentConfigurator(Consumer<AgentContainer> agentConfigurator) {
+    public TestDockerClientFacade agentConfigurator(Consumer<AgentContainer> agentConfigurator) {
         lock.run(() -> this.agentConfigurator = agentConfigurator);
         return this;
     }

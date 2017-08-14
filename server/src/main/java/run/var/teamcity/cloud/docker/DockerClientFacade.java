@@ -8,7 +8,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
-public interface DockerClientAdapter extends AutoCloseable {
+public interface DockerClientFacade extends AutoCloseable {
 
     PullStatusListener NOOP_PULL_LISTENER = (layer, current, total) -> {};
 

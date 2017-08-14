@@ -10,19 +10,19 @@ import java.util.Deque;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class TestDockerClientAdapterFactory extends DockerClientAdapterFactory {
+public class TestDockerClientFacadeFactory extends DockerClientFacadeFactory {
 
     private final LockHandler lock = LockHandler.newReentrantLock();
 
-    private final Deque<Consumer<TestDockerClientAdapter>> configurators = new ArrayDeque<>();
+    private final Deque<Consumer<TestDockerClientFacade>> configurators = new ArrayDeque<>();
 
-    private volatile TestDockerClientAdapter clientAdapter;
-    private volatile Function<TestDockerClientAdapter, DockerClientAdapter> wrapper;
+    private volatile TestDockerClientFacade clientFacade;
+    private volatile Function<TestDockerClientFacade, DockerClientFacade> wrapper;
     private volatile DockerClientException creationFailureException;
 
 
     @Override
-    public DockerClientAdapter createAdapter(DockerClientConfig dockerConfig) {
+    public DockerClientFacade createFacade(DockerClientConfig dockerConfig) {
 
         if (creationFailureException != null) {
             throw creationFailureException;
@@ -32,24 +32,24 @@ public class TestDockerClientAdapterFactory extends DockerClientAdapterFactory {
             throw new IllegalArgumentException("Unsupported URI: " + dockerConfig.getInstanceURI());
         }
 
-        TestDockerClientAdapter testClientAdapter = new TestDockerClientAdapter();
-        for (Consumer<TestDockerClientAdapter> configurator : configurators) {
-            configurator.accept(testClientAdapter);
+        TestDockerClientFacade testClientFacade = new TestDockerClientFacade();
+        for (Consumer<TestDockerClientFacade> configurator : configurators) {
+            configurator.accept(testClientFacade);
         }
 
-        DockerClientAdapter clientAdapter = wrapper == null ? testClientAdapter : wrapper.apply(testClientAdapter);
+        DockerClientFacade clientFacade = wrapper == null ? testClientFacade : wrapper.apply(testClientFacade);
 
-        this.clientAdapter = testClientAdapter;
+        this.clientFacade = testClientFacade;
 
-        return clientAdapter;
+        return clientFacade;
     }
 
 
-    public TestDockerClientAdapter getClientAdapter() {
-        return clientAdapter;
+    public TestDockerClientFacade createFacade() {
+        return clientFacade;
     }
 
-    public void addConfigurator(Consumer<TestDockerClientAdapter> configurator) {
+    public void addConfigurator(Consumer<TestDockerClientFacade> configurator) {
         lock.run(() -> configurators.add(configurator));
     }
 
@@ -59,7 +59,7 @@ public class TestDockerClientAdapterFactory extends DockerClientAdapterFactory {
         lock.run(configurators::removeLast);
     }
 
-    public void setWrapper(Function<TestDockerClientAdapter, DockerClientAdapter> wrapper) {
+    public void setWrapper(Function<TestDockerClientFacade, DockerClientFacade> wrapper) {
         this.wrapper = wrapper;
     }
 

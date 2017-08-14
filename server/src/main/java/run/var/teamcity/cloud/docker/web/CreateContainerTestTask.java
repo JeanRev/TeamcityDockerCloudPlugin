@@ -1,7 +1,7 @@
 package run.var.teamcity.cloud.docker.web;
 
 import com.intellij.openapi.diagnostic.Logger;
-import run.var.teamcity.cloud.docker.DockerClientAdapter;
+import run.var.teamcity.cloud.docker.DockerClientFacade;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
 import run.var.teamcity.cloud.docker.NewContainerInfo;
@@ -55,7 +55,7 @@ class CreateContainerTestTask extends ContainerTestTask {
 
         LOG.info("Creating test container for instance: " + instanceUuid + ". Server URL: " + serverUrl);
 
-        DockerClientAdapter clientAdapter = testTaskHandler.getDockerClientAdapter();
+        DockerClientFacade clientFacade = testTaskHandler.getDockerClientFacade();
 
         EditableNode container = imageConfig.getContainerSpec().editNode();
         container.getOrCreateArray("Env").add(DockerCloudUtils.ENV_TEST_INSTANCE_ID + "=" + instanceUuid).add
@@ -75,7 +75,7 @@ class CreateContainerTestTask extends ContainerTestTask {
         if (imageConfig.isPullOnCreate()) {
             msg("Pulling image " + image);
 
-            clientAdapter.pull(image, imageConfig.getRegistryCredentials(), new PullListener());
+            clientFacade.pull(image, imageConfig.getRegistryCredentials(), new PullListener());
         }
 
         msg("Creating container");
@@ -87,7 +87,7 @@ class CreateContainerTestTask extends ContainerTestTask {
         Map<String, String> labels = Collections.singletonMap(DockerCloudUtils.TEST_INSTANCE_ID_LABEL,
                 instanceUuid.toString());
 
-        NewContainerInfo containerInfo = clientAdapter.createAgentContainer(imageConfig.getContainerSpec(), image,
+        NewContainerInfo containerInfo = clientFacade.createAgentContainer(imageConfig.getContainerSpec(), image,
                 labels, env);
 
         containerInfo.getWarnings().forEach(this::warning);

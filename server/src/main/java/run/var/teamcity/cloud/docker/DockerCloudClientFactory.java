@@ -28,22 +28,22 @@ public class DockerCloudClientFactory implements CloudClientFactory {
 
     private final String editProfileUrl;
     private final SBuildServer buildServer;
-    private final DockerClientAdapterFactory clientAdapterFactory;
+    private final DockerClientFacadeFactory clientFacadeFactory;
 
     public DockerCloudClientFactory(@Nonnull final SBuildServer buildServer,
                                     @Nonnull final CloudRegistrar cloudRegistrar,
                                     @Nonnull final PluginDescriptor pluginDescriptor) {
-        this(buildServer, cloudRegistrar, pluginDescriptor, DockerClientAdapterFactory.getDefault());
+        this(buildServer, cloudRegistrar, pluginDescriptor, DockerClientFacadeFactory.getDefault());
     }
 
     DockerCloudClientFactory(@Nonnull final SBuildServer buildServer,
                              @Nonnull final CloudRegistrar cloudRegistrar,
                              @Nonnull final PluginDescriptor pluginDescriptor,
-                             @Nonnull final DockerClientAdapterFactory clientAdapterFactory) {
+                             @Nonnull final DockerClientFacadeFactory clientFacadeFactory) {
         this.editProfileUrl = pluginDescriptor.getPluginResourcesPath(DockerCloudSettingsController.EDIT_PATH);
         cloudRegistrar.registerCloudFactory(this);
         this.buildServer = buildServer;
-        this.clientAdapterFactory = clientAdapterFactory;
+        this.clientFacadeFactory = clientFacadeFactory;
     }
 
 
@@ -62,14 +62,14 @@ public class DockerCloudClientFactory implements CloudClientFactory {
         properties.put(CloudImageParameters.SOURCE_IMAGES_JSON,
                 CloudImageParameters.collectionToJson(params.getCloudImages()));
 
-        DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(properties, clientAdapterFactory);
+        DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(properties, clientFacadeFactory);
         List<DockerImageConfig> imageConfigs = DockerImageConfig.processParams(properties);
 
         final int threadPoolSize = Math.min(imageConfigs.size() * 2, Runtime.getRuntime().availableProcessors() + 1);
         clientConfig.getDockerClientConfig()
                 .connectionPoolSize(threadPoolSize);
 
-        return new DefaultDockerCloudClient(clientConfig, clientAdapterFactory, imageConfigs,
+        return new DefaultDockerCloudClient(clientConfig, clientFacadeFactory, imageConfigs,
                 OfficialAgentImageResolver.forCurrentServer(DockerRegistryClientFactory.getDefault()), state,
                 buildServer);
     }

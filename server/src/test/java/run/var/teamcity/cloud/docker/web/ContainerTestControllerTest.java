@@ -2,7 +2,7 @@ package run.var.teamcity.cloud.docker.web;
 
 import org.junit.Before;
 import org.junit.Test;
-import run.var.teamcity.cloud.docker.TestDockerClientAdapterFactory;
+import run.var.teamcity.cloud.docker.TestDockerClientFacadeFactory;
 import run.var.teamcity.cloud.docker.test.TestAtmosphereFrameworkFacade;
 import run.var.teamcity.cloud.docker.test.TestHttpServletRequest;
 import run.var.teamcity.cloud.docker.test.TestHttpServletResponse;
@@ -183,7 +183,7 @@ public class ContainerTestControllerTest {
     }
 
     private ContainerTestController createController() {
-        return new ContainerTestController(new TestDockerClientAdapterFactory(), new TestAtmosphereFrameworkFacade(),
+        return new ContainerTestController(new TestDockerClientFacadeFactory(), new TestAtmosphereFrameworkFacade(),
                 new TestSBuildServer(), new TestPluginDescriptor(), new TestWebControllerManager(), testMgr);
     }
 

@@ -30,13 +30,13 @@ import java.util.stream.Collectors;
 
 import static run.var.teamcity.cloud.docker.PullStatusListener.NO_PROGRESS;
 
-public class DefaultDockerClientAdapter implements DockerClientAdapter {
+public class DefaultDockerClientFacade implements DockerClientFacade {
 
-    private final static Logger LOG = LoggerFactory.getLogger(DefaultDockerClientAdapter.class);
+    private final static Logger LOG = LoggerFactory.getLogger(DefaultDockerClientFacade.class);
 
     private final DockerClient client;
 
-    DefaultDockerClientAdapter(DockerClient client) {
+    DefaultDockerClientFacade(DockerClient client) {
         this.client = client;
     }
 
@@ -146,7 +146,7 @@ public class DefaultDockerClientAdapter implements DockerClientAdapter {
                     String error = status.getAsString("error", null);
                     if (error != null) {
                         Node details = status.getObject("errorDetail", Node.EMPTY_OBJECT);
-                        throw new DockerClientAdapterException("Failed to handlePull image: " + error + " -- " + details
+                        throw new DockerClientFacadeException("Failed to handlePull image: " + error + " -- " + details
                                 .getAsString("message", null), null);
                     }
                     if (statusListener == NOOP_PULL_LISTENER) {
@@ -186,7 +186,7 @@ public class DefaultDockerClientAdapter implements DockerClientAdapter {
                 statusListener.pullInProgress(layer, statusMsg, percent);
             }
         } catch (IOException e) {
-            throw new DockerClientAdapterException("Pull failed.", e);
+            throw new DockerClientFacadeException("Pull failed.", e);
         }
     }
 
@@ -202,7 +202,7 @@ public class DefaultDockerClientAdapter implements DockerClientAdapter {
                 sb.append(DockerCloudUtils.readUTF8String(streamFragment));
             }
         } catch (IOException e) {
-            throw new DockerClientAdapterException("Failed to stream logs.");
+            throw new DockerClientFacadeException("Failed to stream logs.");
         }
 
         return sb;

@@ -1,7 +1,7 @@
 package run.var.teamcity.cloud.docker.web;
 
 import run.var.teamcity.cloud.docker.ContainerInfo;
-import run.var.teamcity.cloud.docker.DockerClientAdapter;
+import run.var.teamcity.cloud.docker.DockerClientFacade;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
@@ -42,14 +42,14 @@ class StartContainerTestTask extends ContainerTestTask {
 
     @Override
     Status work() {
-        DockerClientAdapter clientAdapter = testTaskHandler.getDockerClientAdapter();
+        DockerClientFacade clientFacade = testTaskHandler.getDockerClientFacade();
 
         if (containerStartTime == null) {
             // Container not started yet, doing it now.
 
             containerStartTime = Instant.now();
 
-            clientAdapter.startAgentContainer(containerId);
+            clientFacade.startAgentContainer(containerId);
 
             msg("Waiting for agent to connect", Phase.WAIT_FOR_AGENT);
 
@@ -58,7 +58,7 @@ class StartContainerTestTask extends ContainerTestTask {
             return SUCCESS;
         }
 
-        List<ContainerInfo> containers = clientAdapter.listActiveAgentContainers(DockerCloudUtils
+        List<ContainerInfo> containers = clientFacade.listActiveAgentContainers(DockerCloudUtils
                         .TEST_INSTANCE_ID_LABEL, instanceUuid.toString());
         if (containers.isEmpty()) {
             throw new ContainerTestTaskException("Container was prematurely destroyed.");
