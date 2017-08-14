@@ -1,5 +1,6 @@
 package run.var.teamcity.cloud.docker.test;
 
+import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.client.BadRequestException;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
@@ -298,7 +299,7 @@ public class TestDockerClient implements DockerClient {
 
     @Nonnull
     @Override
-    public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, Set<StdioType> stdioTypes, boolean
+    public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, @NotNull Set<StdioType> stdioTypes, boolean
             follow) {
         return lock.call(() -> {
             checkForFailure();

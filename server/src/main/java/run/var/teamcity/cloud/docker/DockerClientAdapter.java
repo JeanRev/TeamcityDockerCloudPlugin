@@ -12,7 +12,6 @@ public interface DockerClientAdapter extends AutoCloseable {
 
     PullStatusListener NOOP_PULL_LISTENER = (layer, current, total) -> {};
 
-
     @Nonnull
     NewContainerInfo createAgentContainer(@Nonnull Node containerSpec, @Nonnull String image, @Nonnull Map<String,
             String> labels, @Nonnull Map<String, String> env);

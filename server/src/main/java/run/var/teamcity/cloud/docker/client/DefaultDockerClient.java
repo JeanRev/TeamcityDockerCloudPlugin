@@ -19,6 +19,7 @@ import org.apache.http.util.TextUtils;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
+import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.client.apcon.ApacheConnectorProvider;
 import run.var.teamcity.cloud.docker.client.npipe.NPipeSocketAddress;
@@ -160,9 +161,9 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
     @Nonnull
     @Override
-    public Node inspectContainer(@Nonnull String containerId) {
-        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
-        return invoke(target().path("/containers/{id}/json").resolveTemplate("id", containerId), HttpMethod.GET, null,
+    public Node inspectContainer(@Nonnull String container) {
+        DockerCloudUtils.requireNonNull(container, "Container ID cannot be null.");
+        return invoke(target().path("/containers/{id}/json").resolveTemplate("id", container), HttpMethod.GET, null,
                 prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
     }
 
@@ -198,8 +199,8 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
     @Nonnull
     @Override
-    public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, Set<StdioType> stdioTypes,
-                                            boolean
+    public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, @Nonnull Set<StdioType> stdioTypes,
+                                    boolean
             follow) {
 
         return invokeStream(prepareLogsTarget(target(), containerId, lineCount, stdioTypes).queryParam("follow",
@@ -228,10 +229,10 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     }
 
     @Override
-    public void stopContainer(@Nonnull String containerId, Duration timeout) {
-        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
+    public void stopContainer(@Nonnull String container, Duration timeout) {
+        DockerCloudUtils.requireNonNull(container, "Container ID cannot be null.");
 
-        WebTarget target = target().path("/containers/{id}/stop").resolveTemplate("id", containerId);
+        WebTarget target = target().path("/containers/{id}/stop").resolveTemplate("id", container);
         if (!timeout.equals(DockerClient.DEFAULT_TIMEOUT)) {
             if (timeout.isNegative()) {
                 throw new IllegalArgumentException("Timeout must be a positive integer.");
@@ -252,9 +253,9 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     }
 
     @Override
-    public void removeContainer(@Nonnull String containerId, boolean removeVolumes, boolean force) {
-        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
-        invokeVoid(target().path("/containers/{id}").resolveTemplate("id", containerId).queryParam("v", removeVolumes)
+    public void removeContainer(@Nonnull String container, boolean removeVolumes, boolean force) {
+        DockerCloudUtils.requireNonNull(container, "Container ID cannot be null.");
+        invokeVoid(target().path("/containers/{id}").resolveTemplate("id", container).queryParam("v", removeVolumes)
                 .queryParam("force", force), HttpMethod.DELETE, null, null);
     }
 
