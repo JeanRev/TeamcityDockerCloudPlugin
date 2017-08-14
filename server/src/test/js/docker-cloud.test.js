@@ -1133,6 +1133,10 @@ describe('Validators', function() {
         verifyFailure(eltHandle, 'profile_name');
     });
 
+    it('should perform official agent image checkbox validation', function() {
+        verifyNoWindows(loadElt('UseOfficialTCAgentImage'));
+    });
+
     it('should perform image name validation', function() {
         var eltHandle = loadElt('Image');
 

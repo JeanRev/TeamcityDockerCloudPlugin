@@ -1772,6 +1772,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         }
                     }],
                     dockerCloudImage_Image: [requiredValidator],
+                    dockerCloudImage_UseOfficialTCAgentImage: [noWindowsValidator],
                     dockerCloudImage_MaxInstanceCount: [positiveIntegerValidator, function($elt) {
                         var value = $elt.val();
                         if (value && parseInt(value) < 1) {
