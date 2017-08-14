@@ -514,18 +514,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
                 $j('span[id$="_error"], span[id$="_warning"]', self.$dialog).empty();
 
-                var viewModel = self._convertSettingsToViewModel(self.imagesData[profileName] || {
-                        /* Defaults for new images. */
-                        Administration: {
-                            UseOfficialTCAgentImage: true,
-                            PullOnCreate: true,
-                            MaxInstanceCount: 2
-                        },
-                        Editor: {
-                            MemoryUnit: 'bytes',
-                            MemorySwapUnit: 'bytes'
-                        }
-                    });
+                var viewModel = self._convertSettingsToViewModel(self.imagesData[profileName] || self.createEmptySettings());
                 self._applyViewModel(viewModel);
                 self._updateAllTablesMandoryStarsVisibility();
                 self.selectTabWithId("dockerCloudImageTab_general");
@@ -879,6 +868,23 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             notEmpty: function(value) {
                 return value !== undefined && value !== null && (value.length === undefined || value.length) && ($j.type(value) != "object" || Object.keys(value).length);
             },
+
+            createEmptySettings: function() {
+                return {
+                    /* Defaults for new images. */
+                    Administration: {
+                        Version: self.IMAGE_VERSION,
+                        UseOfficialTCAgentImage: !self.daemonOs || self.daemonOs.toLowerCase() !== 'windows', //
+                        PullOnCreate: true,
+                        MaxInstanceCount: 2
+                    },
+                    Editor: {
+                        MemoryUnit: 'bytes',
+                        MemorySwapUnit: 'bytes'
+                    }
+                };
+            },
+
             _convertSettingsToViewModel: function(settings) {
                 var viewModel = {};
 

@@ -1583,3 +1583,23 @@ describe('validateHandler', function() {
         expect($j('#myField_error').get(0).innerHTML).toEqual('some_error');
     });
 });
+
+describe('createEmptySettings', function() {
+
+    it('should convert to view model and backward', function() {
+        var settings = dockerCloud.createEmptySettings();
+        var viewModel = dockerCloud._convertSettingsToViewModel(settings);
+        expect(dockerCloud._convertViewModelToSettings(viewModel)).toEqual(settings);
+    });
+
+    it('should set official image flag according to daemon OS', function() {
+        dockerCloud.daemonOs = undefined;
+        expect(dockerCloud.createEmptySettings().Administration.UseOfficialTCAgentImage).toEqual(true);
+
+        dockerCloud.daemonOs = 'linux';
+        expect(dockerCloud.createEmptySettings().Administration.UseOfficialTCAgentImage).toEqual(true);
+
+        dockerCloud.daemonOs = 'windows';
+        expect(dockerCloud.createEmptySettings().Administration.UseOfficialTCAgentImage).toEqual(false);
+    });
+});
