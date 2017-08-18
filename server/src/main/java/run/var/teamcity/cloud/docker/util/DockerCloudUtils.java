@@ -19,12 +19,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.IllegalFormatException;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Constants and utility class for the Docker cloud plugin.
@@ -491,5 +492,92 @@ public final class DockerCloudUtils {
      */
     public static boolean isWindowsHost() {
         return WINDOWS_HOST;
+    }
+
+    /**
+     * Creates a new immutable map from the specified {@link Pair(Object, Object)}s.
+     *
+     * @param pairs the pairs
+     * @param <K> the type of key
+     * @param <V> the type of value
+     *
+     * @return the new map
+     *
+     * @throws NullPointerException if the list of pairs, or any of the contained pair, are {@code null}
+     *
+     * @see #pair(Object, Object)
+     */
+    @Nonnull
+    @SafeVarargs
+    public static <K,V> Map<K,V> immutableMapOf(@Nonnull Pair<K,V>... pairs) {
+        DockerCloudUtils.requireNonNull(pairs, "List of pairs cannot be null.");
+        return Collections.unmodifiableMap(mapOf(pairs));
+    }
+
+    /**
+     * Creates a new mutable map from the specified {@link Pair(Object, Object)}s.
+     *
+     * @param pairs the pairs
+     * @param <K> the type of key
+     * @param <V> the type of value
+     *
+     * @return the new map
+     *
+     * @throws NullPointerException if the list of pairs, or any of the contained pair, are {@code null}
+     *
+     * @see #pair(Object, Object)
+     */
+    @Nonnull
+    @SafeVarargs
+    public static <K,V> Map<K,V> mapOf(@Nonnull Pair<K,V>... pairs) {
+        DockerCloudUtils.requireNonNull(pairs, "List of pairs cannot be null.");
+        return Arrays.stream(pairs).collect(Collectors.toMap(Pair::getKey, Pair::getValue));
+    }
+
+    /**
+     * Creates a new {@link Pair}.
+     *
+     * @param key the pair "key" (left-hand side value)
+     * @param value the pair "value" (right-hand side value)
+     * @param <K> the type of key
+     * @param <V> the type of value
+     *
+     * @return the new pair
+     */
+    @Nonnull
+    public static <K,V> Pair<K,V> pair(@Nonnull K key, @Nonnull V value) {
+        DockerCloudUtils.requireNonNull(key, "Key cannot be null.");
+        DockerCloudUtils.requireNonNull(value, "Value cannot be null.");
+
+        return new Pair<>(key, value);
+    }
+
+    /**
+     * A pair of objects.
+     *
+     * @param <K> the type of the pair "key" (left-hand side value)
+     * @param <V> the type of the pair "value" (right-hand side value)
+     *
+     * @see DockerCloudUtils#pair(Object, Object)
+     */
+    public static class Pair<K,V> {
+        private final K key;
+        private final V value;
+
+        private Pair(K key, V value) {
+            assert key != null && value != null;
+            this.key = key;
+            this.value = value;
+        }
+
+        @Nonnull
+        public K getKey() {
+            return key;
+        }
+
+        @Nonnull
+        public V getValue() {
+            return value;
+        }
     }
 }

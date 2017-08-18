@@ -210,33 +210,7 @@ public final class TestUtils {
     }
 
     @SafeVarargs
-    public static <K,V> Map<K,V> mapOf(Pair<K,V>... pairs) {
-        return Arrays.stream(pairs).collect(Collectors.toMap(Pair::getKey, Pair::getValue));
-    }
-
-    @SafeVarargs
     public static <V> List<V> listOf(V... elts) {
         return Arrays.stream(elts).collect(Collectors.toList());
-    }
-
-    public static <K,V> Pair<K,V> pair(K key, V value) {
-        return new Pair<>(key, value);
-    }
-
-    public static class Pair<K,V> {
-        private final K key;
-        private final V value;
-        private Pair(K key, V value) {
-            this.key = key;
-            this.value = value;
-        }
-
-        private K getKey() {
-            return key;
-        }
-
-        private V getValue() {
-            return value;
-        }
     }
 }

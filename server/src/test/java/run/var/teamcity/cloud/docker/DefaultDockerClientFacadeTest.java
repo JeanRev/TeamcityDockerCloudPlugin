@@ -27,8 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus.CREATED;
 import static run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus.STARTED;
-import static run.var.teamcity.cloud.docker.test.TestUtils.mapOf;
-import static run.var.teamcity.cloud.docker.test.TestUtils.pair;
+import static run.var.teamcity.cloud.docker.util.DockerCloudUtils.mapOf;
+import static run.var.teamcity.cloud.docker.util.DockerCloudUtils.pair;
 
 public class DefaultDockerClientFacadeTest {
 
