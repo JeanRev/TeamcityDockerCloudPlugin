@@ -106,7 +106,7 @@ class CreateContainerTestTask extends ContainerTestTask {
         String trackedLayer = null;
 
         @Override
-        public void pullInProgress(@Nonnull String layer, String status, int percent) {
+        public void pullInProgress(@Nonnull String layer, @Nonnull String status, int percent) {
 
             if (percent == NO_PROGRESS) {
                 trackedLayer = null;
@@ -119,7 +119,7 @@ class CreateContainerTestTask extends ContainerTestTask {
                 return;
             }
 
-            if (!lastStatus.equals(status) || lastPercent != percent) {
+            if (!status.equals(lastStatus) || lastPercent != percent) {
                 msg("Pull in progress - " + layer + ": " + percent + "%");
             }
 
