@@ -30,8 +30,8 @@ class StartContainerTestTask extends ContainerTestTask {
      * Creates a new task instance.
      *
      * @param testTaskHandler the test task handler
-     * @param containerId     the ID of the container to be started
-     * @param instanceUuid    the container test instance UUID
+     * @param containerId the ID of the container to be started
+     * @param instanceUuid the container test instance UUID
      */
     StartContainerTestTask(@Nonnull ContainerTestHandler testTaskHandler, @Nonnull String containerId,
                            @Nonnull UUID instanceUuid) {
@@ -51,7 +51,9 @@ class StartContainerTestTask extends ContainerTestTask {
 
             clientFacade.startAgentContainer(containerId);
 
-            msg("Waiting for agent to connect", Phase.WAIT_FOR_AGENT);
+            testTaskHandler.notifyContainerStarted(containerStartTime);
+
+            msg("Waiting for agent to connect");
 
             return PENDING;
         } else if (testTaskHandler.isBuildAgentDetected()) {
@@ -59,7 +61,7 @@ class StartContainerTestTask extends ContainerTestTask {
         }
 
         List<ContainerInfo> containers = clientFacade.listActiveAgentContainers(DockerCloudUtils
-                        .TEST_INSTANCE_ID_LABEL, instanceUuid.toString());
+                .TEST_INSTANCE_ID_LABEL, instanceUuid.toString());
         if (containers.isEmpty()) {
             throw new ContainerTestTaskException("Container was prematurely destroyed.");
         } else if (containers.size() == 1) {
@@ -68,7 +70,7 @@ class StartContainerTestTask extends ContainerTestTask {
                 Duration timeElapsedSinceStart = Duration.between(containerStartTime, Instant.now());
                 if (timeElapsedSinceStart.compareTo(AGENT_WAIT_TIMEOUT) > 0) {
                     throw new ContainerTestTaskException("Timeout: no agent connection after " +
-                            AGENT_WAIT_TIMEOUT + " seconds.");
+                            AGENT_WAIT_TIMEOUT.getSeconds() + " seconds.");
                 }
             } else {
                 throw new ContainerTestTaskException("Container exited prematurely (" + container.getState() + ")");

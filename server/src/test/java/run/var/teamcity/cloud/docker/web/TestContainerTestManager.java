@@ -6,48 +6,58 @@ import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 
 import javax.annotation.Nonnull;
+import java.util.Collections;
+import java.util.Optional;
 import java.util.UUID;
 
-public class TestContainerTestManager extends ContainerTestManager {
+public class TestContainerTestManager implements ContainerTestManager {
 
     private DockerCloudClientConfig clientConfig;
     private DockerImageConfig imageConfig;
     private ContainerTestListener listener;
     private Phase involvedPhase = null;
 
-    private boolean disposed = false;
-
+    @Nonnull
     @Override
-    UUID createNewTestContainer(@Nonnull DockerCloudClientConfig clientConfig, @Nonnull DockerImageConfig imageConfig,
-                                @Nonnull ContainerTestListener listener) {
+    public UUID createNewTestContainer(@Nonnull DockerCloudClientConfig clientConfig, @Nonnull DockerImageConfig
+            imageConfig) {
         this.clientConfig = clientConfig;
         this.imageConfig = imageConfig;
-        this.listener = listener;
-
         this.involvedPhase = Phase.CREATE;
         return TestUtils.TEST_UUID;
     }
 
     @Override
-    void startTestContainer(@Nonnull UUID testUuid) {
+    public void startTestContainer(@Nonnull UUID testUuid) {
         checkUuid(testUuid);
         this.involvedPhase = Phase.START;
     }
 
+    @Nonnull
     @Override
     public String getLogs(@Nonnull UUID testUuid) {
         throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
-    void dispose(@Nonnull UUID testUuid) {
+    public void dispose(@Nonnull UUID testUuid) {
         checkUuid(testUuid);
         this.involvedPhase = null;
     }
 
     @Override
-    void notifyInteraction(@Nonnull UUID testUuid) {
+    public void setListener(@Nonnull UUID testUuid, @Nonnull ContainerTestListener listener) {
         checkUuid(testUuid);
+        this.listener = listener;
+    }
+
+    @Nonnull
+    @Override
+    public Optional<TestContainerStatusMsg> retrieveStatus(UUID testUuid) {
+        checkUuid(testUuid);
+        return Optional.of(new TestContainerStatusMsg(testUuid, Phase.CREATE, TestContainerStatusMsg.Status.PENDING,
+                "Dummy status", "dummy_container_id", null, null,
+                Collections.emptyList()));
     }
 
     private void checkUuid(UUID uuid) {
@@ -57,8 +67,8 @@ public class TestContainerTestManager extends ContainerTestManager {
     }
 
     @Override
-    void dispose() {
-        disposed = true;
+    public void dispose() {
+        // Nothing to do.
     }
 
     public DockerCloudClientConfig getClientConfig() {
@@ -75,14 +85,5 @@ public class TestContainerTestManager extends ContainerTestManager {
 
     public Phase getInvolvedPhase() {
         return involvedPhase;
-    }
-
-    public boolean isDisposed() {
-        return disposed;
-    }
-
-
-    public class ContainerTest {
-
     }
 }

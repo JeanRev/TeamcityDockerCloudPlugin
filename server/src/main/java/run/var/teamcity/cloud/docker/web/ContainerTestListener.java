@@ -1,5 +1,6 @@
 package run.var.teamcity.cloud.docker.web;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
@@ -8,12 +9,11 @@ import javax.annotation.Nullable;
 public interface ContainerTestListener {
 
     /**
-     * Notify some status changes. The status message may be {@code null}, meaning that no status information is
-     * available on the current test phase.
+     * Notify some status changes.
      *
      * @param statusMsg the status message
      */
-    void notifyStatus(@Nullable TestContainerStatusMsg statusMsg);
+    void notifyStatus(@Nonnull TestContainerStatusMsg statusMsg);
 
     /**
      * Callback method invoked when the test has been disposed.

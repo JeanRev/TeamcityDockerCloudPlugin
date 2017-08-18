@@ -14,22 +14,24 @@ import javax.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.util.Map;
 
+import static run.var.teamcity.cloud.docker.web.WebSocketDeploymentStatusProvider.DeploymentStatus.SUCCESS;
+
 public class DockerCloudSettingsController extends BaseController {
 
     public final static String EDIT_PATH = "docker-cloud-settings.html";
 
-    @Nonnull
+    private final WebSocketDeploymentStatusProvider wsDeploymentStatusProvider;
     private final PluginDescriptor pluginDescriptor;
-    @Nonnull
     private final String jspPath;
-    @Nonnull
     private final String htmlPath;
 
-    public DockerCloudSettingsController(@Nonnull SBuildServer server,
+    public DockerCloudSettingsController(@Nonnull WebSocketDeploymentStatusProvider wsDeploymentStatusProvider,
+                                         @Nonnull SBuildServer server,
                                          @Nonnull PluginDescriptor pluginDescriptor,
                                          @Nonnull WebControllerManager manager) {
         super(server);
 
+        this.wsDeploymentStatusProvider = wsDeploymentStatusProvider;
         this.pluginDescriptor = pluginDescriptor;
 
         htmlPath = pluginDescriptor.getPluginResourcesPath(EDIT_PATH);
@@ -64,6 +66,7 @@ public class DockerCloudSettingsController extends BaseController {
         model.put("defaultLocalInstanceParam", defaultLocalInstanceParam);
         model.put("defaultLocalInstanceURI", defaultLocalInstanceURI);
         model.put("windowsHost", windowsHost);
+        model.put("webSocketEndpointsAvailable", wsDeploymentStatusProvider.getDeploymentStatus() == SUCCESS);
         return mv;
     }
 }

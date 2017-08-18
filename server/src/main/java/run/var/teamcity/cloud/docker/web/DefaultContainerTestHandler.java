@@ -3,7 +3,6 @@ package run.var.teamcity.cloud.docker.web;
 import run.var.teamcity.cloud.docker.DockerClientFacade;
 import run.var.teamcity.cloud.docker.DockerClientFacadeFactory;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.LockHandler;
 import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
@@ -14,6 +13,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -24,39 +24,35 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
     private final UUID uuid = UUID.randomUUID();
     private final LockHandler lock = LockHandler.newReentrantLock();
     private final DockerClientFacade clientFacade;
-    private final DockerClientConfig clientConfig;
-    private final ContainerTestListener statusListener;
-    private final StreamingController streamingController;
 
+    @Nullable
+    private ContainerTestListener testListener;
     private Instant lastInteraction;
+    @Nullable
+    private TestContainerStatusMsg lastStatusMsg;
+    @Nullable
     private String containerId;
+    @Nullable
+    private Instant containerStartTime;
     private boolean buildAgentDetected = false;
 
     private ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTaskFuture = null;
 
-    private DefaultContainerTestHandler(DockerClientConfig clientConfig, DockerClientFacade clientFacade,
-                                        ContainerTestListener statusListener, StreamingController streamingController) {
-        assert clientFacade != null && statusListener != null;
+    private DefaultContainerTestHandler(DockerClientFacade clientFacade) {
+        assert clientFacade != null;
 
-        this.clientConfig = clientConfig;
         this.clientFacade = clientFacade;
-        this.statusListener = statusListener;
-        this.streamingController = streamingController;
 
         notifyInteraction();
     }
 
     public static DefaultContainerTestHandler newTestInstance(@Nonnull DockerCloudClientConfig clientConfig,
-                                                              @Nonnull DockerClientFacadeFactory clientFacadeFactory,
-                                                              @Nonnull ContainerTestListener statusListener,
-                                                              @Nullable StreamingController streamingController) {
+                                                              @Nonnull DockerClientFacadeFactory clientFacadeFactory) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
         DockerCloudUtils.requireNonNull(clientFacadeFactory, "Docker client facade factory cannot be null.");
-        DockerCloudUtils.requireNonNull(statusListener, "Status listener cannot be null.");
         DockerClientFacade clientFacade = clientFacadeFactory.createFacade(clientConfig.getDockerClientConfig()
                 .connectionPoolSize(1));
-        return new DefaultContainerTestHandler(clientConfig.getDockerClientConfig(), clientFacade, statusListener,
-                streamingController);
+        return new DefaultContainerTestHandler(clientFacade);
     }
 
     /**
@@ -81,23 +77,13 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
     }
 
     /**
-     * Gets the atmosphere resource associated with this test if any.
+     * Gets the listener associated with this test if any.
      *
-     * @return the atmosphere resource or {@code null}
+     * @return the listener if any
      */
-    @Nullable
-    public ContainerTestListener getStatusListener() {
-        return lock.call(() -> statusListener);
-    }
-
-    /**
-     * Gets the task currently associated with this test. May be {@code null} if no task was associated yet.
-     *
-     * @return the task
-     */
-    @Nullable
-    public ScheduledFutureWithRunnable<? extends ContainerTestTask> getCurrentTaskFuture() {
-        return lock.call(() -> currentTaskFuture);
+    @Nonnull
+    public Optional<ContainerTestListener> getTestListener() {
+        return Optional.ofNullable(lock.call(() -> testListener));
     }
 
     /**
@@ -115,7 +101,7 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
      * Notify a user interaction for this test.
      */
     public void notifyInteraction() {
-        lastInteraction = Instant.now();
+        lock.run(() -> lastInteraction = Instant.now());
     }
 
     /**
@@ -125,7 +111,17 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
      */
     @Nonnull
     public Instant getLastInteraction() {
-        return lastInteraction;
+        return lock.call(() -> lastInteraction);
+    }
+
+    /**
+     * Gets the task currently associated with this test. May be {@code null} if no task was associated yet.
+     *
+     * @return the task
+     */
+    @Nullable
+    public ScheduledFutureWithRunnable<? extends ContainerTestTask> getCurrentTaskFuture() {
+        return lock.call(() -> currentTaskFuture);
     }
 
     /**
@@ -135,12 +131,11 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
      *
      * @throws NullPointerException if {@code currentTask} is {@code null}
      */
-    public void setCurrentTask(@Nonnull ScheduledFutureWithRunnable<? extends ContainerTestTask>
-                                       currentTask) {
+    public void setCurrentTaskFuture(@Nonnull ScheduledFutureWithRunnable<? extends ContainerTestTask>
+                                             currentTask) {
         DockerCloudUtils.requireNonNull(currentTask, "Current task cannot be null.");
         lock.run(() -> {
             this.currentTaskFuture = currentTask;
-            statusListener.notifyStatus(null);
             notifyInteraction();
         });
     }
@@ -150,10 +145,30 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
 
         lock.run(() -> this.containerId = containerId);
+    }
 
-        if (streamingController != null) {
-            streamingController.registerContainer(uuid, new ContainerCoordinates(containerId, clientConfig));
+    @Override
+    public void notifyContainerStarted(@Nonnull Instant containerStartTime) {
+        DockerCloudUtils.requireNonNull(containerStartTime, "Start time cannot be null.");
+
+        lock.run(() -> this.containerStartTime = containerStartTime);
+    }
+
+    public void setListener(@Nonnull ContainerTestListener testListener) {
+        DockerCloudUtils.requireNonNull(testListener, "Test listener cannot be null.");
+
+        TestContainerStatusMsg lastStatusMsg = lock.call(() -> {
+            this.testListener = testListener;
+            return this.lastStatusMsg;
+        });
+
+        if (lastStatusMsg != null) {
+            testListener.notifyStatus(lastStatusMsg);
         }
+    }
+
+    public Optional<TestContainerStatusMsg> getLastStatusMsg() {
+        return Optional.ofNullable(lock.call(() -> lastStatusMsg));
     }
 
     @Override
@@ -163,7 +178,15 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
         DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
         DockerCloudUtils.requireNonNull(status, "Warnings list cannot be null.");
 
-        statusListener.notifyStatus(new TestContainerStatusMsg(uuid, phase, status, msg, containerId, failure, warnings));
+        TestContainerStatusMsg statusMsg = new TestContainerStatusMsg(uuid, phase, status, msg, containerId,
+                containerStartTime, failure, warnings);
+
+        lock.run(() -> this.lastStatusMsg = statusMsg);
+        ContainerTestListener testListener = lock.call(() -> this.testListener);
+
+        if (testListener != null) {
+            testListener.notifyStatus(statusMsg);
+        }
     }
 
     @Override
@@ -172,6 +195,6 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
     }
 
     public void setBuildAgentDetected(boolean buildAgentDetected) {
-        lock.run(() ->  this.buildAgentDetected = buildAgentDetected);
+        lock.run(() -> this.buildAgentDetected = buildAgentDetected);
     }
 }

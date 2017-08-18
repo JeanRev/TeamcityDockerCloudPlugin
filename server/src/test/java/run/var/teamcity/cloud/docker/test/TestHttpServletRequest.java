@@ -1,5 +1,7 @@
 package run.var.teamcity.cloud.docker.test;
 
+import run.var.teamcity.cloud.docker.util.LockHandler;
+
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
@@ -11,7 +13,6 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -27,7 +28,9 @@ import java.util.Map;
 @SuppressWarnings("deprecation")
 public class TestHttpServletRequest implements HttpServletRequest {
 
+    private final LockHandler lock = LockHandler.newReentrantLock();
     private final Map<String, String[]> parameters = new HashMap<>();
+    private TestHttpSession httpSession;
 
     @Override
     public String getAuthType() {
@@ -125,13 +128,18 @@ public class TestHttpServletRequest implements HttpServletRequest {
     }
 
     @Override
-    public HttpSession getSession(boolean create) {
-        throw new UnsupportedOperationException("Not a real request.");
+    public TestHttpSession getSession(boolean create) {
+        return lock.call(() -> {
+            if (httpSession == null && create) {
+                httpSession = new TestHttpSession();
+            }
+            return httpSession;
+        });
     }
 
     @Override
-    public HttpSession getSession() {
-        throw new UnsupportedOperationException("Not a real request.");
+    public TestHttpSession getSession() {
+        return getSession(true);
     }
 
     @Override
@@ -181,7 +189,7 @@ public class TestHttpServletRequest implements HttpServletRequest {
 
     @Override
     public Object getAttribute(String name) {
-        throw new UnsupportedOperationException("Not a real request.");
+        return null;
     }
 
     @Override

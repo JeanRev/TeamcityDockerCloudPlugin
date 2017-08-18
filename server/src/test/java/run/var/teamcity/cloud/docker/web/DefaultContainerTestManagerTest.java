@@ -34,7 +34,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
-import static run.var.teamcity.cloud.docker.web.ContainerTestManager.ActionException;
 
 /**
  * {@link ContainerTestController} test suite.
@@ -86,7 +85,9 @@ public class DefaultContainerTestManagerTest {
 
         ContainerTestManager mgr = createManager();
 
-        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
+
+        mgr.setListener(testUuid, testListener);
 
         TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
 
@@ -99,7 +100,9 @@ public class DefaultContainerTestManagerTest {
 
         mgr.startTestContainer(testUuid);
 
-        queryUntilPhase(Phase.WAIT_FOR_AGENT);
+        waitUntil(() -> mgr.
+                retrieveStatus(testUuid).map(msg -> msg.getContainerStartTime() != null).
+                orElse(false));
 
         assertThat(clientFacade.getContainers()).hasSize(1);
         assertThat(clientFacade.getContainers().get(0).isRunning()).isTrue();
@@ -109,7 +112,9 @@ public class DefaultContainerTestManagerTest {
 
         agentMgr.registeredAgent(agent);
 
-        queryUntilSuccess(Phase.WAIT_FOR_AGENT);
+        waitUntil(() -> mgr.
+                retrieveStatus(testUuid).map(msg -> msg.getContainerStartTime() != null).
+                orElse(false));
 
         mgr.dispose(testUuid);
 
@@ -126,12 +131,13 @@ public class DefaultContainerTestManagerTest {
         imageResolver.image("local-only:1.0");
         clientFacadeFactory.addConfigurator(clientFacade -> clientFacade.localImage("local-only:1.0"));
 
-        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
+        mgr.setListener(testUuid, testListener);
 
         // Image exists only locally, pull will fail.
         queryUntilFailure(Phase.CREATE);
 
-        assertThatExceptionOfType(ActionException.class).isThrownBy(
+        assertThatExceptionOfType(ContainerTestException.class).isThrownBy(
                 () -> mgr.startTestContainer(testUuid));
     }
 
@@ -143,7 +149,9 @@ public class DefaultContainerTestManagerTest {
         imageResolver.image("local-only:1.0");
         clientFacadeFactory.addConfigurator(clientFacade -> clientFacade.localImage("local-only:1.0"));
 
-        mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
+
+        mgr.setListener(testUuid, testListener);
 
         queryUntilSuccess(Phase.CREATE);
 
@@ -154,7 +162,9 @@ public class DefaultContainerTestManagerTest {
     public void diposeTest() {
         ContainerTestManager mgr = createManager();
 
-        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
+
+        mgr.setListener(testUuid, testListener);
 
         queryUntilSuccess(Phase.CREATE);
 
@@ -170,7 +180,9 @@ public class DefaultContainerTestManagerTest {
         // Cancelling a test related to an already removed container.
         testListener = new TestContainerTestStatusListener();
 
-        testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
+        testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
+
+        mgr.setListener(testUuid, testListener);
 
         clientFacade = clientFacadeFactory.createFacade();
 
@@ -190,7 +202,9 @@ public class DefaultContainerTestManagerTest {
         setupFastCleanupRate();
 
         ContainerTestManager mgr = createManager();
-        mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
+
+        mgr.setListener(testUuid, testListener);
 
         waitUntil(() -> !testListener.getMsgs().isEmpty());
 
@@ -213,7 +227,9 @@ public class DefaultContainerTestManagerTest {
 
         ContainerTestManager mgr = createManager();
 
-        mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
+
+        mgr.setListener(testUuid, testListener);
 
         queryUntilSuccess();
 
@@ -228,7 +244,9 @@ public class DefaultContainerTestManagerTest {
 
         ContainerTestManager mgr = createManager();
 
-        mgr.createNewTestContainer(clientConfig, createImageConfig(), testListener);
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
+
+        mgr.setListener(testUuid, testListener);
 
         queryUntilFailure();
     }
@@ -266,24 +284,13 @@ public class DefaultContainerTestManagerTest {
         });
     }
 
-    private void queryUntilPhase(Phase targetPhase) {
-        waitUntil(() -> {
-            if (testListener.getMsgs().isEmpty()) {
-                return false;
-            }
-            TestContainerStatusMsg queryMsg = testListener.getMsgs().getLast();
-            Status status = queryMsg.getStatus();
-            assertThat(status).isNotSameAs(Status.FAILURE);
-            return queryMsg.getPhase() == targetPhase;
-        });
-    }
-
     private DockerImageConfig createImageConfig() {
-        return new DockerImageConfig("test", containerSpec, pullOnCreate, true, false, DockerRegistryCredentials.ANONYMOUS, 1, null);
+        return new DockerImageConfig("test", containerSpec, pullOnCreate, true, false,
+                DockerRegistryCredentials.ANONYMOUS, 1, null);
     }
 
     private ContainerTestManager createManager() {
         return new DefaultContainerTestManager(imageResolver, clientFacadeFactory,
-                buildServer, new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRate, null);
+                buildServer, new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRate);
     }
 }

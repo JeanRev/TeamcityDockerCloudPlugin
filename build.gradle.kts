@@ -44,6 +44,14 @@ subprojects {
     mainSourceSet.compileClasspath += configurations.getByName("provided")
     testSourceSet.compileClasspath += configurations.getByName("provided")
     testSourceSet.runtimeClasspath += configurations.getByName("provided")
+
+    afterEvaluate({
+        tasks.withType<JavaCompile> {
+            options.compilerArgs.add("-Xlint:unchecked")
+            options.compilerArgs.add("-Xlint:deprecation")
+            options.encoding = "UTF-8"
+        }
+    })
 }
 
 task<Zip>("tcdist") {

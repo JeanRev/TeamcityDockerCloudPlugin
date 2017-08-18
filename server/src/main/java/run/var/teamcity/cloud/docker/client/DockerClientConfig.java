@@ -3,6 +3,7 @@ package run.var.teamcity.cloud.docker.client;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
 import java.net.URI;
 import java.time.Duration;
 
@@ -14,7 +15,7 @@ import java.time.Duration;
  *
  * <p>Instances of this class are not thread-safe.</p>
  */
-public class DockerClientConfig {
+public class DockerClientConfig implements Serializable {
 
     private final static Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofMinutes(1);
     private final static Duration DEFAULT_TRANSFER_TIMEOUT = Duration.ofMinutes(5);

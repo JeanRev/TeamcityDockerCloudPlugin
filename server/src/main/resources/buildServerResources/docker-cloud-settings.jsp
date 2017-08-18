@@ -1,3 +1,4 @@
+
 <%@ page import="run.var.teamcity.cloud.docker.util.DockerCloudUtils" %>
 <%@ page import="jetbrains.buildServer.clouds.CloudImageParameters" %>
 <%@ taglib prefix="props" tagdir="/WEB-INF/tags/props" %>
@@ -13,6 +14,7 @@
 <%--@elvariable id="defaultLocalInstanceParam" type="java.lang.String"--%>
 <%--@elvariable id="defaultLocalInstanceURI" type="java.net.URI"--%>
 <%--@elvariable id="windowsHost" type="java.lang.Boolean"--%>
+<%--@elvariable id="webSocketEndpointsAvailable" type="java.lang.Boolean"--%>
 <c:set var="paramName" value="<%=DockerCloudUtils.IMAGES_PARAM%>"/>
 
 <jsp:useBean id="serverUrl" scope="request" type="java.lang.String"/>
@@ -219,8 +221,9 @@
                             daemonMinVersion: '<%=DockerCloudUtils.DOCKER_API_MIN_VERSION.getVersionString()%>',
                             errorIconURL: '<c:url value="/img/attentionCommentRed.png"/>',
                             warnIconURL: '<c:url value="/img/attentionComment.png"/>',
-                            testStatusSocketPath: '<c:url value="/app/docker-cloud/test-container/getStatus"/>',
-                            streamSocketPath: '<c:url value="/app/docker-cloud/streaming/logs"/>',
+                            testStatusSocketPath: '<c:url value="/app/docker-cloud/ws/test-container-status"/>',
+                            streamSocketPath: '<c:url value="/app/docker-cloud/ws/container-logs"/>',
+                            webSocketEndpointsAvailable: ${webSocketEndpointsAvailable},
                             windowsHost: ${windowsHost},
                             debugEnabled: ${debugEnabled}
                         });

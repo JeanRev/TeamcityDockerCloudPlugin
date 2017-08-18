@@ -26,7 +26,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var imagesParam = params.imagesParam;
                 var tcImagesDetailsParam = params.tcImagesDetails;
 
-                self.hasWebSocketSupport = 'WebSocket' in window;
+                self.hasWebSocketSupport = ('WebSocket' in window) && params.webSocketEndpointsAvailable;
+                if (self.hasWebSocketSupport) {
+                    self.logInfo("WebSocket support enabled.")
+                }
                 self.hasXTermSupport = self.hasWebSocketSupport && self.checkXtermBrowserSupport();
                 if (self.hasXTermSupport) {
                     self.logInfo("XTerm support enabled.")
@@ -1338,6 +1341,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.$testedImage.val(JSON.stringify(settings));
 
                     self.$testContainerLabel.text("Starting test...");
+                    self.testPhase = 'CREATE';
                     self._invokeTestAction('create', BS.Clouds.Admin.CreateProfileForm.serializeParameters())
                         .done(function (response) {
                             self.testUuid = JSON.parse(response.responseText).testUuid;
@@ -1353,6 +1357,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.$testContainerErrorIcon.hide();
 
                     self.$testContainerLabel.text("Waiting on server...");
+                    self.testPhase = 'START';
                     self._invokeTestAction('start')
                         .done(function () {
                             self._queryTestStatus();
@@ -1426,11 +1431,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self._invokeTestAction('query', BS.Clouds.Admin.CreateProfileForm.serializeParameters())
                         .done(function(response){
                             var responseMap = self._parseTestStatusResponse(response.responseText);
-                            if (responseMap.status == 'PENDING') {
+                            if (!responseMap || responseMap.status === 'PENDING') {
                                 self.logDebug('Scheduling status retrieval.');
                                 setTimeout(self._queryTestStatus, 5000);
                             }
-                            self._processTestStatusResponse(responseMap);
+                            if (responseMap) {
+                                self._processTestStatusResponse(responseMap);
+                            }
                         });
                 }
             },
@@ -1450,6 +1457,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
             _closeStatusSocket: function() {
                 if (self.testStatusSocket) {
+                    self.logInfo("Closing status socket.");
                     try { self.testStatusSocket.close() } catch (e) {}
                     delete self.testStatusSocket;
                 }
@@ -1465,15 +1473,20 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     responseMap.msg + ' Container ID: ' + responseMap.containerId + ' Uuid: ' + responseMap.testUuid +
                     ' Warnings: ' + responseMap.warnings.length);
 
+                if (self.testPhase !== responseMap.phase) {
+                    self.logDebug('Ignoring spurious status message.');
+                    return;
+                }
                 self.$testContainerLabel.text(self.shortenString(responseMap.msg, 300));
+                var agentStarted = responseMap.containerStartTime !== null &&
+                    responseMap.containerStartTime !== undefined;
 
-
-                if (responseMap.status == 'PENDING') {
-                    if (responseMap.phase == "WAIT_FOR_AGENT") {
+                if (responseMap.status === 'PENDING') {
+                    if (agentStarted) {
                         if (self.hasXTermSupport && !self.logStreamingSocket) {
                             self.logInfo('Opening live logs socket now.');
 
-                            var url =self.resolveWebSocketURL(self.streamSocketPath + '?correlationId=' + self.testUuid);
+                            var url = self.resolveWebSocketURL(self.streamSocketPath + '?testUuid=' + self.testUuid);
                             self.$dockerTestContainerOutputTitle.fadeIn(400);
                             // Compensate the appearance of the terminal with a upward shift of the dialog window.
                             // Should be roughly half of the terminal height include the title.
@@ -1497,7 +1510,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.$testContainerCancelBtn.hide();
                     self.$testContainerLoader.hide();
                     self.$testContainerCloseBtn.show();
-                    if (responseMap.phase == 'WAIT_FOR_AGENT') {
+                    if (agentStarted) {
                         self.$testContainerContainerLogsBtn.show();
                         self.$testExecInfo.append('Note: you can access the running container by using the <code>exec</code> ' +
                             'command on the the Docker daemon host. For example: ' +
@@ -1505,8 +1518,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         self.$testExecInfo.slideDown();
                     }
 
-                    if (responseMap.status == 'FAILURE') {
-                        if (responseMap.phase == 'CREATE') {
+                    if (responseMap.status === 'FAILURE') {
+                        if (responseMap.phase === 'CREATE') {
                             self.$testContainerCloseBtn.val("Close");
                         } else {
                             self.$testContainerCloseBtn.val("Dispose container");
@@ -1520,8 +1533,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                                 responseMap.failureCause);
                         }
 
-                    } else if (responseMap.status == 'SUCCESS') {
-
+                    } else if (responseMap.status === 'SUCCESS') {
                         self.$testContainerCloseBtn.val("Dispose container");
 
                         var hasWarning = !!responseMap.warnings.length;
@@ -1532,14 +1544,14 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             self.$testContainerSuccessIcon.show();
                         }
 
-                        if (responseMap.phase == 'CREATE') {
+                        if (responseMap.phase === 'CREATE') {
                             self.$testContainerStartBtn.show();
                             if (hasWarning) {
                                 self.$testContainerLabel.text("Container " + responseMap.containerId + " created with warnings:");
                             } else {
                                 self.$testContainerLabel.text("Container " + responseMap.containerId + " successfully created.");
                             }
-                        } else if (responseMap.phase == 'WAIT_FOR_AGENT') {
+                        } else if (responseMap.phase === 'START') {
 
                             if (hasWarning) {
                                 self.$testContainerLabel.text("Agent connection detected for container " + responseMap.containerId + ":");
@@ -1934,6 +1946,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testContainerLabel.removeClass('containerTestError');
                 self.$testContainerCancelBtn.attr('disabled', false);
                 self.testCancelled = false;
+                delete self.testPhase;
             },
 
             validateHandler: function() {

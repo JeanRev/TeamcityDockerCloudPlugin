@@ -120,7 +120,7 @@ class CreateContainerTestTask extends ContainerTestTask {
             }
 
             if (!status.equals(lastStatus) || lastPercent != percent) {
-                msg("Pull in progress - " + layer + ": " + percent + "%");
+                msg("Pull in progress - " + status + " " + layer + ": " + percent + "%");
             }
 
             lastStatus = status;

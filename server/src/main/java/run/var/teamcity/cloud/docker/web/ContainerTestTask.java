@@ -137,8 +137,8 @@ abstract class ContainerTestTask implements Runnable {
 
             // IMPORTANT: status notification must occurs at least once per task cycle. The status messages that we are
             // sending also serves as heartbeats: they are used to detect idle or stalled tests, and will keep the
-            // listener open when WebSockets are in use. The latter case is especially when behind a proxy such as
-            // nginx, since it may allow only.
+            // tcp connection open when WebSockets are in use. The latter use case is especially important when
+            // behind a proxy such as nginx, since it may allow only relatively short connection timeout by default.
             testTaskHandler.notifyStatus(phase, status, msg, error, warnings);
         });
     }

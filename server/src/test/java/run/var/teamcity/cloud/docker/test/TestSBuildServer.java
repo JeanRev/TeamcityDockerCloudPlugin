@@ -126,11 +126,13 @@ public class TestSBuildServer implements SBuildServer {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
+    @Deprecated
     @Override
     public byte getServerMajorVersion() {
         return serverMajorVersion;
     }
 
+    @Deprecated
     @Override
     public byte getServerMinorVersion() {
         return serverMinorVersion;
@@ -204,7 +206,8 @@ public class TestSBuildServer implements SBuildServer {
     }
 
     @Override
-    public <T extends TeamCityExtension> void registerExtension(@Nonnull Class<T> extensionClass, @NonNls @Nonnull String sourceId, @Nonnull T extension) {
+    public <T extends TeamCityExtension> void registerExtension(@Nonnull Class<T> extensionClass, @NonNls @Nonnull
+            String sourceId, @Nonnull T extension) {
         if (sourceId == null || extension == null) {
             throw new NullPointerException();
         }
@@ -219,7 +222,8 @@ public class TestSBuildServer implements SBuildServer {
     }
 
     @Override
-    public <T extends TeamCityExtension> void unregisterExtension(@Nonnull Class<T> extensionClass, @NonNls @Nonnull String sourceId) {
+    public <T extends TeamCityExtension> void unregisterExtension(@Nonnull Class<T> extensionClass, @NonNls @Nonnull
+            String sourceId) {
         if (sourceId == null) {
             throw new NullPointerException();
         }
@@ -243,7 +247,8 @@ public class TestSBuildServer implements SBuildServer {
     }
 
     @Override
-    public <T extends TeamCityExtension> void foreachExtension(@Nonnull Class<T> agentExtensionClass, @Nonnull ExtensionAction<T> action) {
+    public <T extends TeamCityExtension> void foreachExtension(@Nonnull Class<T> agentExtensionClass, @Nonnull
+            ExtensionAction<T> action) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 
@@ -374,7 +379,8 @@ public class TestSBuildServer implements SBuildServer {
     }
 
     @Override
-    public Map<SBuildType, List<SRunningBuild>> getRunningStatus(@Nullable User user, @Nullable BuildDataFilter filter) {
+    public Map<SBuildType, List<SRunningBuild>> getRunningStatus(@Nullable User user, @Nullable BuildDataFilter
+            filter) {
         throw new UnsupportedOperationException("Not a real build server.");
     }
 

@@ -6,6 +6,7 @@ import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -30,13 +31,21 @@ public interface ContainerTestHandler {
     void notifyContainerId(@Nonnull String containerId);
 
     /**
+     * Notify the handler that the test container has been started. This callback is not expected to be called more
+     * than once for a complete test.
+     *
+     * @param containerStartTime the container start time
+     */
+    void notifyContainerStarted(@Nonnull Instant containerStartTime);
+
+    /**
      * Notify the test status back to the user.
      *
-     * @param phase        the test phase
-     * @param status       the test status
-     * @param msg          the status message (may be {@code null})
+     * @param phase the test phase
+     * @param status the test status
+     * @param msg the status message (may be {@code null})
      * @param failureCause the failure cause (may be {@code null})
-     * @param warnings     a list of encountered warnings
+     * @param warnings a list of encountered warnings
      *
      * @throws NullPointerException if {@code phase}, {@code status} or {@code warnings} is {@code null}
      */

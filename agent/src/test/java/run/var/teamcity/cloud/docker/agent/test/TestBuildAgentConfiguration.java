@@ -59,6 +59,7 @@ public class TestBuildAgentConfiguration implements BuildAgentConfiguration {
 
     }
 
+    @Deprecated
     @NotNull
     @Override
     public File getBuildTempDirectory() {
@@ -66,6 +67,7 @@ public class TestBuildAgentConfiguration implements BuildAgentConfiguration {
 
     }
 
+    @Deprecated
     @NotNull
     @Override
     public File getAgentTempDirectory() {
@@ -154,23 +156,27 @@ public class TestBuildAgentConfiguration implements BuildAgentConfiguration {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
+    @Deprecated
     @NotNull
     @Override
     public Map<String, String> getCustomProperties() {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
+    @Deprecated
     @NotNull
     @Override
     public Map<String, String> getAgentParameters() {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
+    @Deprecated
     @Override
     public void addCustomProperty(@NotNull String s, @NotNull String s1) {
         throw new UnsupportedOperationException("Not a real agent.");
     }
 
+    @Deprecated
     @Nullable
     @Override
     public String getEnv(@NotNull String s) {
