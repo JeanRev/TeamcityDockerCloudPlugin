@@ -88,13 +88,13 @@ public class DefaultDockerClientWindowsTest extends DefaultDockerClientAllVersio
         client.inspectContainer(containerId);
 
         // Testing "post mortem" logs.
-        try (StreamHandler handler = client.streamLogs(containerId, 3, StdioType.all(), false)) {
+        try (StreamHandler handler = client.streamLogs(containerId, -1, StdioType.all(), false)) {
             assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDOUT, stdoutMsg);
             assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDOUT, stderrMsg);
             assertThat(handler.getNextStreamFragment()).isNull();
         }
 
-        try (StreamHandler handler = client.streamLogs(containerId, 1, StdioType.all(), false)) {
+        try (StreamHandler handler = client.streamLogs(containerId, -1, StdioType.all(), false)) {
             assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDOUT, stderrMsg);
             assertThat(handler.getNextStreamFragment()).isNull();
         }
