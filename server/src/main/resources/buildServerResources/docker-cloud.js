@@ -1522,11 +1522,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.$testContainerCancelBtn.hide();
                     self.$testContainerLoader.hide();
                     self.$testContainerCloseBtn.show();
+
                     if (agentStarted) {
                         self.$testContainerContainerLogsBtn.show();
                         self.$testExecInfo.append('Note: you can access the running container by using the <code>exec</code> ' +
                             'command on the the Docker daemon host. For example: ' +
-                            '<p class="mono">docker exec -t -i ' + responseMap.containerId + ' /bin/bash</p>');
+                            '<p class="mono">docker exec -t -i ' + responseMap.containerId + ' ' +
+                            (self.daemonOs === 'windows' ? 'powershell' : '/bin/bash') +'</p>');
                         self.$testExecInfo.slideDown();
                     }
 
