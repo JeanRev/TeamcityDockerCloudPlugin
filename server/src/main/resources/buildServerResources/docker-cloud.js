@@ -1493,7 +1493,9 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                 if (responseMap.status === 'PENDING') {
                     if (agentStarted) {
-                        if (self.hasXTermSupport && !self.logStreamingSocket) {
+                        // Note: streaming log on Windows Docker daemons is currently not functional:
+                        // See: https://github.com/moby/moby/issues/30046
+                        if (self.hasXTermSupport && !self.logStreamingSocket && self.daemonOs !== 'windows') {
                             self.logInfo('Opening live logs socket now.');
 
                             var url = self.resolveWebSocketURL(self.streamSocketPath + '?testUuid=' + self.testUuid);
