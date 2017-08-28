@@ -46,10 +46,6 @@ dependencies {
     compile("org.glassfish.jersey.connectors:jersey-apache-connector:2.23.1")
     add("provided", "org.jetbrains.teamcity:cloud-interface:${extra.get("serverApiVersion")}")
     add("provided", "org.jetbrains.teamcity:server-api:${extra.get("serverApiVersion")}")
-    // We depends on the server JAR private API to provide two non-critical features.
-    // Feature requests are pending:
-    // - https://youtrack.jetbrains.com/issue/TW-49809
-    // - https://youtrack.jetbrains.com/issue/TW-49810
     add("provided", "org.jetbrains.teamcity.internal:server:${extra.get("serverApiVersion")}")
     add("provided", "javax.websocket:javax.websocket-api:1.1")
     // Required for tests using the cloud API to process JSON structures.
