@@ -3,6 +3,7 @@ package run.var.teamcity.cloud.docker.web;
 import run.var.teamcity.cloud.docker.ContainerInfo;
 import run.var.teamcity.cloud.docker.DockerClientFacade;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.Stopwatch;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
@@ -25,6 +26,7 @@ class StartContainerTestTask extends ContainerTestTask {
     private final String containerId;
     private final UUID instanceUuid;
     private Instant containerStartTime = null;
+    private Stopwatch agentConnectionStopWatch = null;
 
     /**
      * Creates a new task instance.
@@ -49,6 +51,8 @@ class StartContainerTestTask extends ContainerTestTask {
 
             containerStartTime = Instant.now();
 
+            agentConnectionStopWatch = Stopwatch.start();
+
             clientFacade.startAgentContainer(containerId);
 
             testTaskHandler.notifyContainerStarted(containerStartTime);
@@ -67,8 +71,7 @@ class StartContainerTestTask extends ContainerTestTask {
         } else if (containers.size() == 1) {
             final ContainerInfo container = containers.get(0);
             if (container.isRunning()) {
-                Duration timeElapsedSinceStart = Duration.between(containerStartTime, Instant.now());
-                if (timeElapsedSinceStart.compareTo(AGENT_WAIT_TIMEOUT) > 0) {
+                if (agentConnectionStopWatch.getDuration().compareTo(AGENT_WAIT_TIMEOUT) > 0) {
                     throw new ContainerTestTaskException("Timeout: no agent connection after " +
                             AGENT_WAIT_TIMEOUT.getSeconds() + " seconds.");
                 }

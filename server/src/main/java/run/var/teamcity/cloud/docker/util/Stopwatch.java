@@ -2,27 +2,19 @@ package run.var.teamcity.cloud.docker.util;
 
 import javax.annotation.Nonnull;
 import java.time.Duration;
-import java.time.Instant;
 
 /**
- * A simple stopwatch implementation based on {@code java.time}.
+ * A very simple stopwatch implementation based on {@code System.nanoTime()}.
  * <p>
- *     This implementation is thread safe.
+ *     Instances of this class are immutable.
  * </p>
  */
 public class Stopwatch {
 
-    private volatile Instant startTime;
+    private final long startTime;
 
-    private Stopwatch() {
-        reset();
-    }
-
-    /**
-     * Reset this stopwatch. Bring this stopwatch back to 0, and start counting immediately.
-     */
-    public void reset() {
-        startTime = Instant.now();
+    private Stopwatch(long startTime) {
+        this.startTime = startTime;
     }
 
     /**
@@ -31,7 +23,7 @@ public class Stopwatch {
      * @return the new stopwatch instance
      */
     public static Stopwatch start() {
-        return new Stopwatch();
+        return new Stopwatch(System.nanoTime());
     }
 
     /**
@@ -50,7 +42,14 @@ public class Stopwatch {
         return sw.getDuration();
     }
 
+    /**
+     * Gets the elapsed duration since this timer has been started.
+     *
+     * @return the elapsed duration
+     */
+    @Nonnull
     public Duration getDuration() {
-        return Duration.between(startTime, Instant.now());
+        long now = System.nanoTime();
+        return Duration.ofNanos(Math.max(0, now - startTime));
     }
 }

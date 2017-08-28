@@ -29,12 +29,4 @@ public class StopwatchTest {
         Runnable runnable = () -> TestUtils.waitSec(1);
         assertThat(Stopwatch.measure(runnable).toMillis()).isCloseTo(1000L, offset(150L));
     }
-
-    @Test
-    public void reset() {
-        Stopwatch sw = Stopwatch.start();
-        TestUtils.waitSec(1);
-        sw.reset();
-        assertThat(sw.getDuration()).isBetween(Duration.ZERO, Duration.ofMillis(100));
-    }
 }
