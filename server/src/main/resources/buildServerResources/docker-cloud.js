@@ -105,11 +105,21 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             /* MAIN SETTINGS */
 
             _initDaemonInfo: function() {
+
+                // The radio button selection between local and custom instance address is conditionally displayed
+                // and its state persisted as plugin property. This test ensure that we always have a consistent
+                // state with older versions of the plugin where the associated property may not have been set yet.
+                if (!self.$useLocalInstance.is(':checked')) {
+                    self.$useCustomInstance.prop('checked', true);
+                }
+
                 // Simple heuristic to check if this is a new cloud profile. At least one image must be saved for
                 // existing profiles.
                 var existingProfile = Object.keys(self.imagesData).length;
 
                 if (existingProfile) {
+                    // Check Docker connectivity for existing profiles at the time the configuration is loaded.
+                    // This ensure that we have fresh meta-data regarding the Daemon OS and supported API.
                     setTimeout(self._checkConnection, 0);
                 }
             },
@@ -197,7 +207,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }).
                 done(function(daemonInfo) {
                     var effectiveApiVersion = daemonInfo.meta.effectiveApiVersion;
-                    var daemonOs = daemonInfo.Os;
+                    var daemonOs = daemonInfo.info.Os;
 
                     self.$checkConnectionResult.addClass('infoMessage');
                     self.$checkConnectionResult.text('Connection successful to Docker v' + daemonInfo.info.Version
@@ -2023,8 +2033,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 try { console.log(msg) } catch (e) {}
             },
             prepareDiagnosticDialogWithLink: function($container, msg, details) {
-                self.prepareDiagnosticDialog(msg, details);
                 var viewDetailsLink = $j('<a href="#/">view details</a>)').click(function () {
+                    self.prepareDiagnosticDialog(msg, details);
                     BS.DockerDiagnosticDialog.showCentered();
                 });
                 $container.append(' (').append(viewDetailsLink).append(')');
