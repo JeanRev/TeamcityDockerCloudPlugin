@@ -152,6 +152,14 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 null);
     }
 
+    @Nonnull
+    @Override
+    public Node createService(@Nonnull Node serviceSpec) {
+        DockerCloudUtils.requireNonNull(serviceSpec, "Service JSON specification cannot be null.");
+        WebTarget target = target().path("/services/create");
+        return invoke(target, HttpMethod.POST, serviceSpec, prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
+    }
+
     @Override
     public void restartContainer(@Nonnull String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
@@ -255,6 +263,12 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         DockerCloudUtils.requireNonNull(container, "Container ID cannot be null.");
         invokeVoid(target().path("/containers/{id}").resolveTemplate("id", container).queryParam("v", removeVolumes)
                 .queryParam("force", force), HttpMethod.DELETE, null, null);
+    }
+
+    @Override
+    public void removeService(@Nonnull String service) {
+        DockerCloudUtils.requireNonNull(service, "Service ID cannot be null.");
+        invokeVoid(target().path("/services/{id}").resolveTemplate("id", service), HttpMethod.DELETE, null, null);
     }
 
     @Nonnull

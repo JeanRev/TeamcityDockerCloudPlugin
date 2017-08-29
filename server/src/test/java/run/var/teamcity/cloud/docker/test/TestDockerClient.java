@@ -165,6 +165,12 @@ public class TestDockerClient implements DockerClient {
         });
     }
 
+    @Nonnull
+    @Override
+    public Node createService(@Nonnull Node containerSpec) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
     @Override
     public void restartContainer(@Nonnull String containerId) {
         // Virtually no difference with a simple start from a test perspective.
@@ -352,6 +358,11 @@ public class TestDockerClient implements DockerClient {
             }
             containers.remove(containerId);
         });
+    }
+
+    @Override
+    public void removeService(@Nonnull String service) {
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Nonnull

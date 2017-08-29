@@ -51,16 +51,19 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
 
     protected Set<String> containerIdsForCleanup;
 
+    private Set<String> serviceIdsForCleanup;
+
     private DefaultDockerClient client;
 
     @Before
     public void init() {
         containerIdsForCleanup = new HashSet<>();
+        serviceIdsForCleanup = new HashSet<>();
     }
 
 
     @Test
-    public void startStopRemove() throws URISyntaxException {
+    public void startStopRemoveContainer() throws URISyntaxException {
         DefaultDockerClient client = createClient();
 
         EditableNode containerSpec = Node.EMPTY_OBJECT.editNode().
@@ -80,6 +83,23 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         client.stopContainer(containerId, Duration.ZERO);
 
         client.removeContainer(containerId, true, true);
+    }
+
+    @Test
+    public void startAndRemoveService() {
+        DefaultDockerClient client = createClient();
+
+        EditableNode serviceSpec = Node.EMPTY_OBJECT.editNode();
+
+        serviceSpec.getOrCreateObject("TaskTemplate").
+                getOrCreateObject("ContainerSpec").
+                put("Image", TEST_IMAGE);
+
+        Node createNode = client.createService(serviceSpec.saveNode());
+
+        String serviceId = createNode.getAsString("ID");
+
+        client.removeService(serviceId);
     }
 
     @Test
@@ -343,7 +363,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
     }
 
     @Test
-    public void authentifiedPullPrivateRegistry() throws URISyntaxException, IOException {
+    public void authentifiedPullPrivateRegistry() throws IOException {
         String registryAddress = getRegistryAddress();
 
         DefaultDockerClient client = createClient(createClientConfig());
@@ -356,12 +376,12 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         }
     }
 
-    protected DefaultDockerClient createClient() throws URISyntaxException {
+    protected DefaultDockerClient createClient() {
         return createClient(1);
     }
 
 
-    protected DefaultDockerClient createClient(int connectionPoolSize) throws URISyntaxException {
+    protected DefaultDockerClient createClient(int connectionPoolSize) {
 
         DockerClientConfig config = createClientConfig();
 
@@ -370,19 +390,23 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         return client = DefaultDockerClient.newInstance(config);
     }
 
-    private DockerClientConfig createClientConfig() throws URISyntaxException {
+    private DockerClientConfig createClientConfig() {
         return createClientConfig(getApiTargetVersion());
     }
 
-    private DockerClientConfig createClientConfig(DockerAPIVersion apiVersion) throws URISyntaxException {
+    private DockerClientConfig createClientConfig(DockerAPIVersion apiVersion) {
         String dockerAddress = System.getProperty(getDockerAddrSysprop());
 
         Assume.assumeNotNull(dockerAddress);
 
-        return createConfig(new URI(getConnectionScheme() + "://" + dockerAddress), apiVersion, false);
+        try {
+            return createConfig(new URI(getConnectionScheme() + "://" + dockerAddress), apiVersion, false);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    private DefaultDockerClient createClient(DockerClientConfig clientConfig) throws URISyntaxException {
+    private DefaultDockerClient createClient(DockerClientConfig clientConfig) {
         return client = DefaultDockerClient.newInstance(clientConfig);
     }
 
@@ -406,6 +430,14 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         containerIdsForCleanup.forEach(container -> {
             try {
                 createClient().removeContainer(container, true, true);
+            } catch (Exception e) {
+                // Ignore
+            }
+        });
+
+        serviceIdsForCleanup.forEach(service -> {
+            try {
+                createClient().removeService(service);
             } catch (Exception e) {
                 // Ignore
             }

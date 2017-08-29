@@ -77,6 +77,19 @@ public interface DockerClient extends Closeable {
     void startContainer(@Nonnull String containerId);
 
     /**
+     * Creates a service with the given service specification.
+     *
+     * @param serviceSpec the service specification
+     *
+     * @return the service creation outcome
+     *
+     * @throws NullPointerException if {@code serviceSpec} is {@code null}
+     * @throws DockerClientException if an error occurred while communicating with the daemon
+     */
+    @Nonnull
+    Node createService(@Nonnull Node serviceSpec);
+
+    /**
      * Restarts the container with the given id.
      *
      * @param containerId the container id
@@ -167,6 +180,16 @@ public interface DockerClient extends Closeable {
      * @throws DockerClientException if an error occurred while communicating with the daemon
      */
     void removeContainer(@Nonnull String container, boolean removeVolumes, boolean force);
+
+    /**
+     * Removes the service with the given name or id.
+     *
+     * @param service the service
+     *
+     * @throws NullPointerException if {@code service} is {@code null}
+     * @throws DockerClientException if an error occurred while communicating with the daemon
+     */
+    void removeService(@Nonnull String service);
 
     /**
      * Lists the containers filtered using the given sets of labels. For a container to be included in the list, all of
