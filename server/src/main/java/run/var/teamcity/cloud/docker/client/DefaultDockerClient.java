@@ -19,7 +19,6 @@ import org.apache.http.util.TextUtils;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
-import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.client.apcon.ApacheConnectorProvider;
 import run.var.teamcity.cloud.docker.client.npipe.NPipeSocketAddress;
@@ -135,6 +134,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     }
 
     @Nonnull
+    @Override
     public Node createContainer(@Nonnull Node containerSpec, @Nullable String name) {
         DockerCloudUtils.requireNonNull(containerSpec, "Container JSON specification cannot be null.");
         WebTarget target = target().path("/containers/create");
@@ -207,10 +207,10 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 follow ? 1 : 0), HttpMethod.GET, null, hasTty(containerId));
     }
 
-    private WebTarget prepareLogsTarget(WebTarget target, String containerId, int lineCount, Set<StdioType>
+    private WebTarget prepareLogsTarget(WebTarget target, String container, int lineCount, Set<StdioType>
             stdioTypes) {
 
-        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
+        DockerCloudUtils.requireNonNull(container, "Container name or id cannot be null.");
         DockerCloudUtils.requireNonNull(stdioTypes, "Set of stdio types cannot be null.");
         String tail;
         if (lineCount > 0) {
@@ -224,7 +224,7 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
             throw new IllegalArgumentException("Set of stdio types cannot be empty.");
         }
 
-        return applyStdioTypes(target, stdioTypes).path("/containers/{id}/logs").resolveTemplate("id", containerId)
+        return applyStdioTypes(target, stdioTypes).path("/containers/{id}/logs").resolveTemplate("id", container)
                 .queryParam("tail", tail);
     }
 
