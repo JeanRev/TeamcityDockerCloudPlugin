@@ -12,9 +12,11 @@ public class NPipeSocketAddress extends SocketAddress {
 
     // Pattern for a named pipe location.
     // It must basically starts with a double back-slash, followed by a server name (or a dot for a local pipe),
-    // then a directory named 'pipe', and finally the pipe name. The pipe name itself can be divided into See:
+    // then a directory named 'pipe', and finally the pipe name. The pipe name itself can be divided into several
+    // path fragment with backslashes.
+    // See:
     // https://msdn.microsoft.com/en-us/library/windows/desktop/aa365783(v=vs.85).aspx
-    final static Pattern PIPE_NAME_PTN = Pattern.compile("\\\\\\\\[^\\\\]+\\\\pipe(?:\\\\[^\\\\]+)+");
+    private final static Pattern PIPE_NAME_PTN = Pattern.compile("\\\\\\\\[^\\\\]+\\\\pipe(?:\\\\[^\\\\]+)+");
 
     private final Path pipe;
 

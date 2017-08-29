@@ -160,7 +160,7 @@ class NPipeSocketImpl extends SocketImpl {
                 throw new SocketException("Socket is closed.");
             }
             if (optID == SocketOptions.SO_TIMEOUT) {
-                return timeout.toMillis();
+                return (int) Math.min(Integer.MAX_VALUE, timeout.toMillis());
             }
             return null;
         });

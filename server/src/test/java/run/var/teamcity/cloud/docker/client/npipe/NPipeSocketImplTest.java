@@ -59,13 +59,13 @@ public class NPipeSocketImplTest {
         impl.setOption(SocketOptions.SO_TIMEOUT, 42);
         connect(impl);
 
-        assertThat(impl.getOption(SocketOptions.SO_TIMEOUT)).isEqualTo(42L);
+        assertThat(impl.getOption(SocketOptions.SO_TIMEOUT)).isEqualTo(42);
         assertThat(((PipeChannelInputStream) impl.getInputStream()).getReadTimeout()).isEqualTo(Duration.ofMillis(42));
         assertThat(((PipeChannelOutputStream) impl.getOutputStream()).getWriteTimeout()).isEqualTo(Duration.ofMillis
                 (42));
 
         impl.setOption(SocketOptions.SO_TIMEOUT, 43);
-        assertThat(impl.getOption(SocketOptions.SO_TIMEOUT)).isEqualTo(43L);
+        assertThat(impl.getOption(SocketOptions.SO_TIMEOUT)).isEqualTo(43);
         assertThat(((PipeChannelInputStream) impl.getInputStream()).getReadTimeout()).isEqualTo(Duration.ofMillis(43));
         assertThat(((PipeChannelOutputStream) impl.getOutputStream()).getWriteTimeout()).isEqualTo(Duration.ofMillis
                 (43L));

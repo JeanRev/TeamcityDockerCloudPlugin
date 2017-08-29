@@ -5,6 +5,7 @@ import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -193,8 +194,12 @@ public final class TestUtils {
         return getSampleImageConfigSpec(Node.EMPTY_OBJECT.editNode(), profileName);
     }
 
-    public static Path tempFile() throws IOException {
-        return Files.createTempFile("dck_cld_", ".tmp");
+    public static Path tempFile() {
+        try {
+            return Files.createTempFile("dck_cld_", ".tmp");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     public static Node getSampleImageConfigSpec(EditableNode parent, String profileName) {
