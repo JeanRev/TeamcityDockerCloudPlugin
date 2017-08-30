@@ -172,6 +172,16 @@ public class TestDockerClient implements DockerClient {
     }
 
     @Override
+    public Node inspectService(@Nonnull String service) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Override
+    public void updateService(@Nonnull String service, @Nonnull Node serviceSpec, @Nonnull BigInteger version) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Override
     public void restartContainer(@Nonnull String containerId) {
         // Virtually no difference with a simple start from a test perspective.
         try {

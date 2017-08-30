@@ -157,7 +157,12 @@ public abstract class DockerAbstractClient implements Closeable {
                 target.request(MediaType.APPLICATION_JSON).acceptEncoding(SUPPORTED_CHARSET.name()),
                 method, entity != null ? Entity.json(entity.toString()) : null, emptyHeaders(), errorCodeMapper);
 
-        response.close();
+        try {
+            response.close();
+        } catch (ProcessingException e) {
+            // Ignore. Note: the apache client, under some conditions, may throw exception related to chucked encoding
+            // upon normal closure of the response input stream.
+        }
     }
 
     /**

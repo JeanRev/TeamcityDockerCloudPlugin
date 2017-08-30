@@ -7,6 +7,7 @@ import run.var.teamcity.cloud.docker.util.NodeStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.math.BigInteger;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
@@ -88,6 +89,30 @@ public interface DockerClient extends Closeable {
      */
     @Nonnull
     Node createService(@Nonnull Node serviceSpec);
+
+    /**
+     * Inspects a service.
+     *
+     * @param service the service name or id
+     *
+     * @return the service inspection outcome
+     *
+     * @throws NullPointerException if {@code service} is {@code null}
+     * @throws DockerClientException if an error occurred while communicating with the daemon
+     */
+    Node inspectService(@Nonnull String service);
+
+    /**
+     * Updates a service with the given service specification.
+     *
+     * @param service the service to be updated
+     * @param serviceSpec the updated service specification
+     * @param version the service specification version number
+     *
+     * @throws NullPointerException if any argument is {@code null}
+     * @throws DockerClientException if an error occurred while communicating with the daemon
+     */
+    void updateService(@Nonnull String service, @Nonnull Node serviceSpec, @Nonnull BigInteger version);
 
     /**
      * Restarts the container with the given id.

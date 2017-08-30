@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -103,6 +104,49 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
     }
 
     @Test
+    public void updateAndInspectService() {
+        DefaultDockerClient client = createClient();
+
+        EditableNode serviceSpec = Node.EMPTY_OBJECT.editNode();
+
+        serviceSpec.getOrCreateObject("TaskTemplate").
+                getOrCreateObject("ContainerSpec").
+                put("Image", TEST_IMAGE);
+
+        final String labelA = TEST_LABEL_KEY + ".A";
+        final String labelB = TEST_LABEL_KEY + ".B";
+
+        serviceSpec.getOrCreateObject("Labels").put(labelA, "A");
+
+        Node createNode = client.createService(serviceSpec.saveNode());
+
+        String serviceId = createNode.getAsString("ID");
+
+        serviceIdsForCleanup.add(serviceId);
+
+        Node inspect = client.inspectService(serviceId);
+
+        Map<String, String> labels = inspect.getObject("Spec").getObject("Labels").getObjectValues().entrySet()
+                .stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getAsString()));
+
+        assertThat(labels).isEqualTo(mapOf(pair(labelA, "A")));
+
+        serviceSpec = inspect.getObject("Spec").editNode();
+
+        serviceSpec.getOrCreateObject("Labels").put(labelB, "B");
+
+        client.updateService(serviceId, serviceSpec.saveNode(), inspect.getObject("Version").
+                getAsBigInt("Index"));
+
+        inspect = client.inspectService(serviceId);
+
+        labels = inspect.getObject("Spec").getObject("Labels").getObjectValues().entrySet().stream().
+                collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getAsString()));
+
+        assertThat(labels).isEqualTo(mapOf(pair(labelA, "A"), pair(labelB, "B")));
+    }
+
+    @Test
     public void listContainersWithLabels() {
         DefaultDockerClient client = createClient();
 
@@ -172,7 +216,6 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         String serviceId1 = createNode.getAsString("ID");
 
         serviceIdsForCleanup.add(serviceId1);
-
 
         serviceSpec = Node.EMPTY_OBJECT.editNode();
 

@@ -43,6 +43,7 @@ import javax.ws.rs.core.Response;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
@@ -158,6 +159,23 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         DockerCloudUtils.requireNonNull(serviceSpec, "Service JSON specification cannot be null.");
         WebTarget target = target().path("/services/create");
         return invoke(target, HttpMethod.POST, serviceSpec, prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
+    }
+
+    @Nonnull
+    @Override
+    public Node inspectService(@Nonnull String service) {
+        DockerCloudUtils.requireNonNull(service, "Service ID cannot be null.");
+        return invoke(target().path("/services/{id}").resolveTemplate("id", service), HttpMethod.GET, null,
+                prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
+    }
+
+    @Override
+    public void updateService(@Nonnull String service, @Nonnull Node serviceSpec, @Nonnull BigInteger version) {
+        DockerCloudUtils.requireNonNull(service, "Service ID cannot be null.");
+        DockerCloudUtils.requireNonNull(serviceSpec, "Service JSON specification cannot be null.");
+
+        invokeVoid(target().path("/services/{id}/update").resolveTemplate("id", service).
+                        queryParam("version", version), HttpMethod.POST, serviceSpec,null);
     }
 
     @Override
