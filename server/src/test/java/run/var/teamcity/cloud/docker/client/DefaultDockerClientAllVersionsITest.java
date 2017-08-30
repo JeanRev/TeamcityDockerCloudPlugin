@@ -103,7 +103,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
     }
 
     @Test
-    public void listContainersWithLabels() throws URISyntaxException {
+    public void listContainersWithLabels() {
         DefaultDockerClient client = createClient();
 
         final String labelA = TEST_LABEL_KEY + ".A";
@@ -148,6 +148,66 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
                 .getArrayValues();
 
         assertThat(containers.isEmpty());
+    }
+
+    @Test
+    public void listServicesWithLabels() {
+        DefaultDockerClient client = createClient();
+
+        final String labelA = TEST_LABEL_KEY + ".A";
+        final String labelB = TEST_LABEL_KEY + ".B";
+        final String labelC = TEST_LABEL_KEY + ".C";
+
+        EditableNode serviceSpec = Node.EMPTY_OBJECT.editNode();
+
+        serviceSpec.getOrCreateObject("Labels").
+                put(labelA, "A").
+                put(labelB, "B");
+
+        serviceSpec.getOrCreateObject("TaskTemplate").
+                getOrCreateObject("ContainerSpec").
+                put("Image", TEST_IMAGE);
+
+        Node createNode = client.createService(serviceSpec.saveNode());
+        String serviceId1 = createNode.getAsString("ID");
+
+        serviceIdsForCleanup.add(serviceId1);
+
+
+        serviceSpec = Node.EMPTY_OBJECT.editNode();
+
+        serviceSpec.getOrCreateObject("Labels").put(labelA, "A");
+        serviceSpec.getOrCreateObject("TaskTemplate").
+                getOrCreateObject("ContainerSpec").
+                put("Image", TEST_IMAGE);
+
+        createNode = client.createService(serviceSpec.saveNode());
+        String serviceId2 = createNode.getAsString("ID");
+
+        serviceIdsForCleanup.add(serviceId2);
+
+        List<Node> services = client.listServicesWithLabel(mapOf()).getArrayValues();
+        Set<String> returnedIds = services.stream().map(service -> service.getAsString("ID")).collect(Collectors
+                .toSet());
+
+        assertThat(returnedIds).contains(serviceId1, serviceId2);
+
+        services = client.listServicesWithLabel(mapOf(pair(labelA, "A"))).getArrayValues();
+        returnedIds = services.stream().map(service -> service.getAsString("ID")).collect(Collectors
+                .toSet());
+
+        assertThat(returnedIds).containsExactlyInAnyOrder(serviceId1, serviceId2);
+
+        services = client.listServicesWithLabel(mapOf(pair(labelA, "A"), pair(labelB, "B"))).getArrayValues();
+        returnedIds = services.stream().map(service -> service.getAsString("ID")).collect(Collectors
+                .toSet());
+
+        assertThat(returnedIds).containsExactly(serviceId1);
+
+        services = client.listServicesWithLabel(mapOf(pair(labelA, "A"), pair(labelB, "B"), pair(labelC, "C")))
+                .getArrayValues();
+
+        assertThat(services.isEmpty());
     }
 
     @Test

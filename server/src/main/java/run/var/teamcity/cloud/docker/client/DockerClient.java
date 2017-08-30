@@ -205,6 +205,19 @@ public interface DockerClient extends Closeable {
     Node listContainersWithLabel(@Nonnull Map<String, String> labelFilters);
 
     /**
+     * Lists the services filtered using the given sets of labels. For a service to be included in the list, all of
+     * the labels from the filter map will need to be set with the corresponding value.
+     *
+     * @param labelFilters the label filter map
+     *
+     * @return the list of services
+     *
+     * @throws NullPointerException if {@code labelFilters}, or any of its keys or values, are {@code null}
+     */
+    @Nonnull
+    Node listServicesWithLabel(@Nonnull Map<String, String> labelFilters);
+
+    /**
      * Closes this client. Has no effect if the client is already closed.
      */
     @Override

@@ -276,6 +276,27 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     public Node listContainersWithLabel(@Nonnull Map<String, String> labelFilters) {
         DockerCloudUtils.requireNonNull(labelFilters, "Label filters map cannot be null.");
 
+        WebTarget target = target().path("/containers/json").queryParam("all", true);
+
+        target = addLabelsFiltersToQuery(target, labelFilters);
+
+        return invoke(target, HttpMethod.GET, null, prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
+    }
+
+    @Nonnull
+    @Override
+    public Node listServicesWithLabel(@Nonnull Map<String, String> labelFilters) {
+        DockerCloudUtils.requireNonNull(labelFilters, "Label filters map cannot be null.");
+
+        WebTarget target = target().path("/services");
+
+        target = addLabelsFiltersToQuery(target, labelFilters);
+
+        return invoke(target, HttpMethod.GET, null, prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
+    }
+
+    private WebTarget addLabelsFiltersToQuery(WebTarget target, Map<String, String> labelFilters) {
+        assert target != null && labelFilters != null;
         StringBuilder filter = new StringBuilder();
         for (Map.Entry<String, String> labelFilter : labelFilters.entrySet()) {
             String key = labelFilter.getKey();
@@ -287,12 +308,12 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
             }
             filter.append("\"").append(labelFilter.getKey()).append("=").append(labelFilter.getValue()).append("\"");
         }
-        WebTarget target = target().path("/containers/json").queryParam("all", true);
 
         if (filter.length() > 0) {
             target = target.queryParam("filters", "%7B\"label\": [" + filter+ "]%7D");
         }
-        return invoke(target, HttpMethod.GET, null, prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
+
+        return target;
     }
 
     private WebTarget applyStdioTypes(WebTarget target, Set<StdioType> stdioTypes) {

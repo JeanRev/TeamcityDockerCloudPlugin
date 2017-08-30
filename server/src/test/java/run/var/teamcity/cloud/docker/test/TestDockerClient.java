@@ -405,6 +405,12 @@ public class TestDockerClient implements DockerClient {
         return list;
     }
 
+    @Nonnull
+    @Override
+    public Node listServicesWithLabel(@Nonnull Map<String, String> labelFilters) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
     public TestDockerClient localImage(String repo, String tag) {
         newLocalImage(repo, tag);
         return this;
