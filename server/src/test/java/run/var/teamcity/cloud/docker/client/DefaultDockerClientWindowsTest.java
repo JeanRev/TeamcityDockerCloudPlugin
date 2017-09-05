@@ -66,7 +66,7 @@ public class DefaultDockerClientWindowsTest extends DefaultDockerClientAllVersio
         final String stdoutMsg = "print something on stdout";
         final String stderrMsg = STDERR_MSG_PREFIX + "print something on stderr";
 
-        try (StreamHandler attachHandler = client.attach(containerId)) {
+        try (StreamHandler attachHandler = client.attach(containerId, true)) {
             try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(attachHandler.getOutputStream(), StandardCharsets.UTF_8))) {
 
                 writer.println(stdoutMsg);
@@ -88,13 +88,13 @@ public class DefaultDockerClientWindowsTest extends DefaultDockerClientAllVersio
         client.inspectContainer(containerId);
 
         // Testing "post mortem" logs.
-        try (StreamHandler handler = client.streamLogs(containerId, -1, StdioType.all(), false)) {
+        try (StreamHandler handler = client.streamLogs(containerId, -1, StdioType.all(), false, true)) {
             assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDOUT, stdoutMsg);
             assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDOUT, stderrMsg);
             assertThat(handler.getNextStreamFragment()).isNull();
         }
 
-        try (StreamHandler handler = client.streamLogs(containerId, -1, StdioType.all(), false)) {
+        try (StreamHandler handler = client.streamLogs(containerId, -1, StdioType.all(), false, true)) {
             assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDOUT, stderrMsg);
             assertThat(handler.getNextStreamFragment()).isNull();
         }

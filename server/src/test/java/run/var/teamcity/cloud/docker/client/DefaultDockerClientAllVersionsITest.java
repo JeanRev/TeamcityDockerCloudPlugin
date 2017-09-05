@@ -183,8 +183,8 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         final String stdoutMsg = "print something on stdout";
         final String stderrMsg = STDERR_MSG_PREFIX + "print something on stderr";
 
-        try (StreamHandler attachHandler = client.attach(containerId)) {
-            try (StreamHandler logHandler = client.streamLogs(containerId, -1, StdioType.all(), true)) {
+        try (StreamHandler attachHandler = client.attach(containerId, true)) {
+            try (StreamHandler logHandler = client.streamLogs(containerId, -1, StdioType.all(), true, true)) {
                 try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(attachHandler.getOutputStream(),
                         StandardCharsets.UTF_8))) {
 
@@ -211,18 +211,18 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         }
 
         // Testing "post mortem" logs.
-        try (StreamHandler handler = client.streamLogs(containerId, 3, StdioType.all(), false)) {
+        try (StreamHandler handler = client.streamLogs(containerId, 3, StdioType.all(), false, true)) {
             assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDOUT, stdoutMsg);
             assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDERR, stderrMsg);
             assertThat(handler.getNextStreamFragment()).isNull();
         }
 
-        try (StreamHandler handler = client.streamLogs(containerId, 1, StdioType.all(), false)) {
+        try (StreamHandler handler = client.streamLogs(containerId, 1, StdioType.all(), false, true)) {
             assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDERR, stderrMsg);
             assertThat(handler.getNextStreamFragment()).isNull();
         }
 
-        try (StreamHandler handler = client.streamLogs(containerId, 3, EnumSet.of(StdioType.STDERR), false)) {
+        try (StreamHandler handler = client.streamLogs(containerId, 3, EnumSet.of(StdioType.STDERR), false, true)) {
             assertFragmentContent(handler.getNextStreamFragment(), StdioType.STDERR, stderrMsg);
             assertThat(handler.getNextStreamFragment()).isNull();
         }

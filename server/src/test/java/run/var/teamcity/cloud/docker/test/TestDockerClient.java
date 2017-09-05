@@ -299,8 +299,8 @@ public class TestDockerClient implements DockerClient {
 
     @Nonnull
     @Override
-    public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, @NotNull Set<StdioType> stdioTypes, boolean
-            follow) {
+    public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, @NotNull Set<StdioType> stdioTypes,
+                                    boolean follow, boolean demuxStdio) {
         return lock.call(() -> {
             checkForFailure();
             Container container = containers.get(containerId);

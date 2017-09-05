@@ -188,23 +188,21 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         return invokeNodeStream(target, HttpMethod.POST, null, prepareHeaders(credentials), null);
     }
 
-    public StreamHandler attach(@Nonnull String containerId) {
+    public StreamHandler attach(@Nonnull String containerId, boolean demuxStdio) {
 
         return invokeStream(target().path("/containers/{id}/attach").resolveTemplate("id", containerId)
                         .queryParam
                                 ("stdout", 1).queryParam("stderr", 1).queryParam("stdin", 1).queryParam("stream", 1),
-                HttpMethod.POST,
-                null, hasTty(containerId));
+                HttpMethod.POST,null, demuxStdio);
     }
 
     @Nonnull
     @Override
     public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, @Nonnull Set<StdioType> stdioTypes,
-                                    boolean
-            follow) {
+                                    boolean follow, boolean demuxStdio) {
 
         return invokeStream(prepareLogsTarget(target(), containerId, lineCount, stdioTypes).queryParam("follow",
-                follow ? 1 : 0), HttpMethod.GET, null, hasTty(containerId));
+                follow ? 1 : 0), HttpMethod.GET, null, demuxStdio);
     }
 
     private WebTarget prepareLogsTarget(WebTarget target, String container, int lineCount, Set<StdioType>
@@ -282,10 +280,6 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         }
         return invoke(target, HttpMethod.GET, null, prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
     }
-    
-    private boolean hasTty(String containerId) {
-        return inspectContainer(containerId).getObject("Config").getAsBoolean("Tty");
-    }
 
     private WebTarget applyStdioTypes(WebTarget target, Set<StdioType> stdioTypes) {
         assert target != null && stdioTypes != null;
@@ -297,8 +291,8 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         return target;
     }
 
-    private StreamHandler invokeStream(WebTarget target, String method, ErrorCodeMapper errorCodeMapper, boolean
-            hasTty) {
+    private StreamHandler invokeStream(WebTarget target, String method, ErrorCodeMapper errorCodeMapper,
+                                       boolean demuxStdio) {
 
         assert target != null && method != null;
 
@@ -324,8 +318,8 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         InputStream inputStream = (InputStream) response.getEntity();
         OutputStream outputStream = connection.prepareOutputStream();
 
-        return hasTty ? new CompositeStreamHandler(closeHandle, inputStream, outputStream) : new
-                MultiplexedStreamHandler(closeHandle, inputStream, outputStream);
+        return !demuxStdio ? new CompositeStreamHandler(closeHandle, inputStream, outputStream) :
+                new MultiplexedStreamHandler(closeHandle, inputStream, outputStream);
     }
 
 

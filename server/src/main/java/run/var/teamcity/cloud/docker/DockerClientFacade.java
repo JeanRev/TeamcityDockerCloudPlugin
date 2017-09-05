@@ -38,6 +38,9 @@ public interface DockerClientFacade extends AutoCloseable {
 
     CharSequence getLogs(String containerId);
 
+    @Nonnull
+    StreamHandler streamLogs(String containerId);
+
     @Override
     void close();
 }

@@ -196,7 +196,10 @@ public class DefaultDockerClientFacade implements DockerClientFacade {
 
         StringBuilder sb = new StringBuilder(5 * 1024);
 
-        try (StreamHandler handler = client.streamLogs(containerId, 10000, StdioType.all(), false)) {
+        boolean hasTty = client.inspectContainer(containerId).getObject("Config").getAsBoolean("Tty");
+
+        try (StreamHandler handler = client.streamLogs(containerId, 10000, StdioType.all(), false,
+                hasTty)) {
             StdioInputStream streamFragment;
             while ((streamFragment = handler.getNextStreamFragment()) != null) {
                 sb.append(DockerCloudUtils.readUTF8String(streamFragment));
@@ -206,6 +209,16 @@ public class DefaultDockerClientFacade implements DockerClientFacade {
         }
 
         return sb;
+    }
+
+    @Nonnull
+    @Override
+    public StreamHandler streamLogs(String containerId) {
+        return client.streamLogs(containerId, 10, StdioType.all(), true, hasTty(containerId));
+    }
+
+    private boolean hasTty(String containerId) {
+        return client.inspectContainer(containerId).getObject("Config").getAsBoolean("Tty");
     }
 
     private void inspectImage(String image, EditableNode containerSpec) {

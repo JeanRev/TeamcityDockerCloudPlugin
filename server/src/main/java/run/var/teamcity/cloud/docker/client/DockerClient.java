@@ -129,9 +129,10 @@ public interface DockerClient extends Closeable {
      * Streams the container logs.
      *
      * @param containerId the container id
-     * @param lineCount the number of line context
+     * @param lineCount the number of line of context
      * @param stdioTypes the types of stream to be fetched
-     * @param follow {@code true} if the logs must be streamed continuously
+     * @param follow if the logs must be fetched continuously
+     * @param demuxStdio {@code true} if the logs content must be demultiplexed using Stdio frames
      *
      * @return a stream handler to consume the logs
      *
@@ -139,8 +140,8 @@ public interface DockerClient extends Closeable {
      * @throws DockerClientException if an error occurred while communicating with the daemon
      */
     @Nonnull
-    StreamHandler streamLogs(@Nonnull String containerId, int lineCount, @Nonnull Set<StdioType> stdioTypes, boolean
-            follow);
+    StreamHandler streamLogs(@Nonnull String containerId, int lineCount, @Nonnull Set<StdioType> stdioTypes,
+                             boolean follow, boolean demuxStdio);
 
 
     /**

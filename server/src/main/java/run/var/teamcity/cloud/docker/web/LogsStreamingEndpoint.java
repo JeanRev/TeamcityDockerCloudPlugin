@@ -2,11 +2,10 @@ package run.var.teamcity.cloud.docker.web;
 
 
 import com.intellij.openapi.diagnostic.Logger;
+import run.var.teamcity.cloud.docker.DockerClientFacade;
+import run.var.teamcity.cloud.docker.DockerClientFacadeFactory;
 import run.var.teamcity.cloud.docker.StreamHandler;
-import run.var.teamcity.cloud.docker.client.DefaultDockerClient;
-import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.client.StdioInputStream;
-import run.var.teamcity.cloud.docker.client.StdioType;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
 
@@ -111,10 +110,9 @@ public class LogsStreamingEndpoint {
         @Override
         public void run() {
             assert containerTestReference.getContainerId().isPresent();
-            try (DefaultDockerClient client = (DefaultDockerClient) DockerClientFactory.getDefault()
-                    .createClientWithAPINegotiation(containerTestReference.getClientConfig())) {
-                try (StreamHandler streamHandler = client.streamLogs(containerTestReference.getContainerId().get(), 10,
-                        StdioType.all(), true)) {
+            try (DockerClientFacade client = DockerClientFacadeFactory.getDefault()
+                    .createFacade(containerTestReference.getClientConfig())) {
+                try (StreamHandler streamHandler = client.streamLogs(containerTestReference.getContainerId().get())) {
                     this.streamHandler = streamHandler;
 
                     while (true) {

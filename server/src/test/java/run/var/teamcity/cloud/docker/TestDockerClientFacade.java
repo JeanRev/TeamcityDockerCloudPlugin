@@ -166,6 +166,12 @@ public class TestDockerClientFacade implements DockerClientFacade {
         return null;
     }
 
+    @Nonnull
+    @Override
+    public StreamHandler streamLogs(String containerId) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
     @Override
     public void close() {
         lock.run(() -> closed = true);
