@@ -366,7 +366,6 @@ abstract class AbstractNode<N extends AbstractNode> {
      * @throws NodeProcessingException if this node is not an object, or if the child node is not a boolean
      * value node
      */
-    @Nullable
     public Boolean getAsBoolean(@Nonnull String fieldName, @Nullable Boolean def) {
         DockerCloudUtils.requireNonNull(fieldName, "Field name cannot be null.");
         checkObject();

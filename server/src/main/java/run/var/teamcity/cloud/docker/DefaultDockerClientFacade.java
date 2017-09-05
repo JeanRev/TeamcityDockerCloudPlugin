@@ -194,18 +194,24 @@ public class DefaultDockerClientFacade implements DockerClientFacade {
     @Override
     public CharSequence getLogs(String containerId) {
 
+        boolean hasTty = client.inspectContainer(containerId).getObject("Config").
+                getAsBoolean("Tty", false);
+
+
+        StreamHandler streamHandler = client.streamLogs(containerId, 10000, StdioType.all(), false, hasTty);
+        return demuxLogs(streamHandler);
+    }
+
+    private CharSequence demuxLogs(StreamHandler streamHandler) {
         StringBuilder sb = new StringBuilder(5 * 1024);
 
-        boolean hasTty = client.inspectContainer(containerId).getObject("Config").getAsBoolean("Tty");
-
-        try (StreamHandler handler = client.streamLogs(containerId, 10000, StdioType.all(), false,
-                hasTty)) {
-            StdioInputStream streamFragment;
-            while ((streamFragment = handler.getNextStreamFragment()) != null) {
+        StdioInputStream streamFragment;
+        try {
+            while ((streamFragment = streamHandler.getNextStreamFragment()) != null) {
                 sb.append(DockerCloudUtils.readUTF8String(streamFragment));
             }
         } catch (IOException e) {
-            throw new DockerClientFacadeException("Failed to stream logs.");
+            throw new DockerClientFacadeException("Failed to fetch logs.");
         }
 
         return sb;

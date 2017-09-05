@@ -9,6 +9,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
+import java.util.Arrays;
 
 /**
  * Base class for {@link StreamHandler}s.
@@ -37,9 +39,27 @@ abstract class AbstractStreamHandler implements StreamHandler {
     }
 
     @Override
-    public void close() throws IOException {
-        inputStream.close();
-        outputStream.close();
-        closeHandle.close();
+    public void close() {
+        IOException failure = null;
+
+        for (Closeable closeable : Arrays.asList(inputStream, outputStream, closeHandle))  {
+            failure = close(failure, closeable);
+        }
+
+        if (failure != null) {
+            throw new UncheckedIOException(failure);
+        }
+    }
+
+    private IOException close(IOException failure, Closeable closeable) {
+        try {
+            closeable.close();
+        } catch (IOException e) {
+            if (failure == null) {
+                failure = new IOException("Failed to close some stream.");
+            }
+            failure.addSuppressed(e);
+        }
+        return failure;
     }
 }
