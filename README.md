@@ -27,6 +27,9 @@ to the _plugins_ subfolder in the TeamCity Data Directory.
 By default, the [official TeamCity agent images](https://hub.docker.com/r/jetbrains/teamcity-agent/) will be used. These
 images are usable without any additional configuration, but you may need to tune the container settings a little depending on your build requirements.
 
+## News
+For the latest information on the development of the plugin, and access to preview versions, visit the project's Gitter [chatroom](https://gitter.im/TeamcityDockerCloudPlugin/Lobby).
+
 ## Build
 This project uses Gradle [Kotlin](https://kotlinlang.org/) scripts to build and package the plugin. To create the plugin archive simple run the
 <code>tcDist</code> task using the provided gradle wrapper:
