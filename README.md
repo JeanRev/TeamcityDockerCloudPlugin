@@ -12,8 +12,8 @@ according to your TeamCity version.
 
 ## Requirements
 - TeamCity 10.x or greater.
-- A Docker daemon accessible through either TCP or Unix Sockets, supporting the remote API v1.24 (Engine version 
-1.12.x).
+- A Docker daemon accessible through either TCP, Unix Socket, or Windows name pipe and supporting the remote API v1.24 
+(Engine version 1.12.x).
 
 Browser requirements are the same than TeamCity itself (IE9+ or recent version of Firefox/Chrome/Safari/Opera/Edge).
 
