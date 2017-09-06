@@ -11,7 +11,6 @@ import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -45,7 +44,7 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
 
     final static String LATEST = REPO + ":latest";
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final LockHandler lock = LockHandler.newReentrantLock();
     private final String version;
 
     private final DockerRegistryClientFactory registryClientFty;
@@ -62,11 +61,8 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
      */
     public OfficialAgentImageResolver(String version, DockerRegistryClientFactory registryClientFty) {
         super(new DockerImageDefaultResolver());
-        DockerCloudUtils.requireNonNull(version, "Version string cannot be null.");
-        DockerCloudUtils.requireNonNull(registryClientFty, "Registry client factory cannot be null.");
-
-        this.version = version;
-        this.registryClientFty = registryClientFty;
+        this.version = DockerCloudUtils.requireNonNull(version, "Version string cannot be null.");
+        this.registryClientFty = DockerCloudUtils.requireNonNull(registryClientFty, "Registry client factory cannot be null.");
     }
 
     /**
@@ -80,18 +76,15 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
         if (!imgConfig.isUseOfficialTCAgentImage()) {
             return null;
         }
-        String imageTag;
-        lock.lock();
-        try {
-            imageTag = this.imageTag;
+
+        return lock.call(() -> {
+            String imageTag = this.imageTag;
             if (imageTag == null) {
                 imageTag = this.imageTag = performResolution();
             }
 
             return imageTag;
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     private String performResolution() {

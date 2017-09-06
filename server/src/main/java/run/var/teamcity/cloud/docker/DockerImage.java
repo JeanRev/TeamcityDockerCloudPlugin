@@ -5,15 +5,15 @@ import jetbrains.buildServer.clouds.CloudErrorInfo;
 import jetbrains.buildServer.clouds.CloudImage;
 import jetbrains.buildServer.clouds.InstanceStatus;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.LockHandler;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A Docker {@link CloudImage}.
@@ -27,7 +27,7 @@ public class DockerImage implements CloudImage {
     private final DockerImageConfig config;
 
     // This lock ensure a thread-safe usage of all the variables below.
-    private final Lock lock = new ReentrantLock();
+    private final LockHandler lock = LockHandler.newReentrantLock();
 
     private final Map<UUID, DockerInstance> instances = new ConcurrentHashMap<>();
 
@@ -63,35 +63,22 @@ public class DockerImage implements CloudImage {
     @Nonnull
     @Override
     public String getName() {
-        try {
-            lock.lock();
+        return lock.call(() -> {
             String name = config.getProfileName();
             if (imageName != null) {
                 name += " (" + imageName + ")";
             }
             return name;
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Nullable
     public String getImageName() {
-        lock.lock();
-        try {
-            return imageName;
-        } finally {
-            lock.unlock();
-        }
+        return lock.call(() -> imageName);
     }
 
     void setImageName(@Nonnull String imageName) {
-        lock.lock();
-        try {
-            this.imageName = imageName;
-        } finally {
-            lock.unlock();
-        }
+        lock.run(() -> this.imageName = imageName);
     }
 
     /**
@@ -107,12 +94,7 @@ public class DockerImage implements CloudImage {
     @Nonnull
     @Override
     public Collection<DockerInstance> getInstances() {
-        try {
-            lock.lock();
-            return instances.values();
-        } finally {
-            lock.unlock();
-        }
+        return lock.call(() -> Collections.unmodifiableCollection(instances.values()));
     }
 
     @Nullable
@@ -139,12 +121,7 @@ public class DockerImage implements CloudImage {
     @Nullable
     DockerInstance findInstanceById(@Nonnull UUID id) {
         DockerCloudUtils.requireNonNull(id, "UUID cannot be null.");
-        try {
-            lock.lock();
-            return instances.get(id);
-        } finally {
-            lock.unlock();
-        }
+        return lock.call(() -> instances.get(id));
     }
 
     @Nullable
@@ -167,12 +144,8 @@ public class DockerImage implements CloudImage {
     @Nonnull
     DockerInstance createInstance() {
         DockerInstance instance = new DockerInstance(this);
-        try {
-            lock.lock();
-            instances.put(instance.getUuid(), instance);
-        } finally {
-            lock.unlock();
-        }
+
+        lock.run(() -> instances.put(instance.getUuid(), instance));
 
         return instance;
     }
@@ -183,9 +156,7 @@ public class DockerImage implements CloudImage {
      * @return {@code true} if new instances can be created for this image, {@code false} otherwise.
      */
     public boolean canStartNewInstance() {
-        lock.lock();
-        try {
-
+        return lock.call(() -> {
             int maxInstanceCount = config.getMaxInstanceCount();
             int usedInstance = 0;
             for (DockerInstance instance : instances.values()) {
@@ -201,9 +172,7 @@ public class DockerImage implements CloudImage {
             }
 
             return maxInstanceCount == -1 || usedInstance < maxInstanceCount;
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override
@@ -221,11 +190,7 @@ public class DockerImage implements CloudImage {
      */
     void clearInstanceId(@Nonnull UUID id) {
         DockerCloudUtils.requireNonNull(id, "UUID cannot be null.");
-        try {
-            lock.lock();
-            instances.remove(id);
-        } finally {
-            lock.unlock();
-        }
+
+        lock.run(() -> instances.remove(id));
     }
 }

@@ -14,7 +14,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
  * {@link DockerImageConfig} test suite.
@@ -74,10 +76,6 @@ public class DockerImageConfigTest {
 
         params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
 
-        List<DockerImageConfig> images = DockerImageConfig.processParams(params);
-
-        assertThat(images).isEmpty();
-
         CloudImageParameters imageParameters = new CloudImageParameters();
         imageParameters.setParameter(CloudImageParameters.SOURCE_ID_FIELD, "TestProfile");
         imageParameters.setParameter(CloudImageParameters.AGENT_POOL_ID_FIELD, "42");
@@ -96,7 +94,7 @@ public class DockerImageConfigTest {
         params.put(CloudImageParameters.SOURCE_IMAGES_JSON,
                 CloudImageParameters.collectionToJson(Collections.singleton(imageParameters)));
 
-        images = DockerImageConfig.processParams(params);
+        List<DockerImageConfig> images = DockerImageConfig.processParams(params);
 
         assertThat(images).hasSize(1);
 
@@ -131,27 +129,45 @@ public class DockerImageConfigTest {
     }
 
     @Test
-    public void fromInvalidConfigMap() {
+    public void duplicateProfileName() {
+        Map<String, String> params = new HashMap<>();
+        EditableNode imagesNode = Node.EMPTY_ARRAY.editNode();
+
+        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(),"TestProfile1");
+        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(),"TestProfile2");
+        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
+
+        // OK
+        DockerImageConfig.processParams(params);
+
+        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(),"TestProfile2");
+        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
+
+        assertInvalidProperty(params, DockerCloudUtils.IMAGES_PARAM);
+    }
+
+    @Test
+    public void noImageProvided() {
         Map<String, String> params = new HashMap<>();
 
-        // Empty list of images.
-        assertInvalidProperty(params, DockerCloudUtils.IMAGES_PARAM);
-
         // Empty image definition.
-        params.put(DockerCloudUtils.IMAGES_PARAM, Node.EMPTY_OBJECT.toString());
+        assertInvalidProperty(params, DockerCloudUtils.IMAGES_PARAM);
 
         EditableNode imagesNode = Node.EMPTY_ARRAY.editNode();
 
-        // Duplicate profile name.
-        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(),"TestProfile");
+        // Empty image list
         params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
-        DockerImageConfig.processParams(params);
 
-        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(),"TestProfile");
-
-        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
         assertInvalidProperty(params, DockerCloudUtils.IMAGES_PARAM);
+
+        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(),"TestProfile");
+
+        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
+
+        // OK
+        DockerImageConfig.processParams(params);
     }
+
 
     private void assertInvalidProperty(Map<String, String> params, String name) {
         Throwable throwable = catchThrowable(() -> DockerImageConfig.processParams(params));

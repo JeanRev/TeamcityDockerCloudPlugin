@@ -2,8 +2,9 @@ package run.var.teamcity.cloud.docker.client;
 
 
 import org.junit.Test;
+import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.test.TestInputStream;
-import run.var.teamcity.cloud.docker.test.TestOutputStream;
+import run.var.teamcity.cloud.docker.test.TestOutputStreamFilter;
 
 import java.io.IOException;
 
@@ -14,7 +15,7 @@ public abstract class StreamHandlerTest {
 
     protected TestInputStream closeHandle = TestInputStream.empty();
     protected TestInputStream inputStream = TestInputStream.empty();
-    protected TestOutputStream outputStream = TestOutputStream.dummy();
+    protected TestOutputStreamFilter outputStream = TestOutputStreamFilter.dummy();
 
     @Test
     public void closeHandler() throws IOException {
@@ -44,6 +45,6 @@ public abstract class StreamHandlerTest {
         return createHandler(closeHandle, inputStream, outputStream);
     }
 
-    protected abstract StreamHandler createHandler(TestInputStream closeHandle, TestInputStream inputStream,
-                                                   TestOutputStream outputStream);
+    protected abstract AbstractStreamHandler createHandler(TestInputStream closeHandle, TestInputStream inputStream,
+                                                           TestOutputStreamFilter outputStream);
 }

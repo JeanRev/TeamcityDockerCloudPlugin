@@ -1,13 +1,17 @@
 package run.var.teamcity.cloud.docker.util;
 
 import javax.annotation.Nonnull;
-import java.util.concurrent.*;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RunnableScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * A {@link RunnableScheduledFuture} wrapper with a reference to a source task.
  *
  * <p>This class permits to keep tracks of the callable associated with a {@code RunnableScheduledFuture} to which all
- * method invocation will be delegated.</p>
+ * method invocations will be delegated.</p>
  *
  * @param <V> the callable return type
  */
@@ -20,14 +24,12 @@ public class WrappedRunnableScheduledFuture<T, V> implements RunnableScheduledFu
      * s
      * Creates a new wrapper instance.
      *
-     * @param task    the source task
+     * @param task the source task
      * @param wrapped the object to which all invocations will be delegated
      */
     public WrappedRunnableScheduledFuture(@Nonnull T task, @Nonnull RunnableScheduledFuture<V> wrapped) {
-        DockerCloudUtils.requireNonNull(task, "Source task cannot be null.");
-        DockerCloudUtils.requireNonNull(wrapped, "Wrapped runnable cannot be null.");
-        this.task = task;
-        this.wrapped = wrapped;
+        this.task = DockerCloudUtils.requireNonNull(task, "Source task cannot be null.");
+        this.wrapped = DockerCloudUtils.requireNonNull(wrapped, "Wrapped runnable cannot be null.");
     }
 
     @Nonnull

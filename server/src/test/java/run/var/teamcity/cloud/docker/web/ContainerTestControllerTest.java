@@ -1,8 +1,16 @@
 package run.var.teamcity.cloud.docker.web;
 
+import jetbrains.buildServer.serverSide.auth.Permission;
 import org.junit.Before;
 import org.junit.Test;
-import run.var.teamcity.cloud.docker.test.*;
+import run.var.teamcity.cloud.docker.TestDockerClientFacadeFactory;
+import run.var.teamcity.cloud.docker.test.TestHttpServletRequest;
+import run.var.teamcity.cloud.docker.test.TestHttpServletResponse;
+import run.var.teamcity.cloud.docker.test.TestPluginDescriptor;
+import run.var.teamcity.cloud.docker.test.TestSBuildServer;
+import run.var.teamcity.cloud.docker.test.TestSUser;
+import run.var.teamcity.cloud.docker.test.TestUtils;
+import run.var.teamcity.cloud.docker.test.TestWebControllerManager;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.web.ContainerTestController.Action;
@@ -25,12 +33,11 @@ public class ContainerTestControllerTest {
     private TestContainerTestManager testMgr;
     private EditableNode responseNode;
 
-
     @Before
     public void init() {
         testMgr = new TestContainerTestManager();
 
-        request = new TestHttpServletRequest().
+        request = createAuthorizedRequest().
                 parameters(TestUtils.getSampleDockerConfigParams()).
                 parameters(TestUtils.getSampleTestImageConfigParams());
 
@@ -82,7 +89,8 @@ public class ContainerTestControllerTest {
         request.parameter("action", Action.CREATE.name());
         ctrl.doPost(request, response, responseNode);
 
-        testMgr.getListener().notifyStatus(new TestContainerStatusMsg(TestUtils.TEST_UUID, Phase.CREATE, Status.PENDING, null, null, null, Collections.emptyList()));
+        testMgr.getListener().notifyStatus(new TestContainerStatusMsg(TestUtils.TEST_UUID, Phase.CREATE, Status
+                .PENDING, null, null, null, null, Collections.emptyList()));
 
         request.
                 parameter("action", Action.QUERY.name()).
@@ -124,7 +132,7 @@ public class ContainerTestControllerTest {
     public void invalidQueries() {
         ContainerTestController ctrl = createController();
 
-        TestHttpServletRequest request = new TestHttpServletRequest();
+        TestHttpServletRequest request = createAuthorizedRequest();
         TestHttpServletResponse response = new TestHttpServletResponse();
 
         // Missing action parameter.
@@ -135,7 +143,7 @@ public class ContainerTestControllerTest {
         assertThat(response.getWrittenResponse()).isNotEmpty();
 
         // Invalid action parameter.
-        request = new TestHttpServletRequest();
+        request = createAuthorizedRequest();
         response = new TestHttpServletResponse();
         request.parameter("action", "not a real action");
 
@@ -146,7 +154,7 @@ public class ContainerTestControllerTest {
         assertThat(response.getWrittenResponse()).isNotEmpty();
 
         // Missing client configuration.
-        request = new TestHttpServletRequest();
+        request = createAuthorizedRequest();
         response = new TestHttpServletResponse();
         request.parameters(TestUtils.getSampleTestImageConfigParams());
         request.parameter("action", Action.CREATE.name());
@@ -158,7 +166,7 @@ public class ContainerTestControllerTest {
         assertThat(response.getWrittenResponse()).isNotEmpty();
 
         // Missing image configuration.
-        request = new TestHttpServletRequest();
+        request = createAuthorizedRequest();
         response = new TestHttpServletResponse();
         request.parameters(TestUtils.getSampleDockerConfigParams());
         request.parameter("action", Action.CREATE.name());
@@ -170,18 +178,38 @@ public class ContainerTestControllerTest {
         assertThat(response.getWrittenResponse()).isNotEmpty();
     }
 
+    @Test
+    public void unauthorized() {
+        ContainerTestController ctrl = createController();
+
+        request.parameter("action", Action.CREATE.name());
+
+        request.getSession().invalidate();
+
+        ctrl.doPost(request, response, responseNode);
+
+        assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_UNAUTHORIZED);
+        assertThat(responseNode).isEqualTo(Node.EMPTY_OBJECT);
+        assertThat(response.getWrittenResponse()).isNotEmpty();
+    }
+
     private void resetResponse() {
         response = new TestHttpServletResponse();
         responseNode = Node.EMPTY_OBJECT.editNode();
     }
 
-    private ContainerTestController createController() {
-        return new ContainerTestController(new TestDockerClientFactory(), new TestAtmosphereFrameworkFacade(),
-                new TestSBuildServer(), new TestPluginDescriptor(), new TestWebControllerManager(), testMgr);
+    private TestHttpServletRequest createAuthorizedRequest() {
+        TestHttpServletRequest request = new TestHttpServletRequest();
+        TestSUser user = new TestSUser();
+        user.addProjectPermission("foo", Permission.MANAGE_AGENT_CLOUDS);
+        user.addProjectPermission("foo", Permission.START_STOP_CLOUD_AGENT);
+        request.getSession().setAttribute(WebUtils.DEFAULT_USER_KEY, user);
+        return request;
     }
 
-    private TestContainerStatusMsg createStatusMsg(Phase phase) {
-        return new TestContainerStatusMsg(TestUtils.TEST_UUID, phase,
-                Status.PENDING, "status msg", null, null, Collections.emptyList());
+    private ContainerTestController createController() {
+        return new ContainerTestController(new TestDockerClientFacadeFactory(), new TestSBuildServer(),
+                new TestPluginDescriptor(), new TestWebControllerManager(), testMgr);
     }
+
 }

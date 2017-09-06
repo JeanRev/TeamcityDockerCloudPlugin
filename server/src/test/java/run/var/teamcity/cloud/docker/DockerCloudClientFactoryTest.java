@@ -7,7 +7,6 @@ import jetbrains.buildServer.clouds.CloudImageParameters;
 import org.junit.Test;
 import run.var.teamcity.cloud.docker.test.TestCloudRegistrar;
 import run.var.teamcity.cloud.docker.test.TestCloudState;
-import run.var.teamcity.cloud.docker.test.TestDockerClientFactory;
 import run.var.teamcity.cloud.docker.test.TestPluginDescriptor;
 import run.var.teamcity.cloud.docker.test.TestSBuildAgent;
 import run.var.teamcity.cloud.docker.test.TestSBuildServer;
@@ -16,8 +15,6 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -77,6 +74,6 @@ public class DockerCloudClientFactoryTest {
 
     private DockerCloudClientFactory createFactory() {
         return new DockerCloudClientFactory(new TestSBuildServer(), new TestCloudRegistrar(),
-                new TestPluginDescriptor(), new TestDockerClientFactory());
+                new TestPluginDescriptor(), new TestDockerClientFacadeFactory());
     }
 }

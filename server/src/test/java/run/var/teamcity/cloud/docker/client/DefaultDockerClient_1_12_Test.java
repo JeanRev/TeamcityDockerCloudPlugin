@@ -5,7 +5,7 @@ import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.Stopwatch;
 
 import java.net.URISyntaxException;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.data.Offset.offset;
@@ -24,16 +24,16 @@ public class DefaultDockerClient_1_12_Test extends DefaultDockerClientAllVersion
         Node createNode = client.createContainer(containerSpec, null);
         String containerId = createNode.getAsString("Id", null);
 
-        this.containerId = containerId;
+        containerIdsForCleanup.add(containerId);
 
         assertThat(containerId).isNotNull().isNotEmpty();
 
         client.startContainer(containerId);
 
         Stopwatch sw = Stopwatch.start();
-        client.stopContainer(containerId, 2);
+        client.stopContainer(containerId, Duration.ofSeconds(2));
 
-        assertThat(sw.millis()).isCloseTo(TimeUnit.SECONDS.toMillis(2), offset(400L));
+        assertThat(sw.getDuration().toMillis()).isCloseTo(2000, offset(400L));
     }
 
     @Override

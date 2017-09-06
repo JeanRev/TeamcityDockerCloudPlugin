@@ -18,10 +18,14 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Constants and utility class for the Docker cloud plugin.
@@ -44,6 +48,10 @@ public final class DockerCloudUtils {
      * Docker label key to store the instance UUID.
      */
     public static final String INSTANCE_ID_LABEL = NS_PREFIX + "instance_id";
+    /**
+     * Docker label key to store the container source image ID (hash).
+     */
+    public static final String SOURCE_IMAGE_ID_LABEL = NS_PREFIX + "source_image";
     /**
      * Docker label key to store a demo instance UUID.
      */
@@ -69,6 +77,10 @@ public final class DockerCloudUtils {
      */
     public static final String USE_DEFAULT_UNIX_SOCKET_PARAM = NS_PREFIX + "use_default_unix_socket";
     /**
+     * Docker cloud parameter: use default Docker socket on the local machine.
+     */
+    public static final String USE_DEFAULT_WIN_NAMED_PIPE_PARAM = NS_PREFIX + "use_default_win_named_pipe";
+    /**
      * Docker cloud parameter: Docker instance URI.
      */
     public static final String INSTANCE_URI = NS_PREFIX + "instance_uri";
@@ -81,6 +93,10 @@ public final class DockerCloudUtils {
      */
     public static final URI DOCKER_DEFAULT_SOCKET_URI;
     /**
+     * The Docker named pipe default location on Windows systems.
+     */
+    public static final URI DOCKER_DEFAULT_NAMED_PIPE_URI;
+    /**
      * Currently supported (highest) Docker API version.
      */
     public static final DockerAPIVersion DOCKER_API_TARGET_VERSION = DockerAPIVersion.parse("1.26");
@@ -88,15 +104,22 @@ public final class DockerCloudUtils {
      * Minimal Docker API version.
      */
     public static final DockerAPIVersion DOCKER_API_MIN_VERSION = DockerAPIVersion.parse("1.24");
+    /**
+     * Windows host flag. Will be {@code true} if the JVM is running on a Windows host.
+     */
+    private static final boolean WINDOWS_HOST;
 
     static {
         assert DOCKER_API_TARGET_VERSION.isGreaterThan(DOCKER_API_MIN_VERSION);
 
         try {
             DOCKER_DEFAULT_SOCKET_URI = new URI("unix:///var/run/docker.sock");
+            DOCKER_DEFAULT_NAMED_PIPE_URI = new URI("npipe:////./pipe/docker_engine");
         } catch (URISyntaxException e) {
             throw new AssertionError(e);
         }
+
+        WINDOWS_HOST = System.getProperty("os.name").toLowerCase().startsWith("windows");
     }
 
     /**
@@ -129,6 +152,11 @@ public final class DockerCloudUtils {
      */
     public static final String ENV_INSTANCE_ID = ENV_PREFIX + "INSTANCE_UUID";
     /**
+     * Environment variable name to store custom cloud agent parameters. Those parameters are provided by the TC server
+     * and must be published in custom configuration parameters map of the agent.
+     */
+    public static final String ENV_AGENT_PARAMS = ENV_PREFIX + "AGENT_PARAMS";
+    /**
      * Environment variable name to store the cloud instance UUID.
      */
     public static final String ENV_TEST_INSTANCE_ID = ENV_PREFIX + "TEST_INSTANCE_UUID";
@@ -142,17 +170,37 @@ public final class DockerCloudUtils {
      * Test for argument nullity.
      *
      * @param obj the object to test
-     * @param msg the error message to be thrown
+     * @param msg the error message
+     * notation)
+     *
+     * @return {@code obj} when non null
      *
      * @throws NullPointerException if any argument is {@code null}
      */
-    public static void requireNonNull(@Nonnull Object obj, @Nonnull String msg) {
-        if (msg == null) {
-            throw new NullPointerException("Error message cannot be null.");
+    @Nonnull
+    public static <T> T requireNonNull(T obj, @Nonnull String msg) {
+        return requireNonNull(obj, () -> msg);
+    }
+
+    /**
+     * Test for argument nullity.
+     *
+     * @param obj the object to test
+     * @param msgSupplier the error message supplier
+     *
+     * @return {@code obj} when non null
+     *
+     * @throws NullPointerException if any argument is {@code null}
+     */
+    @Nonnull
+    public static <T> T requireNonNull(T obj, @Nonnull Supplier<String> msgSupplier) {
+        if (msgSupplier == null) {
+            throw new NullPointerException("Error message supplier cannot be null.");
         }
         if (obj == null) {
-            throw new NullPointerException(msg);
+            throw new NullPointerException(msgSupplier.get());
         }
+        return obj;
     }
 
     /**
@@ -210,7 +258,7 @@ public final class DockerCloudUtils {
     @Nullable
     public static UUID tryParseAsUUID(@Nullable String value) {
         try {
-            return value != null ? UUID.fromString(value) : null;
+            return value != null && value.length() > 0 ? UUID.fromString(value) : null;
         } catch (IllegalArgumentException e) {
             // Ignore.
         }
@@ -425,5 +473,111 @@ public final class DockerCloudUtils {
      */
     public static boolean isDefaultDockerSocketAvailable() {
         return Files.exists(Paths.get(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI.getPath()));
+    }
+
+    /**
+     * Checks if this default Docker named pipe is available on this host. This method will only verify the existence
+     * of the pipe file without additional check.
+     *
+     * @return {@code true} if the default Docker named pipe is available
+     */
+    public static boolean isDefaultDockerNamedPipeAvailable() {
+        return Files.exists(Paths.get(DockerCloudUtils.DOCKER_DEFAULT_NAMED_PIPE_URI.getPath()));
+    }
+
+    /**
+     * Returns {@code true} if the host for this JVM runs on Windows.
+     *
+     * @return {@code true} if the host for this JVM runs on Windows
+     */
+    public static boolean isWindowsHost() {
+        return WINDOWS_HOST;
+    }
+
+    /**
+     * Creates a new immutable map from the specified {@link Pair(Object, Object)}s.
+     *
+     * @param pairs the pairs
+     * @param <K> the type of key
+     * @param <V> the type of value
+     *
+     * @return the new map
+     *
+     * @throws NullPointerException if the list of pairs, or any of the contained pair, are {@code null}
+     *
+     * @see #pair(Object, Object)
+     */
+    @Nonnull
+    @SafeVarargs
+    public static <K,V> Map<K,V> immutableMapOf(@Nonnull Pair<K,V>... pairs) {
+        DockerCloudUtils.requireNonNull(pairs, "List of pairs cannot be null.");
+        return Collections.unmodifiableMap(mapOf(pairs));
+    }
+
+    /**
+     * Creates a new mutable map from the specified {@link Pair(Object, Object)}s.
+     *
+     * @param pairs the pairs
+     * @param <K> the type of key
+     * @param <V> the type of value
+     *
+     * @return the new map
+     *
+     * @throws NullPointerException if the list of pairs, or any of the contained pair, are {@code null}
+     *
+     * @see #pair(Object, Object)
+     */
+    @Nonnull
+    @SafeVarargs
+    public static <K,V> Map<K,V> mapOf(@Nonnull Pair<K,V>... pairs) {
+        DockerCloudUtils.requireNonNull(pairs, "List of pairs cannot be null.");
+        return Arrays.stream(pairs).collect(Collectors.toMap(Pair::getKey, Pair::getValue));
+    }
+
+    /**
+     * Creates a new {@link Pair}.
+     *
+     * @param key the pair "key" (left-hand side value)
+     * @param value the pair "value" (right-hand side value)
+     * @param <K> the type of key
+     * @param <V> the type of value
+     *
+     * @return the new pair
+     */
+    @Nonnull
+    public static <K,V> Pair<K,V> pair(@Nonnull K key, @Nonnull V value) {
+        DockerCloudUtils.requireNonNull(key, "Key cannot be null.");
+        DockerCloudUtils.requireNonNull(value, "Value cannot be null.");
+
+        return new Pair<>(key, value);
+    }
+
+    /**
+     * A pair of objects.
+     *
+     * @param <K> the type of the pair "key" (left-hand side value)
+     * @param <V> the type of the pair "value" (right-hand side value)
+     *
+     * @see DockerCloudUtils#pair(Object, Object)
+     */
+    public static class Pair<K,V> {
+        private final K key;
+        private final V value;
+
+        private Pair(K key, V value) {
+            assert key != null && value != null;
+            this.key = key;
+            this.value = value;
+        }
+
+        @Nonnull
+        public K getKey() {
+            return key;
+        }
+
+        @Nonnull
+        public V getValue() {
+            return value;
+        }
     }
 }

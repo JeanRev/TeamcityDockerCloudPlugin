@@ -4,7 +4,13 @@ import jetbrains.buildServer.BuildAgent;
 import jetbrains.buildServer.LicenseNotGrantedException;
 import jetbrains.buildServer.agentServer.AgentBuild;
 import jetbrains.buildServer.agentServer.AgentBuildResult;
-import jetbrains.buildServer.serverSide.*;
+import jetbrains.buildServer.serverSide.AgentDescription;
+import jetbrains.buildServer.serverSide.BuildAgentEx;
+import jetbrains.buildServer.serverSide.BuildAgentInit;
+import jetbrains.buildServer.serverSide.RunType;
+import jetbrains.buildServer.serverSide.SBuildType;
+import jetbrains.buildServer.serverSide.SFinishedBuild;
+import jetbrains.buildServer.serverSide.SRunningBuild;
 import jetbrains.buildServer.serverSide.agentPools.AgentPool;
 import jetbrains.buildServer.serverSide.agentTypes.SAgentType;
 import jetbrains.buildServer.serverSide.comments.Comment;
@@ -14,7 +20,11 @@ import jetbrains.buildServer.util.Action;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * {@link AgentDescription} for testing.
@@ -24,6 +34,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     private String name = "";
     private boolean removable = true;
     private boolean enabled = true;
+    private String hostAddress = null;
 
     private final Map<String, String> availableParameters = new HashMap<>();
 
@@ -136,7 +147,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
 
     @Override
     public String getHostAddress() {
-        throw new UnsupportedOperationException("Not a real agent.");
+        return hostAddress;
     }
 
     @Override
@@ -409,5 +420,10 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     @Override
     public AgentPool getAgentPool() {
         throw new UnsupportedOperationException("Not a real agent.");
+    }
+
+    public TestSBuildAgent hostAddress(String hostAddress) {
+        this.hostAddress = hostAddress;
+        return this;
     }
 }

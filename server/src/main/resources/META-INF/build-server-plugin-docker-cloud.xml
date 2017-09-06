@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd"
        default-autowire="constructor">
+
+  <!--<context:annotation-config/>-->
 
   <bean class="run.var.teamcity.cloud.docker.DockerCloudClientFactory"/>
   <bean class="run.var.teamcity.cloud.docker.web.CheckConnectivityController"/>
   <bean class="run.var.teamcity.cloud.docker.web.DockerCloudSettingsController"/>
   <bean class="run.var.teamcity.cloud.docker.web.DockerImageDetailsExtension"/>
   <bean class="run.var.teamcity.cloud.docker.web.ContainerTestController"/>
-  <bean class="run.var.teamcity.cloud.docker.web.atmo.DefaultAtmosphereFacade"/>
-  <bean class="run.var.teamcity.cloud.docker.web.StreamingController"/>
+  <bean class="run.var.teamcity.cloud.docker.web.SpringConfiguration"/>
+  <bean class="run.var.teamcity.cloud.docker.web.ContainerTestListenerEndpoint" scope="prototype"/>
+    <bean class="run.var.teamcity.cloud.docker.web.DefaultContainerTestManager"/>
+  <bean class="run.var.teamcity.cloud.docker.web.LogsStreamingEndpoint"/>
 </beans>

@@ -5,13 +5,14 @@ import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
  * A Docker API version number. Used to parse and order API version strings. The logic of this class is expected to be
  * roughly equivalent to the code used to evaluate version number in Docker itself.
  */
-public class DockerAPIVersion implements Comparable<DockerAPIVersion> {
+public class DockerAPIVersion implements Comparable<DockerAPIVersion>, Serializable {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(DockerAPIVersion.class);
 

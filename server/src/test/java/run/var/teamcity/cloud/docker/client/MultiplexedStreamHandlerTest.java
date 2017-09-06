@@ -2,8 +2,9 @@ package run.var.teamcity.cloud.docker.client;
 
 import org.junit.Before;
 import org.junit.Test;
+import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.test.TestInputStream;
-import run.var.teamcity.cloud.docker.test.TestOutputStream;
+import run.var.teamcity.cloud.docker.test.TestOutputStreamFilter;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import java.io.ByteArrayInputStream;
@@ -75,7 +76,7 @@ public class MultiplexedStreamHandlerTest extends StreamHandlerTest {
     }
 
     @Override
-    protected StreamHandler createHandler(TestInputStream closeHandle, TestInputStream inputStream, TestOutputStream outputStream) {
+    protected AbstractStreamHandler createHandler(TestInputStream closeHandle, TestInputStream inputStream, TestOutputStreamFilter outputStream) {
         return new MultiplexedStreamHandler(closeHandle, inputStream, outputStream);
     }
 }

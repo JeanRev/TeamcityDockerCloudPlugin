@@ -6,14 +6,11 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
         //noinspection JSUnresolvedVariable
         var self = {
             IMAGE_VERSION: 4,
-            selectors: {
-                editImageLink: '.editImageLink',
-                imagesTableRow: '.imagesTableRow'
-            },
+            IP_V4_OR_V6_REGEX: /((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))/,
             init: function (params) {
                 self.logInfo('Initializing Docker Cloud JS support.');
 
-                self.defaultLocalSocketURI = params.defaultLocalSocketURI;
+                self.defaultLocalInstanceURI = params.defaultLocalInstanceURI;
                 self.checkConnectivityCtrlURL = params.checkConnectivityCtrlURL;
                 self.testContainerCtrlURL = params.testContainerCtrlURL;
                 self.testStatusSocketPath = params.testStatusSocketPath;
@@ -23,12 +20,16 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.debugEnabled = params.debugEnabled;
                 self.daemonTargetVersion = params.daemonTargetVersion;
                 self.daemonMinVersion = params.daemonMinVersion;
+                self.windowsHost = params.windowsHost;
 
                 var useTlsParam = params.useTlsParam;
                 var imagesParam = params.imagesParam;
                 var tcImagesDetailsParam = params.tcImagesDetails;
 
-                self.hasWebSocketSupport = 'WebSocket' in window;
+                self.hasWebSocketSupport = ('WebSocket' in window) && params.webSocketEndpointsAvailable;
+                if (self.hasWebSocketSupport) {
+                    self.logInfo("WebSocket support enabled.")
+                }
                 self.hasXTermSupport = self.hasWebSocketSupport && self.checkXtermBrowserSupport();
                 if (self.hasXTermSupport) {
                     self.logInfo("XTerm support enabled.")
@@ -104,11 +105,21 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             /* MAIN SETTINGS */
 
             _initDaemonInfo: function() {
+
+                // The radio button selection between local and custom instance address is conditionally displayed
+                // and its state persisted as plugin property. This test ensure that we always have a consistent
+                // state with older versions of the plugin where the associated property may not have been set yet.
+                if (!self.$useLocalInstance.is(':checked')) {
+                    self.$useCustomInstance.prop('checked', true);
+                }
+
                 // Simple heuristic to check if this is a new cloud profile. At least one image must be saved for
                 // existing profiles.
                 var existingProfile = Object.keys(self.imagesData).length;
 
                 if (existingProfile) {
+                    // Check Docker connectivity for existing profiles at the time the configuration is loaded.
+                    // This ensure that we have fresh meta-data regarding the Daemon OS and supported API.
                     setTimeout(self._checkConnection, 0);
                 }
             },
@@ -161,7 +172,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             },
             _instanceChange: function() {
                 var useLocalInstance = self.$useLocalInstance.is(':checked');
-                self.$dockerAddress.val(useLocalInstance ? self.defaultLocalSocketURI : "");
+                self.$dockerAddress.val(useLocalInstance ? self.defaultLocalInstanceURI : "");
                 self.$dockerAddress.prop('disabled', useLocalInstance);
                 self._scheduleConnectionCheck();
             },
@@ -196,6 +207,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }).
                 done(function(daemonInfo) {
                     var effectiveApiVersion = daemonInfo.meta.effectiveApiVersion;
+                    var daemonOs = daemonInfo.info.Os;
 
                     self.$checkConnectionResult.addClass('infoMessage');
                     self.$checkConnectionResult.text('Connection successful to Docker v' + daemonInfo.info.Version
@@ -213,6 +225,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
 
                     self.effectiveApiVersion = effectiveApiVersion;
+                    self.daemonOs = daemonOs;
                 }).
                 always(function () {
                     self.$checkConnectionLoader.hide();
@@ -399,6 +412,28 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$tcImagesDetails.val(json);
             },
 
+            _addTableRow: function($tableBody) {
+                var key = $tableBody.attr("id");
+                var index = $j.data($tableBody.get(0), "index") || 0;
+                index++;
+                self.logDebug("Adding row #" + index + " to table " + key + ".");
+
+                var newRow = '<tr>' + self.arrayTemplates[key].replace(/IDX/g, index) + '<td' +
+                    ' class="center dockerCloudCtrlCell">' + self.arrayTemplates.deleteCell + '</td></tr>';
+
+                var $table = $tableBody.closest("table");
+                // Add the new line as the last line before the table controls, or as the last table line if no
+                // controls are available.
+                var $lastRow = $tableBody.children('tr').last();
+                if ($lastRow.hasClass('dockerCloudAddItem')) {
+                    $lastRow.before(newRow);
+                } else {
+                    $tableBody.append(newRow)
+                }
+                $j.data($tableBody.get(0), "index", index);
+                self._updateTableMandoryStarsVisibility($table);
+            },
+
             _updateAllTablesMandoryStarsVisibility: function() {
                 self.$dialogTables.each(function(i, table) {
                     self._updateTableMandoryStarsVisibility($j(table));
@@ -492,18 +527,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
                 $j('span[id$="_error"], span[id$="_warning"]', self.$dialog).empty();
 
-                var viewModel = self._convertSettingsToViewModel(self.imagesData[profileName] || {
-                        /* Defaults for new images. */
-                        Administration: {
-                            UseOfficialTCAgentImage: true,
-                            PullOnCreate: true,
-                            MaxInstanceCount: 2
-                        },
-                        Editor: {
-                            MemoryUnit: 'bytes',
-                            MemorySwapUnit: 'bytes'
-                        }
-                    });
+                var viewModel = self._convertSettingsToViewModel(self.imagesData[profileName] || self.createEmptySettings());
                 self._applyViewModel(viewModel);
                 self._updateAllTablesMandoryStarsVisibility();
                 self.selectTabWithId("dockerCloudImageTab_general");
@@ -519,11 +543,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         .removeData('profile');
                 }
 
-                BS.DockerImageDialog.showCentered();
-
-                // Update validation status and all other kinds of handler. This must be done after showing the dialog
-                // since validation will skip elements that are not visible.
+                // Update validation status and all other kinds of handler.
                 self._triggerAllFields(existingImage);
+
+                BS.DockerImageDialog.showCentered();
             },
             _showImageDialogClickHandler: function () {
                 if (!self.$newImageBtn.attr('disabled')) {
@@ -824,6 +847,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 }
 
+                self.copy(viewModel, hostConfig, 'SecurityOpt');
+
+                if (self.notEmpty(viewModel.StorageOpt)) {
+                    hostConfig.StorageOpt = {};
+                    self._safeEach(viewModel.StorageOpt, function (storageOpt) {
+                        hostConfig.StorageOpt[storageOpt.Key] = storageOpt.Value;
+                    });
+                }
+
                 self.copy(viewModel, hostConfig, 'CgroupParent');
                 self.copy(viewModel, editor, 'MemoryUnit');
                 self.copy(viewModel, editor, 'MemorySwapUnit');
@@ -849,6 +881,23 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             notEmpty: function(value) {
                 return value !== undefined && value !== null && (value.length === undefined || value.length) && ($j.type(value) != "object" || Object.keys(value).length);
             },
+
+            createEmptySettings: function() {
+                return {
+                    /* Defaults for new images. */
+                    Administration: {
+                        Version: self.IMAGE_VERSION,
+                        UseOfficialTCAgentImage: !self.daemonOs || self.daemonOs.toLowerCase() !== 'windows', //
+                        PullOnCreate: true,
+                        MaxInstanceCount: 2
+                    },
+                    Editor: {
+                        MemoryUnit: 'bytes',
+                        MemorySwapUnit: 'bytes'
+                    }
+                };
+            },
+
             _convertSettingsToViewModel: function(settings) {
                 var viewModel = {};
 
@@ -1024,6 +1073,16 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 }
 
+                self.copy(hostConfig, viewModel, 'SecurityOpt');
+
+                var storageOpt = [];
+                self._safeKeyValueEach(hostConfig.StorageOpt, function(key, value) {
+                    storageOpt.push({ Key: key, Value: value});
+                });
+                if (storageOpt.length) {
+                    viewModel.StorageOpt = storageOpt;
+                }
+
                 self.copy(hostConfig, viewModel, 'CgroupParent');
 
                 return viewModel;
@@ -1037,7 +1096,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     { id: "dockerCloudImageTab_run", lbl: "Run" },
                     { id: "dockerCloudImageTab_network", lbl: "Network" },
                     { id: "dockerCloudImageTab_resources", lbl: "Resources" },
-                    { id: "dockerCloudImageTab_privileges", lbl: "Privileges" },
+                    { id: "dockerCloudImageTab_security", lbl: "Security" },
                     { id: "dockerCloudImageTab_advanced", lbl: "Advanced" }];
 
                 var imageDataTabbedPane = new TabbedPane();
@@ -1059,13 +1118,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         self.updateOkBtnState();
                     };
                     tab.clearMessages = function (id) {
-                        self._removeFromArray(tab.errors, id);
-                        self._removeFromArray(tab.warnings, id);
+                        self.removeFromArray(tab.errors, id);
+                        self.removeFromArray(tab.warnings, id);
                         tab._updateTabIcon();
                         self.updateOkBtnState();
                     };
                     tab.addMessage = function (id, warning) {
-                        self._addToArrayIfAbsent(warning ? tab.warnings : tab.errors, id);
+                        self.addToArrayIfAbsent(warning ? tab.warnings : tab.errors, id);
                         tab._updateTabIcon();
                         self.updateOkBtnState();
                     };
@@ -1114,7 +1173,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 var useLocalInstance = self.$useLocalInstance.is(':checked');
                 self.$dockerAddress.prop('disabled', useLocalInstance);
                 if (useLocalInstance) {
-                    self.$dockerAddress.val(self.defaultLocalSocketURI);
+                    self.$dockerAddress.val(self.defaultLocalInstanceURI);
                 }
 
                 self.$checkConnectionBtn.click(self._checkConnectionClickHandler);
@@ -1124,31 +1183,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     // Normalize the Docker address and do some auto-correction regarding count of slashes after the
                     // scheme.
                     var address = self.$dockerAddress.val();
-                    var match = address.match(/([a-zA-Z]+?):\/*(.*)/);
-                    var scheme;
-                    var schemeSpecificPart;
-                    var ignore = false;
-                    if (match) {
-                        // Some scheme detected.
-                        scheme = match[1].toLowerCase();
-                        schemeSpecificPart = match[2];
-                    } else if (address.match(/[0-9].*/)) {
-                        scheme = 'tcp';
-                        schemeSpecificPart = address;
-                    } else {
-                        match = address.match(/\/+(.*)/);
-                        if (match) {
-                            scheme = 'unix';
-                            schemeSpecificPart = match[1];
-                        } else {
-                            // Most certainly invalid, but let the server complain about it.
-                            ignore = true;
-                        }
-                    }
-
-                    if (!ignore) {
-                        self.$dockerAddress.val(scheme + ':' + (scheme === 'unix' ? '///' : '//') + schemeSpecificPart);
-                    }
+                    address = self.sanitizeURI(address, self.windowsHost);
+                    self.$dockerAddress.val(address);
 
                     self._scheduleConnectionCheck();
                 });
@@ -1178,16 +1214,21 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     BS.DockerImageDialog.close();
                 });
 
-                var editDelegates = self.selectors.imagesTableRow + ' .highlight, ' + self.selectors.editImageLink;
+                var editDelegates = '.imagesTableRow .highlight, .editImageLink';
                 self.$imagesTable.on('click', editDelegates, function () {
                     self.showEditDialog($j(this));
                     return false;
                 });
 
                 self.$useOfficialDockerImage.change(function () {
-                    self.$image.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
-                    self.$registryUser.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
-                    self.$registryPassword.prop('disabled', self.$useOfficialDockerImage.is(':checked'));
+                    var useOfficialAgentImage = self.$useOfficialDockerImage.is(':checked');
+                    self.$image.prop('disabled', useOfficialAgentImage);
+                    self.$registryUser.prop('disabled', useOfficialAgentImage);
+                    self.$registryPassword.prop('disabled', useOfficialAgentImage);
+                    if (useOfficialAgentImage) {
+                        self.$registryUser.val('');
+                        self.$registryPassword.val('');
+                    }
                     self.$image.blur();
                 }).change();
 
@@ -1235,8 +1276,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     $swap.blur();
                 });
 
-                self.$dialog.on("blur", 'input:text', self.validate);
-                self.$dialog.on("change", 'input:not(input:text):not(input:button), select', self.validate);
+                self.$dialog.on("blur", 'input:text', self.validateHandler);
+                self.$dialog.on("change", 'input:not(input:text):not(input:button), select', self.validateHandler);
 
                 self.$imagesTable.on('click', ".dockerCloudDeleteBtn", function() {
                     if (!confirm('Do you really want to delete this image ?')) {
@@ -1282,15 +1323,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
                     // Fetch closest table.
                     var $tableBody = $elt.closest("tbody");
-                    var key = $tableBody.attr("id");
-                    var index = $j.data($tableBody.get(0), "index") || 0;
-                    index++;
-                    self.logDebug("Adding row #" + index + " to table " + key + ".");
-                    var $table = $elt.closest("table");
-                    $elt.closest("tr").before('<tr>' + self.arrayTemplates[key].replace(/IDX/g, index) + '<td' +
-                    ' class="center dockerCloudCtrlCell">' + self.arrayTemplates.deleteCell + '</td></tr>');
-                    $j.data($tableBody.get(0), "index", index);
-                    self._updateTableMandoryStarsVisibility($table);
+
+                    self._addTableRow($tableBody);
                 });
 
                 self.$swapUnlimited.change(function() {
@@ -1317,6 +1351,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.$testedImage.val(JSON.stringify(settings));
 
                     self.$testContainerLabel.text("Starting test...");
+                    self.testPhase = 'CREATE';
                     self._invokeTestAction('create', BS.Clouds.Admin.CreateProfileForm.serializeParameters())
                         .done(function (response) {
                             self.testUuid = JSON.parse(response.responseText).testUuid;
@@ -1332,6 +1367,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.$testContainerErrorIcon.hide();
 
                     self.$testContainerLabel.text("Waiting on server...");
+                    self.testPhase = 'START';
                     self._invokeTestAction('start')
                         .done(function () {
                             self._queryTestStatus();
@@ -1405,11 +1441,13 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self._invokeTestAction('query', BS.Clouds.Admin.CreateProfileForm.serializeParameters())
                         .done(function(response){
                             var responseMap = self._parseTestStatusResponse(response.responseText);
-                            if (responseMap.status == 'PENDING') {
+                            if (!responseMap || responseMap.status === 'PENDING') {
                                 self.logDebug('Scheduling status retrieval.');
                                 setTimeout(self._queryTestStatus, 5000);
                             }
-                            self._processTestStatusResponse(responseMap);
+                            if (responseMap) {
+                                self._processTestStatusResponse(responseMap);
+                            }
                         });
                 }
             },
@@ -1429,6 +1467,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
 
             _closeStatusSocket: function() {
                 if (self.testStatusSocket) {
+                    self.logInfo("Closing status socket.");
                     try { self.testStatusSocket.close() } catch (e) {}
                     delete self.testStatusSocket;
                 }
@@ -1444,15 +1483,22 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     responseMap.msg + ' Container ID: ' + responseMap.containerId + ' Uuid: ' + responseMap.testUuid +
                     ' Warnings: ' + responseMap.warnings.length);
 
-                self.$testContainerLabel.text(responseMap.msg);
+                if (self.testPhase !== responseMap.phase) {
+                    self.logDebug('Ignoring spurious status message.');
+                    return;
+                }
+                self.$testContainerLabel.text(self.shortenString(responseMap.msg, 300));
+                var agentStarted = responseMap.containerStartTime !== null &&
+                    responseMap.containerStartTime !== undefined;
 
+                if (responseMap.status === 'PENDING') {
+                    if (agentStarted) {
+                        // Note: streaming log on Windows Docker daemons is currently not functional:
+                        // See: https://github.com/moby/moby/issues/30046
+                        if (self.hasXTermSupport && !self.logStreamingSocket && self.daemonOs !== 'windows') {
+                            self.logInfo('Opening live logs socket now.');
 
-                if (responseMap.status == 'PENDING') {
-                    if (responseMap.phase == "WAIT_FOR_AGENT") {
-                        if (self.hasXTermSupport && !self.logStreamingSocket) {
-                            console.log('Opening live logs sockt now.');
-
-                            var url =self.resolveWebSocketURL(self.streamSocketPath + '?correlationId=' + self.testUuid);
+                            var url = self.resolveWebSocketURL(self.streamSocketPath + '?testUuid=' + self.testUuid);
                             self.$dockerTestContainerOutputTitle.fadeIn(400);
                             // Compensate the appearance of the terminal with a upward shift of the dialog window.
                             // Should be roughly half of the terminal height include the title.
@@ -1476,16 +1522,18 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     self.$testContainerCancelBtn.hide();
                     self.$testContainerLoader.hide();
                     self.$testContainerCloseBtn.show();
-                    if (responseMap.phase == 'WAIT_FOR_AGENT') {
+
+                    if (agentStarted) {
                         self.$testContainerContainerLogsBtn.show();
                         self.$testExecInfo.append('Note: you can access the running container by using the <code>exec</code> ' +
                             'command on the the Docker daemon host. For example: ' +
-                            '<p class="mono">docker exec -t -i ' + responseMap.containerId + ' /bin/bash</p>');
+                            '<p class="mono">docker exec -t -i ' + responseMap.containerId + ' ' +
+                            (self.daemonOs === 'windows' ? 'powershell' : '/bin/bash') +'</p>');
                         self.$testExecInfo.slideDown();
                     }
 
-                    if (responseMap.status == 'FAILURE') {
-                        if (responseMap.phase == 'CREATE') {
+                    if (responseMap.status === 'FAILURE') {
+                        if (responseMap.phase === 'CREATE') {
                             self.$testContainerCloseBtn.val("Close");
                         } else {
                             self.$testContainerCloseBtn.val("Dispose container");
@@ -1499,8 +1547,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                                 responseMap.failureCause);
                         }
 
-                    } else if (responseMap.status == 'SUCCESS') {
-
+                    } else if (responseMap.status === 'SUCCESS') {
                         self.$testContainerCloseBtn.val("Dispose container");
 
                         var hasWarning = !!responseMap.warnings.length;
@@ -1511,14 +1558,14 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             self.$testContainerSuccessIcon.show();
                         }
 
-                        if (responseMap.phase == 'CREATE') {
+                        if (responseMap.phase === 'CREATE') {
                             self.$testContainerStartBtn.show();
                             if (hasWarning) {
                                 self.$testContainerLabel.text("Container " + responseMap.containerId + " created with warnings:");
                             } else {
                                 self.$testContainerLabel.text("Container " + responseMap.containerId + " successfully created.");
                             }
-                        } else if (responseMap.phase == 'WAIT_FOR_AGENT') {
+                        } else if (responseMap.phase === 'START') {
 
                             if (hasWarning) {
                                 self.$testContainerLabel.text("Agent connection detected for container " + responseMap.containerId + ":");
@@ -1629,31 +1676,30 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
             _initValidators: function () {
                 self.logDebug("Validators setup.");
 
-                var requiredValidator = function (elt) {
-                    var value = elt.val().trim();
-                    elt.val(value);
+                var requiredValidator = function ($elt) {
+                    var value = autoTrim($elt);
                     if (!value) {
                         return {msg: "This field is required."};
                     }
                 };
 
-                var ipv4OrIpv6Validator = function (elt) {
-                    var regex = /((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))/;
-                    var value = elt.val().trim();
-                    elt.val(value);
-                    if (value && !regex.test(value)) {
+                var ipv4OrIpv6Validator = function ($elt) {
+                    var value = autoTrim($elt);
+                    if (value && !self.IP_V4_OR_V6_REGEX.test(value)) {
                         return {msg: "Please specify a valid IPv4 or IPv6 address."};
                     }
                 };
 
-                var positiveIntegerValidator = function (elt) {
-                    var value = elt.val().trim().replace(/^0+/, '');
+                var positiveIntegerValidator = function ($elt) {
+                    var value = $elt.val().trim().replace(/^0+(.+)/, '$1');
+                    $elt.val(value);
                     if (!value) {
                         return;
                     }
                     if (/^[0-9]+$/.test(value)) {
-                        // Check that we are in the positive range of a golang int64 max value.
-                        if (parseInt(value) > 9223372036854775807) {
+                        // Check that we are in the positive range of a golang int64 max value, which is
+                        // 9223372036854775807 minus a safety marge due to comparison rounding errors.
+                        if (parseInt(value) > 9000000000000000000) {
                             return {msg: "Value out of bound."};
                         }
                     } else {
@@ -1661,30 +1707,27 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 };
 
-                var portNumberValidator = function (elt) {
-                    var value = elt.val().trim();
-                    elt.val(value);
+                var portNumberValidator = function ($elt) {
+                    var value = $elt.val();
                     if (!value) {
                         return;
                     }
-                    if (!positiveIntegerValidator(elt)) {
-                        var number = parseInt(elt.val());
-                        if (number >= 1 && number <= 65535) {
-                            return;
-                        }
+                    var number = parseInt($elt.val());
+                    if (number >= 1 && number <= 65535) {
+                        return;
                     }
-
                     return {msg: "Port number must be between 1 and 65535."};
                 };
 
-                var cpusValidator = function(elt) {
-                    var value = elt.val().trim().replace(/^0+\B/, '');
+                var cpusValidator = function($elt) {
+                    var value = autoTrim($elt).replace(/^0+\B/, '');
+                    $elt.val(value);
                     if (!value) {
                         return;
                     }
                     if (/^[0-9]+(\.[0-9]+)?$/.test(value)) {
                         var number = parseFloat(value) * 1e9;
-                        if (number > 9223372036854775807) {
+                        if (number > 9000000000000000000) {
                             return {msg: "Value out of bound."};
                         }
                         if (number % 1 !== 0) { // Should have no decimal part left.
@@ -1695,29 +1738,21 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 };
 
-                var cpuSetValidator = function(elt) {
-                    var value = elt.val().trim();
-                    elt.val(value);
-                    if (!value) {
-                        return;
-                    }
-
-                    if (!/^[0-9]+(?:[-,][0-9]+)*$/.test(value)) {
+                var cpuSetValidator = function($elt) {
+                    var value = autoTrim($elt);
+                    if (value && !/^[0-9]+(?:[-,][0-9]+)*$/.test(value)) {
                         return {msg: "Invalid Cpuset specification."};
                     }
                 };
 
-                var versionValidator = function(targetVersion, elt) {
-                    if (!self.effectiveApiVersion) {
-                        return;
-                    }
-                    var value = elt.val().trim();
-                    elt.val(value);
-                    if (!value) {
-                        return;
-                    }
-
+                var versionValidator = function(targetVersion, $elt) {
                     var daemonVersion = self.effectiveApiVersion;
+                    if (!daemonVersion) {
+                        return;
+                    }
+                    if (isEmptyInput($elt)) {
+                        return;
+                    }
 
                     if (self.compareVersionNumbers(daemonVersion, targetVersion) < 0) {
                         return {msg: 'The daemon API version (v' + daemonVersion + ') is lower than required for ' +
@@ -1725,10 +1760,41 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }
                 };
 
+                var osExclusionValidator = function(excludedOs, elt) {
+                    var daemonOs = self.daemonOs;
+                    if (!daemonOs) {
+                        return;
+                    }
+                    if (isEmptyInput(elt)) {
+                        return;
+                    }
+                    if (daemonOs.toLowerCase() === excludedOs.toLowerCase()) {
+                        return {msg: 'This configuration field is not compatible with the daemon operating system ('
+                        + excludedOs + ').', warning: true};
+                    }
+                };
+
+                var noWindowsValidator = osExclusionValidator.bind(this, 'windows');
+
+                var autoTrim = function($elt) {
+                    var value = $elt.val().trim();
+                    $elt.val(value);
+                    return value;
+                };
+
+                var isEmptyInput = function($elt) {
+                    if ($elt.is(':checkbox') || $elt.is(':radio')) {
+                        return !$elt.is(':checked');
+                    } else {
+                        return !$elt.val();
+                    }
+                };
+
                 self.validators = {
                     dockerCloudImage_Profile: [requiredValidator, function($elt) {
                         if (!/^\w+$/.test($elt.val())) {
-                            return {msg: 'Only alphanumerical characters without diacritic and underscores allowed.'}
+                            return {msg: 'Only alphanumerical characters (without diacritic) and underscores' +
+                            ' allowed.'}
                         }
                     }, function($elt) {
                         var newProfile = $elt.val();
@@ -1738,21 +1804,24 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                         }
                     }],
                     dockerCloudImage_Image: [requiredValidator],
+                    dockerCloudImage_UseOfficialTCAgentImage: [noWindowsValidator],
                     dockerCloudImage_MaxInstanceCount: [positiveIntegerValidator, function($elt) {
-                        if (parseInt($elt.val()) < 1) {
+                        var value = $elt.val();
+                        if (value && parseInt(value) < 1) {
                             return {msg: "At least one instance must be permitted."};
                         }
                     }],
                     dockerCloudImage_RegistryUser: [function ($elt){
-                        var pass = self.$registryPassword.val().trim();
-                        var user = $elt.val().trim();
+                        autoTrim($elt);
+                        var pass = self.$registryPassword.val();
+                        var user = $elt.val();
                         if (pass && !user) {
                             return {msg: 'Must specify user if password set.'}
                         }
                     }],
                     dockerCloudImage_RegistryPassword: [function ($elt){
                         var user = self.$registryUser.val().trim();
-                        var pass = $elt.val().trim();
+                        var pass = $elt.val();
                         if (user && !pass) {
                             return {msg: 'Must specify password if user set.'}
                         }
@@ -1761,8 +1830,7 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     dockerCloudImage_Entrypoint_IDX: [function ($elt) {
                         var row = $elt.closest("tr");
                         if (row.index() === 0) {
-                            var value = $elt.val().trim();
-                            $elt.val(value);
+                            var value = autoTrim($elt);
                             if (!value) {
                                 return {msg: "The first entry point argument must point to an executable."};
                             }
@@ -1770,8 +1838,8 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     }],
                     dockerCloudImage_Volumes_IDX_PathInContainer: [requiredValidator],
                     dockerCloudImage_Ports_IDX_HostIp: [ipv4OrIpv6Validator],
-                    dockerCloudImage_Ports_IDX_HostPort: [portNumberValidator],
-                    dockerCloudImage_Ports_IDX_ContainerPort: [requiredValidator, portNumberValidator],
+                    dockerCloudImage_Ports_IDX_HostPort: [positiveIntegerValidator, portNumberValidator],
+                    dockerCloudImage_Ports_IDX_ContainerPort: [requiredValidator, positiveIntegerValidator, portNumberValidator],
                     dockerCloudImage_Dns_IDX: [requiredValidator],
                     dockerCloudImage_DnsSearch_IDX: [requiredValidator],
                     dockerCloudImage_ExtraHosts_IDX_Name: [requiredValidator],
@@ -1788,75 +1856,56 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                     dockerCloudImage_Devices_IDX_PathInContainer: [requiredValidator],
                     dockerCloudImage_Env_IDX_Name: [requiredValidator],
                     dockerCloudImage_Labels_IDX_Key: [requiredValidator],
-                    dockerCloudImage_Memory: [function ($elt) {
-                        var value = $elt.val().trim();
-                        $elt.val(value);
+                    dockerCloudImage_SecurityOpt_IDX: [requiredValidator],
+                    dockerCloudImage_StorageOpt_IDX_Key: [requiredValidator],
+                        dockerCloudImage_Memory: [positiveIntegerValidator, function ($elt) {
+                        var value = $elt.val();
                         if (!value) {
                             return;
                         }
-                        var result = positiveIntegerValidator($elt);
-                        if (!result) {
-                            var number = parseInt(value);
-                            var multiplier = self._units_multiplier[self.$memoryUnit.val()];
-                            if ((number * multiplier) < 524288) {
-                                result = {msg: "Memory must be at least 4Mb."}
-                            }
+                        var number = parseInt(value);
+                        var multiplier = self._units_multiplier[self.$memoryUnit.val()];
+                        if ((number * multiplier) < 4194304) {
+                            return {msg: "Memory must be at least 4Mb."}
                         }
-                        return result;
                     }],
                     dockerCloudImage_CPUs: [cpusValidator, versionValidator.bind(this, '1.25')],
-                    dockerCloudImage_CpuQuota: [function($elt) {
-                        var value = $elt.val().trim();
-                        $elt.val(value);
+                    dockerCloudImage_CpuQuota: [positiveIntegerValidator, function($elt) {
+                        var value = $elt.val();
                         if (!value) {
                             return;
                         }
-                        var result = positiveIntegerValidator($elt);
-                        if (!result) {
-                            var number = parseInt(value);
-                            if (number < 1000) {
-                                result = {msg: "CPU Quota must be at least of 1000μs (1ms)."}
-                            }
+                        var number = parseInt(value);
+                        if (number < 1000) {
+                            return {msg: "CPU Quota must be at least of 1000μs (1ms)."}
                         }
-                        return result;
                     }],
-                    dockerCloudImage_CpusetCpus: [cpuSetValidator],
-                    dockerCloudImage_CpusetMems: [cpuSetValidator],
+                    dockerCloudImage_CpusetCpus: [noWindowsValidator, cpuSetValidator],
+                    dockerCloudImage_CpusetMems: [noWindowsValidator, cpuSetValidator],
                     dockerCloudImage_CpuShares: [positiveIntegerValidator],
-                    dockerCloudImage_CpuPeriod: [function($elt) {
-                        var value = $elt.val().trim();
-                        $elt.val(value);
+                    dockerCloudImage_CpuPeriod: [noWindowsValidator, positiveIntegerValidator, function($elt) {
+                        var value = $elt.val();
                         if (!value) {
                             return;
                         }
-                        var result = positiveIntegerValidator($elt);
-                        if (!result) {
-                            var number = parseInt(value);
-                            if (number < 1000 || number > 1000000) {
-                                result = {msg: "CPU period must be between 1000μs (1ms) and 1000000μs (1s)"}
-                            }
+                        var number = parseInt(value);
+                        if (number < 1000 || number > 1000000) {
+                            return {msg: "CPU period must be between 1000μs (1ms) and 1000000μs (1s)"}
                         }
-                        return result;
                     }],
-                    dockerCloudImage_BlkioWeight: [function ($elt) {
-                        var value = $elt.val().trim();
-                        $elt.val(value);
+                    dockerCloudImage_BlkioWeight: [noWindowsValidator, positiveIntegerValidator, function ($elt) {
+                        var value = $elt.val();
                         if (!value) {
                             return;
                         }
-                        var result = positiveIntegerValidator($elt);
-                        if (!result) {
-                            var number = parseInt(value);
-                            if (number < 10 || number > 1000) {
-                                result = {msg: "IO weight must be between 10 and 1000"}
-                            }
+                        var number = parseInt(value);
+                        if (number < 10 || number > 1000) {
+                            return {msg: "IO weight must be between 10 and 1000"}
                         }
-                        return result;
                     }],
-                    dockerCloudImage_MemorySwap: [
+                    dockerCloudImage_MemorySwap: [noWindowsValidator, positiveIntegerValidator,
                         function ($elt) {
-                            var value = $elt.val().trim();
-                            $elt.val(value);
+                            var value = $elt.val();
                             if (!value) {
                                 return;
                             }
@@ -1867,21 +1916,20 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                             if (!memoryVal) {
                                 return {msg: "Swap limitation can only be used in conjunction with the memory limit."};
                             }
-                            if (!positiveIntegerValidator(self.$memory)) {
-                                var memory = parseInt(memoryVal);
-                                var result = positiveIntegerValidator($elt);
-                                if (!result) {
-                                    var swap = parseInt(value);
-                                    var memoryUnitMultiplier = self._units_multiplier[self.$memoryUnit.val()];
-                                    var swapUnitMultiplier = self._units_multiplier[self.$swapUnit.val()];
-                                    if (swap * swapUnitMultiplier <= memory * memoryUnitMultiplier) {
-                                        result = {msg: "Swap limit must be strictly greater than the memory limit."}
-                                    }
-                                }
-                                return result;
+                            var memory = parseInt(memoryVal);
+                            if (isNaN(memory)) {
+                                return;
+                            }
+                            var swap = parseInt(value);
+                            var memoryUnitMultiplier = self._units_multiplier[self.$memoryUnit.val()];
+                            var swapUnitMultiplier = self._units_multiplier[self.$swapUnit.val()];
+                            if (swap * swapUnitMultiplier <= memory * memoryUnitMultiplier) {
+                                return {msg: "Swap limit must be strictly greater than the memory limit."}
                             }
                         }
-                    ]
+                    ],
+                    dockerCloudImage_OomKillDisable: [noWindowsValidator],
+                    dockerCloudImage_CgroupParent: [noWindowsValidator]
                 };
             },
 
@@ -1910,43 +1958,62 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 self.$testExecInfo.empty();
                 self.$testExecInfo.hide();
                 self.$testContainerLabel.removeClass('containerTestError');
-                self.$testContainerCancelBtn.attr('disabled', false)
+                self.$testContainerCancelBtn.attr('disabled', false);
                 self.testCancelled = false;
+                delete self.testPhase;
             },
 
-            validate: function () {
+            validateHandler: function() {
+                var $elt = $j(this);
+                var eltId = $elt.attr("id") || $elt.attr("name");
 
-                var result;
-                var elt = $j(this);
-                var eltId = elt.attr("id") || elt.attr("name");
-
-                var vals = self.validators[eltId];
-                if (!vals) {
-                    vals = self.validators[eltId.replace(/[0-9]+/, "IDX")];
+                var validators = self.validators[eltId];
+                if (!validators) {
+                    validators = self.validators[eltId.replace(/[0-9]+/, "IDX")];
                 }
 
+                var validation = self.validate($elt, validators);
+
+                var tab = self._getElementTab($elt);
+                var errorMsg = $j("#" + eltId + "_error").empty();
+                var warningMsg = $j("#" + eltId + "_warning").empty();
+
+                tab.clearMessages(eltId);
+
+                if (validation.warnings.length) {
+                    $j.each(validation.warnings, function(i, warning) {
+                        warningMsg.append('<p>' + warning + '</p>');
+                    });
+                    tab.addMessage(eltId, true)
+                }
+                if (validation.error) {
+                    errorMsg.append(validation.error);
+                    tab.addMessage(eltId, false)
+                }
+            },
+
+            validate: function ($elt, validators) {
+                var result;
+
+                var error = null;
+                var warnings = [];
                 // Only validate fields that are not disabled.
                 // Note: fields that are not visible must always be validated in order to perform cross-tabs
                 // validation.
-                if (vals && !elt.is(':disabled')) {
-                    $j.each(vals, function (i, validator) {
-                        result = validator(elt);
+                if (validators && !$elt.is(':disabled')) {
+                    $j.each(validators, function (i, validator) {
+                        result = validator($elt);
                         if (result) {
-                            return false;
+                            if (result.warning) {
+                                warnings.push(result.msg);
+                            } else if (!error) {
+                                error = result.msg;
+                            }
                         }
                     });
                 }
-                var tab = self._getElementTab(elt);
-                var errorMsg = $j("#" + eltId + "_error").empty();
-                var warningMsg = $j("#" + eltId + "_warning").empty();
-                if (result) {
-                    var msg = result.warning ? warningMsg : errorMsg;
-                    msg.append(result.msg);
-                    tab.addMessage(eltId, result.warning);
-                } else {
-                    tab.clearMessages(eltId);
-                }
-                return true;
+
+                return { warnings: warnings || [], error: error};
             },
 
             /* UTILS */
@@ -1970,15 +2037,15 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 try { console.log(msg) } catch (e) {}
             },
             prepareDiagnosticDialogWithLink: function($container, msg, details) {
-                self.prepareDiagnosticDialog(msg, details);
                 var viewDetailsLink = $j('<a href="#/">view details</a>)').click(function () {
+                    self.prepareDiagnosticDialog(msg, details);
                     BS.DockerDiagnosticDialog.showCentered();
                 });
                 $container.append(' (').append(viewDetailsLink).append(')');
             },
 
             prepareDiagnosticDialog: function(msg, details) {
-                self.$diagnosticMsg.text(msg);
+                self.$diagnosticMsg.text(self.shortenString(msg, 300));
                 self.$diagnosticLogs.text(details);
 
                 if (!self.clipboard && typeof Clipboard !== 'undefined') {
@@ -2059,39 +2126,25 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 });
                 return digits;
             },
-            _padLeft: function(txt, padChar, minSize) {
-                txt = txt.toString();
-                while (txt.length < minSize) txt = padChar + txt;
-                return txt;
-            },
             _units_multiplier:  {
                 GiB: 1073741824,
                 MiB: 1048576,
                 KiB: 1024,
                 bytes: 1
             },
-
-            _resolveUnit: function(value) {
-                var resolved = null;
-                $j.each(self._units_multiplier, function(unit, multiplier) {
-                    if (value % multiplier === 0) {
-                        resolved = unit;
-                    }
-                });
-                return resolved || 'bytes';
-            },
-            _removeFromArray: function (array, value) {
+            removeFromArray: function (array, value) {
                 var i = array.indexOf(value);
                 if (i != -1) {
                     return array.splice(i, 1);
                 }
             },
-            _addToArrayIfAbsent: function (array, value) {
+            addToArrayIfAbsent: function (array, value) {
                 var i = array.indexOf(value);
                 if (i == -1) {
                     array.push(value);
                 }
             },
+
 
             // Base-64 encoding/decoding is tricky to achieve in an unicode-safe way (especially when using the atob
             // and btoa standard functions). We leverage here an all-purpose binary-based Base64 encoder and do the
@@ -2131,6 +2184,66 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
                 }
             },
 
+            sanitizeURI: function(uri, windowsHost) {
+                uri = uri && uri.trim();
+                if (!uri) {
+                    return uri;
+                }
+                var match = uri.match(windowsHost ? /^([a-zA-Z]+?):[/\\]+(.*)/ : /^([a-zA-Z]+?):\/+(.*)/);
+                var scheme;
+                var schemeSpecificPart;
+                var ignore = false;
+
+                // Default: assume TCP hostname.
+                scheme = 'tcp';
+                schemeSpecificPart = uri;
+
+                if (match) {
+                    // Some scheme detected, use it instead.
+                    scheme = match[1].toLowerCase();
+                    schemeSpecificPart = match[2];
+                } if (!self.IP_V4_OR_V6_REGEX.test(uri)) {
+                    // Not an IP address, does it look like a file path ?
+                    if (windowsHost) {
+                        match = uri.match(/^[/\\]+(.*)/);
+                        if (match) {
+                            scheme = 'npipe';
+                            schemeSpecificPart = match[1];
+                        }
+                    } else {
+                        match = uri.match(/^\/+(.*)/);
+                        if (match) {
+                            scheme = 'unix';
+                            schemeSpecificPart = match[1];
+                        }
+                    }
+                }
+
+                var leadingSlashes;
+                if (scheme === 'unix') {
+                    leadingSlashes = '///';
+                } else if (scheme === 'npipe') {
+                    leadingSlashes = '////';
+                    schemeSpecificPart = schemeSpecificPart.replace(/\\/g, '/');
+                } else {
+                    leadingSlashes = '//';
+                }
+
+                uri = scheme + ':' + leadingSlashes + schemeSpecificPart;
+
+                return uri;
+            },
+
+            shortenString: function(str, maxLen) {
+                if (!str) {
+                    return "";
+                }
+                if (str.length <= maxLen) {
+                    return str;
+                }
+                return str.substring(0, maxLen).trim() + "…";
+            },
+
             arrayTemplates: {
                 deleteCell: '<a class="btn dockerCloudCtrlBtn dockerCloudDeleteBtn" href="#/" title="Delete"><span></span></a>',
                 settingsCell: '<a class="btn dockerCloudCtrlBtn dockerCloudSettingsBtn" href="#/" title="Settings"><span></span></a>',
@@ -2158,6 +2271,10 @@ BS.Clouds.Docker = BS.Clouds.Docker || (function () {
         <td><input type="text" id="dockerCloudImage_Links_IDX_Alias" /><span class="error" id="dockerCloudImage_Links_IDX_Alias_error"></span></td>',
                 dockerCloudImage_LogConfig: '<td><input type="text" id="dockerCloudImage_LogConfig_IDX_Key" /><span class="error" id="dockerCloudImage_LogConfig_IDX_Key_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_LogConfig_IDX_Value" /></td>',
+                dockerCloudImage_SecurityOpt: '<td><input type="text" id="dockerCloudImage_SecurityOpt_IDX"/><span' +
+                ' class="error" id="dockerCloudImage_SecurityOpt_IDX_error"></span></td>',
+                dockerCloudImage_StorageOpt: '<td><input type="text" id="dockerCloudImage_StorageOpt_IDX_Key" /><span class="error" id="dockerCloudImage_StorageOpt_IDX_Key_error"></span></td>\
+        <td><input type="text" id="dockerCloudImage_StorageOpt_IDX_Value" /></td>',
                 dockerCloudImage_Ulimits: ' <td><input type="text" id="dockerCloudImage_Ulimits_IDX_Name" /><span class="error" id="dockerCloudImage_Ulimits_IDX_Name_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_Ulimits_IDX_Soft" /><span class="error" id="dockerCloudImage_Ulimits_IDX_Soft_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_Ulimits_IDX_Hard" /><span class="error" id="dockerCloudImage_Ulimits_IDX_Hard_error"></span></td>',

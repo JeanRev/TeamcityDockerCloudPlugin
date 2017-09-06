@@ -5,32 +5,37 @@ import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 
 import javax.annotation.Nonnull;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
  * Container test manager.
  */
-abstract class ContainerTestManager {
+interface ContainerTestManager {
 
     /**
      * Create a new test container.
      *
      * @param clientConfig the cloud client configuration
      * @param imageConfig the image configuration from which the test container will be created
-     * @param listener the test listener
      *
      * @return the create test UUID
+     *
+     * @throws NullPointerException if any argument is {@code null}
+     * @throws ContainerTestException if an error prevented the container creation
      */
     @Nonnull
-    abstract UUID createNewTestContainer(@Nonnull DockerCloudClientConfig clientConfig,
-                                         @Nonnull DockerImageConfig imageConfig,
-                                         @Nonnull ContainerTestListener listener);
+    UUID createNewTestContainer(@Nonnull DockerCloudClientConfig clientConfig,
+                                         @Nonnull DockerImageConfig imageConfig);
     /**
      * Start the test container for the given test UUID.
      *
      * @param testUuid the test UUID
+     *
+     * @throws NullPointerException if {@code testUuid} is {@code null}
+     * @throws ContainerTestException if an error prevented the container from being started
      */
-    abstract void startTestContainer(@Nonnull UUID testUuid);
+    void startTestContainer(@Nonnull UUID testUuid);
 
     /**
      * Gets the containers logs for the given test UUID.
@@ -38,35 +43,38 @@ abstract class ContainerTestManager {
      * @param testUuid the test UUID
      *
      * @return the container logs
+     *
+     * @throws NullPointerException if {@code testUuid} is {@code null}
+     * @throws ContainerTestException if an error prevented querying the container logs
      */
     @Nonnull
-    public abstract String getLogs(@Nonnull UUID testUuid);
+    String getLogs(@Nonnull UUID testUuid);
 
     /**
      * Dispose the test with the given UUID.
      *
      * @param testUuid the test UUID
+     *
+     * @throws NullPointerException if {@code testUuid} is {@code null}
      */
-    abstract void dispose(@Nonnull UUID testUuid);
+    void dispose(@Nonnull UUID testUuid);
 
     /**
-     * Notify that an interaction occurred for the given test UUUID.
+     * Sets the listener for the given test UUID.
      *
-     * @param testUUid the test UUID
+     * @param testUuid the test UUID
+     * @param listener the test listener
+     *
+     * @throws NullPointerException if any argument is {@code null}
      */
-    abstract void notifyInteraction(@Nonnull UUID testUUid);
+    void setListener(@Nonnull UUID testUuid, @Nonnull ContainerTestListener listener);
 
-    abstract void dispose();
+    @Nonnull
+    Optional<TestContainerStatusMsg> retrieveStatus(UUID testUuid);
 
-    static class ActionException extends RuntimeException {
-        final int code;
-        final String message;
-
-        ActionException(int code, String message) {
-            super(message);
-            this.code = code;
-            this.message = message;
-        }
-    }
+    /**
+     * Dispose the test manager.
+     */
+    void dispose();
 
 }

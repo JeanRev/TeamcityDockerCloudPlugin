@@ -39,58 +39,15 @@
  */
 package run.var.teamcity.cloud.docker.client.apcon;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
-import java.io.FilterInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import javax.ws.rs.ProcessingException;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.core.Configuration;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response;
-
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-
+import jersey.repackaged.com.google.common.util.concurrent.MoreExecutors;
+import org.apache.http.ConnectionReuseStrategy;
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpException;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.protocol.HttpContext;
-import org.apache.http.protocol.HttpRequestExecutor;
-import org.apache.http.util.Args;
-import org.glassfish.jersey.apache.connector.ApacheClientProperties;
-import org.glassfish.jersey.apache.connector.LocalizationMessages;
-import org.glassfish.jersey.client.ClientProperties;
-import org.glassfish.jersey.client.ClientRequest;
-import org.glassfish.jersey.client.ClientResponse;
-import org.glassfish.jersey.client.RequestEntityProcessing;
-import org.glassfish.jersey.client.spi.AsyncConnectorCallback;
-import org.glassfish.jersey.client.spi.Connector;
-import org.glassfish.jersey.internal.util.PropertiesHelper;
-import org.glassfish.jersey.message.internal.HeaderUtils;
-import org.glassfish.jersey.message.internal.OutboundMessageContext;
-import org.glassfish.jersey.message.internal.ReaderWriter;
-import org.glassfish.jersey.message.internal.Statuses;
-
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.AuthCache;
@@ -125,11 +82,51 @@ import org.apache.http.impl.conn.DefaultManagedHttpClientConnection;
 import org.apache.http.impl.conn.ManagedHttpClientConnectionFactory;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.io.SessionOutputBuffer;
+import org.apache.http.protocol.HttpContext;
+import org.apache.http.protocol.HttpRequestExecutor;
+import org.apache.http.util.Args;
 import org.apache.http.util.TextUtils;
 import org.apache.http.util.VersionInfo;
-
-import jersey.repackaged.com.google.common.util.concurrent.MoreExecutors;
+import org.glassfish.jersey.apache.connector.ApacheClientProperties;
+import org.glassfish.jersey.apache.connector.LocalizationMessages;
+import org.glassfish.jersey.client.ClientProperties;
+import org.glassfish.jersey.client.ClientRequest;
+import org.glassfish.jersey.client.ClientResponse;
+import org.glassfish.jersey.client.RequestEntityProcessing;
+import org.glassfish.jersey.client.spi.AsyncConnectorCallback;
+import org.glassfish.jersey.client.spi.Connector;
+import org.glassfish.jersey.internal.util.PropertiesHelper;
+import org.glassfish.jersey.message.internal.HeaderUtils;
+import org.glassfish.jersey.message.internal.OutboundMessageContext;
+import org.glassfish.jersey.message.internal.ReaderWriter;
+import org.glassfish.jersey.message.internal.Statuses;
 import run.var.teamcity.cloud.docker.client.UpgradeAwareConnectionReuseStrategy;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Configuration;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.FilterInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /*
  * This class is a modified version of the Jersey connector for the Apache Http Client library
@@ -211,9 +208,6 @@ class ApacheConnector implements Connector {
     private final CookieStore cookieStore;
     private final boolean preemptiveBasicAuth;
     private final RequestConfig requestConfig;
-
-    // DK_CLD: See getHttpContext()
-    private final ThreadLocal<HttpContext> localHttpContext = new ThreadLocal<>();
 
     /**
      * Create the new Apache HTTP Client connector.
@@ -315,7 +309,16 @@ class ApacheConnector implements Connector {
         clientBuilder.setDefaultRequestConfig(requestConfig);
 
         /* DK_CLD: Add our connection reuse strategy. */
-        clientBuilder.setConnectionReuseStrategy(new UpgradeAwareConnectionReuseStrategy());
+        Object reuseStrategy = config.getProperties().get(ApacheConnectorProvider.CONNECTION_REUSE_STRATEGY_PROP);
+        if (reuseStrategy != null) {
+            if (reuseStrategy instanceof ConnectionReuseStrategy) {
+                clientBuilder.setConnectionReuseStrategy((ConnectionReuseStrategy) reuseStrategy);
+            } else {
+                LOGGER.severe("Not an connection reuse strategy instance: " + reuseStrategy.getClass());
+            }
+        }
+
+        clientBuilder.setKeepAliveStrategy((response, context) -> 0);
         clientBuilder.setRequestExecutor(new HttpRequestExecutor() {
             protected HttpResponse doReceiveResponse(
                     final HttpRequest request,
@@ -534,8 +537,6 @@ class ApacheConnector implements Connector {
             } catch (final IOException e) {
                 LOGGER.log(Level.SEVERE, null, e);
             }
-
-            localHttpContext.set(context);
             return responseContext;
         } catch (final Exception e) {
             throw new ProcessingException(e);
@@ -686,8 +687,6 @@ class ApacheConnector implements Connector {
 
         final InputStream inputStream;
 
-        // DK_CLD: do not forward the entity stream to Jersey if the connection has been upgraded. This prevent any
-        // component of trying to reading it, which likely result in unexpected result or even deadlock.
         if (response.getEntity() == null) {
             inputStream = new ByteArrayInputStream(new byte[0]);
         } else {

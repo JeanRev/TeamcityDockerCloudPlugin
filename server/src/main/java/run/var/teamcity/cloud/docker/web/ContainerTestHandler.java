@@ -1,11 +1,12 @@
 package run.var.teamcity.cloud.docker.web;
 
-import run.var.teamcity.cloud.docker.client.DockerClient;
+import run.var.teamcity.cloud.docker.DockerClientFacade;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -14,12 +15,12 @@ import java.util.List;
 public interface ContainerTestHandler {
 
     /**
-     * Retrieves the Docker client instance to be used for the test.
+     * Retrieves the Docker client facade instance to be used for the test.
      *
-     * @return the client instance
+     * @return the client facade instance
      */
     @Nonnull
-    DockerClient getDockerClient();
+    DockerClientFacade getDockerClientFacade();
 
     /**
      * Notify the handler that the test container ID is available. This callback is not expected to be called more
@@ -30,13 +31,21 @@ public interface ContainerTestHandler {
     void notifyContainerId(@Nonnull String containerId);
 
     /**
+     * Notify the handler that the test container has been started. This callback is not expected to be called more
+     * than once for a complete test.
+     *
+     * @param containerStartTime the container start time
+     */
+    void notifyContainerStarted(@Nonnull Instant containerStartTime);
+
+    /**
      * Notify the test status back to the user.
      *
-     * @param phase        the test phase
-     * @param status       the test status
-     * @param msg          the status message (may be {@code null})
+     * @param phase the test phase
+     * @param status the test status
+     * @param msg the status message (may be {@code null})
      * @param failureCause the failure cause (may be {@code null})
-     * @param warnings     a list of encountered warnings
+     * @param warnings a list of encountered warnings
      *
      * @throws NullPointerException if {@code phase}, {@code status} or {@code warnings} is {@code null}
      */

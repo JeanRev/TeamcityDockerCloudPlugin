@@ -7,13 +7,16 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.entry;
 
 @SuppressWarnings("unchecked")
 public abstract class AbstractNodeTest<N extends AbstractNode> {
@@ -29,11 +32,11 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
 
     @Test
     public void getArrayValuesNotAnArray() {
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> emptyNode().getArrayValues());
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> objectNode(pair("A", "1"), pair("B", "2")).getArrayValues());
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> stringNode("A").getArrayValues());
     }
 
@@ -49,9 +52,9 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
 
     @Test
     public void getObjectValuesNotAnObject() {
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> stringArrayNode("A", "B", "C").getObjectValues());
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> stringNode("A").getObjectValues());
     }
 
@@ -67,9 +70,9 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
 
     @Test
     public void getObjectNotAnObject() {
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> parentWithChildArray("A", "B", "C").getObject("child"));
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> stringNode("A").getObject("child"));
 
     }
@@ -90,9 +93,9 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
 
     @Test
     public void getArrayNotAnArray() {
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> parentWithChildObject(pair("A", "1")).getArray("child"));
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> stringNode("A").getArray("child"));
     }
 
@@ -100,14 +103,42 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
     public void getAsInt() {
         AbstractNode<N> node = parentWithChildInt(42);
         assertThat(node.getAsInt("child")).isEqualTo(42);
+        node = parentWithChildInt(Integer.MAX_VALUE);
+        assertThat(node.getAsInt("child")).isEqualTo(Integer.MAX_VALUE);
+        node = parentWithChildInt(Integer.MIN_VALUE);
+        assertThat(node.getAsInt("child")).isEqualTo(Integer.MIN_VALUE);
         assertThat(node.getAsInt("unknownChild", 0)).isEqualTo(0);
     }
 
     @Test
+    public void getAsIntOutOfBound() {
+        AbstractNode<N> nodeMax = parentWithChildLong(Integer.MAX_VALUE + 1L);
+        assertThatExceptionOfType(NodeProcessingException.class).
+                isThrownBy(() -> nodeMax.getAsInt("child"));
+        AbstractNode<N> nodeMin = parentWithChildLong(Integer.MIN_VALUE - 1L);
+        assertThatExceptionOfType(NodeProcessingException.class).
+                isThrownBy(() -> nodeMin.getAsInt("child"));
+    }
+
+    @Test
+    public void getAsIntFromDecimal() {
+        AbstractNode<N> node = parentWithChildDouble(1.0);
+        assertThat(node.getAsInt("child")).isEqualTo(1);
+
+        node = parentWithChildBigDecimal(new BigDecimal("1E+1"));
+        assertThat(node.getAsInt("child")).isEqualTo(10);
+
+        AbstractNode<N> nodeWithFraction = parentWithChildBigDecimal(BigDecimal.valueOf(1.1));
+        assertThatExceptionOfType(NodeProcessingException.class).
+                isThrownBy(() -> nodeWithFraction.getAsInt("child"));
+
+    }
+
+    @Test
     public void getAsIntNotAnInt() {
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> parentWithChildString("A").getAsInt("child"));
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> stringNode("A").getAsInt("child"));
     }
 
@@ -115,6 +146,33 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
     public void getAsLong() {
         AbstractNode<N> node = parentWithChildInt(42);
         assertThat(node.getAsLong("child")).isEqualTo(42);
+        node = parentWithChildLong(Long.MAX_VALUE);
+        assertThat(node.getAsLong("child")).isEqualTo(Long.MAX_VALUE);
+        node = parentWithChildLong(Long.MIN_VALUE);
+        assertThat(node.getAsLong("child")).isEqualTo(Long.MIN_VALUE);
+    }
+
+    @Test
+    public void getAsLongOutOfBound() {
+        AbstractNode<N> nodeMax = parentWithChildBigInteger(BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE));
+        assertThatExceptionOfType(NodeProcessingException.class).
+                isThrownBy(() -> nodeMax.getAsLong("child"));
+        AbstractNode<N> nodeMin = parentWithChildBigInteger(BigInteger.valueOf(Long.MIN_VALUE).subtract(BigInteger.ONE));
+        assertThatExceptionOfType(NodeProcessingException.class).
+                isThrownBy(() -> nodeMin.getAsLong("child"));
+    }
+
+    @Test
+    public void getAsLongFromDecimal() {
+        AbstractNode<N> node = parentWithChildDouble(1.0);
+        assertThat(node.getAsLong("child")).isEqualTo(1L);
+
+        node = parentWithChildBigDecimal(new BigDecimal("1E+1"));
+        assertThat(node.getAsLong("child")).isEqualTo(10L);
+
+        AbstractNode<N> nodeWithFraction = parentWithChildBigDecimal(BigDecimal.valueOf(1.1));
+        assertThatExceptionOfType(NodeProcessingException.class).
+                isThrownBy(() -> nodeWithFraction.getAsLong("child"));
     }
 
     @Test
@@ -126,9 +184,9 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
 
     @Test
     public void getAsBooleanNotABoolean() {
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> parentWithChildString("A").getAsBoolean("child"));
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> stringNode("A").getAsBoolean("child"));
     }
 
@@ -141,9 +199,9 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
 
     @Test
     public void getAsStringNotAString() {
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> parentWithChildInt(42).getAsString("child"));
-        assertThatExceptionOfType(UnsupportedOperationException.class).
+        assertThatExceptionOfType(NodeProcessingException.class).
                 isThrownBy(() -> intNode(42).getAsInt("child"));
     }
 
@@ -154,6 +212,36 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
         assertThat(node.getAsBigInt("unknownChild", BigInteger.ZERO)).isEqualTo(BigInteger.ZERO);
     }
 
+    @Test
+    public void getAsBigIntFromDecimal() {
+        AbstractNode<N> node = parentWithChildDouble(1.0);
+        assertThat(node.getAsBigInt("child")).isEqualTo(BigInteger.ONE);
+
+        node = parentWithChildDouble(1.0);
+        assertThat(node.getAsBigInt("child")).isEqualTo(BigInteger.ONE);
+
+        node = parentWithChildBigDecimal(new BigDecimal("1E+1"));
+        assertThat(node.getAsBigInt("child")).isEqualTo(BigInteger.TEN);
+
+        AbstractNode<N> nodeWithFraction = parentWithChildBigDecimal(BigDecimal.valueOf(1.1));
+        assertThatExceptionOfType(NodeProcessingException.class).
+                isThrownBy(() -> nodeWithFraction.getAsBigInt("child"));
+    }
+
+    @Test
+    public void isNull() {
+        AbstractNode<N> node = parentWithChildString("A");
+        assertThat(node.getObjectValues().get("child").isNull()).isFalse();
+        node = parentWithChildNull();
+        assertThat(node.getObjectValues().get("child").isNull()).isTrue();
+    }
+
+    protected AbstractNode<N> parentWithChildNull() {
+        ObjectNode parent = AbstractNode.OBJECT_MAPPER.createObjectNode();
+        parent.putNull("child");
+        return createNode(parent);
+    }
+
     protected AbstractNode<N> parentWithChildString(String value) {
         ObjectNode parent = AbstractNode.OBJECT_MAPPER.createObjectNode();
         parent.put("child", value);
@@ -161,6 +249,28 @@ public abstract class AbstractNodeTest<N extends AbstractNode> {
     }
 
     protected AbstractNode<N> parentWithChildInt(int value) {
+        ObjectNode parent = AbstractNode.OBJECT_MAPPER.createObjectNode();
+        parent.put("child", value);
+        return createNode(parent);
+    }
+
+    protected AbstractNode<N> parentWithChildLong(long value) {
+        ObjectNode parent = AbstractNode.OBJECT_MAPPER.createObjectNode();
+        parent.put("child", value);
+        return createNode(parent);
+    }
+
+    protected AbstractNode<N> parentWithChildDouble(double value) {
+        ObjectNode parent = AbstractNode.OBJECT_MAPPER.createObjectNode();
+        parent.put("child", value);
+        return createNode(parent);
+    }
+
+    protected AbstractNode<N> parentWithChildBigInteger(BigInteger value) {
+        return parentWithChildBigDecimal(new BigDecimal(value));
+    }
+
+    protected AbstractNode<N> parentWithChildBigDecimal(BigDecimal value) {
         ObjectNode parent = AbstractNode.OBJECT_MAPPER.createObjectNode();
         parent.put("child", value);
         return createNode(parent);

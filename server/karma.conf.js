@@ -5,6 +5,7 @@ module.exports = function(config) {
         reporters: ['progress', 'junit', 'teamcity'],
         files: [
             'src/main/resources/buildServerResources/*.js',
+            'src/main/resources/buildServerResources/image-settings.html',
             'src/test/js/*.js'
         ],
 

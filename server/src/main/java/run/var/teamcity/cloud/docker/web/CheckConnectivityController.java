@@ -1,10 +1,8 @@
 package run.var.teamcity.cloud.docker.web;
 
-import jetbrains.buildServer.controllers.BaseFormXmlController;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
-import org.jdom.Element;
 import org.springframework.web.servlet.ModelAndView;
 import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.client.DockerClient;
@@ -15,12 +13,11 @@ import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Spring controller to handle Docker connectivity tests.
@@ -67,7 +64,7 @@ public class CheckConnectivityController extends BaseFormJsonController {
                     DockerCloudUtils.DOCKER_API_TARGET_VERSION)
                     .usingTls(useTLS)
                     .connectionPoolSize(1)
-                    .connectTimeoutMillis((int) TimeUnit.SECONDS.toMillis(20));
+                    .connectTimeout(Duration.ofSeconds(20));
 
             DockerClient client = dockerClientFactory.createClientWithAPINegotiation(dockerConfig);
 
@@ -88,12 +85,6 @@ public class CheckConnectivityController extends BaseFormJsonController {
             responseNode
                     .put("error", msg != null ? msg : "")
                     .put("failureCause", DockerCloudUtils.getStackTrace(error));
-        }
-    }
-
-    private static void setAttr(@Nonnull Element elt, @Nonnull String name, @Nullable Object value) {
-        if (value != null) {
-            elt.setAttribute(name, value.toString());
         }
     }
 }

@@ -1,8 +1,9 @@
 package run.var.teamcity.cloud.docker.client;
 
 import org.junit.Test;
+import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.test.TestInputStream;
-import run.var.teamcity.cloud.docker.test.TestOutputStream;
+import run.var.teamcity.cloud.docker.test.TestOutputStreamFilter;
 
 import java.io.IOException;
 
@@ -34,7 +35,7 @@ public class CompositeStreamHandlerTest extends StreamHandlerTest {
     }
 
     @Override
-    protected StreamHandler createHandler(TestInputStream closeHandle, TestInputStream inputStream, TestOutputStream outputStream) {
+    protected AbstractStreamHandler createHandler(TestInputStream closeHandle, TestInputStream inputStream, TestOutputStreamFilter outputStream) {
         return new CompositeStreamHandler(closeHandle, inputStream, outputStream);
     }
 }

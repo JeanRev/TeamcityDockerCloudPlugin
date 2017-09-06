@@ -1,23 +1,12 @@
+<%@ page import="run.var.teamcity.cloud.docker.ContainerInfo" %>
 <%@ page import="run.var.teamcity.cloud.docker.DockerInstance" %>
 <%@ page import="run.var.teamcity.cloud.docker.util.DockerCloudUtils" %>
-<%@ page import="run.var.teamcity.cloud.docker.util.Node" %>
-<%@ page import="java.text.DateFormat" %>
+<%@ page import="java.time.Instant" %>
+<%@ page import="java.time.ZoneId" %>
+<%@ page import="java.time.format.DateTimeFormatter" %>
+<%@ page import="java.time.format.FormatStyle" %>
 <%@ page import="java.util.Locale" %>
-<%--
-  ~ Copyright 2000-2012 JetBrains s.r.o.
-  ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
-  ~
-  ~ http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
-  --%>
+<%@ page import="java.util.Optional" %>
 
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 
@@ -41,14 +30,17 @@
             </thead>
             <tbody>
             <%
-                DateFormat dateFmt = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.ENGLISH);
+                DateTimeFormatter dateFmt = DateTimeFormatter.
+                        ofLocalizedDateTime(FormatStyle.LONG, FormatStyle.SHORT).
+                        withLocale(Locale.ENGLISH);
                 for (DockerInstance instance : image.getInstances()) {
-                    Node containerInfo = instance.getContainerInfo();
-                    if (containerInfo == null) {
+                    Optional<ContainerInfo> optContainerInfo = instance.getContainerInfo();
+                    if (!optContainerInfo.isPresent()) {
                         continue;
                     }
+                    ContainerInfo containerInfo = optContainerInfo.get();
                     StringBuilder displayName = new StringBuilder();
-                    for (Node name : containerInfo.getArray("Names").getArrayValues()) {
+                    for (String name : containerInfo.getNames()) {
                         if (displayName.length() > 0) {
                             displayName.append(", ");
                         }
@@ -56,11 +48,11 @@
                     }
             %>
             <tr>
-                <td><%= DockerCloudUtils.toShortId(containerInfo.getAsString("Id")) %>
+                <td><%= DockerCloudUtils.toShortId(containerInfo.getId()) %>
                 </td>
-                <td><%= dateFmt.format(containerInfo.getAsLong("Created") * 1000) %>
+                <td><%= dateFmt.format(containerInfo.getCreationTimestamp().atZone(ZoneId.systemDefault())) %>
                 </td>
-                <td><%= containerInfo.getAsString("State") %>
+                <td><%= containerInfo.getState() %>
                 </td>
                 <td><%= displayName.toString() %>
                 </td>
@@ -72,14 +64,17 @@
         </table>
     </div>
     <%
+        Optional<Instant> lastDockerSyncTime = image.getCloudClient().getLastDockerSyncTime();
         String lastSync;
-        long lastDockerSyncTimeMillis = image.getCloudClient().getLastDockerSyncTimeMillis();
-        if (lastDockerSyncTimeMillis != -1) {
-            lastSync = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.SHORT, Locale.ENGLISH).format(lastDockerSyncTimeMillis);
+        //noinspection OptionalIsPresent
+        if (lastDockerSyncTime.isPresent()) {
+            //noinspection unchecked
+            lastSync = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG, FormatStyle.SHORT).
+                            withLocale(Locale.ENGLISH).
+                            format(lastDockerSyncTime.get().atZone(ZoneId.systemDefault()));
         } else {
             lastSync = "not performed yet.";
         }
-
     %>
     Last sync with docker: <%= lastSync %>
 </div>

@@ -2,11 +2,14 @@ package run.var.teamcity.cloud.docker.util;
 
 import jetbrains.buildServer.serverSide.AgentDescription;
 import org.junit.Test;
-import run.var.teamcity.cloud.docker.test.TestSBuildAgent;
 import run.var.teamcity.cloud.docker.test.TestInputStream;
+import run.var.teamcity.cloud.docker.test.TestSBuildAgent;
 import run.var.teamcity.cloud.docker.test.TestUtils;
+import run.var.teamcity.cloud.docker.util.DockerCloudUtils.Pair;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,6 +27,14 @@ public class DockerCloudUtilsTest {
         DockerCloudUtils.requireNonNull(new Object(), errorMsg);
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> DockerCloudUtils.requireNonNull(null,
                 errorMsg)).withMessage(errorMsg);
+    }
+
+    @Test
+    public void requireNotNullMessageSupplier() {
+        String errorMsg = "Blah blah";
+        DockerCloudUtils.requireNonNull(new Object(), () -> errorMsg);
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> DockerCloudUtils.requireNonNull(null,
+                () -> errorMsg)).withMessage("Blah blah");
     }
 
     @Test
@@ -187,7 +198,6 @@ public class DockerCloudUtilsTest {
     @Test
     public void readUTF8AsciiStringWithLengthCapAndTextUnderflow() throws IOException {
         // Ascii text: 1 byte per character, so no risk to truncate a character.
-        String bigText = bigAsciiText();
         TestInputStream stream = TestInputStream.withUTF8String("ABC");
         assertThat(DockerCloudUtils.readUTF8String(stream, 1000)).isEqualTo("ABC");
         assertThat(DockerCloudUtils.readUTF8String(TestInputStream.empty(), 1000)).isEqualTo("");
@@ -261,6 +271,71 @@ public class DockerCloudUtilsTest {
     @Test
     public void getStackTraceWithNullInput() {
         assertThat(DockerCloudUtils.getStackTrace(null)).isEmpty();
+    }
+
+    @Test
+    public void newMutableMap() {
+        assertThat(DockerCloudUtils.mapOf()).isEmpty();
+
+        Map<String, String> expected = new HashMap<>();
+        expected.put("A", "1");
+        expected.put("B", "2");
+
+        Map<String, String> actual = DockerCloudUtils.mapOf(DockerCloudUtils.pair("A", "1"),
+                DockerCloudUtils.pair("B", "2"));
+
+        assertThat(actual).isEqualTo(expected);
+
+        actual.put("C", "3");
+
+        assertThat(actual.get("C")).isEqualTo("3");
+    }
+
+    @Test
+    public void newImmutableMap() {
+        assertThat(DockerCloudUtils.immutableMapOf()).isEmpty();
+
+        Map<String, String> expected = new HashMap<>();
+        expected.put("A", "1");
+        expected.put("B", "2");
+
+        Map<String, String> actual = DockerCloudUtils.immutableMapOf(DockerCloudUtils.pair("A", "1"),
+                DockerCloudUtils.pair("B", "2"));
+
+        assertThat(actual).isEqualTo(expected);
+
+        assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> actual.put("C", "3"));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void newMutableMapInvalidArgument() {
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> DockerCloudUtils.mapOf(
+                (Pair[]) null));
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> DockerCloudUtils.mapOf
+                (DockerCloudUtils.pair("A", "1"), null));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void newImmutableMapInvalidArgument() {
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> DockerCloudUtils.immutableMapOf(
+                (Pair[]) null));
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> DockerCloudUtils.immutableMapOf
+                (DockerCloudUtils.pair("A", "1"), null));
+    }
+
+    @Test
+    public void pairFactoryMethod() {
+        Pair pair = DockerCloudUtils.pair("A", "1");
+        assertThat(pair.getKey()).isEqualTo("A");
+        assertThat(pair.getValue()).isEqualTo("1");
+    }
+
+    @Test
+    public void pairFactoryMethodInvalidArgument() {
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> DockerCloudUtils.pair(null, "1"));
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> DockerCloudUtils.pair("A", null));
     }
 
     private String bigAsciiText() {

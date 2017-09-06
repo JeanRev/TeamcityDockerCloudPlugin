@@ -1,17 +1,36 @@
 package run.var.teamcity.cloud.docker.test;
 
-import javax.servlet.*;
-import javax.servlet.http.*;
+import run.var.teamcity.cloud.docker.util.LockHandler;
+
+import javax.servlet.AsyncContext;
+import javax.servlet.DispatcherType;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.Part;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.Principal;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 
 @SuppressWarnings("deprecation")
 public class TestHttpServletRequest implements HttpServletRequest {
 
+    private final LockHandler lock = LockHandler.newReentrantLock();
     private final Map<String, String[]> parameters = new HashMap<>();
+    private TestHttpSession httpSession;
 
     @Override
     public String getAuthType() {
@@ -109,13 +128,18 @@ public class TestHttpServletRequest implements HttpServletRequest {
     }
 
     @Override
-    public HttpSession getSession(boolean create) {
-        throw new UnsupportedOperationException("Not a real request.");
+    public TestHttpSession getSession(boolean create) {
+        return lock.call(() -> {
+            if (httpSession == null && create) {
+                httpSession = new TestHttpSession();
+            }
+            return httpSession;
+        });
     }
 
     @Override
-    public HttpSession getSession() {
-        throw new UnsupportedOperationException("Not a real request.");
+    public TestHttpSession getSession() {
+        return getSession(true);
     }
 
     @Override
@@ -165,7 +189,7 @@ public class TestHttpServletRequest implements HttpServletRequest {
 
     @Override
     public Object getAttribute(String name) {
-        throw new UnsupportedOperationException("Not a real request.");
+        return null;
     }
 
     @Override

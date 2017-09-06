@@ -2,6 +2,7 @@ package run.var.teamcity.cloud.docker.client;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.text.StringUtil;
+import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.HttpStatus;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
@@ -12,12 +13,17 @@ import org.apache.http.conn.ssl.DefaultHostnameVerifier;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.util.PublicSuffixMatcherLoader;
+import org.apache.http.impl.NoConnectionReuseStrategy;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.TextUtils;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
+import org.jetbrains.annotations.NotNull;
+import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.client.apcon.ApacheConnectorProvider;
+import run.var.teamcity.cloud.docker.client.npipe.NPipeSocketAddress;
+import run.var.teamcity.cloud.docker.client.npipe.NPipeSocketClientConnectionOperator;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
@@ -36,14 +42,16 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.io.Closeable;
-import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Base64;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -77,7 +85,8 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
      */
     private enum SupportedScheme {
         UNIX,
-        TCP;
+        TCP,
+        NPIPE;
 
         String part() {
             return name().toLowerCase();
@@ -152,9 +161,17 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
     @Nonnull
     @Override
-    public Node inspectContainer(@Nonnull String containerId) {
-        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
-        return invoke(target().path("/containers/{id}/json").resolveTemplate("id", containerId), HttpMethod.GET, null,
+    public Node inspectContainer(@Nonnull String container) {
+        DockerCloudUtils.requireNonNull(container, "Container ID cannot be null.");
+        return invoke(target().path("/containers/{id}/json").resolveTemplate("id", container), HttpMethod.GET, null,
+                prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
+    }
+
+    @Nonnull
+    @Override
+    public Node inspectImage(@Nonnull String image) {
+        DockerCloudUtils.requireNonNull(image, "Image name or ID cannot be null.");
+        return invoke(target().path("/images/{id}/json").resolveTemplate("id", image), HttpMethod.GET, null,
                 prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
     }
 
@@ -180,7 +197,10 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 null, hasTty(containerId));
     }
 
-    public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, Set<StdioType> stdioTypes, boolean
+    @Nonnull
+    @Override
+    public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, @Nonnull Set<StdioType> stdioTypes,
+                                    boolean
             follow) {
 
         return invokeStream(prepareLogsTarget(target(), containerId, lineCount, stdioTypes).queryParam("follow",
@@ -209,16 +229,16 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     }
 
     @Override
-    public void stopContainer(@Nonnull String containerId, long timeoutSec) {
-        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
+    public void stopContainer(@Nonnull String container, Duration timeout) {
+        DockerCloudUtils.requireNonNull(container, "Container ID cannot be null.");
 
-        WebTarget target = target().path("/containers/{id}/stop").resolveTemplate("id", containerId);
-        if (timeoutSec != DockerClient.DEFAULT_TIMEOUT) {
-            if (timeoutSec < 0) {
+        WebTarget target = target().path("/containers/{id}/stop").resolveTemplate("id", container);
+        if (!timeout.equals(DockerClient.DEFAULT_TIMEOUT)) {
+            if (timeout.isNegative()) {
                 throw new IllegalArgumentException("Timeout must be a positive integer.");
             }
 
-            target = target.queryParam("t", timeoutSec);
+            target = target.queryParam("t", timeout.getSeconds());
         }
 
 
@@ -233,22 +253,34 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     }
 
     @Override
-    public void removeContainer(@Nonnull String containerId, boolean removeVolumes, boolean force) {
-        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
-        invokeVoid(target().path("/containers/{id}").resolveTemplate("id", containerId).queryParam("v", removeVolumes)
+    public void removeContainer(@Nonnull String container, boolean removeVolumes, boolean force) {
+        DockerCloudUtils.requireNonNull(container, "Container ID cannot be null.");
+        invokeVoid(target().path("/containers/{id}").resolveTemplate("id", container).queryParam("v", removeVolumes)
                 .queryParam("force", force), HttpMethod.DELETE, null, null);
     }
 
     @Nonnull
     @Override
-    public Node listContainersWithLabel(@Nonnull String key, @Nonnull String value) {
-        DockerCloudUtils.requireNonNull(key, "Label key cannot be null.");
-        DockerCloudUtils.requireNonNull(value, "Label value cannot be null.");
-        return invoke(target().path("/containers/json").
-                queryParam("all", true).
-                queryParam("filters", "%7B\"label\": " +
-                        "[\"" + key + "=" + value + "\"]%7D"), HttpMethod.GET, null,
-                prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
+    public Node listContainersWithLabel(@Nonnull Map<String, String> labelFilters) {
+        DockerCloudUtils.requireNonNull(labelFilters, "Label filters map cannot be null.");
+
+        StringBuilder filter = new StringBuilder();
+        for (Map.Entry<String, String> labelFilter : labelFilters.entrySet()) {
+            String key = labelFilter.getKey();
+            String value = labelFilter.getValue();
+            DockerCloudUtils.requireNonNull(key, () -> "Invalid null key: " + labelFilters);
+            DockerCloudUtils.requireNonNull(value, () -> "Invalid null value: " + labelFilters);
+            if (filter.length() > 0) {
+                filter.append(",");
+            }
+            filter.append("\"").append(labelFilter.getKey()).append("=").append(labelFilter.getValue()).append("\"");
+        }
+        WebTarget target = target().path("/containers/json").queryParam("all", true);
+
+        if (filter.length() > 0) {
+            target = target.queryParam("filters", "%7B\"label\": [" + filter+ "]%7D");
+        }
+        return invoke(target, HttpMethod.GET, null, prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
     }
     
     private boolean hasTty(String containerId) {
@@ -299,7 +331,8 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
     /**
      * Open a new client using the provided configuration. The Docker URI must use one of the supported scheme
-     * from the Docker CLI, either <tt>unix://<em>[absolute_path_to_unix_socket]</em> for Unix sockets or
+     * from the Docker CLI, either <tt>unix://<em>[absolute_path_to_unix_socket]</em> for Unix sockets,
+     * <tt>npipe://<em>pipe_location</em> for Windows named pipes</tt> or
      * <tt>tcp://<em>[ip_address]</em></tt> for TCP connections.
      *
      * @param clientConfig the Docker client configuration
@@ -333,10 +366,11 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid scheme: " + dockerURI.getScheme() + ". Only 'tcp' or 'unix' supported.", e);
         }
-        // Note: we use a custom connection operator here to handle Unix sockets because 1) it allows use to circumvent
-        // some problem encountered with the default connection operator 2) it dispense us from implementing a custom
-        // ConnectionSocketFactory which is oriented toward internet sockets.
+        // Note: we use a custom connection operator here to handle Unix sockets and named pipes because 1) it gives
+        // us the required flexibility to deal with these specific types of socket 2) it dispense us from implementing
+        // a custom ConnectionSocketFactory which is oriented toward internet sockets.
         HttpClientConnectionOperator connectionOperator = null;
+        ConnectionReuseStrategy connectionReuseStrategy = new UpgradeAwareConnectionReuseStrategy();
         final URI effectiveURI;
 
         switch (scheme) {
@@ -360,19 +394,23 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                 }
                 break;
             case UNIX:
-                if (dockerURI.getHost() != null || dockerURI.getPort() != -1 || dockerURI.getUserInfo() != null ||
-                        dockerURI.getQuery() != null || dockerURI.getFragment() != null) {
-                    throw new IllegalArgumentException("Only path can be provided for unix scheme.");
+                if (DockerCloudUtils.isWindowsHost()) {
+                    throw new IllegalArgumentException("Unix sockets are not supported on Windows hosts.");
                 }
-                if (usingTLS) {
-                    throw new IllegalArgumentException("TLS not available with Unix sockets.");
+                effectiveURI = validatePathBasedURI(dockerURI, usingTLS, SupportedScheme.UNIX, "Unix sockets");
+                connectionOperator = new UnixSocketClientConnectionOperator(Paths.get(dockerURI.getPath()));
+                break;
+            case NPIPE:
+                if (!DockerCloudUtils.isWindowsHost()) {
+                    throw new IllegalArgumentException("Named pipes are only supported on Windows hosts.");
                 }
-                try {
-                    effectiveURI = new URI(SupportedScheme.UNIX.part(), null, "localhost", 80, null, null, null);
-                } catch (URISyntaxException e) {
-                    throw new IllegalArgumentException("Failed to build effective URI for Unix socket.", e);
-                }
-                connectionOperator = new UnixSocketClientConnectionOperator(new File(dockerURI.getPath()));
+                effectiveURI = validatePathBasedURI(dockerURI, usingTLS, SupportedScheme.NPIPE, "named pipes.");
+                NPipeSocketAddress pipeAddress = NPipeSocketAddress.fromPath(Paths.get(dockerURI.getPath()));
+                connectionOperator = new NPipeSocketClientConnectionOperator(pipeAddress);
+                // Some dysfunctions have been noticed when keeping connections alive between requests for named pipes:
+                // the daemon sometimes fails to send HTTP headers when reusing connections, or truncate the payload.
+                // Disabling connection reuse for now.
+                connectionReuseStrategy = NoConnectionReuseStrategy.INSTANCE;
                 break;
             default:
                 throw new AssertionError("Unknown enum member: " + scheme);
@@ -389,15 +427,33 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
                     getDefaultRegistry(clientConfig.isVerifyingHostname()), connectionFactory, null);
         }
 
-
         // We are only interested into a single route.
         connManager.setDefaultMaxPerRoute(connectionPoolSize);
         connManager.setMaxTotal(connectionPoolSize);
 
         config.property(ApacheClientProperties.CONNECTION_MANAGER, connManager);
-        config.property(ClientProperties.CONNECT_TIMEOUT, clientConfig.getConnectTimeoutMillis());
+        // NB: caution with those, they must strictly be set as integers (not long).
+        config.property(ClientProperties.CONNECT_TIMEOUT, (int) clientConfig.getConnectTimeout().toMillis());
+        config.property(ClientProperties.READ_TIMEOUT, (int) clientConfig.getTransferTimeout().toMillis());
+        config.property(ApacheConnectorProvider.CONNECTION_REUSE_STRATEGY_PROP, connectionReuseStrategy);
+
         return new DefaultDockerClient(connectionFactory, ClientBuilder.newClient(config), effectiveURI,
                 clientConfig.getApiVersion());
+    }
+
+    private static URI validatePathBasedURI(URI dockerURI, boolean usingTLS, SupportedScheme scheme, String schemeLabel) {
+        if (dockerURI.getHost() != null || dockerURI.getPort() != -1 || dockerURI.getUserInfo() != null ||
+                dockerURI.getQuery() != null || dockerURI.getFragment() != null) {
+            throw new IllegalArgumentException("Only path can be provided for " + schemeLabel + ".");
+        }
+        if (usingTLS) {
+            throw new IllegalArgumentException("TLS not available with " + schemeLabel + ".");
+        }
+        try {
+            return  new URI(scheme.part(), null, "localhost", 80, null, null, null);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Failed to build effective URI for " + schemeLabel + ".", e);
+        }
     }
 
     private static Registry<ConnectionSocketFactory> getDefaultRegistry(boolean verifyHostname) {

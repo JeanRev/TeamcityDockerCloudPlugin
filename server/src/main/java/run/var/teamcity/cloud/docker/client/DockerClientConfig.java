@@ -3,8 +3,9 @@ package run.var.teamcity.cloud.docker.client;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
 import java.net.URI;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 /**
  * A {@link DockerClient} configuration.
@@ -14,16 +15,18 @@ import java.util.concurrent.TimeUnit;
  *
  * <p>Instances of this class are not thread-safe.</p>
  */
-public class DockerClientConfig {
+public class DockerClientConfig implements Serializable {
 
-    private final static int DEFAULT_CONNECT_TIMEOUT_MILLIS = (int) TimeUnit.MINUTES.toMillis(1);
+    private final static Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofMinutes(1);
+    private final static Duration DEFAULT_TRANSFER_TIMEOUT = Duration.ofMinutes(5);
 
     private final URI instanceURI;
     private final DockerAPIVersion apiVersion;
     private boolean usingTLS = false;
     private boolean verifyingHostname = true;
     private int connectionPoolSize = 1;
-    private int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT_MILLIS;
+    private Duration connectTimeout = DEFAULT_CONNECT_TIMEOUT;
+    private Duration transferTimeout = DEFAULT_TRANSFER_TIMEOUT;
 
     /**
      * Creates a new configuration targeting the specified Docker URI.
@@ -33,10 +36,8 @@ public class DockerClientConfig {
      * @throws NullPointerException if {@code instanceURI} is {@code null}
      */
     public DockerClientConfig(@Nonnull URI instanceURI, DockerAPIVersion apiVersion) {
-        DockerCloudUtils.requireNonNull(instanceURI, "Docker instance URI cannot be null.");
-        DockerCloudUtils.requireNonNull(apiVersion, "Docker version API cannot be null.");
-        this.instanceURI = instanceURI;
-        this.apiVersion = apiVersion;
+        this.instanceURI = DockerCloudUtils.requireNonNull(instanceURI, "Docker instance URI cannot be null.");
+        this.apiVersion = DockerCloudUtils.requireNonNull(apiVersion, "Docker version API cannot be null.");
     }
 
     /**
@@ -84,21 +85,39 @@ public class DockerClientConfig {
     }
 
     /**
-     * Connection timeout to the Docker daemon in milliseconds.
+     * Connection timeout to the Docker daemon. Depending on the connection type this timeout may not be applicable.
      *
-     * @param connectTimeoutMillis the timeout in milliseconds
+     * @param connectTimeout the timeout duration
      *
      * @return this configuration instance for chained invocation
      *
-     * @throws IllegalArgumentException if {@code connectTimeoutMillis} is negative
+     * @throws IllegalArgumentException if {@code connectTimeout} is negative
      */
-    public DockerClientConfig connectTimeoutMillis(int connectTimeoutMillis) {
-        if (connectTimeoutMillis < 0) {
-            throw new IllegalArgumentException("Timeout specification must be positive: " + connectTimeoutMillis +
+    public DockerClientConfig connectTimeout(Duration connectTimeout) {
+        if (connectTimeout.isNegative()) {
+            throw new IllegalArgumentException("Timeout specification must be positive: " + connectTimeout +
                     ". Use 0 for no timeout.");
         }
 
-        this.connectTimeoutMillis = connectTimeoutMillis;
+        this.connectTimeout = connectTimeout;
+        return this;
+    }
+
+    /**
+     * Timeout for read or write operation when communicating with the Docker daemon. Depending on the connection type
+     * read or write timeouts may not be applicable.
+     *
+     * @param transferTimeout the timeout duration
+     *
+     * @return IllegalArgumentException if {@code transferTimeout} is negative
+     */
+    public DockerClientConfig transferTimeout(Duration transferTimeout) {
+        if (transferTimeout.isNegative()) {
+            throw new IllegalArgumentException("Timeout specification must be positive: " + transferTimeout +
+                    ". Use 0 for no timeout.");
+        }
+
+        this.transferTimeout = transferTimeout;
         return this;
     }
 
@@ -151,11 +170,20 @@ public class DockerClientConfig {
     }
 
     /**
-     * Gets the timeout in milliseconds when connecting to the Daemon.
+     * Gets the timeout when connecting to the Daemon.
      *
-     * @return the timeout in milliseconds or {@code 0} for no timeout
+     * @return the timeout, or a {@code 0} duration for no timeout
      */
-    public int getConnectTimeoutMillis() {
-        return connectTimeoutMillis;
+    public Duration getConnectTimeout() {
+        return connectTimeout;
+    }
+
+    /**
+     * Gets the timeout in milliseconds when communicating with the Daemon.
+     *
+     * @return the timeout, or a {@code 0} duration for no timeout
+     */
+    public Duration getTransferTimeout() {
+        return transferTimeout;
     }
 }

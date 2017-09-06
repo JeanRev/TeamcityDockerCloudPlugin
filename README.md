@@ -12,8 +12,8 @@ according to your TeamCity version.
 
 ## Requirements
 - TeamCity 10.x or greater.
-- A Docker daemon accessible through either TCP or Unix Sockets, supporting the remote API v1.24 (Engine version 
-1.12.x).
+- A Docker daemon accessible through either TCP, Unix Socket, or Windows name pipe and supporting the remote API v1.24 
+(Engine version 1.12.x).
 
 Browser requirements are the same than TeamCity itself (IE9+ or recent version of Firefox/Chrome/Safari/Opera/Edge).
 
@@ -26,6 +26,9 @@ to the _plugins_ subfolder in the TeamCity Data Directory.
 
 By default, the [official TeamCity agent images](https://hub.docker.com/r/jetbrains/teamcity-agent/) will be used. These
 images are usable without any additional configuration, but you may need to tune the container settings a little depending on your build requirements.
+
+## News
+For the latest information on the development of the plugin, and access to preview versions, visit the project's Gitter [chatroom](https://gitter.im/TeamcityDockerCloudPlugin/Lobby).
 
 ## Build
 This project uses Gradle [Kotlin](https://kotlinlang.org/) scripts to build and package the plugin. To create the plugin archive simple run the

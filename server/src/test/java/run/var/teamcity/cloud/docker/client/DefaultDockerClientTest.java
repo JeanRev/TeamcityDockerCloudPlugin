@@ -34,12 +34,28 @@ public class DefaultDockerClientTest extends DefaultDockerClientTestBase {
     }
 
     @Test
-    public void validUnixSocketSettings() {
-        DefaultDockerClient.newInstance(createConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI, false)).close();
-        // Minimal valid url: scheme an absolute path.
-        DefaultDockerClient.newInstance(createConfig(URI.create("unix:/some/non/sandard/location.sock"), false)).close();
-        // Also accepted: empty authority and absolute path.
-        DefaultDockerClient.newInstance(createConfig(URI.create("unix:///some/non/sandard/location.sock"), false)).close();
+    public void platformDependentSettings() {
+        if (DockerCloudUtils.isWindowsHost()) {
+            assertThatExceptionOfType(IllegalArgumentException.class).
+                    isThrownBy(() -> DefaultDockerClient.newInstance(createConfig(DockerCloudUtils
+                            .DOCKER_DEFAULT_SOCKET_URI, false)));
+            DefaultDockerClient.newInstance(createConfig(DockerCloudUtils.DOCKER_DEFAULT_NAMED_PIPE_URI, false))
+                    .close();
+            // Empty authority and absolute path.
+            DefaultDockerClient.newInstance(createConfig(URI.create("npipe://///./pipe/non_standard_location"),
+                    false)).close();
+        } else {
+            assertThatExceptionOfType(IllegalArgumentException.class).
+                    isThrownBy(() -> DefaultDockerClient.newInstance(createConfig(DockerCloudUtils
+                            .DOCKER_DEFAULT_NAMED_PIPE_URI, false)));
+            DefaultDockerClient.newInstance(createConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI, false)).close();
+            // Minimal valid url: scheme and absolute path.
+            DefaultDockerClient.newInstance(createConfig(URI.create("unix:/some/non/sandard/location.sock"), false))
+                    .close();
+            // Also accepted: empty authority and absolute path.
+            DefaultDockerClient.newInstance(createConfig(URI.create("unix:///some/non/sandard/location.sock"), false)
+            ).close();
+        }
     }
 
     @Test
@@ -52,10 +68,31 @@ public class DefaultDockerClientTest extends DefaultDockerClientTestBase {
 
         // Invalid slash count after scheme.
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                DefaultDockerClient.newInstance(createConfig(URI.create("unix://some/non/standard/location.sock"), false)));
+                DefaultDockerClient.newInstance(createConfig(URI.create("unix://some/non/standard/location.sock"),
+                        false)));
         // With query.
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                DefaultDockerClient.newInstance(createConfig(URI.create("unix:///var/run/docker.sock?param=value"), false)));
+                DefaultDockerClient.newInstance(createConfig(URI.create("unix:///var/run/docker.sock?param=value"),
+                        false)));
+
+    }
+
+    @Test
+    @SuppressWarnings("ConstantConditions")
+    public void invalidNPipeSettings() {
+
+        // Using TLS with a unix socket.
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.newInstance(createConfig(DockerCloudUtils.DOCKER_DEFAULT_NAMED_PIPE_URI, true)));
+
+        // Invalid slash count after scheme.
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.newInstance(createConfig(URI.create("npipe:///./pipe/non_standard_location"),
+                        false)));
+        // With query.
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+                DefaultDockerClient.newInstance(createConfig(URI.create("npipe:////" +
+                        "./pipe/non_standard_location?param=value"), false)));
 
     }
 

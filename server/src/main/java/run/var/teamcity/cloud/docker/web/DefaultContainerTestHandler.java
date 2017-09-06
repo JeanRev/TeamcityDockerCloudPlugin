@@ -1,64 +1,58 @@
 package run.var.teamcity.cloud.docker.web;
 
-import com.intellij.openapi.diagnostic.Logger;
+import run.var.teamcity.cloud.docker.DockerClientFacade;
+import run.var.teamcity.cloud.docker.DockerClientFacadeFactory;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerClient;
-import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.LockHandler;
 import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Default {@link ContainerTestHandler} implementation.
  */
 public class DefaultContainerTestHandler implements ContainerTestHandler {
 
-    private final static Logger LOG = DockerCloudUtils.getLogger(DefaultContainerTestHandler.class);
-
     private final UUID uuid = UUID.randomUUID();
-    private final ReentrantLock lock = new ReentrantLock();
-    private final DockerClient client;
-    private final DockerClientConfig clientConfig;
-    private final ContainerTestListener statusListener;
-    private final StreamingController streamingController;
+    private final LockHandler lock = LockHandler.newReentrantLock();
+    private final DockerClientFacade clientFacade;
 
-    private long lastInteraction;
+    @Nullable
+    private ContainerTestListener testListener;
+    private Instant lastInteraction;
+    @Nullable
+    private TestContainerStatusMsg lastStatusMsg;
+    @Nullable
     private String containerId;
+    @Nullable
+    private Instant containerStartTime;
     private boolean buildAgentDetected = false;
 
     private ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTaskFuture = null;
 
-    private DefaultContainerTestHandler(DockerClientConfig clientConfig, DockerClient client,
-                                        ContainerTestListener statusListener, StreamingController streamingController) {
-        assert client != null && statusListener != null;
+    private DefaultContainerTestHandler(DockerClientFacade clientFacade) {
+        assert clientFacade != null;
 
-        this.clientConfig = clientConfig;
-        this.client = client;
-        this.statusListener = statusListener;
-        this.streamingController = streamingController;
+        this.clientFacade = clientFacade;
 
         notifyInteraction();
     }
 
     public static DefaultContainerTestHandler newTestInstance(@Nonnull DockerCloudClientConfig clientConfig,
-                                                              @Nonnull DockerClientFactory dockerClientFactory,
-                                                              @Nonnull ContainerTestListener statusListener,
-                                                              @Nullable StreamingController streamingController) {
+                                                              @Nonnull DockerClientFacadeFactory clientFacadeFactory) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
-        DockerCloudUtils.requireNonNull(dockerClientFactory, "Docker client factory cannot be null.");
-        DockerCloudUtils.requireNonNull(statusListener, "Status listener cannot be null.");
-        DockerClient client = dockerClientFactory.createClient(clientConfig.getDockerClientConfig()
+        DockerCloudUtils.requireNonNull(clientFacadeFactory, "Docker client facade factory cannot be null.");
+        DockerClientFacade clientFacade = clientFacadeFactory.createFacade(clientConfig.getDockerClientConfig()
                 .connectionPoolSize(1));
-        return new DefaultContainerTestHandler(clientConfig.getDockerClientConfig(), client, statusListener,
-                streamingController);
+        return new DefaultContainerTestHandler(clientFacade);
     }
 
     /**
@@ -79,27 +73,45 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
      */
     @Nullable
     public String getContainerId() {
-        lock.lock();
-        try {
-            return containerId;
-        } finally {
-            lock.unlock();
-        }
+        return lock.call(() -> containerId);
     }
 
     /**
-     * Gets the atmosphere resource associated with this test if any.
+     * Gets the listener associated with this test if any.
      *
-     * @return the atmosphere resource or {@code null}
+     * @return the listener if any
      */
-    @Nullable
-    public ContainerTestListener getStatusListener() {
-        lock.lock();
-        try {
-            return statusListener;
-        } finally {
-            lock.unlock();
-        }
+    @Nonnull
+    public Optional<ContainerTestListener> getTestListener() {
+        return Optional.ofNullable(lock.call(() -> testListener));
+    }
+
+    /**
+     * Gets the client facade to run the test.
+     *
+     * @return the client facade
+     */
+    @Nonnull
+    @Override
+    public DockerClientFacade getDockerClientFacade() {
+        return clientFacade;
+    }
+
+    /**
+     * Notify a user interaction for this test.
+     */
+    public void notifyInteraction() {
+        lock.run(() -> lastInteraction = Instant.now());
+    }
+
+    /**
+     * Gets the last user interaction timestamp for this test.
+     *
+     * @return the timestamp
+     */
+    @Nonnull
+    public Instant getLastInteraction() {
+        return lock.call(() -> lastInteraction);
     }
 
     /**
@@ -109,34 +121,7 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
      */
     @Nullable
     public ScheduledFutureWithRunnable<? extends ContainerTestTask> getCurrentTaskFuture() {
-        lock.lock();
-        try {
-            return currentTaskFuture;
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Nonnull
-    @Override
-    public DockerClient getDockerClient() {
-        return client;
-    }
-
-    /**
-     * Notify a user interaction for this test.
-     */
-    public void notifyInteraction() {
-        lastInteraction = System.nanoTime();
-    }
-
-    /**
-     * Gets the last user interaction for this test as a nano timestamp.
-     *
-     * @return a nano timestamp
-     */
-    public long getLastInteraction() {
-        return lastInteraction;
+        return lock.call(() -> currentTaskFuture);
     }
 
     /**
@@ -146,32 +131,44 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
      *
      * @throws NullPointerException if {@code currentTask} is {@code null}
      */
-    public void setCurrentTask(@Nonnull ScheduledFutureWithRunnable<? extends ContainerTestTask>
-                                       currentTask) {
+    public void setCurrentTaskFuture(@Nonnull ScheduledFutureWithRunnable<? extends ContainerTestTask>
+                                             currentTask) {
         DockerCloudUtils.requireNonNull(currentTask, "Current task cannot be null.");
-        lock.lock();
-        try {
+        lock.run(() -> {
             this.currentTaskFuture = currentTask;
-            statusListener.notifyStatus(null);
             notifyInteraction();
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     @Override
     public void notifyContainerId(@Nonnull String containerId) {
         DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
-        lock.lock();
-        try {
-            this.containerId = containerId;
-        } finally {
-            lock.unlock();
-        }
 
-        if (streamingController != null) {
-            streamingController.registerContainer(uuid, new ContainerCoordinates(containerId, clientConfig));
+        lock.run(() -> this.containerId = containerId);
+    }
+
+    @Override
+    public void notifyContainerStarted(@Nonnull Instant containerStartTime) {
+        DockerCloudUtils.requireNonNull(containerStartTime, "Start time cannot be null.");
+
+        lock.run(() -> this.containerStartTime = containerStartTime);
+    }
+
+    public void setListener(@Nonnull ContainerTestListener testListener) {
+        DockerCloudUtils.requireNonNull(testListener, "Test listener cannot be null.");
+
+        TestContainerStatusMsg lastStatusMsg = lock.call(() -> {
+            this.testListener = testListener;
+            return this.lastStatusMsg;
+        });
+
+        if (lastStatusMsg != null) {
+            testListener.notifyStatus(lastStatusMsg);
         }
+    }
+
+    public Optional<TestContainerStatusMsg> getLastStatusMsg() {
+        return Optional.ofNullable(lock.call(() -> lastStatusMsg));
     }
 
     @Override
@@ -181,26 +178,23 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
         DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
         DockerCloudUtils.requireNonNull(status, "Warnings list cannot be null.");
 
-        statusListener.notifyStatus(new TestContainerStatusMsg(uuid, phase, status, msg, containerId, failure, warnings));
+        TestContainerStatusMsg statusMsg = new TestContainerStatusMsg(uuid, phase, status, msg, containerId,
+                containerStartTime, failure, warnings);
+
+        lock.run(() -> this.lastStatusMsg = statusMsg);
+        ContainerTestListener testListener = lock.call(() -> this.testListener);
+
+        if (testListener != null) {
+            testListener.notifyStatus(statusMsg);
+        }
     }
 
     @Override
     public boolean isBuildAgentDetected() {
-        lock.lock();
-        try {
-            return buildAgentDetected;
-        } finally {
-            lock.unlock();
-        }
-
+        return lock.call(() -> buildAgentDetected);
     }
 
     public void setBuildAgentDetected(boolean buildAgentDetected) {
-        lock.lock();
-        try {
-            this.buildAgentDetected = buildAgentDetected;
-        } finally {
-            lock.unlock();
-        }
+        lock.run(() -> this.buildAgentDetected = buildAgentDetected);
     }
 }

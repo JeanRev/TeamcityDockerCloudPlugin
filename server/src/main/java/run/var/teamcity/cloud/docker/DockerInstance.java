@@ -5,14 +5,14 @@ import jetbrains.buildServer.clouds.CloudInstance;
 import jetbrains.buildServer.clouds.InstanceStatus;
 import jetbrains.buildServer.serverSide.AgentDescription;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-import run.var.teamcity.cloud.docker.util.Node;
+import run.var.teamcity.cloud.docker.util.LockHandler;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.Date;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A Docker {@link CloudInstance}.
@@ -22,14 +22,14 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     private final UUID uuid = UUID.randomUUID();
     private final DockerImage img;
 
-    private long startedTimeMillis;
+    private Instant startedTime;
 
     // This lock ensure a thread-safe usage of all the variables below.
-    private final Lock lock = new ReentrantLock();
+    private final LockHandler lock = LockHandler.newReentrantLock();
 
     private String containerName = null;
     private String containerId;
-    private Node containerInfo;
+    private ContainerInfo containerInfo;
     private InstanceStatus status = InstanceStatus.UNKNOWN;
     private CloudErrorInfo errorInfo;
 
@@ -41,9 +41,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      * @throws NullPointerException if {@code img} is {@code null}
      */
     DockerInstance(@Nonnull DockerImage img) {
-        DockerCloudUtils.requireNonNull(img, "Docker image cannot be null.");
-
-        this.img = img;
+        this.img = DockerCloudUtils.requireNonNull(img, "Docker image cannot be null.");
 
         // The instance is expected to be started immediately (we must do this to ensure that getStartedTime() always
         // return some meaningful value).
@@ -87,34 +85,19 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      */
     void setContainerId(@Nonnull String containerId) {
         DockerCloudUtils.requireNonNull("Container ID cannot be null.", containerId);
-        lock.lock();
-        try {
-            this.containerId = containerId;
-        } finally {
-            lock.unlock();
-        }
 
+        lock.run(() -> this.containerId = containerId);
     }
 
     @Nonnull
     @Override
     public String getName() {
-        lock.lock();
-        try {
-            return containerName == null ? "<Unknown>" : containerName;
-        } finally {
-            lock.unlock();
-        }
+        return lock.call(() -> containerName == null ? "<Unknown>" : containerName);
     }
 
     @Nullable
-    public String getContainerName() {
-        lock.lock();
-        try {
-            return containerName;
-        } finally {
-            lock.unlock();
-        }
+    String getContainerName() {
+        return lock.call(() -> containerName);
     }
 
     /**
@@ -126,12 +109,8 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      */
     void setContainerName(@Nonnull String containerName) {
         DockerCloudUtils.requireNonNull(containerName, "Container name cannot be null.");
-        lock.lock();
-        try {
-            this.containerName = containerName;
-        } finally {
-            lock.unlock();
-        }
+
+        lock.run(() -> this.containerName = containerName);
     }
 
     @Nonnull
@@ -149,7 +128,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     @Nonnull
     @Override
     public Date getStartedTime() {
-        return new Date(startedTimeMillis);
+        return Date.from(startedTime);
     }
 
     @Nullable
@@ -176,22 +155,13 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      */
     void setStatus(@Nonnull InstanceStatus status) {
         DockerCloudUtils.requireNonNull(status, "Instance status cannot be null.");
-        lock.lock();
-        try {
-            this.status = status;
-        } finally {
-            lock.unlock();
-        }
+
+        lock.run(() -> this.status = status);
 
     }
 
-    void updateStartedTime() {
-        lock.lock();
-        try {
-            startedTimeMillis = System.currentTimeMillis();
-        } finally {
-            lock.unlock();
-        }
+    final void updateStartedTime() {
+        lock.run(() -> startedTime = Instant.now());
     }
 
     @Nullable
@@ -201,42 +171,29 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     }
 
     /**
-     * Gets the JSON node describing the associated container if available. The node structure is described in the
-     * <a href="https://docs.docker.com/engine/reference/api/docker_remote_api_v1.24/#/list-containers"><i>list
-     * containers</i></a> command of the remote API documentation.
+     * Gets the additional container meta-data retrieved from the Docker daemon.
      *
-     * @return the JSON node or {@code null} if not available
+     * @return the additional container meta-data or {@code null} if not available
      */
-    @Nullable
-    public Node getContainerInfo() {
-        lock.lock();
-        try {
-            return containerInfo;
-        } finally {
-            lock.unlock();
-        }
+    @Nonnull
+    public Optional<ContainerInfo> getContainerInfo() {
+        return Optional.ofNullable(lock.call(() -> containerInfo));
     }
 
     /**
-     * Sets the JSON node holding the container description.
+     * Sets the additional container meta-data.
      *
-     * @param containerInfo the JSON node or {@code null} if not available
+     * @param containerInfo the container meta-data or {@code null} if not available
      */
-    void setContainerInfo(@Nullable Node containerInfo) {
-        lock.lock();
-        try {
-            this.containerInfo = containerInfo;
-        } finally {
-            lock.unlock();
-        }
+    void setContainerInfo(@Nullable ContainerInfo containerInfo) {
+        lock.run(() -> this.containerInfo = containerInfo);
     }
 
     @Override
     public void notifyFailure(@Nonnull String msg, @Nullable Throwable throwable) {
         DockerCloudUtils.requireNonNull(msg, "Message cannot be null.");
 
-        try {
-            lock.lock();
+        lock.run(() -> {
             if (throwable != null) {
                 this.errorInfo = new CloudErrorInfo(msg, msg, throwable);
             } else {
@@ -244,9 +201,7 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
             }
 
             setStatus(InstanceStatus.ERROR);
-        } finally {
-            lock.unlock();
-        }
+        });
 
     }
 

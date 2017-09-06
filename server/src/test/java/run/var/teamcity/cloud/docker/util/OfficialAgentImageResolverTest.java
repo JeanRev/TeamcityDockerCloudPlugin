@@ -3,8 +3,8 @@ package run.var.teamcity.cloud.docker.util;
 import org.junit.Before;
 import org.junit.Test;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
-import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.client.DockerClientProcessingException;
+import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.client.TestDockerClientRegistryFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;

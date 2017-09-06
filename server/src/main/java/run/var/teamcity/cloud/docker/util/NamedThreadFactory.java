@@ -33,8 +33,7 @@ public class NamedThreadFactory implements ThreadFactory {
      * @throws NullPointerException if {@code name} is {@code null}
      */
     public NamedThreadFactory(@Nonnull String name, boolean usingDaemonThreads) {
-        DockerCloudUtils.requireNonNull("Name cannot be null.", name);
-        this.name = name;
+        this.name = DockerCloudUtils.requireNonNull("Name cannot be null.", name);
         this.usingDaemonThreads = usingDaemonThreads;
     }
 

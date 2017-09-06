@@ -7,9 +7,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * A {@link StreamHandler} returning a single composite stream.
+ * A {@link AbstractStreamHandler} returning a single composite stream.
  */
-class CompositeStreamHandler extends StreamHandler {
+class CompositeStreamHandler extends AbstractStreamHandler {
 
     private StdioInputStream compositeStream;
 

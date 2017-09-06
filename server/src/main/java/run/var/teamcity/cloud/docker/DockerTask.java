@@ -3,15 +3,14 @@ package run.var.teamcity.cloud.docker;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import java.time.Duration;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 
 /**
  * An asynchronous task to be submitted to the {@link DockerTaskScheduler}.
  *
  * <p>A task will be <em>repeatable</em> when using
- * {@link #DockerTask(String, DockerCloudErrorHandler, long, long, TimeUnit) the constructor providing delays}.
+ * {@link #DockerTask(String, DockerCloudErrorHandler, Duration, Duration)} the constructor providing delays}.
  * A repeatable task will be repeatedly scheduled for execution after the expiration of the specified delay with no
  * further guarantee: depending on the current thread pool usage the scheduling, respectively the effective
  * execution of a task, may be further delayed.</p>
@@ -24,10 +23,8 @@ abstract class DockerTask implements Callable<Void> {
 
     private final String operationName;
     private final DockerCloudErrorHandler errorProvider;
-    private final long initialDelay;
-    private final long delay;
-    private final TimeUnit timeUnit;
-    private final boolean repeatable;
+    private final Duration initialDelay;
+    private final Duration delay;
 
     /**
      * Creates a one-shot task.
@@ -38,7 +35,7 @@ abstract class DockerTask implements Callable<Void> {
      * @throws NullPointerException if any argument is {@code null}
      */
     DockerTask(String operationName, DockerCloudErrorHandler errorHandler) {
-        this(operationName, errorHandler, -1, -1, null, false);
+        this(operationName, errorHandler, Duration.ofMillis(-1), Duration.ofMillis(-1));
     }
 
     /**
@@ -48,73 +45,42 @@ abstract class DockerTask implements Callable<Void> {
      * @param errorHandler  the error handler
      * @param initialDelay  the delay preceding the initial scheduling of the task
      * @param delay         the delay preceding the subsequent scheduling of the task
-     * @param timeUnit      the time unit for the delays
      *
      * @throws NullPointerException     if any argument is {@code null}
      * @throws IllegalArgumentException if a delay is negative
      */
-    DockerTask(@Nonnull String operationName, @Nonnull DockerCloudErrorHandler errorHandler, long initialDelay, long delay, @Nonnull TimeUnit timeUnit) {
-        this(operationName, errorHandler, initialDelay, delay, timeUnit, true);
-    }
-
-    private DockerTask(@Nonnull String operationName, @Nonnull DockerCloudErrorHandler errorHandler, long initialDelay, long delay, TimeUnit timeUnit, boolean repeatable) {
+    DockerTask(@Nonnull String operationName, @Nonnull DockerCloudErrorHandler errorHandler, @Nonnull Duration
+            initialDelay, @Nonnull Duration delay) {
         DockerCloudUtils.requireNonNull(operationName, "Operation name cannot be null.");
         DockerCloudUtils.requireNonNull(operationName, "Error handler cannot be null.");
-        if (repeatable) {
-            DockerCloudUtils.requireNonNull(timeUnit, "Time unit cannot be null.");
-            if (initialDelay < 0) {
-                throw new IllegalArgumentException("Initial delay must be a positive integer.");
-            }
-            if (delay < 0) {
-                throw new IllegalArgumentException("Delay must be a positive integer.");
-            }
-        }
+        DockerCloudUtils.requireNonNull(initialDelay, "Initial delay cannot be null.");
+        DockerCloudUtils.requireNonNull(delay, "Delay cannot be null.");
 
         this.operationName = operationName;
         this.errorProvider = errorHandler;
         this.initialDelay = initialDelay;
         this.delay = delay;
-        this.timeUnit = timeUnit;
-        this.repeatable = repeatable;
     }
 
     /**
-     * Returns {@code true} if this task is repeatable.
+     * Returns the initial scheduling delay for the task.
      *
-     * @return {@code true} if this task is repeatable
+     * @return the initial scheduling delay
      */
-    boolean isRepeatable() {
-        return repeatable;
-    }
-
-    /**
-     * Returns the initial scheduling delay for the task. Will return -1 if this task is not repeatable.
-     *
-     * @return the initial scheduling delay if available, or -1
-     */
-    long getInitialDelay() {
+    @Nonnull
+    Duration getInitialDelay() {
         return initialDelay;
     }
 
     /**
-     * Returns the subsequent scheduling delay for the task.  Will return -1 if this task is not repeatable.
+     * Returns the subsequent scheduling delay for the task.  Will return a negative duration of if this task is not
+     * repeatable.
      *
-     * @return the subsequent scheduling delay if available, or -1
+     * @return the subsequent scheduling delay if available
      */
-    long getDelay() {
+    @Nonnull
+    Duration getRescheduleDelay() {
         return delay;
-    }
-
-    /**
-     * Returns the time unit for the delay. Will be {@code null} if this task is not repeatable.
-     *
-     * @return the time unit for the delays or {@code null}
-     *
-     * @see #isRepeatable()
-     */
-    @Nullable
-    TimeUnit getTimeUnit() {
-        return timeUnit;
     }
 
     /**

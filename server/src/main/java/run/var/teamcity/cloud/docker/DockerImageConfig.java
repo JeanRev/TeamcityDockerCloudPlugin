@@ -11,7 +11,14 @@ import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.annotation.Nonnull;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static com.intellij.openapi.util.text.StringUtil.isNotEmpty;
 
@@ -157,7 +164,7 @@ public class DockerImageConfig {
 
         Set<String> profileNames = new HashSet<>();
 
-        List<DockerImageConfig> images = null;
+        List<DockerImageConfig> images = Collections.emptyList();
         if (imagesJSon != null && !imagesJSon.isEmpty()) {
             try {
                 Node imagesNode = Node.parse(imagesJSon);
@@ -175,7 +182,9 @@ public class DockerImageConfig {
                 LOG.error("Failed to parse image configuration.", e);
                 invalidProperties.add(new InvalidProperty(DockerCloudUtils.IMAGES_PARAM, "Cannot parse image data."));
             }
-        } else {
+        }
+
+        if (images.isEmpty()){
             invalidProperties.add(new InvalidProperty(DockerCloudUtils.IMAGES_PARAM, "No image provided."));
         }
 

@@ -1,12 +1,12 @@
 package run.var.teamcity.cloud.docker.web;
 
-import org.jdom.Element;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,7 +34,7 @@ public class TestContainerStatusMsg {
     }
 
     /**
-     * Phase of the rcontainer test.
+     * Phase of the container test.
      */
     public enum Phase {
         /**
@@ -44,15 +44,14 @@ public class TestContainerStatusMsg {
         /**
          * Starting the container.
          */
-        START,
-        /**
-         * Waiting for the agent to connect.
-         */
-        WAIT_FOR_AGENT,
+        START
     }
 
     private final String msg;
+    @Nullable
     private final String containerId;
+    @Nullable
+    private final Instant containerStartTime;
     private final Status status;
     private final UUID taskUuid;
     private final Phase phase;
@@ -62,27 +61,26 @@ public class TestContainerStatusMsg {
     /**
      * Creates a new status message instance.
      *
-     * @param uuid    the test UUID
-     * @param phase   the test phase
-     * @param status  the test status
-     * @param msg     the status message (may be {@code null})
+     * @param uuid the test UUID
+     * @param phase the test phase
+     * @param status the test status
+     * @param msg the status message (may be {@code null})
      * @param failure a failure cause (may be {@code null})
      *
      * @throws NullPointerException if {@code uuid}, {@code phase}, or {@code status} are {@code null}
      */
-    public TestContainerStatusMsg(@Nonnull UUID uuid, @Nonnull Phase phase, @Nonnull Status status, @Nullable String msg,
-                                  @Nullable String containerId, @Nullable Throwable failure, List<String> warnings) {
-        DockerCloudUtils.requireNonNull(uuid, "Test UUID cannot be null.");
-        DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
-        DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
-        DockerCloudUtils.requireNonNull(warnings, "Warnings list cannot be null.");
-        this.taskUuid = uuid;
-        this.phase = phase;
-        this.status = status;
+    public TestContainerStatusMsg(@Nonnull UUID uuid, @Nonnull Phase phase, @Nonnull Status status, @Nullable String
+            msg,
+                                  @Nullable String containerId, @Nullable Instant containerStartTime,
+                                  @Nullable Throwable failure, @Nonnull List<String> warnings) {
+        this.taskUuid = DockerCloudUtils.requireNonNull(uuid, "Test UUID cannot be null.");
+        this.phase = DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
+        this.status = DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
         this.msg = msg;
         this.containerId = containerId;
+        this.containerStartTime = containerStartTime;
         this.throwable = failure;
-        this.warnings = warnings;
+        this.warnings = DockerCloudUtils.requireNonNull(warnings, "Warnings list cannot be null.");
     }
 
     /**
@@ -136,6 +134,26 @@ public class TestContainerStatusMsg {
     }
 
     /**
+     * Gets the created container id if any.
+     *
+     * @return the created container id or {@code null}
+     */
+    @Nullable
+    public String getContainerId() {
+        return containerId;
+    }
+
+    /**
+     * Gets the container start time if any.
+     *
+     * @return the container start time or {@code null} if not already started
+     */
+    @Nullable
+    public Instant getContainerStartTime() {
+        return containerStartTime;
+    }
+
+    /**
      * Marshall this status message to a JSON node.
      *
      * @return the JSON node
@@ -147,6 +165,7 @@ public class TestContainerStatusMsg {
         statusMsg
                 .put("msg", msg)
                 .put("containerId", containerId != null ? DockerCloudUtils.toShortId(containerId) : null)
+                .put("containerStartTime", containerStartTime != null ? containerStartTime.toEpochMilli() : null)
                 .put("status", status)
                 .put("phase", phase)
                 .put("taskUuid", taskUuid);
