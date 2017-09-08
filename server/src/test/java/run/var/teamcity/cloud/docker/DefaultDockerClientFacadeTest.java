@@ -337,10 +337,28 @@ public class DefaultDockerClientFacadeTest {
     }
 
     @Test
-    public void getLogs() {
+    public void getDemuxedLogs() {
         DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
 
         Container container = new Container();
+
+        container.getLogStreamHandler().
+                fragment("txt on stdout, ", StdioType.STDOUT).
+                fragment("txt on stdin, ", StdioType.STDIN).
+                fragment("txt unknown std type", null);
+
+        dockerClient.container(container);
+
+        CharSequence logs = facade.getLogs(container.getId());
+
+        assertThat(logs.toString()).isEqualTo("txt on stdout, txt on stdin, txt unknown std type");
+    }
+
+    @Test
+    public void getCompositeLogs() {
+        DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
+
+        Container container = new Container().tty(true);
 
         container.getLogStreamHandler().
                 fragment("txt on stdout, ", StdioType.STDOUT).

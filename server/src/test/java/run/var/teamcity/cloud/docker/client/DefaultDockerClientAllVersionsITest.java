@@ -17,10 +17,12 @@ import run.var.teamcity.cloud.docker.util.Stopwatch;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -35,6 +37,8 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.data.Offset.offset;
+import static run.var.teamcity.cloud.docker.test.TestUtils.listOf;
+import static run.var.teamcity.cloud.docker.test.TestUtils.repeat;
 import static run.var.teamcity.cloud.docker.util.DockerCloudUtils.mapOf;
 import static run.var.teamcity.cloud.docker.util.DockerCloudUtils.pair;
 
@@ -147,6 +151,32 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
     }
 
     @Test
+<<<<<<< Updated upstream
+=======
+    public void listTasks() {
+        DefaultDockerClient client = createClient();
+
+        EditableNode serviceSpec = Node.EMPTY_OBJECT.editNode();
+
+        serviceSpec.getOrCreateObject("TaskTemplate").
+                getOrCreateObject("ContainerSpec").
+                put("Image", TEST_IMAGE);
+
+        Node createNode = client.createService(serviceSpec.saveNode());
+
+        String serviceId = createNode.getAsString("ID");
+
+        serviceIdsForCleanup.add(serviceId);
+
+        List<Node> tasks = client.listTasks(serviceId).getArrayValues();
+
+        assertThat(tasks.size()).isEqualTo(1);
+
+        assertThat(tasks.get(0).getObject("Status").getAsString("State")).isIn("running", "pending", "allocated");
+    }
+
+    @Test
+>>>>>>> Stashed changes
     public void listContainersWithLabels() {
         DefaultDockerClient client = createClient();
 
@@ -355,6 +385,59 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         assertThat(fragment).isNotNull();
         assertThat(DockerCloudUtils.readUTF8String(fragment)).isEqualTo(msg + LINE_SEP);
         assertThat(fragment.getType()).isSameAs(type);
+    }
+
+    @Test
+    public void streamServiceLogs() throws IOException {
+        DefaultDockerClient client = createClient();
+
+        EditableNode serviceSpec = Node.EMPTY_OBJECT.editNode();
+
+        final String stdoutMsg1 = "print something on stdout";
+        final String stderrMsg = STDERR_MSG_PREFIX + "print something on stderr";
+        final String stdoutMsg2 = "print again something on stdout";
+
+        serviceSpec.getOrCreateObject("TaskTemplate").
+                getOrCreateObject("ContainerSpec").
+                put("Image", TEST_IMAGE).
+                put("OpenStdin", true).
+                getOrCreateArray("Command").
+                add("/usr/bin/echo.sh").
+                add(stdoutMsg1).
+                add(stderrMsg).
+                add(stdoutMsg2);
+
+        Node createNode = client.createService(serviceSpec.saveNode());
+
+        String serviceId = createNode.getAsString("ID");
+
+        serviceIdsForCleanup.add(serviceId);
+
+        // Note that when streaming logs from a service, standard and error streams may be received interleaved.
+        // This is why this test only checks that the stream fragments are received in the expected order according to
+        // their type of stream.
+
+        List<String> stdoutMessages = new ArrayList<>();
+        List<String> stderrMessages = new ArrayList<>();
+
+        try (StreamHandler handler = client.streamServiceLogs(serviceId, 3, StdioType.all(), true, true)) {
+            repeat(3, () -> {
+                StdioInputStream fragment = handler.getNextStreamFragment();
+                StdioType type = fragment.getType();
+                try {
+                    if (type == StdioType.STDOUT) {
+                        stdoutMessages.add(DockerCloudUtils.readUTF8String(fragment));
+                    } else if (type == StdioType.STDERR) {
+                        stderrMessages.add(DockerCloudUtils.readUTF8String(fragment));
+                    }
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        }
+
+        assertThat(stdoutMessages).isEqualTo(listOf(stdoutMsg1 + LINE_SEP, stdoutMsg2 + LINE_SEP));
+        assertThat(stderrMessages).isEqualTo(listOf(stderrMsg + LINE_SEP));
     }
 
     @Test

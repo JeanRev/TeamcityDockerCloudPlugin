@@ -36,5 +36,5 @@ public interface StreamHandler extends AutoCloseable {
     OutputStream getOutputStream();
 
     @Override
-    void close() throws IOException;
+    void close();
 }

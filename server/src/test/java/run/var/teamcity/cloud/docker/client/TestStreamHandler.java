@@ -8,6 +8,7 @@ import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -55,9 +56,13 @@ public class TestStreamHandler implements StreamHandler {
     }
 
     @Override
-    public void close() throws IOException {
-        lock.runChecked(() -> {
-            outputStream.close();
+    public void close() {
+        lock.run(() -> {
+            try {
+                outputStream.close();
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
             closed = true;
         });
     }

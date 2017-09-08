@@ -43,17 +43,21 @@ import javax.ws.rs.core.Response;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * A Docker client. This client supports connecting to the Docker daemon using either Unix sockets or TCP connections.
@@ -227,12 +231,20 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
     public StreamHandler streamLogs(@Nonnull String containerId, int lineCount, @Nonnull Set<StdioType> stdioTypes,
                                     boolean follow, boolean demuxStdio) {
 
-        return invokeStream(prepareLogsTarget(target(), containerId, lineCount, stdioTypes).queryParam("follow",
-                follow ? 1 : 0), HttpMethod.GET, null, demuxStdio);
+        return invokeStream(prepareLogsTarget(target(), "/containers/{id}/logs", containerId, lineCount, stdioTypes,
+                follow), HttpMethod.GET, null, demuxStdio);
     }
 
-    private WebTarget prepareLogsTarget(WebTarget target, String container, int lineCount, Set<StdioType>
-            stdioTypes) {
+    @Nonnull
+    @Override
+    public StreamHandler streamServiceLogs(@Nonnull String serviceId, int lineCount, @Nonnull Set<StdioType>
+            stdioTypes, boolean follow, boolean demuxStream) {
+        return invokeStream(prepareLogsTarget(target(), "/services/{id}/logs", serviceId, lineCount,
+                stdioTypes, follow), HttpMethod.GET, null, demuxStream);
+    }
+
+    private WebTarget prepareLogsTarget(WebTarget target, String path, String container, int lineCount, Set<StdioType>
+            stdioTypes, boolean follow) {
 
         DockerCloudUtils.requireNonNull(container, "Container name or id cannot be null.");
         DockerCloudUtils.requireNonNull(stdioTypes, "Set of stdio types cannot be null.");
@@ -248,8 +260,10 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
             throw new IllegalArgumentException("Set of stdio types cannot be empty.");
         }
 
-        return applyStdioTypes(target, stdioTypes).path("/containers/{id}/logs").resolveTemplate("id", container)
-                .queryParam("tail", tail);
+        return applyStdioTypes(target, stdioTypes).path(path).
+                resolveTemplate("id", container).
+                queryParam("tail", tail).
+                queryParam("follow", follow ? 1 : 0);
     }
 
     @Override
@@ -315,23 +329,26 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
     private WebTarget addLabelsFiltersToQuery(WebTarget target, Map<String, String> labelFilters) {
         assert target != null && labelFilters != null;
-        StringBuilder filter = new StringBuilder();
-        for (Map.Entry<String, String> labelFilter : labelFilters.entrySet()) {
-            String key = labelFilter.getKey();
-            String value = labelFilter.getValue();
-            DockerCloudUtils.requireNonNull(key, () -> "Invalid null key: " + labelFilters);
-            DockerCloudUtils.requireNonNull(value, () -> "Invalid null value: " + labelFilters);
-            if (filter.length() > 0) {
-                filter.append(",");
-            }
-            filter.append("\"").append(labelFilter.getKey()).append("=").append(labelFilter.getValue()).append("\"");
-        }
 
-        if (filter.length() > 0) {
-            target = target.queryParam("filters", "%7B\"label\": [" + filter+ "]%7D");
-        }
+        List<String> labels = labelFilters.entrySet().stream().
+                map(entry -> entry.getKey() + "=" + entry.getValue()).
+                collect(Collectors.toList());
 
-        return target;
+        return addFilterToQuery(target, "label", labels);
+    }
+
+    private WebTarget addFilterToQuery(WebTarget target, String filterKey, List<String> filterValues) {
+        if (filterValues.isEmpty()) {
+            return target;
+        }
+        EditableNode filter = Node.EMPTY_OBJECT.editNode();
+        EditableNode filterArray = filter.getOrCreateArray(filterKey);
+        filterValues.forEach(filterArray::add);
+        try {
+            return target.queryParam("filters", URLEncoder.encode(filter.toString(), "UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            throw new AssertionError(e);
+        }
     }
 
     private WebTarget applyStdioTypes(WebTarget target, Set<StdioType> stdioTypes) {

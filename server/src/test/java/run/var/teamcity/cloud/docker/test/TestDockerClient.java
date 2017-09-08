@@ -201,10 +201,14 @@ public class TestDockerClient implements DockerClient {
             if (container == null) {
                 throw new NotFoundException("Container not found: " + containerId);
             }
-            return Node.EMPTY_OBJECT.editNode().
+            EditableNode inspectNode = Node.EMPTY_OBJECT.editNode().
                     put("Id", containerId).
-                    put("Name", container.getName()).
-                    saveNode();
+                    put("Name", container.getName());
+
+            inspectNode.getOrCreateObject("Config").
+                    put("Tty", container.tty);
+
+            return inspectNode.saveNode();
         });
     }
 
@@ -323,8 +327,24 @@ public class TestDockerClient implements DockerClient {
             if (container == null) {
                 throw new NotFoundException("No such container: " + containerId);
             }
+
+            if ((container.tty && demuxStdio)) {
+                fail("Illegal attempt to demultiplex tty-based container stream.");
+            }
+
+            if ((!container.tty && !demuxStdio)) {
+                fail("Illegal attempt to consume non-tty-based stream without demultiplexing.");
+            }
+
             return container.getLogStreamHandler();
         });
+    }
+
+    @Nonnull
+    @Override
+    public StreamHandler streamServiceLogs(@Nonnull String containerId, int lineCount, @Nonnull Set<StdioType>
+            stdioTypes, boolean follow, boolean demuxStream) {
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     private BigDecimal toBigDecimal(Number number) {
@@ -511,6 +531,7 @@ public class TestDockerClient implements DockerClient {
         private final Map<String, String> labels = new ConcurrentHashMap<>();
         private final Map<String, String> env = new ConcurrentHashMap<>();
         private volatile String name = id;
+        private volatile boolean tty;
         private volatile TestImage image;
         private volatile ContainerStatus status;
         private volatile TestStreamHandler logStreamHandler = new TestStreamHandler(new OutputStream() {
@@ -559,6 +580,11 @@ public class TestDockerClient implements DockerClient {
 
         public Container image(TestImage image) {
             this.image = image;
+            return this;
+        }
+
+        public Container tty(boolean tty) {
+            this.tty = tty;
             return this;
         }
 

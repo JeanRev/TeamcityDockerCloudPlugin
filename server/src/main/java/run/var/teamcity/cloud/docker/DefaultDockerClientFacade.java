@@ -198,7 +198,7 @@ public class DefaultDockerClientFacade implements DockerClientFacade {
                 getAsBoolean("Tty", false);
 
 
-        StreamHandler streamHandler = client.streamLogs(containerId, 10000, StdioType.all(), false, hasTty);
+        StreamHandler streamHandler = client.streamLogs(containerId, 10000, StdioType.all(), false, !hasTty);
         return demuxLogs(streamHandler);
     }
 

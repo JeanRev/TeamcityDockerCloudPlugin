@@ -181,6 +181,22 @@ public interface DockerClient extends Closeable {
     StreamHandler streamLogs(@Nonnull String containerId, int lineCount, @Nonnull Set<StdioType> stdioTypes,
                              boolean follow, boolean demuxStdio);
 
+    /**
+     * Streams the service logs.
+     *
+     * @param containerId the container id
+     * @param lineCount the number of line context
+     * @param stdioTypes the types of stream to be fetched
+     * @param follow {@code true} if the logs must be streamed continuously
+     *
+     * @return a stream handler to consume the logs
+     *
+     * @throws NullPointerException if any argument is {@code null}
+     * @throws DockerClientException if an error occurred while communicating with the daemon
+     */
+    @Nonnull
+    StreamHandler streamServiceLogs(@Nonnull String containerId, int lineCount, @Nonnull Set<StdioType> stdioTypes,
+                                  boolean follow, boolean demuxStream);
 
     /**
      * Stops the container with the given name or id and stop timeout. Use {@link #DEFAULT_TIMEOUT} as timeout value

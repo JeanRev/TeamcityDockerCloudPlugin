@@ -4,6 +4,7 @@ import org.junit.Test;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.util.Stopwatch;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.time.Duration;
 
@@ -34,6 +35,11 @@ public class DefaultDockerClient_1_12_Test extends DefaultDockerClientAllVersion
         client.stopContainer(containerId, Duration.ofSeconds(2));
 
         assertThat(sw.getDuration().toMillis()).isCloseTo(2000, offset(400L));
+    }
+
+    @Override // Not a test.
+    public void streamServiceLogs() throws IOException {
+        // Getting log from service is not available from this Daemon version.
     }
 
     @Override

@@ -1,5 +1,6 @@
 package run.var.teamcity.cloud.docker.client;
 
+import org.apache.http.MalformedChunkCodingException;
 import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
@@ -54,6 +55,8 @@ abstract class AbstractStreamHandler implements StreamHandler {
     private IOException close(IOException failure, Closeable closeable) {
         try {
             closeable.close();
+        } catch (MalformedChunkCodingException e) {
+            // May happen if the stream was not fully exhausted at the time the connection is closed. Ignore.
         } catch (IOException e) {
             if (failure == null) {
                 failure = new IOException("Failed to close some stream.");
