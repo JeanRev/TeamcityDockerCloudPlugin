@@ -17,6 +17,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -25,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.fail;
 
@@ -217,5 +219,15 @@ public final class TestUtils {
     @SafeVarargs
     public static <V> List<V> listOf(V... elts) {
         return Arrays.stream(elts).collect(Collectors.toList());
+    }
+
+    public static void repeat(int times, VoidCallable callable) {
+        for (int i = 0; i < times; i++) {
+            try {
+                callable.call();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }

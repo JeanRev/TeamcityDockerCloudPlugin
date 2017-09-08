@@ -151,8 +151,6 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
     }
 
     @Test
-<<<<<<< Updated upstream
-=======
     public void listTasks() {
         DefaultDockerClient client = createClient();
 
@@ -172,11 +170,11 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
 
         assertThat(tasks.size()).isEqualTo(1);
 
-        assertThat(tasks.get(0).getObject("Status").getAsString("State")).isIn("running", "pending", "allocated");
+        assertThat(tasks.get(0).getObject("Status").getAsString("State")).isIn("running", "pending", "allocated",
+                                                                               "new");
     }
 
     @Test
->>>>>>> Stashed changes
     public void listContainersWithLabels() {
         DefaultDockerClient client = createClient();
 

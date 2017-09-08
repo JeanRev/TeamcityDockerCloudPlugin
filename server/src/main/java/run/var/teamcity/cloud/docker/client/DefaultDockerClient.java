@@ -53,6 +53,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -323,6 +324,17 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
         WebTarget target = target().path("/services");
 
         target = addLabelsFiltersToQuery(target, labelFilters);
+
+        return invoke(target, HttpMethod.GET, null, prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
+    }
+
+    @Nonnull
+    @Override
+    public Node listTasks(@Nonnull String serviceId) {
+        DockerCloudUtils.requireNonNull(serviceId, "Service ID cannot be null.");
+        WebTarget target = target().path("/tasks");
+
+        target = addFilterToQuery(target, "service", Collections.singletonList(serviceId));
 
         return invoke(target, HttpMethod.GET, null, prepareHeaders(DockerRegistryCredentials.ANONYMOUS), null);
     }

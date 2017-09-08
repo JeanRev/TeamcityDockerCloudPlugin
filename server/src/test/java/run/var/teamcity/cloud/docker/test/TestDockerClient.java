@@ -467,6 +467,12 @@ public class TestDockerClient implements DockerClient {
         lock.run(() -> closed = true);
     }
 
+    @Nonnull
+    @Override
+    public Node listTasks(@Nonnull String serviceId) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
     public Set<TestImage> getLocalImages() {
         return new HashSet<>(localImages)   ;
     }

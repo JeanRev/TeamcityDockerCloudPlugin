@@ -241,6 +241,7 @@ public interface DockerClient extends Closeable {
      * @return the list of containers
      *
      * @throws NullPointerException if {@code labelFilters}, or any of its keys or values, are {@code null}
+     * @throws DockerClientException if an error occurred while communicating with the daemon
      */
     @Nonnull
     Node listContainersWithLabel(@Nonnull Map<String, String> labelFilters);
@@ -254,6 +255,7 @@ public interface DockerClient extends Closeable {
      * @return the list of services
      *
      * @throws NullPointerException if {@code labelFilters}, or any of its keys or values, are {@code null}
+     * @throws DockerClientException if an error occurred while communicating with the daemon
      */
     @Nonnull
     Node listServicesWithLabel(@Nonnull Map<String, String> labelFilters);
@@ -263,4 +265,17 @@ public interface DockerClient extends Closeable {
      */
     @Override
     void close();
+
+    /**
+     * Lists the tasks for the given service.
+     *
+     * @param serviceId the service
+     *
+     * @return the list of tasks
+     *
+     * @throws NullPointerException if {@code serviceId} is {@code null}
+     * @throws DockerClientException if an error occurred while communicating with the daemon
+     */
+    @Nonnull
+    Node listTasks(@Nonnull String serviceId);
 }
