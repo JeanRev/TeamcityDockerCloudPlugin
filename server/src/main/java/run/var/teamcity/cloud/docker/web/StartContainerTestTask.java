@@ -1,6 +1,6 @@
 package run.var.teamcity.cloud.docker.web;
 
-import run.var.teamcity.cloud.docker.ContainerInfo;
+import run.var.teamcity.cloud.docker.AgentHolderInfo;
 import run.var.teamcity.cloud.docker.DockerClientFacade;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Stopwatch;
@@ -11,6 +11,7 @@ import javax.annotation.Nonnull;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status.PENDING;
@@ -25,6 +26,7 @@ class StartContainerTestTask extends ContainerTestTask {
 
     private final String containerId;
     private final UUID instanceUuid;
+    private String taskId = null;
     private Instant containerStartTime = null;
     private Stopwatch agentConnectionStopWatch = null;
 
@@ -53,7 +55,7 @@ class StartContainerTestTask extends ContainerTestTask {
 
             agentConnectionStopWatch = Stopwatch.start();
 
-            clientFacade.startAgentContainer(containerId);
+            taskId = clientFacade.startAgent(containerId);
 
             testTaskHandler.notifyContainerStarted(containerStartTime);
 
@@ -64,22 +66,23 @@ class StartContainerTestTask extends ContainerTestTask {
             return SUCCESS;
         }
 
-        List<ContainerInfo> containers = clientFacade.listActiveAgentContainers(DockerCloudUtils
+        List<AgentHolderInfo> containers = clientFacade.listAgentHolders(DockerCloudUtils
                 .TEST_INSTANCE_ID_LABEL, instanceUuid.toString());
-        if (containers.isEmpty()) {
+        Optional<AgentHolderInfo> agentHolder = containers.stream().
+                filter(holder -> holder.getId().equals(containerId) && holder.getTaskId().equals(taskId)).
+                findFirst();
+
+        if (!agentHolder.isPresent()) {
             throw new ContainerTestTaskException("Container was prematurely destroyed.");
-        } else if (containers.size() == 1) {
-            final ContainerInfo container = containers.get(0);
-            if (container.isRunning()) {
-                if (agentConnectionStopWatch.getDuration().compareTo(AGENT_WAIT_TIMEOUT) > 0) {
-                    throw new ContainerTestTaskException("Timeout: no agent connection after " +
-                            AGENT_WAIT_TIMEOUT.getSeconds() + " seconds.");
-                }
-            } else {
-                throw new ContainerTestTaskException("Container exited prematurely (" + container.getState() + ")");
+        }
+
+        if (agentHolder.get().isRunning()) {
+            if (agentConnectionStopWatch.getDuration().compareTo(AGENT_WAIT_TIMEOUT) > 0) {
+                throw new ContainerTestTaskException("Timeout: no agent connection after " + AGENT_WAIT_TIMEOUT.getSeconds() + " seconds.");
             }
         } else {
-            assert false : "Multiple containers found for the test instance UUID: " + instanceUuid;
+            throw new ContainerTestTaskException("Container exited prematurely (" + agentHolder.get().getStateMsg() +
+                    ")");
         }
 
         return PENDING;

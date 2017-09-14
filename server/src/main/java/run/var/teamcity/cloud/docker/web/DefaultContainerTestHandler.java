@@ -50,8 +50,9 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
                                                               @Nonnull DockerClientFacadeFactory clientFacadeFactory) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
         DockerCloudUtils.requireNonNull(clientFacadeFactory, "Docker client facade factory cannot be null.");
-        DockerClientFacade clientFacade = clientFacadeFactory.createFacade(clientConfig.getDockerClientConfig()
-                .connectionPoolSize(1));
+        DockerClientFacade clientFacade = clientFacadeFactory
+                .createFacade(clientConfig.getDockerClientConfig().connectionPoolSize(1),
+                              DockerClientFacadeFactory.Type.SWARM);
         return new DefaultContainerTestHandler(clientFacade);
     }
 
@@ -131,8 +132,7 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
      *
      * @throws NullPointerException if {@code currentTask} is {@code null}
      */
-    public void setCurrentTaskFuture(@Nonnull ScheduledFutureWithRunnable<? extends ContainerTestTask>
-                                             currentTask) {
+    public void setCurrentTaskFuture(@Nonnull ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTask) {
         DockerCloudUtils.requireNonNull(currentTask, "Current task cannot be null.");
         lock.run(() -> {
             this.currentTaskFuture = currentTask;

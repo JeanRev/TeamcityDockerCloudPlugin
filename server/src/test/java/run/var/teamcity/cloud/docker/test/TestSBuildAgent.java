@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link AgentDescription} for testing.
@@ -36,7 +37,8 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     private boolean enabled = true;
     private String hostAddress = null;
 
-    private final Map<String, String> availableParameters = new HashMap<>();
+    private final Map<String, String> availableParameters = new ConcurrentHashMap<>();
+    private final Map<String, String> configurationParameters = new ConcurrentHashMap<>();
 
     @Nonnull
     @Override
@@ -82,7 +84,7 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
     @Nonnull
     @Override
     public Map<String, String> getConfigurationParameters() {
-        return Collections.emptyMap();
+        return configurationParameters;
     }
 
     @Nonnull
@@ -424,6 +426,11 @@ public class TestSBuildAgent implements BuildAgentEx, BuildAgentInit {
 
     public TestSBuildAgent hostAddress(String hostAddress) {
         this.hostAddress = hostAddress;
+        return this;
+    }
+
+    public TestSBuildAgent configurationParameter(String key, String value) {
+        configurationParameters.put(key, value);
         return this;
     }
 }

@@ -28,10 +28,13 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     private final LockHandler lock = LockHandler.newReentrantLock();
 
     private String containerName = null;
-    private String containerId;
-    private ContainerInfo containerInfo;
+    private String agentHolderId;
+    private String taskId;
+    private AgentHolderInfo agentHolderInfo;
     private InstanceStatus status = InstanceStatus.UNKNOWN;
     private CloudErrorInfo errorInfo;
+    private Integer agentId;
+    private UUID agentRuntimeUuid;
 
     /**
      * Creates a new Docker cloud instance.
@@ -65,28 +68,43 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     }
 
     /**
-     * Gets the Docker container ID associated with this cloud instance. It could be {@code null} if the container is
-     * not known yet or is not available anymore.
+     * Gets the Docker agent holder ID associated with this cloud instance. It could be {@code null} if the agent
+     * holder is not known yet or is not available anymore.
      *
-     * @return the container ID or {@code null}
+     * @return the agent holder ID or {@code null}
      */
-    @Nullable
-    String getContainerId() {
-        return containerId;
+    @Nonnull
+    Optional<String> getAgentHolderId() {
+        return Optional.ofNullable(lock.call(() -> this.agentHolderId));
     }
 
     /**
      * Sets the Docker container ID.
      *
-     * @param containerId the container ID
-     *                    S
+     * @param agentHolderId the agent holder ID
      *
-     * @throws NullPointerException if {@code containerId} is {@code null}
+     * @throws NullPointerException if {@code agentHolderId} is {@code null}
      */
-    void setContainerId(@Nonnull String containerId) {
-        DockerCloudUtils.requireNonNull("Container ID cannot be null.", containerId);
+    void setAgentHolderId(@Nonnull String agentHolderId) {
+        DockerCloudUtils.requireNonNull(agentHolderId, "Agent holder id cannot be null.");
 
-        lock.run(() -> this.containerId = containerId);
+        lock.run(() -> this.agentHolderId = agentHolderId);
+    }
+
+    /**
+     * Gets the task ID associated with this instance, if any.
+     *
+     * @return the task ID if any
+     */
+    @Nonnull
+    public Optional<String> getTaskId() {
+        return Optional.ofNullable(taskId);
+    }
+
+    void setTaskId(@Nonnull String taskId) {
+        DockerCloudUtils.requireNonNull(taskId, "Task id cannot be null.");
+
+        lock.run(() -> this.taskId = taskId);
     }
 
     @Nonnull
@@ -176,17 +194,82 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
      * @return the additional container meta-data or {@code null} if not available
      */
     @Nonnull
-    public Optional<ContainerInfo> getContainerInfo() {
-        return Optional.ofNullable(lock.call(() -> containerInfo));
+    public Optional<AgentHolderInfo> getAgentHolderInfo() {
+        return Optional.ofNullable(lock.call(() -> agentHolderInfo));
+    }
+
+    /**
+     * Registers or verifies the given agent ID against this instance. If this instance is already registered to an
+     * agent, this method has no effect.
+     *
+     * @param agentId the agent id to be registered
+     *
+     * @return {@code true} if {@code agentId} matches the currently registered agent, {@code false} otherwise
+     */
+    public boolean registerOrCompareAgentId(int agentId) {
+        return lock.call(() -> {
+            if (this.agentId != null) {
+                 return this.agentId == agentId;
+            }
+            this.agentId = agentId;
+            return true;
+        });
+    }
+
+    /**
+     * Gets the agent runtime UUID associated with this instance, if any.
+     *
+     * @return the agent runtime UUID if any
+     */
+    @Nonnull
+    public Optional<UUID> getAgentRuntimeUuid() {
+        return Optional.ofNullable(lock.call(() -> agentRuntimeUuid));
+    }
+
+    /**
+     * Registers the agent runtime UUID against this instance. This method has no effect if another agent has already
+     * registered itself.
+     *
+     * @param agentRuntimeUuid the new agent runtime UUID
+     *
+     * @throws NullPointerException if {@code agentRuntimeUuid} is {@code null}
+     */
+    public void registerAgentRuntimeUuid(@Nonnull UUID agentRuntimeUuid) {
+        DockerCloudUtils.requireNonNull(agentRuntimeUuid, "Agent runtime UUID cannot be null.");
+        lock.run(() -> {
+           if (this.agentRuntimeUuid == null) {
+               this.agentRuntimeUuid = agentRuntimeUuid;
+           }
+        });
+    }
+
+    /**
+     * Unregisters the agent runtime UUID associated with this instance. This method has no effect if no agent are
+     * currently registered, or if the provided UUID does not match the UUID registered with this instance.
+     *
+     * @param agentRuntimeUuid the agent runtime UUID to be unregistered
+     *
+     * @throws NullPointerException if {@code agentRuntimeUuid} is {@code null}
+     */
+    public void unregisterAgentRuntimeUUid(@Nonnull UUID agentRuntimeUuid) {
+        DockerCloudUtils.requireNonNull(agentRuntimeUuid, "Agent runtime UUID cannot be null.");
+        lock.run(() -> {
+           if (this.agentRuntimeUuid == null) {
+               return;
+           }
+           if (agentRuntimeUuid.equals(this.agentRuntimeUuid)) {
+               this.agentRuntimeUuid = null;
+           }
+        });
     }
 
     /**
      * Sets the additional container meta-data.
      *
-     * @param containerInfo the container meta-data or {@code null} if not available
+     * @param agentHolderInfo the container meta-data or {@code null} if not available
      */
-    void setContainerInfo(@Nullable ContainerInfo containerInfo) {
-        lock.run(() -> this.containerInfo = containerInfo);
+    void setAgentHolderInfo(@Nullable AgentHolderInfo agentHolderInfo) {
+        lock.run(() -> this.agentHolderInfo = agentHolderInfo);
     }
 
     @Override

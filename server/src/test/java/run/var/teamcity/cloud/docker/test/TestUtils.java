@@ -12,12 +12,12 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.fail;
 
@@ -39,7 +38,9 @@ public final class TestUtils {
 
     public static final UUID TEST_UUID_2 = UUID.fromString("00000000-1ced-beef-0000-000000000000");
 
-    private final static int WAIT_DEFAULT_REFRESH_RATE_MSEC = 500;
+    public static final Instant TEST_INSTANT = Instant.parse("2007-12-03T10:15:30.00Z");
+
+    private final static int WAIT_DEFAULT_REFRESH_RATE_MSEC = 300;
     private final static int WAIT_DEFAULT_MAX_WAIT_TIME_SEC = 20;
 
     public static void waitSec(long sec) {

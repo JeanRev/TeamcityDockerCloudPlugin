@@ -1,19 +1,17 @@
 package run.var.teamcity.cloud.docker.web;
 
 import com.intellij.openapi.diagnostic.Logger;
+import run.var.teamcity.cloud.docker.CreateAgentParameters;
 import run.var.teamcity.cloud.docker.DockerClientFacade;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
-import run.var.teamcity.cloud.docker.NewContainerInfo;
+import run.var.teamcity.cloud.docker.NewAgentHolderInfo;
 import run.var.teamcity.cloud.docker.PullStatusListener;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
 import javax.annotation.Nonnull;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import javax.annotation.Nullable;
 import java.util.UUID;
 
 /**
@@ -57,38 +55,18 @@ class CreateContainerTestTask extends ContainerTestTask {
 
         DockerClientFacade clientFacade = testTaskHandler.getDockerClientFacade();
 
-        EditableNode container = imageConfig.getContainerSpec().editNode();
-        container.getOrCreateArray("Env").add(DockerCloudUtils.ENV_TEST_INSTANCE_ID + "=" + instanceUuid).add
-                (DockerCloudUtils.ENV_SERVER_URL + "=" + serverUrl);
-        container.getOrCreateObject("Labels").put(DockerCloudUtils.TEST_INSTANCE_ID_LABEL, instanceUuid.toString());
-        String image = imageResolver.resolve(imageConfig);
-
-        if (image == null) {
-            // Illegal configuration, should not happen.
-            throw new ContainerTestTaskException("Failed to resolve image name.");
-        }
-
-        LOG.debug("Resolved image name: " + image);
-
-        container.put("Image", image);
-
-        if (imageConfig.isPullOnCreate()) {
-            msg("Pulling image " + image);
-
-            clientFacade.pull(image, imageConfig.getRegistryCredentials(), new PullListener());
-        }
-
         msg("Creating container");
 
-        Map<String, String> env = new HashMap<>();
-        env.put(DockerCloudUtils.ENV_TEST_INSTANCE_ID, instanceUuid.toString());
-        env.put(DockerCloudUtils.ENV_SERVER_URL, serverUrl);
+        CreateAgentParameters createAgentParameters = CreateAgentParameters.
+                fromImageConfig(imageConfig, imageResolver, false);
 
-        Map<String, String> labels = Collections.singletonMap(DockerCloudUtils.TEST_INSTANCE_ID_LABEL,
-                instanceUuid.toString());
+        createAgentParameters.
+                env(DockerCloudUtils.ENV_TEST_INSTANCE_ID, instanceUuid.toString()).
+                env(DockerCloudUtils.ENV_SERVER_URL, serverUrl).
+                label(DockerCloudUtils.TEST_INSTANCE_ID_LABEL, instanceUuid.toString()).
+                pullStatusListener(new PullListener());
 
-        NewContainerInfo containerInfo = clientFacade.createAgentContainer(imageConfig.getContainerSpec(), image,
-                labels, env);
+        NewAgentHolderInfo containerInfo = clientFacade.createAgent(createAgentParameters);
 
         containerInfo.getWarnings().forEach(this::warning);
 
@@ -100,15 +78,18 @@ class CreateContainerTestTask extends ContainerTestTask {
     private class PullListener implements PullStatusListener {
 
         String lastStatus = null;
-        int lastPercent = NO_PROGRESS;
+        int lastPercent = -1;
 
         // We currently have only one line of status. So, we track the progress of one layer after another.
         String trackedLayer = null;
 
         @Override
-        public void pullInProgress(@Nonnull String layer, @Nonnull String status, int percent) {
+        public void pullInProgress(@Nonnull String status, @Nullable String layer, int percent) {
+
+            String statusMsg = layer != null ? status + " " + layer : status;
 
             if (percent == NO_PROGRESS) {
+                msg(statusMsg);
                 trackedLayer = null;
                 return;
             }
@@ -120,7 +101,7 @@ class CreateContainerTestTask extends ContainerTestTask {
             }
 
             if (!status.equals(lastStatus) || lastPercent != percent) {
-                msg("Pull in progress - " + status + " " + layer + ": " + percent + "%");
+                msg("Pull in progress - " + statusMsg + ": " + percent + "%");
             }
 
             lastStatus = status;

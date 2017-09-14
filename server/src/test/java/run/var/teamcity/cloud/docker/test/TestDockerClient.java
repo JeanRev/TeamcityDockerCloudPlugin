@@ -1,7 +1,9 @@
 package run.var.teamcity.cloud.docker.test;
 
 import org.jetbrains.annotations.NotNull;
+import run.var.teamcity.cloud.docker.DefaultDockerClientFacade;
 import run.var.teamcity.cloud.docker.StreamHandler;
+import run.var.teamcity.cloud.docker.SwarmDockerClientFacade;
 import run.var.teamcity.cloud.docker.client.BadRequestException;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
 import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
@@ -13,7 +15,7 @@ import run.var.teamcity.cloud.docker.client.InvocationFailedException;
 import run.var.teamcity.cloud.docker.client.NotFoundException;
 import run.var.teamcity.cloud.docker.client.StdioType;
 import run.var.teamcity.cloud.docker.client.TestImage;
-import run.var.teamcity.cloud.docker.client.TestStreamHandler;
+import run.var.teamcity.cloud.docker.client.TestStreamHandlerFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.LockHandler;
@@ -28,7 +30,10 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -36,9 +41,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static run.var.teamcity.cloud.docker.test.TestUtils.runAsync;
+import static run.var.teamcity.cloud.docker.test.TestUtils.waitMillis;
+
 
 /**
  * A {@link DockerClient} made for testing. Will simulate a Docker daemon using in-memory structures.
@@ -55,8 +65,10 @@ public class TestDockerClient implements DockerClient {
     }
 
     private final Map<String, Container> containers = new HashMap<>();
+    private final Map<String, Service> services = new HashMap<>();
     private final Set<TestImage> registryImages = new HashSet<>();
     private final Set<TestImage> localImages = new HashSet<>();
+    private final List<String> containerCreationWarnings = new ArrayList<>();
     private final LockHandler lock = LockHandler.newReentrantLock();
 
     /**
@@ -68,6 +80,7 @@ public class TestDockerClient implements DockerClient {
     private DockerAPIVersion supportedAPIVersion = null;
     private DockerAPIVersion minAPIVersion = null;
     private DockerAPIVersion apiVersion;
+    private String serviceCreationWarning;
     private boolean lenientVersionCheck = false;
     private final DockerRegistryCredentials dockerRegistryCredentials;
 
@@ -116,9 +129,9 @@ public class TestDockerClient implements DockerClient {
     @Override
     public Node createContainer(@Nonnull Node containerSpec, @Nullable String name) {
 
-        TestUtils.waitMillis(300);
+        waitMillis(300);
 
-        String createdContainerId = lock.call(() -> {
+        return lock.call(() -> {
             String containerId;
             checkForFailure();
             TestImage testImg = lookupImage(localImages, containerSpec.getAsString("Image"));
@@ -142,43 +155,158 @@ public class TestDockerClient implements DockerClient {
             container.image(testImg);
             containerId = container.getId();
             containers.put(containerId, container);
-            return containerId;
+
+            EditableNode createNode = Node.EMPTY_OBJECT.editNode().put("Id", containerId);
+            EditableNode warnings = createNode.getOrCreateArray("Warnings");
+
+            containerCreationWarnings.forEach(warnings::add);
+
+            return createNode.saveNode();
         });
-
-
-        return Node.EMPTY_OBJECT.editNode().put("Id", createdContainerId).saveNode();
     }
 
     @Override
     public void startContainer(@Nonnull String containerId) {
-        TestUtils.waitMillis(300);
+        waitMillis(300);
         lock.run(() -> {
             checkForFailure();
             Container container = containers.get(containerId);
             if (container == null) {
                 throw new NotFoundException("No such container: " + containerId);
-            } else if (container.status == ContainerStatus.STARTED) {
+            } else if (container.isRunning()) {
                 throw new InvocationFailedException("Container already started: " + containerId);
             }
 
-            container.status = ContainerStatus.STARTED;
+            container.running(true);
         });
     }
 
     @Nonnull
     @Override
-    public Node createService(@Nonnull Node containerSpec) {
-        throw new UnsupportedOperationException("Not implemented yet.");
+    public Node createService(@Nonnull Node serviceSpec) {
+        waitMillis(300);
+
+        return lock.call(() -> {
+            checkForFailure();
+
+            Service service = new Service();
+
+            service.image(serviceSpec.getAsString("Image"));
+
+            serviceSpec.getObject("Labels").
+                    getObjectValues().forEach((key, node) ->
+                    service.label(key, node.getAsString()));
+
+            Node containerSpec = serviceSpec.getObject("TaskTemplate").getObject("ContainerSpec");
+
+            containerSpec.getArray("Env", Node.EMPTY_ARRAY)
+                    .getArrayValues().forEach(node -> {
+                String[] tokens = node.getAsString().split("=");
+                assertThat(tokens.length).isEqualTo(2);
+                service.env(tokens[0], tokens[1]);
+            });
+
+            String serviceId = service.getId();
+
+            services.put(serviceId, service);
+
+            EditableNode createNode = Node.EMPTY_OBJECT.editNode();
+
+            createNode.put("ID", serviceId);
+
+            if (serviceCreationWarning != null) {
+                createNode.put("Warning", serviceCreationWarning);
+            }
+
+            return createNode.saveNode();
+        });
+
+
     }
 
     @Override
-    public Node inspectService(@Nonnull String service) {
-        throw new UnsupportedOperationException("Not implemented yet.");
+    public Node inspectService(@Nonnull String serviceId) {
+        return lock.call(() -> {
+            Service service = services.get(serviceId);
+
+            if (service == null) {
+                throw new NotFoundException("Service not found: " + serviceId);
+            }
+
+            EditableNode inspection = Node.EMPTY_OBJECT.editNode();
+
+            inspection.
+                    put("ID", serviceId).
+                    getOrCreateObject("Version").
+                    put("Index", service.version);
+
+            EditableNode spec = inspection.getOrCreateObject("Spec");
+
+            spec.getOrCreateObject("Mode").
+                    getOrCreateObject("Replicated").
+                    put("Replicas", service.replicas.size());
+
+            spec.put("Name", service.getName()).
+                    getOrCreateObject("TaskTemplate").
+                    getOrCreateObject("ContainerSpec").
+                    put("TTY", service.tty).
+                    put("Image", service.image + "@resolved");
+
+            return inspection.saveNode();
+        });
     }
 
     @Override
-    public void updateService(@Nonnull String service, @Nonnull Node serviceSpec, @Nonnull BigInteger version) {
-        throw new UnsupportedOperationException("Not implemented yet.");
+    public void updateService(@Nonnull String serviceId, @Nonnull Node serviceSpec, @Nonnull BigInteger version) {
+        lock.run(() -> {
+            Service service = services.get(serviceId);
+
+            if (service == null) {
+                throw new NotFoundException("Service not found: " + serviceId);
+            }
+
+            if (service.version != version.intValueExact()) {
+                throw new InvocationFailedException("Wrong version number. Got: " + version + ". Expected: " +
+                        service.version);
+            }
+
+            updateServiceSpec(service, serviceSpec);
+        });
+    }
+
+    private void updateServiceSpec(Service service, Node serviceSpec) {
+
+        service.labels.clear();
+        serviceSpec.getObject("Labels", Node.EMPTY_OBJECT).getObjectValues().
+                forEach((key, value) -> service.label(key, value.isNull() ? "" : value.getAsString()));
+
+        service.env.clear();
+        serviceSpec.getObject("TaskTemplate").
+                getObject("ContainerSpec").
+                getArray("Env", Node.EMPTY_ARRAY).
+                getArrayValues().stream().
+                map(Node::getAsString).
+                forEach(var -> {
+                    String tokens[] = var.split("=");
+                    assertThat(tokens.length).isEqualTo(2);
+                    service.env(tokens[0], tokens[1]);
+                });
+
+        int replicas = serviceSpec.
+                getObject("Mode").
+                getObject("Replicated").
+                getAsInt("Replicas");
+
+        for (int i = service.getReplicas().size(); i < replicas; i++) {
+            Task newTask = service.pushTask();
+            runAsync(() -> {
+                waitMillis(500);
+                newTask.state = SwarmDockerClientFacade.TaskRunningState.RUNNING.toString().toLowerCase();
+            });
+        }
+        for (int i = service.getReplicas().size(); i > replicas; i--) {
+            service.popTask();
+        }
     }
 
     @Override
@@ -328,7 +456,7 @@ public class TestDockerClient implements DockerClient {
                 throw new NotFoundException("No such container: " + containerId);
             }
 
-            if ((container.tty && demuxStdio)) {
+            if (container.tty && demuxStdio) {
                 fail("Illegal attempt to demultiplex tty-based container stream.");
             }
 
@@ -336,15 +464,31 @@ public class TestDockerClient implements DockerClient {
                 fail("Illegal attempt to consume non-tty-based stream without demultiplexing.");
             }
 
-            return container.getLogStreamHandler();
+            TestStreamHandlerFactory streamHandlerFty = container.getLogStreamHandler();
+            return demuxStdio ? streamHandlerFty.multiplexedStreamHandler() :
+                    streamHandlerFty.compositeStreamHandler();
         });
     }
 
     @Nonnull
     @Override
-    public StreamHandler streamServiceLogs(@Nonnull String containerId, int lineCount, @Nonnull Set<StdioType>
+    public StreamHandler streamServiceLogs(@Nonnull String serviceId, int lineCount, @Nonnull Set<StdioType>
             stdioTypes, boolean follow, boolean demuxStream) {
-        throw new UnsupportedOperationException("Not implemented yet.");
+        return lock.call(() -> {
+            checkForFailure();
+            Service service = services.get(serviceId);
+            if (service == null) {
+                throw new NotFoundException("No such container: " + serviceId);
+            }
+
+            if (service.tty && demuxStream) {
+                fail("Illegal attempt to demultiplex tty-based container stream.");
+            }
+
+            TestStreamHandlerFactory streamHandlerFty = service.getLogStreamHandler();
+            return demuxStream ? streamHandlerFty.multiplexedStreamHandler() :
+                    streamHandlerFty.compositeStreamHandler();
+        });
     }
 
     private BigDecimal toBigDecimal(Number number) {
@@ -357,33 +501,31 @@ public class TestDockerClient implements DockerClient {
 
     @Override
     public void stopContainer(@Nonnull String containerId, Duration timeout) {
-        TestUtils.waitMillis(300);
+        waitMillis(300);
 
         lock.run(() -> {
             checkForFailure();
             Container container = containers.get(containerId);
             if (container == null) {
                 throw new NotFoundException("No such container: " + containerId);
-            } else if (container.status == ContainerStatus.CREATED) {
+            } else if (!container.isRunning()) {
                 throw new ContainerAlreadyStoppedException("Container is not running: " + containerId);
             }
 
-            container.status = ContainerStatus.CREATED;
+            container.running(true);
         });
     }
 
     @Override
     public void removeContainer(@Nonnull String containerId, boolean removeVolumes, boolean force) {
-        lock.lock();
-
-        TestUtils.waitMillis(300);
+        waitMillis(300);
 
         lock.run(() -> {
             checkForFailure();
             Container container = containers.get(containerId);
             if (container == null) {
                 throw new NotFoundException("No such container: " + containerId);
-            } else if (!force && container.status == ContainerStatus.STARTED) {
+            } else if (!force && container.isRunning()) {
                 throw new InvocationFailedException("Container is still running: " + containerId);
             }
             containers.remove(containerId);
@@ -391,15 +533,24 @@ public class TestDockerClient implements DockerClient {
     }
 
     @Override
-    public void removeService(@Nonnull String service) {
-        throw new UnsupportedOperationException("Not implemented yet.");
+    public void removeService(@Nonnull String serviceId) {
+        lock.run(() -> {
+            checkForFailure();
+            Service service = services.get(serviceId);
+            if (service == null) {
+                throw new NotFoundException("No such service: " + serviceId);
+            }
+            services.remove(serviceId);
+        });
     }
 
     @Nonnull
     @Override
     public Node listContainersWithLabel(@Nonnull Map<String, String> labelFilters) {
 
-        Node list = lock.call(() -> {
+        waitMillis(300);
+
+        return lock.call(() -> {
             checkForFailure();
             List<Container> filtered = containers.values().stream().
                     filter(container -> {
@@ -419,9 +570,9 @@ public class TestDockerClient implements DockerClient {
                 if (container.image != null) {
                     containerNode.put("ImageID", container.image.getId());
                 }
-                containerNode.put("State", container.status == ContainerStatus.STARTED ? "running" : "stopped");
-                containerNode.getOrCreateArray("Names").add(DockerCloudUtils.toShortId(container.id));
-                containerNode.put("Created", System.currentTimeMillis());
+                containerNode.put("State", container.isRunning() ? DefaultDockerClientFacade.CONTAINER_RUNNING_STATE : "stopped");
+                containerNode.getOrCreateArray("Names").add(container.name);
+                containerNode.put("Created", container.creationTimestamp.getEpochSecond());
                 EditableNode labels = containerNode.getOrCreateObject("Labels");
                 for (Map.Entry<String, String> labelEntry : container.labels.entrySet()) {
                     labels.put(labelEntry.getKey(), labelEntry.getValue());
@@ -429,20 +580,63 @@ public class TestDockerClient implements DockerClient {
             }
             return result.saveNode();
         });
-
-        TestUtils.waitMillis(300);
-
-        return list;
     }
 
     @Nonnull
     @Override
     public Node listServicesWithLabel(@Nonnull Map<String, String> labelFilters) {
-        throw new UnsupportedOperationException("Not implemented yet.");
+        waitMillis(300);
+
+        return lock.call(() -> {
+            checkForFailure();
+            List<Service> filtered = services.values().stream().
+                    filter(service -> {
+                        for (Map.Entry<String, String> labelFilter : labelFilters.entrySet()) {
+                            String labelValue = service.labels.get(labelFilter.getKey());
+                            if (labelValue == null || !labelValue.equals(labelFilter.getValue())) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    }).collect(Collectors.toList());
+
+            EditableNode result = Node.EMPTY_ARRAY.editNode();
+            for (Service service : filtered) {
+                EditableNode serviceNode = result.addObject();
+                serviceNode.
+                        put("ID", service.id).
+                        put("CreatedAt", DateTimeFormatter.ISO_INSTANT.format(service.creationTimestamp));
+                EditableNode spec = serviceNode.getOrCreateObject("Spec");
+
+                spec.
+                        getOrCreateObject("Mode").
+                        getOrCreateObject("Replicated").
+                        put("Replicas", service.replicas.size());
+
+                EditableNode labels = spec.getOrCreateObject("Labels");
+                for (Map.Entry<String, String> labelEntry : service.labels.entrySet()) {
+                    labels.put(labelEntry.getKey(), labelEntry.getValue());
+                }
+
+                spec.put("Name", service.getName());
+
+            }
+            return result.saveNode();
+        });
     }
 
     public TestDockerClient localImage(String repo, String tag) {
         newLocalImage(repo, tag);
+        return this;
+    }
+
+    public TestDockerClient serviceCreationWarning(String serviceCreationWarning) {
+        lock.run(() -> this.serviceCreationWarning = serviceCreationWarning);
+        return this;
+    }
+
+    public TestDockerClient containerCreationWarning(String containerCreationWarning) {
+        lock.run(() -> containerCreationWarnings.add(containerCreationWarning));
         return this;
     }
 
@@ -470,7 +664,26 @@ public class TestDockerClient implements DockerClient {
     @Nonnull
     @Override
     public Node listTasks(@Nonnull String serviceId) {
-        throw new UnsupportedOperationException("Not implemented yet.");
+        waitMillis(300);
+
+        return lock.call(() -> {
+           Service service = services.get(serviceId);
+
+           if (service == null) {
+               throw new NotFoundException("No such service: " + serviceId);
+           }
+
+           EditableNode tasks = Node.EMPTY_ARRAY.editNode();
+
+           for (Task replica : service.replicas) {
+               tasks.addObject().
+                       put("ID", replica.id).
+                       getOrCreateObject("Status").
+                       put("State", replica.state);
+           }
+
+           return tasks.saveNode();
+        });
     }
 
     public Set<TestImage> getLocalImages() {
@@ -479,6 +692,10 @@ public class TestDockerClient implements DockerClient {
 
     public List<Container> getContainers() {
         return lock.call(() -> new ArrayList<>(containers.values()));
+    }
+
+    public List<Service> getServices() {
+        return lock.call(() -> new ArrayList<>(services.values()));
     }
 
     public boolean isClosed() {
@@ -536,24 +753,17 @@ public class TestDockerClient implements DockerClient {
         private final String id = TestUtils.createRandomSha256();
         private final Map<String, String> labels = new ConcurrentHashMap<>();
         private final Map<String, String> env = new ConcurrentHashMap<>();
-        private volatile String name = id;
-        private volatile boolean tty;
-        private volatile TestImage image;
-        private volatile ContainerStatus status;
-        private volatile TestStreamHandler logStreamHandler = new TestStreamHandler(new OutputStream() {
+        private final TestStreamHandlerFactory logStreamHandler = new TestStreamHandlerFactory(new OutputStream() {
             @Override
             public void write(int b) throws IOException {
                 fail("Read only stream handler.");
             }
         });
-
-        public Container() {
-            this(ContainerStatus.CREATED);
-        }
-
-        public Container(ContainerStatus status) {
-            this.status = status;
-        }
+        private volatile boolean tty;
+        private volatile String name = id;
+        private volatile TestImage image;
+        private volatile boolean running;
+        private volatile Instant creationTimestamp = Instant.now();
 
         public TestImage getImage() {
             return image;
@@ -575,8 +785,8 @@ public class TestDockerClient implements DockerClient {
             return env;
         }
 
-        public ContainerStatus getStatus() {
-            return status;
+        public boolean isRunning() {
+            return running;
         }
 
         public Container name(String name) {
@@ -604,13 +814,132 @@ public class TestDockerClient implements DockerClient {
             return this;
         }
 
-        public TestStreamHandler getLogStreamHandler() {
+        public Container running(boolean running) {
+            this.running = running;
+            return this;
+        }
+
+        public Container creationTimestamp(Instant creationTimestamp) {
+            this.creationTimestamp = creationTimestamp;
+            return this;
+        }
+
+        public TestStreamHandlerFactory getLogStreamHandler() {
             return logStreamHandler;
+        }
+    }
+
+    public static class Service {
+
+        private final String id = TestUtils.createRandomSha256();
+        private final Map<String, String> labels = new ConcurrentHashMap<>();
+        private final Map<String, String> env = new ConcurrentHashMap<>();
+        private final Deque<Task> replicas = new ConcurrentLinkedDeque<>();
+        private final TestStreamHandlerFactory logStreamHandler = new TestStreamHandlerFactory(new OutputStream() {
+            @Override
+            public void write(int b) throws IOException {
+                fail("Read only stream handler.");
+            }
+        });
+
+        private volatile boolean tty;
+        private volatile String name = id;
+        private volatile int version = 42;
+        private volatile Instant creationTimestamp = Instant.now();
+        private volatile String image;
+
+
+        public String getId() {
+            return id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getImage() {
+            return image;
+        }
+
+        public Map<String, String> getLabels() {
+            return labels;
+        }
+
+        public Map<String, String> getEnv() {
+            return env;
+        }
+
+        public Deque<Task> getReplicas() {
+            return replicas;
+        }
+
+        public Service name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Service label(String key, String value) {
+            labels.put(key, value);
+            return this;
+        }
+
+        public Service creationTimestamp(Instant creationTimestamp) {
+            this.creationTimestamp = creationTimestamp;
+            return this;
+        }
+
+        public Service env(String var, String value) {
+            env.put(var, value);
+            return this;
+        }
+
+        public Service tty(boolean tty) {
+            this.tty = tty;
+            return this;
+        }
+
+        public Service image(String image) {
+            this.image = image;
+            return this;
+        }
+
+        public Task pushTask() {
+            Task task = new Task();
+            replicas.push(task);
+            return task;
+        }
+
+        public Task popTask() {
+            return replicas.pop();
+        }
+
+        public TestStreamHandlerFactory getLogStreamHandler() {
+            return logStreamHandler;
+        }
+    }
+
+    public static class Task {
+
+        private final String id = TestUtils.createRandomSha256();
+        private volatile String state;
+
+        public Task state(String state) {
+            this.state = state;
+            return this;
+        }
+
+        public String getId() {
+            return id;
         }
     }
 
     public TestDockerClient container(Container container) {
         lock.run(() -> containers.put(container.getId(), container));
+        return this;
+    }
+
+    public TestDockerClient service(Service service) {
+        lock.run(() -> services.put(service.getId(), service));
         return this;
     }
 }

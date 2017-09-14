@@ -405,6 +405,13 @@ public class TestSBuildServer implements SBuildServer {
         return this;
     }
 
+    public TestSBuildServer notifyAgentUnregistered(TestSBuildAgent agent) {
+        for (BuildServerListener listener : buildListeners) {
+            listener.agentUnregistered(agent);
+        }
+        return this;
+    }
+
     public void wrapBuildAgentManager(Function<TestBuildAgentManager, BuildAgentManager> wrapper) {
         wrappedBuildAgentManager = wrapper.apply(buildAgentManager);
     }

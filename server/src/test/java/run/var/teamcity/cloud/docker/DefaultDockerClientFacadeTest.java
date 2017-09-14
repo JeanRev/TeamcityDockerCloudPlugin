@@ -1,60 +1,82 @@
 package run.var.teamcity.cloud.docker;
 
-import org.junit.Before;
 import org.junit.Test;
-import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.client.DockerClient;
-import run.var.teamcity.cloud.docker.client.DockerClientConfig;
-import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.client.StdioType;
 import run.var.teamcity.cloud.docker.client.TestImage;
 import run.var.teamcity.cloud.docker.test.Interceptor;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
 import run.var.teamcity.cloud.docker.test.TestDockerClient.Container;
+import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import java.math.BigInteger;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static java.util.Collections.emptyMap;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus.CREATED;
 import static run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus.STARTED;
+import static run.var.teamcity.cloud.docker.test.TestUtils.listOf;
 import static run.var.teamcity.cloud.docker.util.DockerCloudUtils.mapOf;
 import static run.var.teamcity.cloud.docker.util.DockerCloudUtils.pair;
 
-public class DefaultDockerClientFacadeTest {
+public class DefaultDockerClientFacadeTest extends DockerClientFacadeTest {
 
-    private TestDockerClient dockerClient;
+    @Test
+    public void createAgentMustReturnAgentId() {
+        DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
 
-    @Before
-    public void init() {
-        dockerClient = new TestDockerClient(new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI, DockerAPIVersion
-                .DEFAULT), DockerRegistryCredentials.ANONYMOUS);
+        dockerClient.localImage("resolved-image", "latest");
+
+        NewAgentHolderInfo agentInfo = facade.createAgent(CreateAgentParameters.from(Node.EMPTY_OBJECT).
+                imageName("resolved-image:latest"));
+
+        assertThat(agentInfo.getId()).isEqualTo(dockerClient.getContainers().get(0).getId());
     }
 
     @Test
-    public void createImageConfigInvalidArguments() {
+    public void createAgentMustReturnAgentName() {
         DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
 
-        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> facade.createAgentContainer(null,
-                "resolved-image:latest", emptyMap(), emptyMap()));
+        dockerClient.localImage("resolved-image", "latest");
 
-        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> facade.createAgentContainer(
-                Node.EMPTY_OBJECT,null, emptyMap(), emptyMap()));
+        NewAgentHolderInfo agentInfo = facade.createAgent(CreateAgentParameters.from(Node.EMPTY_OBJECT).
+                imageName("resolved-image:latest"));
 
-        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> facade.createAgentContainer(
-                Node.EMPTY_OBJECT, "resolved-image:latest", null, emptyMap()));
+        assertThat(agentInfo.getName()).isEqualTo(dockerClient.getContainers().get(0).getName());
+    }
 
-        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> facade.createAgentContainer(
-                Node.EMPTY_OBJECT, "resolved-image:latest", emptyMap(), null));
+    @Test
+    public void createAgentMustReturnResolvedImageName() {
+        DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
+
+        dockerClient.localImage("resolved-image", "latest");
+
+        NewAgentHolderInfo agentInfo = facade.createAgent(CreateAgentParameters.from(Node.EMPTY_OBJECT).
+                imageName("resolved-image:latest"));
+
+        assertThat(agentInfo.getResolvedImage()).isEqualTo("resolved-image:latest");
+    }
+
+    @Test
+    public void createAgentMustReturnWarnings() {
+        DockerClientFacade facade = createFacade(dockerClient);
+
+        dockerClient
+                .localImage("resolved-image", "latest")
+                .containerCreationWarning("foo")
+                .containerCreationWarning("bar");
+
+        NewAgentHolderInfo agentInfo = facade.createAgent(CreateAgentParameters.from(Node.EMPTY_OBJECT).
+                imageName("resolved-image:latest"));
+
+        assertThat(agentInfo.getWarnings()).isEqualTo(listOf("foo", "bar"));
     }
 
     @Test
@@ -63,8 +85,8 @@ public class DefaultDockerClientFacadeTest {
 
         TestImage img = dockerClient.newLocalImage("resolved-image", "latest");
 
-        String containerId = facade.createAgentContainer(Node.EMPTY_OBJECT, "resolved-image:latest", emptyMap(),
-                emptyMap()).getId();
+        String containerId = facade.createAgent(CreateAgentParameters.from(Node.EMPTY_OBJECT).
+                imageName("resolved-image:latest")).getId();
 
         List<Container> containers = dockerClient.getContainers();
         assertThat(containers).hasSize(1).first().matches(container -> container.getId().equals(containerId));
@@ -83,12 +105,13 @@ public class DefaultDockerClientFacadeTest {
 
         DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
 
-        facade.createAgentContainer(Node.EMPTY_OBJECT, "resolved-image:latest", emptyMap(), emptyMap());
+        facade.createAgent(CreateAgentParameters.from(Node.EMPTY_OBJECT).
+                imageName("resolved-image:latest"));
 
         Container container = dockerClient.getContainers().get(0);
 
-        assertThat(container.getLabels()).containsEntry(DockerCloudUtils.NS_PREFIX + "foo1", "").containsEntry
-                ("foo2", "bar2");
+        assertThat(container.getLabels()).containsEntry(DockerCloudUtils.NS_PREFIX + "foo1", "")
+                .containsEntry("foo2", "bar2");
     }
 
     @Test
@@ -100,12 +123,13 @@ public class DefaultDockerClientFacadeTest {
 
         DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
 
-        facade.createAgentContainer(Node.EMPTY_OBJECT, "resolved-image:latest", emptyMap(), emptyMap());
+        facade.createAgent(CreateAgentParameters.from(Node.EMPTY_OBJECT).
+                imageName("resolved-image:latest"));
 
         Container container = dockerClient.getContainers().get(0);
 
-        assertThat(container.getEnv()).containsEntry(DockerCloudUtils.ENV_PREFIX + "FOO1", "").containsEntry
-                ("FOO2", "bar2");
+        assertThat(container.getEnv()).containsEntry(DockerCloudUtils.ENV_PREFIX + "FOO1", "")
+                .containsEntry("FOO2", "bar2");
     }
 
     @Test
@@ -114,7 +138,9 @@ public class DefaultDockerClientFacadeTest {
 
         DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
 
-        facade.pull("resolved-image:latest", DockerRegistryCredentials.ANONYMOUS);
+        facade.createAgent(CreateAgentParameters.from(Node.EMPTY_OBJECT).
+                imageName("resolved-image:latest").
+                pullStrategy(PullStrategy.PULL));
 
         assertThat(dockerClient.getLocalImages()).hasSize(1).containsExactly(img);
     }
@@ -125,19 +151,18 @@ public class DefaultDockerClientFacadeTest {
 
         DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
         // Pulling non existing image.
-        facade.pull("resolved-image:latest", DockerRegistryCredentials.ANONYMOUS);
+        facade.createAgent(CreateAgentParameters.from(Node.EMPTY_OBJECT).
+                imageName("resolved-image:latest").
+                pullStrategy(PullStrategy.PULL));
     }
 
     @Test
     public void pullListener() {
 
-        dockerClient.newRegistryImage("resolved-image", "latest")
-                .pullProgress("layer1", "Pulling fs layer", null, null)
-                .pullProgress("layer1", "Downloading", 0, 100)
-                .pullProgress("layer2", "Pulling fs layer", null, null)
+        dockerClient.newRegistryImage("resolved-image", "latest").pullProgress("layer1", "Pulling fs layer", null, null)
+                .pullProgress("layer1", "Downloading", 0, 100).pullProgress("layer2", "Pulling fs layer", null, null)
                 .pullProgress("layer2", "Downloading", 0, new BigInteger("10000000000"))
-                .pullProgress("layer1", "Downloading", 50, 100)
-                .pullProgress("layer1", "Downloading", 100, 100)
+                .pullProgress("layer1", "Downloading", 50, 100).pullProgress("layer1", "Downloading", 100, 100)
                 .pullProgress("layer1", "Pull complete", null, null)
                 .pullProgress("layer2", "Downloading", new BigInteger("2500000000"), new BigInteger("10000000000"))
                 .pullProgress("layer2", "Downloading", new BigInteger("10000000000"), new BigInteger("10000000000"))
@@ -148,21 +173,23 @@ public class DefaultDockerClientFacadeTest {
 
         List<ListenerInvocation> invocations = new ArrayList<>();
 
-        facade.pull("resolved-image:latest", DockerRegistryCredentials.ANONYMOUS,
-                (layer, status, percent) -> invocations.add(new ListenerInvocation(layer, status, percent)));
+        facade.createAgent(CreateAgentParameters.from(Node.EMPTY_OBJECT).
+                imageName("resolved-image:latest").
+                pullStrategy(PullStrategy.PULL).
+                pullStatusListener((status, layer, percent) ->
+                                           invocations.add(new ListenerInvocation(status, layer, percent))));
 
-        assertThat(invocations).isEqualTo(Arrays.asList(
-                new ListenerInvocation("layer1", "Pulling fs layer", PullStatusListener.NO_PROGRESS),
-                new ListenerInvocation("layer1", "Downloading", 0),
-                new ListenerInvocation("layer2", "Pulling fs layer", PullStatusListener.NO_PROGRESS),
-                new ListenerInvocation("layer2", "Downloading", 0),
-                new ListenerInvocation("layer1", "Downloading", 50),
-                new ListenerInvocation("layer1", "Downloading", 100),
-                new ListenerInvocation("layer1", "Pull complete", PullStatusListener.NO_PROGRESS),
-                new ListenerInvocation("layer2", "Downloading", 25),
-                new ListenerInvocation("layer2", "Downloading", 100),
-                new ListenerInvocation("layer2", "Pull complete", PullStatusListener.NO_PROGRESS)
-        ));
+        assertThat(invocations).isEqualTo(
+                Arrays.asList(new ListenerInvocation( "Pulling fs layer","layer1", PullStatusListener.NO_PROGRESS),
+                              new ListenerInvocation( "Downloading","layer1", 0),
+                              new ListenerInvocation( "Pulling fs layer","layer2", PullStatusListener.NO_PROGRESS),
+                              new ListenerInvocation( "Downloading","layer2", 0),
+                              new ListenerInvocation( "Downloading","layer1", 50),
+                              new ListenerInvocation( "Downloading","layer1", 100),
+                              new ListenerInvocation( "Pull complete","layer1", PullStatusListener.NO_PROGRESS),
+                              new ListenerInvocation( "Downloading","layer2", 25),
+                              new ListenerInvocation( "Downloading","layer2", 100),
+                              new ListenerInvocation( "Pull complete","layer2", PullStatusListener.NO_PROGRESS)));
     }
 
     @Test
@@ -171,52 +198,26 @@ public class DefaultDockerClientFacadeTest {
         dockerClient.newRegistryImage("resolved-image", "latest")
                 .pullProgress("layer", "Downloading", 100, 0) // Must avoid dividing by zero.
                 .pullProgress("layer", "Downloading", 100, 50)  // Current > total
-                .pullProgress("layer", "Downloading", -50, 100)
-                .pullProgress("layer", "Downloading", -50, -100);
+                .pullProgress("layer", "Downloading", -50, 100).pullProgress("layer", "Downloading", -50, -100);
 
 
         DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
 
         List<ListenerInvocation> invocations = new ArrayList<>();
 
-        facade.pull("resolved-image:latest", DockerRegistryCredentials.ANONYMOUS,
-                (layer, status, percent) -> invocations.add(new ListenerInvocation(layer, status, percent)));
+        facade.createAgent(CreateAgentParameters.from(Node.EMPTY_OBJECT).
+                imageName("resolved-image:latest").
+                pullStrategy(PullStrategy.PULL).
+                pullStatusListener((status, layer, percent) ->
+                                           invocations.add(new ListenerInvocation(status, layer, percent))));
 
-        assertThat(invocations).isEqualTo(Arrays.asList(
-                new ListenerInvocation("layer", "Downloading", PullStatusListener.NO_PROGRESS),
-                new ListenerInvocation("layer", "Downloading", PullStatusListener.NO_PROGRESS),
-                new ListenerInvocation("layer", "Downloading", PullStatusListener.NO_PROGRESS),
-                new ListenerInvocation("layer", "Downloading", PullStatusListener.NO_PROGRESS)
-        ));
+        assertThat(invocations).isEqualTo(
+                Arrays.asList(new ListenerInvocation("Downloading", "layer", PullStatusListener.NO_PROGRESS),
+                              new ListenerInvocation("Downloading", "layer", PullStatusListener.NO_PROGRESS),
+                              new ListenerInvocation("Downloading", "layer", PullStatusListener.NO_PROGRESS),
+                              new ListenerInvocation("Downloading", "layer", PullStatusListener.NO_PROGRESS)));
     }
 
-    private class ListenerInvocation {
-        final String layer;
-        final String status;
-        final int percent;
-
-
-        ListenerInvocation(String layer, String status, int percent) {
-            this.layer = layer;
-            this.status = status;
-            this.percent = percent;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (!(obj instanceof ListenerInvocation)) {
-                return false;
-            }
-            ListenerInvocation invocation = (ListenerInvocation) obj;
-            return Objects.equals(layer, invocation.layer) && Objects.equals(status, invocation.status) &&
-                    Objects.equals(percent, invocation.percent);
-        }
-
-        @Override
-        public String toString() {
-            return "layer=" + layer + ", status=" + status + ", percent=" + percent;
-        }
-    }
 
     @Test
     public void containerLabels() {
@@ -224,8 +225,11 @@ public class DefaultDockerClientFacadeTest {
 
         DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
 
-        Map<String, String> labels = mapOf(pair("key1", "value1"), pair("key2", "value2"));
-        facade.createAgentContainer(Node.EMPTY_OBJECT,"resolved-image:latest", labels, emptyMap());
+        facade.createAgent(CreateAgentParameters.from(Node.EMPTY_OBJECT).
+                imageName("resolved-image:latest").
+                label("key1", "value1").
+                label("key2", "value2"));
+
         List<Container> containers = dockerClient.getContainers();
         assertThat(containers).hasSize(1);
         assertThat(containers.get(0).getLabels()).containsEntry("key1", "value1").containsEntry("key2", "value2");
@@ -240,24 +244,14 @@ public class DefaultDockerClientFacadeTest {
 
         Map<String, String> env = mapOf(pair("key1", "value1"), pair("key2", "value2"));
 
-        facade.createAgentContainer(Node.EMPTY_OBJECT, "resolved-image:latest", emptyMap(), env);
+        facade.createAgent(CreateAgentParameters.from(Node.EMPTY_OBJECT).
+                imageName("resolved-image:latest").
+                env("key1", "value1").
+                env("key2", "value2"));
 
         List<Container> containers = dockerClient.getContainers();
         assertThat(containers).hasSize(1);
         assertThat(containers.get(0).getEnv()).isEqualTo(env);
-    }
-
-    @Test
-    public void inspectAgentContainer() {
-        Interceptor<DockerClient> interceptor = Interceptor.wrap(dockerClient, DockerClient.class);
-
-        DefaultDockerClientFacade facade = new DefaultDockerClientFacade(interceptor.buildProxy());
-        Container container = new Container().name("agent_name");
-        dockerClient.container(container);
-
-        ContainerInspection inspection = facade.inspectAgentContainer(container.getId());
-
-        assertThat(inspection.getName()).isEqualTo("agent_name");
     }
 
     @Test
@@ -267,15 +261,14 @@ public class DefaultDockerClientFacadeTest {
 
         DefaultDockerClientFacade facade = new DefaultDockerClientFacade(interceptor.buildProxy());
 
-        Container container = new Container(CREATED);
+        Container container = new Container();
         dockerClient.container(container);
 
-        facade.startAgentContainer(container.getId());
-
-        assertThat(container.getStatus()).isEqualTo(STARTED);
-
-        assertThat(interceptor.getInvocations()).hasSize(1).first().matches(invocation -> invocation.matches
-                ("startContainer", container.getId()));
+        String taskId = facade.startAgent(container.getId());
+        assertThat(taskId).isEqualTo(container.getId());
+        assertThat(container.isRunning()).isTrue();
+        assertThat(interceptor.getInvocations()).hasSize(1).first()
+                .matches(invocation -> invocation.matches("startContainer", container.getId()));
     }
 
     @Test
@@ -285,25 +278,59 @@ public class DefaultDockerClientFacadeTest {
 
         DefaultDockerClientFacade facade = new DefaultDockerClientFacade(interceptor.buildProxy());
 
-        Container container = new Container(STARTED);
+        Container container = new Container();
         dockerClient.container(container);
 
-        facade.restartAgentContainer(container.getId());
-
-        assertThat(container.getStatus()).isEqualTo(STARTED);
-
-        assertThat(interceptor.getInvocations()).hasSize(1).first().matches(invocation -> invocation.matches
-                ("restartContainer", container.getId()));
+        String taskId = facade.restartAgent(container.getId());
+        assertThat(taskId).isEqualTo(container.getId());
+        assertThat(container.isRunning()).isTrue();
+        assertThat(interceptor.getInvocations()).hasSize(1).first()
+                .matches(invocation -> invocation.matches("restartContainer", container.getId()));
     }
 
     @Test
     public void listAgentContainers() {
         DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
 
+        TestImage img = dockerClient.newLocalImage("image-1", "latest");
+
+        assertThat(facade.listAgentHolders("foo", "bar")).isEmpty();
+
+        Container container = new Container().
+                label("foo", "bar").
+                label(DockerCloudUtils.SOURCE_IMAGE_ID_LABEL, img.getId()).
+                name("the_container_name").
+                image(img).
+                creationTimestamp(TestUtils.TEST_INSTANT).
+                running(true);
+
+        dockerClient.container(container);
+
+        List<AgentHolderInfo>  agentHolders = facade.
+                listAgentHolders("foo", "bar");
+
+        assertThat(agentHolders).hasSize(1);
+
+        AgentHolderInfo agentHolder = agentHolders.get(0);
+
+        assertThat(agentHolder.getId()).isEqualTo(container.getId());
+        assertThat(agentHolder.getTaskId()).isEqualTo(container.getId());
+        assertThat(agentHolder.getName()).isEqualTo("the_container_name");
+        assertThat(agentHolder.getStateMsg()).isEqualTo(DefaultDockerClientFacade.CONTAINER_RUNNING_STATE);
+        assertThat(agentHolder.getLabels()).isEqualTo(
+                mapOf(pair("foo", "bar"), pair(DockerCloudUtils.SOURCE_IMAGE_ID_LABEL, img.getId())));
+        assertThat(agentHolder.getCreationTimestamp()).isEqualTo(TestUtils.TEST_INSTANT);
+        assertThat(agentHolder.isRunning()).isTrue();
+    }
+
+    @Test
+    public void listAgentContainersMustListMultipleContainers() {
+        DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
+
         TestImage image1 = dockerClient.newLocalImage("image-1", "latest");
         TestImage image2 = dockerClient.newLocalImage("image-2", "latest");
 
-        assertThat(facade.listActiveAgentContainers("foo", "bar")).isEmpty();
+        assertThat(facade.listAgentHolders("foo", "bar")).isEmpty();
 
         Container validContainer1 = new Container().
                 label("foo", "bar").
@@ -315,24 +342,60 @@ public class DefaultDockerClientFacadeTest {
                 label(DockerCloudUtils.SOURCE_IMAGE_ID_LABEL, image2.getId()).
                 image(image2);
 
+        dockerClient.container(validContainer1).container(validContainer2);
+
+        List<String> containerIds = facade.listAgentHolders("foo", "bar").stream().
+                map(AgentHolderInfo::getId).
+                collect(Collectors.toList());
+
+        assertThat(containerIds).containsExactlyInAnyOrder(validContainer1.getId(), validContainer2.getId());
+
+    }
+
+    @Test
+    public void listAgentContainersMustIgnoreContainersWithWrongLabel() {
+        DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
+
+        TestImage image1 = dockerClient.newLocalImage("image-1", "latest");
+
+        assertThat(facade.listAgentHolders("foo", "bar")).isEmpty();
+
         Container wrongLabelValue = new Container().
                 label("foo", "baz").
                 label(DockerCloudUtils.SOURCE_IMAGE_ID_LABEL, image1.getId()).
                 image(image1);
+
+        dockerClient.container(wrongLabelValue);
+
+        List<String> containerIds = facade.listAgentHolders("foo", "bar").stream().
+                map(AgentHolderInfo::getId).
+                collect(Collectors.toList());
+
+        assertThat(containerIds).isEmpty();
+
+    }
+
+    @Test
+    public void listAgentContainersMustIgnoreContainersWithNonMatchingSourceId() {
+        DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
+
+        TestImage image1 = dockerClient.newLocalImage("image-1", "latest");
+        TestImage image2 = dockerClient.newLocalImage("image-2", "latest");
+
+        assertThat(facade.listAgentHolders("foo", "bar")).isEmpty();
 
         Container sourceImageIdNotMatching = new Container().
                 label("foo", "bar").
                 label(DockerCloudUtils.SOURCE_IMAGE_ID_LABEL, image1.getId()).
                 image(image2);
 
-        dockerClient.container(validContainer1).container(validContainer2).container(wrongLabelValue).container
-                (sourceImageIdNotMatching);
+        dockerClient.container(sourceImageIdNotMatching);
 
-        List<String> containerIds = facade.listActiveAgentContainers("foo", "bar").stream().
-                map(ContainerInfo::getId).
+        List<String> containerIds = facade.listAgentHolders("foo", "bar").stream().
+                map(AgentHolderInfo::getId).
                 collect(Collectors.toList());
 
-        assertThat(containerIds).containsExactlyInAnyOrder(validContainer1.getId(), validContainer2.getId());
+        assertThat(containerIds).isEmpty();
 
     }
 
@@ -372,16 +435,8 @@ public class DefaultDockerClientFacadeTest {
         assertThat(logs.toString()).isEqualTo("txt on stdout, txt on stdin, txt unknown std type");
     }
 
-    @Test
-    public void close() {
-        DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
-
-        assertThat(dockerClient.isClosed()).isFalse();
-
-        facade.close();
-
-        assertThat(dockerClient.isClosed()).isTrue();
-
-        facade.close();
+    @Override
+    protected DockerClientFacade createFacade(TestDockerClient dockerClient) {
+        return new DefaultDockerClientFacade(dockerClient);
     }
 }

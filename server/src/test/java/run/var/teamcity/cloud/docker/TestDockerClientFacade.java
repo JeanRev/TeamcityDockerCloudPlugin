@@ -8,7 +8,6 @@ import run.var.teamcity.cloud.docker.client.NotFoundException;
 import run.var.teamcity.cloud.docker.client.UnauthorizedException;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.LockHandler;
-import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.annotation.Nonnull;
 import java.time.Duration;
@@ -31,133 +30,118 @@ public class TestDockerClientFacade implements DockerClientFacade {
     private final Set<String> localImages = new HashSet<>();
     private final Set<String> registryImages = new HashSet<>();
 
-    private final Map<String, AgentContainer> containers = new HashMap<>();
+    private final Map<String, AgentHolder> agentHolders = new HashMap<>();
     private final List<TerminationInfo> terminationInfos = new ArrayList<>();
 
-    private Consumer<AgentContainer> agentConfigurator = null;
+    private Consumer<AgentHolder> agentConfigurator = null;
 
     private DockerRegistryCredentials registryCredentials = DockerRegistryCredentials.ANONYMOUS;
 
     private boolean closed = false;
-    private DockerClientException failOnPullException = null;
     private DockerClientException failOnCreateException = null;
     private DockerClientException failOnAccessException = null;
 
     @Nonnull
     @Override
-    public NewContainerInfo createAgentContainer(@Nonnull Node containerSpec, @Nonnull String image, @Nonnull
-            Map<String, String> labels, @Nonnull Map<String, String> env) {
-        AgentContainer container = new AgentContainer();
-        container.labels.putAll(labels);
-        container.env.putAll(env);
+    public NewAgentHolderInfo createAgent(@Nonnull CreateAgentParameters createAgentParameters) {
+        AgentHolder container = new AgentHolder();
+        container.labels.putAll(createAgentParameters.getLabels());
+        container.env.putAll(createAgentParameters.getEnv());
+
+        String image = createAgentParameters.getImageName().orElse(createAgentParameters.getAgentHolderSpec().
+                getAsString("Image"));
+
         lock.run(() -> {
-            if (!localImages.contains(image)) {
-                throw new NotFoundException("Image not found: " + image);
-            }
             if (failOnCreateException != null) {
                 throw failOnCreateException;
             }
             checkForFailure();
-            containers.put(container.getId(), container);
+            if (createAgentParameters.getPullStrategy() != PullStrategy.NO_PULL) {
+                if (registryImages.contains(image)) {
+                    localImages.add(image);
+                } else if (createAgentParameters.getPullStrategy() != PullStrategy.PULL_IGNORE_FAILURE) {
+                    throw new DockerClientFacadeException("Pull failed for image: " + image);
+                }
+
+            }
+            if (!localImages.contains(image)) {
+                throw new NotFoundException("Image not found: " + image);
+            }
+            if (!registryCredentials.equals(createAgentParameters.getRegistryCredentials())) {
+                throw new UnauthorizedException("Wrong credentials.");
+            }
+            agentHolders.put(container.getId(), container);
             if (agentConfigurator != null) {
                 agentConfigurator.accept(container);
             }
         });
 
-        return new NewContainerInfo(container.getId(), Collections.emptyList());
+        return new NewAgentHolderInfo(container.getId(), container.getName(), image, Collections.emptyList());
     }
 
     @Override
-    public void startAgentContainer(@Nonnull String containerId) {
-        lock.run(() -> {
+    public String startAgent(@Nonnull String agentHolderId) {
+        return lock.call(() -> {
             checkForFailure();
-            AgentContainer agentContainer = containers.get(containerId);
-            if (agentContainer == null) {
-                throw new NotFoundException("No such container: " + containerId);
+            AgentHolder agentHolder = agentHolders.get(agentHolderId);
+            if (agentHolder == null) {
+                throw new NotFoundException("No such container: " + agentHolderId);
             }
-            if (agentContainer.running) {
-                throw new InvocationFailedException("Container already started: " + containerId);
+            if (agentHolder.running) {
+                throw new InvocationFailedException("Container already started: " + agentHolderId);
             }
-            agentContainer.running(true);
+            agentHolder.running(true);
+            return agentHolder.getTaskId();
         });
     }
 
     @Override
-    public void restartAgentContainer(@Nonnull String containerId) {
-        lock.run(this::checkForFailure);
-    }
-
-    @Nonnull
-    @Override
-    public ContainerInspection inspectAgentContainer(@Nonnull String containerId) {
+    public String restartAgent(@Nonnull String agentHolderId) {
         return lock.call(() -> {
             checkForFailure();
-            AgentContainer agentContainer = containers.get(containerId);
-            if (agentContainer == null) {
-                throw new NotFoundException("No such container: " + containerId);
+            AgentHolder agentHolder = agentHolders.get(agentHolderId);
+            if (agentHolder == null) {
+                throw new NotFoundException("No such container: " + agentHolderId);
             }
-
-            return new ContainerInspection(agentContainer.getName());
+            return agentHolder.getTaskId();
         });
-
     }
 
     @Nonnull
     @Override
-    public List<ContainerInfo> listActiveAgentContainers(@Nonnull String labelFilter, @Nonnull String valueFilter) {
+    public List<AgentHolderInfo> listAgentHolders(@Nonnull String labelFilter, @Nonnull String valueFilter) {
         return lock.call(() -> {
             checkForFailure();
-            return containers.values().stream().
+            return agentHolders.values().stream().
                     filter(container -> valueFilter.equals(container.getLabels().get(labelFilter))).
-                    map(container -> new ContainerInfo(container.getId(), container.getLabels(), container.running ?
-                            ContainerInfo.RUNNING_STATE : "", Collections.singletonList(container.getName()),
-                            Instant.MIN)).
+                    map(agentHolder -> new AgentHolderInfo(agentHolder.getId(), agentHolder.getTaskId(),
+                            agentHolder.getLabels(), "", agentHolder.getName(), Instant.MIN, agentHolder.running)).
                     collect(Collectors.toList());
         });
     }
 
     @Override
-    public boolean terminateAgentContainer(@Nonnull String containerId, Duration timeout, boolean removeContainer) {
+    public boolean terminateAgentContainer(@Nonnull String containerId, @Nonnull Duration timeout, boolean removeContainer) {
         return lock.call(() -> {
             if (removeContainer) {
-                AgentContainer agentContainer = containers.remove(containerId);
-                if (agentContainer == null) {
+                AgentHolder agentHolder = agentHolders.remove(containerId);
+                if (agentHolder == null) {
                     throw new NotFoundException("Container not found: " + containerId);
                 }
                 terminationInfos.add(new TerminationInfo(containerId, timeout, removeContainer));
                 return false;
             }
 
-            AgentContainer agentContainer = containers.get(containerId);
-            if (agentContainer == null) {
+            AgentHolder agentHolder = agentHolders.get(containerId);
+            if (agentHolder == null) {
                 throw new NotFoundException("Container not found: " + containerId);
             }
-            if (!agentContainer.running) {
+            if (!agentHolder.running) {
                 throw new ContainerAlreadyStoppedException("Container not running: " + containerId);
             }
-            agentContainer.running(false);
+            agentHolder.running(false);
             terminationInfos.add(new TerminationInfo(containerId, timeout, removeContainer));
             return true;
-        });
-    }
-
-    @Override
-    public void pull(String image, DockerRegistryCredentials credentials, PullStatusListener statusListener) {
-        lock.run(() -> {
-            if (failOnPullException != null) {
-                throw failOnPullException;
-            }
-            checkForFailure();
-
-            if (!credentials.equals(registryCredentials)) {
-                throw new UnauthorizedException("Invalid credentials.");
-            }
-
-            if (!registryImages.contains(image)) {
-                throw new NotFoundException("Image not found: " + image);
-            }
-
-            localImages.add(image);
         });
     }
 
@@ -188,8 +172,8 @@ public class TestDockerClientFacade implements DockerClientFacade {
         });
     }
 
-    public List<AgentContainer> getContainers() {
-        return lock.call(() -> new ArrayList<>(containers.values()));
+    public List<AgentHolder> getAgentHolders() {
+        return lock.call(() -> new ArrayList<>(agentHolders.values()));
     }
 
     public List<TerminationInfo> getTerminationInfos() {
@@ -202,10 +186,6 @@ public class TestDockerClientFacade implements DockerClientFacade {
 
     public void setFailOnAccessException(DockerClientException failOnAccessException) {
         lock.run(() -> this.failOnAccessException = failOnAccessException);
-    }
-
-    public void setFailOnPullException(DockerClientException failOnPullException) {
-        lock.run(() -> this.failOnPullException = failOnPullException);
     }
 
     public void setFailOnCreateException(DockerClientException failOnCreateException) {
@@ -235,30 +215,35 @@ public class TestDockerClientFacade implements DockerClientFacade {
         return this;
     }
 
-    public TestDockerClientFacade container(AgentContainer container) {
-        lock.run(() -> containers.put(container.getId(), container));
+    public TestDockerClientFacade agentHolder(AgentHolder container) {
+        lock.run(() -> agentHolders.put(container.getId(), container));
         return this;
     }
 
-    public TestDockerClientFacade agentConfigurator(Consumer<AgentContainer> agentConfigurator) {
+    public TestDockerClientFacade agentConfigurator(Consumer<AgentHolder> agentConfigurator) {
         lock.run(() -> this.agentConfigurator = agentConfigurator);
         return this;
     }
 
-    public void removeContainer(String containerId) {
-        lock.run(() -> containers.remove(containerId));
+    public void removeAgentHolder(String agentHolderId) {
+        lock.run(() -> agentHolders.remove(agentHolderId));
     }
 
-    public static class AgentContainer {
+    public static class AgentHolder {
         private final String id = TestUtils.createRandomSha256();
         private final Map<String, String> labels = new ConcurrentHashMap<>();
         private final Map<String, String> env = new ConcurrentHashMap<>();
 
         private volatile boolean running = false;
         private volatile String name = id;
+        private volatile String taskId = TestUtils.createRandomSha256();
 
         public String getId() {
             return id;
+        }
+
+        public String getTaskId() {
+            return taskId;
         }
 
         public Map<String, String> getLabels() {
@@ -269,17 +254,17 @@ public class TestDockerClientFacade implements DockerClientFacade {
             return env;
         }
 
-        public AgentContainer label(String key, String value) {
+        public AgentHolder label(String key, String value) {
             labels.put(key, value);
             return this;
         }
 
-        public AgentContainer running(boolean running) {
+        public AgentHolder running(boolean running) {
             this.running = running;
             return this;
         }
 
-        public AgentContainer name(String name) {
+        public AgentHolder name(String name) {
             this.name = name;
             return this;
         }

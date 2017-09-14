@@ -1,26 +1,24 @@
 package run.var.teamcity.cloud.docker.test;
 
-import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
 
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
-public class TestDockerImageResolver extends DockerImageNameResolver {
+public class TestDockerImageResolver implements DockerImageNameResolver {
 
     private volatile String image;
 
     public TestDockerImageResolver(String image) {
-        super(null);
         this.image = image;
     }
 
-    @Nullable
+    @Nonnull
     @Override
-    protected synchronized String resolveInternal(DockerImageConfig imgConfig) {
+    public String resolve() {
         return image;
     }
 
-    public synchronized TestDockerImageResolver image(String image) {
+    public TestDockerImageResolver image(String image) {
         this.image = image;
         return this;
     }

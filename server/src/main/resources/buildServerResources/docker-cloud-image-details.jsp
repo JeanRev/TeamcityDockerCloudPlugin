@@ -1,4 +1,4 @@
-<%@ page import="run.var.teamcity.cloud.docker.ContainerInfo" %>
+<%@ page import="run.var.teamcity.cloud.docker.AgentHolderInfo" %>
 <%@ page import="run.var.teamcity.cloud.docker.DockerInstance" %>
 <%@ page import="run.var.teamcity.cloud.docker.util.DockerCloudUtils" %>
 <%@ page import="java.time.Instant" %>
@@ -34,27 +34,20 @@
                         ofLocalizedDateTime(FormatStyle.LONG, FormatStyle.SHORT).
                         withLocale(Locale.ENGLISH);
                 for (DockerInstance instance : image.getInstances()) {
-                    Optional<ContainerInfo> optContainerInfo = instance.getContainerInfo();
-                    if (!optContainerInfo.isPresent()) {
+                    Optional<AgentHolderInfo> optAgentHolderInfo = instance.getAgentHolderInfo();
+                    if (!optAgentHolderInfo.isPresent()) {
                         continue;
                     }
-                    ContainerInfo containerInfo = optContainerInfo.get();
-                    StringBuilder displayName = new StringBuilder();
-                    for (String name : containerInfo.getNames()) {
-                        if (displayName.length() > 0) {
-                            displayName.append(", ");
-                        }
-                        displayName.append(name);
-                    }
+                    AgentHolderInfo agentHolderInfo = optAgentHolderInfo.get();
             %>
             <tr>
-                <td><%= DockerCloudUtils.toShortId(containerInfo.getId()) %>
+                <td><%= DockerCloudUtils.toShortId(agentHolderInfo.getId()) %>
                 </td>
-                <td><%= dateFmt.format(containerInfo.getCreationTimestamp().atZone(ZoneId.systemDefault())) %>
+                <td><%= dateFmt.format(agentHolderInfo.getCreationTimestamp().atZone(ZoneId.systemDefault())) %>
                 </td>
-                <td><%= containerInfo.getState() %>
+                <td><%= agentHolderInfo.getStateMsg() %>
                 </td>
-                <td><%= displayName.toString() %>
+                <td><%= agentHolderInfo.getName() %>
                 </td>
             </tr>
             <%

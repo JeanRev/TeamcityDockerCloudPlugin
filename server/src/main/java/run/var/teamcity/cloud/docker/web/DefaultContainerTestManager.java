@@ -43,8 +43,10 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-
-class DefaultContainerTestManager implements ContainerTestManager {
+/**
+ * Default {@link ContainerTestManager} implementation.
+ */
+public class DefaultContainerTestManager implements ContainerTestManager {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(ContainerTestManager.class);
 
@@ -68,8 +70,8 @@ class DefaultContainerTestManager implements ContainerTestManager {
     @Autowired
     DefaultContainerTestManager(SBuildServer buildServer, WebLinks webLinks) {
         this(OfficialAgentImageResolver.forCurrentServer(DockerRegistryClientFactory.getDefault()),
-                DockerClientFacadeFactory.getDefault(), buildServer, webLinks, TEST_DEFAULT_IDLE_TIME,
-                CLEANUP_DEFAULT_TASK_RATE);
+             DockerClientFacadeFactory.getDefault(), buildServer, webLinks, TEST_DEFAULT_IDLE_TIME,
+             CLEANUP_DEFAULT_TASK_RATE);
     }
 
 

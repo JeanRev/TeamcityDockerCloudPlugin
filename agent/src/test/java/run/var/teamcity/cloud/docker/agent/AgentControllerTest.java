@@ -27,6 +27,28 @@ public class AgentControllerTest {
     }
 
     @Test
+    public void agentRuntimeId() {
+        TestBuildAgentConfiguration config = new TestBuildAgentConfiguration();
+
+        config.getBuildParameters()
+                .withEnv("TC_DK_CLD_CLIENT_UUID", UUID.randomUUID().toString());
+
+        AgentController ctrl = new AgentController(config);
+
+        ctrl.init();
+
+        UUID runtimeId1 = UUID.fromString(config.getConfigurationParameters().get(AgentController.AGENT_RUNTIME_ID));
+
+        ctrl = new AgentController(config);
+
+        ctrl.init();
+
+        UUID runtimeId2 = UUID.fromString(config.getConfigurationParameters().get(AgentController.AGENT_RUNTIME_ID));
+
+        assertThat(runtimeId1).isNotEqualTo(runtimeId2);
+    }
+
+    @Test
     public void agentWithUserData() {
         TestBuildAgentConfiguration config = new TestBuildAgentConfiguration();
 
@@ -44,7 +66,7 @@ public class AgentControllerTest {
 
         ctrl.init();
 
-        assertThat(config.getConfigurationParameters()).isEqualTo(customParams);
+        assertThat(config.getConfigurationParameters()).containsAllEntriesOf(customParams);
     }
 
     @Test
@@ -58,7 +80,5 @@ public class AgentControllerTest {
         AgentController ctrl = new AgentController(config);
 
         ctrl.init();
-
-        assertThat(config.getConfigurationParameters()).isEmpty();
     }
 }

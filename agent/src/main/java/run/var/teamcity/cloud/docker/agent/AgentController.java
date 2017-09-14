@@ -7,6 +7,7 @@ import jetbrains.buildServer.log.Loggers;
 
 import javax.annotation.PostConstruct;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Agent-side controller.
@@ -14,6 +15,8 @@ import java.util.Map;
 public class AgentController {
 
     private static final Logger LOG = Logger.getInstance(Loggers.CLOUD_CATEGORY_ROOT + AgentController.class.getName());
+
+    public static final String AGENT_RUNTIME_ID = "run.var.teamcity.cloud.docker.agent_runtime_id";
 
     private final BuildAgentConfiguration agentConfiguration;
 
@@ -55,5 +58,7 @@ public class AgentController {
         }
 
         LOG.info("Docker cloud agent plugin successfully initialized.");
+
+        agentConfiguration.addConfigurationParameter(AGENT_RUNTIME_ID, UUID.randomUUID().toString());
     }
 }

@@ -7,7 +7,6 @@ import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.client.NotFoundException;
-import run.var.teamcity.cloud.docker.client.StdioInputStream;
 import run.var.teamcity.cloud.docker.client.StdioType;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
@@ -28,83 +27,134 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static run.var.teamcity.cloud.docker.PullStatusListener.NO_PROGRESS;
-
-public class DefaultDockerClientFacade implements DockerClientFacade {
+/**
+ * {@link DockerClientFacade} orchestrating agents with plain containers.
+ */
+public class DefaultDockerClientFacade extends BaseDockerClientFacade {
 
     private final static Logger LOG = LoggerFactory.getLogger(DefaultDockerClientFacade.class);
 
-    private final DockerClient client;
+    /**
+     * State message for running containers.
+     */
+    public static final String CONTAINER_RUNNING_STATE = "running";
 
-    DefaultDockerClientFacade(DockerClient client) {
-        this.client = client;
+    DefaultDockerClientFacade(@Nonnull DockerClient client) {
+        super(DockerCloudUtils.requireNonNull(client, "Docker client cannot be null."));
     }
 
     @Nonnull
     @Override
-    public NewContainerInfo createAgentContainer(@Nonnull Node containerSpec, @Nonnull String image, @Nonnull Map<String,
-            String> labels,  @Nonnull Map<String, String> env) {
-        DockerCloudUtils.requireNonNull(containerSpec, "Container specification cannot be null.");
-        DockerCloudUtils.requireNonNull(image, "Image name cannot be null.");
-        DockerCloudUtils.requireNonNull(labels, "Labels map cannot be null.");
-        DockerCloudUtils.requireNonNull(env, "Environment map cannot be null.");
+    public NewAgentHolderInfo createAgent(@Nonnull CreateAgentParameters createAgentParameters) {
+        DockerCloudUtils.requireNonNull(createAgentParameters, "Agent creation parameters cannot be null.");
 
-        EditableNode editableContainerSpec = containerSpec.editNode();
+        try {
+            Node agentHolderSpec = createAgentParameters.getAgentHolderSpec();
 
-        editableContainerSpec.put("Image", image);
+            String resolvedImage = createAgentParameters.
+                    getImageName().
+                    orElse(createAgentParameters.getAgentHolderSpec().getAsString("Image", null));
 
-        inspectImage(image, editableContainerSpec);
+            if (resolvedImage == null) {
+                throw new DockerClientFacadeException("Failed to determine image name.");
+            }
 
-        applyLabels(editableContainerSpec, labels);
+            pullIfRequired(resolvedImage, createAgentParameters.getPullStrategy(),
+                      createAgentParameters.getPullStatusListener(), createAgentParameters.getRegistryCredentials());
 
-        applyEnv(editableContainerSpec, env);
+            EditableNode editableContainerSpec = agentHolderSpec.editNode();
 
-        Node containerNode =  client.createContainer(editableContainerSpec.saveNode(), null);
+            Node imageInspect = client.inspectImage(resolvedImage);
 
-        String id = containerNode.getAsString("Id");
-        List<String> warnings = containerNode.getArray("Warnings", Node.EMPTY_ARRAY).getArrayValues().
-                stream().map(Node::getAsString).collect(Collectors.toList());
+            pinContainerImage(editableContainerSpec, imageInspect);
 
-        return new NewContainerInfo(id, warnings);
+            clearExistingPluginProperties(editableContainerSpec, imageInspect);
 
+            applyEnv(editableContainerSpec, createAgentParameters.getEnv());
+
+            applyLabels(editableContainerSpec, createAgentParameters.getLabels());
+
+            Node containerNode = client.createContainer(editableContainerSpec.saveNode(), null);
+
+            String id = containerNode.getAsString("Id");
+            List<String> warnings = containerNode.getArray("Warnings", Node.EMPTY_ARRAY).getArrayValues().
+                    stream().map(Node::getAsString).collect(Collectors.toList());
+
+            Node inspectNode = client.inspectContainer(id);
+
+            String containerName = inspectNode.getAsString("Name");
+
+            if (containerName.startsWith("/")) {
+                containerName = containerName.substring(1);
+            }
+
+            return new NewAgentHolderInfo(id, containerName, resolvedImage, warnings);
+        } catch (NodeProcessingException e) {
+            throw new DockerClientFacadeException("Failed to setup agent container.", e);
+        }
+    }
+
+    private void pullIfRequired(String image, PullStrategy pullStrategy, PullStatusListener listener,
+                           DockerRegistryCredentials credentials) {
+        if (pullStrategy == PullStrategy.NO_PULL) {
+            return;
+        }
+
+        try {
+            pull(image, listener, credentials);
+        } catch (Exception e) {
+            if (pullStrategy == PullStrategy.PULL_IGNORE_FAILURE) {
+                LOG.warn("Pull of image " + image + " failed.", e);
+                return;
+            }
+
+            if (e instanceof DockerClientFacadeException) {
+                throw (DockerClientFacadeException) e;
+            }
+            throw new DockerClientFacadeException("Pull of image " + image + " failed.");
+        }
+    }
+
+    private void pinContainerImage(EditableNode containerSpec , Node imageInspect) {
+        String imageId = imageInspect.getAsString("Id");
+
+        containerSpec.put("Image", imageId);
+        containerSpec.getOrCreateObject("Labels").put(DockerCloudUtils.SOURCE_IMAGE_ID_LABEL, imageId);
     }
 
     @Override
-    public void startAgentContainer(@Nonnull String containerId) {
+    public String startAgent(@Nonnull String containerId) {
         client.startContainer(containerId);
+        return containerId;
     }
 
     @Override
-    public void restartAgentContainer(@Nonnull String containerId) {
+    public String restartAgent(@Nonnull String containerId) {
         client.restartContainer(containerId);
+        return containerId;
     }
 
     @Nonnull
     @Override
-    public ContainerInspection inspectAgentContainer(@Nonnull String containerId) {
-        return parseContainerInspection(client.inspectContainer(containerId));
-    }
-
-    @Nonnull
-    @Override
-    public List<ContainerInfo> listActiveAgentContainers(@Nonnull String labelFilter, @Nonnull String valueFilter) {
+    public List<AgentHolderInfo> listAgentHolders(@Nonnull String labelFilter, @Nonnull String valueFilter) {
         DockerCloudUtils.requireNonNull(labelFilter, "Label filter key cannot be null.");
         DockerCloudUtils.requireNonNull(valueFilter, "Label filter value cannot be null.");
         Node containerNodes = client.listContainersWithLabel(Collections.singletonMap(labelFilter, valueFilter));
 
-        return containerNodes.getArrayValues().stream()
-                .filter(containerNode -> {
-                    String sourceImageId = containerNode.getObject("Labels", Node.EMPTY_OBJECT).getAsString(DockerCloudUtils
-                            .SOURCE_IMAGE_ID_LABEL);
-                    String currentImageId = containerNode.getAsString("ImageID");
-                    return sourceImageId.equals(currentImageId);
-                })
-                .map(this::parseContainerInfo)
-                .collect(Collectors.toList());
+        try {
+            return containerNodes.getArrayValues().stream().filter(containerNode -> {
+                String sourceImageId = containerNode.getObject("Labels", Node.EMPTY_OBJECT).
+                        getAsString(DockerCloudUtils.SOURCE_IMAGE_ID_LABEL);
+                String currentImageId = containerNode.getAsString("ImageID");
+                return sourceImageId.equals(currentImageId);
+            }).map(this::parseContainerInfo).collect(Collectors.toList());
+        } catch (NodeProcessingException e) {
+            throw new DockerClientFacadeException("Failed to list agent containers.", e);
+        }
     }
 
     @Override
-    public boolean terminateAgentContainer(@Nonnull String containerId, Duration timeout, boolean removeContainer) {
+    public boolean terminateAgentContainer(@Nonnull String containerId, @Nonnull Duration timeout, boolean removeContainer) {
         try {
             Duration stopTime = Stopwatch.measure(() ->
                     client.stopContainer(containerId, timeout));
@@ -131,16 +181,15 @@ public class DefaultDockerClientFacade implements DockerClientFacade {
 
     private final static BigInteger UNKNOWN_PROGRESS = BigInteger.valueOf(-1);
 
-    @Override
-    public void pull(String image, DockerRegistryCredentials credentials, PullStatusListener
-            statusListener)  {
+    private void pull(String image, PullStatusListener
+            statusListener, DockerRegistryCredentials credentials)  {
         try (NodeStream nodeStream = client.createImage(image, null, credentials)) {
             Node status;
             while ((status = nodeStream.next()) != null) {
 
-                String statusMsg ;
+                final String statusMsg;
                 final String layer;
-                final int percent;
+                int percent = PullStatusListener.NO_PROGRESS;
 
                 try {
                     String error = status.getAsString("error", null);
@@ -149,41 +198,38 @@ public class DefaultDockerClientFacade implements DockerClientFacade {
                         throw new DockerClientFacadeException("Failed to handlePull image: " + error + " -- " + details
                                 .getAsString("message", null), null);
                     }
-                    if (statusListener == NOOP_PULL_LISTENER) {
+                    if (statusListener == PullStatusListener.NOOP) {
                         continue;
                     }
 
                     statusMsg = status.getAsString("status", null);
+
                     if (statusMsg == null) {
                         continue;
                     }
 
                     layer = status.getAsString("id", null);
-                    if (layer == null) {
-                        continue;
+
+                    if (layer != null) {
+                        Node progressDetails = status.getObject("progressDetail", Node.EMPTY_OBJECT);
+                        BigInteger current = progressDetails.getAsBigInt("current", UNKNOWN_PROGRESS);
+                        BigInteger total = progressDetails.getAsBigInt("total", UNKNOWN_PROGRESS);
+
+                        int currentSign = current.signum();
+                        int totalSign = total.signum();
+
+                        if (currentSign >= 0 && totalSign > 0 && current.compareTo(total) <= 0) {
+                            // Note: multiply first to avoid converting to big decimal.
+                            percent = current.multiply(BigInteger.valueOf(100)).divide(total).intValue();
+                            assert percent >= 0 && percent <= 100;
+                        }
                     }
-
-                    Node progressDetails = status.getObject("progressDetail", Node.EMPTY_OBJECT);
-                    BigInteger current = progressDetails.getAsBigInt("current", UNKNOWN_PROGRESS);
-                    BigInteger total = progressDetails.getAsBigInt("total", UNKNOWN_PROGRESS);
-
-                    int currentSign = current.signum();
-                    int totalSign = total.signum();
-
-                    if (currentSign >= 0 && totalSign > 0 && current.compareTo(total) <= 0) {
-                        // Note: multiply first to avoid converting to big decimal.
-                        percent = current.multiply(BigInteger.valueOf(100)).divide(total).intValue();
-                        assert percent >= 0 && percent <= 100;
-                    } else {
-                        percent = NO_PROGRESS;
-                    }
-
                 } catch (NodeProcessingException e) {
                     LOG.error("Failed to parse server response.", e);
                     continue;
                 }
 
-                statusListener.pullInProgress(layer, statusMsg, percent);
+                statusListener.pullInProgress(statusMsg, layer, percent);
             }
         } catch (IOException e) {
             throw new DockerClientFacadeException("Pull failed.", e);
@@ -192,51 +238,29 @@ public class DefaultDockerClientFacade implements DockerClientFacade {
 
     @Nonnull
     @Override
-    public CharSequence getLogs(String containerId) {
-
-        boolean hasTty = client.inspectContainer(containerId).getObject("Config").
-                getAsBoolean("Tty", false);
-
-
-        StreamHandler streamHandler = client.streamLogs(containerId, 10000, StdioType.all(), false, !hasTty);
+    public CharSequence getLogs(@Nonnull String containerId) {
+        StreamHandler streamHandler = client.streamLogs(containerId, 10000, StdioType.all(), false,
+                                                        !hasTty(containerId));
         return demuxLogs(streamHandler);
-    }
-
-    private CharSequence demuxLogs(StreamHandler streamHandler) {
-        StringBuilder sb = new StringBuilder(5 * 1024);
-
-        StdioInputStream streamFragment;
-        try {
-            while ((streamFragment = streamHandler.getNextStreamFragment()) != null) {
-                sb.append(DockerCloudUtils.readUTF8String(streamFragment));
-            }
-        } catch (IOException e) {
-            throw new DockerClientFacadeException("Failed to fetch logs.");
-        }
-
-        return sb;
     }
 
     @Nonnull
     @Override
-    public StreamHandler streamLogs(String containerId) {
-        return client.streamLogs(containerId, 10, StdioType.all(), true, hasTty(containerId));
+    public StreamHandler streamLogs(@Nonnull String containerId) {
+        return client.streamLogs(containerId, 10000, StdioType.all(), true, !hasTty(containerId));
     }
 
     private boolean hasTty(String containerId) {
-        return client.inspectContainer(containerId).getObject("Config").getAsBoolean("Tty");
-    }
-
-    private void inspectImage(String image, EditableNode containerSpec) {
-        Node imageInspect = client.inspectImage(image);
-
-        clearExistingPluginProperties(imageInspect, containerSpec);
-        markContainer(imageInspect, containerSpec);
+        try {
+            return client.inspectContainer(containerId).getObject("Config").getAsBoolean("Tty", false);
+        } catch (NodeProcessingException e) {
+            throw new DockerClientFacadeException("Failed to inspect container.", e);
+        }
     }
 
     private final static Pattern ENV_PTN = Pattern.compile("(" + DockerCloudUtils.ENV_PREFIX + ".+)=.*");
 
-    private void clearExistingPluginProperties(Node imageInspect, EditableNode containerSpec) {
+    private void clearExistingPluginProperties(EditableNode containerSpec, Node imageInspect) {
         Node imageConfig = imageInspect.getObject("Config", Node.EMPTY_OBJECT);
         Node labels = imageConfig.getObject("Labels", Node.EMPTY_OBJECT);
 
@@ -254,51 +278,20 @@ public class DefaultDockerClientFacade implements DockerClientFacade {
                 .forEach(var -> containerSpec.getOrCreateArray("Env").add(var + "="));
     }
 
-    private void markContainer(Node imageInspect, EditableNode editableContainerSpec) {
-        String imageId = imageInspect.getAsString("Id");
 
-        editableContainerSpec.put("Image", imageId);
-        editableContainerSpec.getOrCreateObject("Labels").put(DockerCloudUtils.SOURCE_IMAGE_ID_LABEL, imageId);
-    }
-
-    private void applyLabels(EditableNode editableContainerSpec, Map<String, String> labels) {
-        assert editableContainerSpec != null && labels != null;
-
-        EditableNode labelsNode = editableContainerSpec.getOrCreateObject("Labels");
-
-        labels.forEach(labelsNode::put);
-    }
-
-    private void applyEnv(EditableNode editableContainerSpec, Map<String, String> env) {
-        assert editableContainerSpec != null && env != null;
-
-        EditableNode envNode = editableContainerSpec.getOrCreateArray("Env");
-
-        env.forEach((key, value) -> envNode.add(key + "=" + value));
-    }
-
-    private ContainerInspection parseContainerInspection(Node inspection) {
-        return new ContainerInspection(inspection.getAsString("Name"));
-    }
-
-    private ContainerInfo parseContainerInfo(Node container) {
+    private AgentHolderInfo parseContainerInfo(Node container) {
         String id = container.getAsString("Id");
-        Map<String, String> labels = container.getObject("Labels").getObjectValues().entrySet().stream().collect
+        Map<String, String> labels = container.getObject("Labels", Node.EMPTY_OBJECT).getObjectValues().entrySet().stream()
+                .collect
                 (Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getAsString()));
-        String state = container.getAsString("State");
-        List<String> names = container.getArray("Names").getArrayValues().stream().map(Node::getAsString).collect(
-                Collectors.toList());
-        Instant creationTimestamp = Instant.ofEpochSecond(container.getAsLong("Created"));
-        return new ContainerInfo(id, labels, state, names, creationTimestamp);
-    }
 
-    /**
-     * Close the underlying docker client.
-     *
-     * @see DockerClient#close()
-     */
-    @Override
-    public void close() {
-        client.close();
+        String state = container.getAsString("State");
+
+        String name = container.getArray("Names").getArrayValues().stream().map(Node::getAsString).findFirst()
+                .orElseThrow(() -> new DockerClientFacadeException("No container name available"));
+        Instant creationTimestamp = Instant.ofEpochSecond(container.getAsLong("Created"));
+
+        return new AgentHolderInfo(id, id, labels, state, name, creationTimestamp,
+                CONTAINER_RUNNING_STATE.equals(state));
     }
 }

@@ -22,7 +22,7 @@ public class TestDockerClientFacadeFactory extends DockerClientFacadeFactory {
 
 
     @Override
-    public DockerClientFacade createFacade(DockerClientConfig dockerConfig) {
+    public DockerClientFacade createFacade(DockerClientConfig dockerConfig, Type type) {
 
         if (creationFailureException != null) {
             throw creationFailureException;
@@ -51,12 +51,6 @@ public class TestDockerClientFacadeFactory extends DockerClientFacadeFactory {
 
     public void addConfigurator(Consumer<TestDockerClientFacade> configurator) {
         lock.run(() -> configurators.add(configurator));
-    }
-
-
-
-    public void removeLastConfigurator() {
-        lock.run(configurators::removeLast);
     }
 
     public void setWrapper(Function<TestDockerClientFacade, DockerClientFacade> wrapper) {

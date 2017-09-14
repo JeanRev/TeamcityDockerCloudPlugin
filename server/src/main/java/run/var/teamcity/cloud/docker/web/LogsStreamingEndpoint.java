@@ -111,7 +111,7 @@ public class LogsStreamingEndpoint {
         public void run() {
             assert containerTestReference.getContainerId().isPresent();
             try (DockerClientFacade client = DockerClientFacadeFactory.getDefault()
-                    .createFacade(containerTestReference.getClientConfig())) {
+                    .createFacade(containerTestReference.getClientConfig(), DockerClientFacadeFactory.Type.SWARM)) {
                 try (StreamHandler streamHandler = client.streamLogs(containerTestReference.getContainerId().get())) {
                     this.streamHandler = streamHandler;
 

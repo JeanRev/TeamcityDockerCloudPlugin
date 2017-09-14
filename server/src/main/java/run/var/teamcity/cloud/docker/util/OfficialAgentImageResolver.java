@@ -2,15 +2,12 @@ package run.var.teamcity.cloud.docker.util;
 
 import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.version.ServerVersionHolder;
-import run.var.teamcity.cloud.docker.DockerImageConfig;
-import run.var.teamcity.cloud.docker.DockerImageDefaultResolver;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
 import run.var.teamcity.cloud.docker.client.DockerClientException;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClient;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,7 +30,7 @@ import java.util.regex.Pattern;
  * This class is thread-safe.
  * </p>
  */
-public class OfficialAgentImageResolver extends DockerImageNameResolver {
+public class OfficialAgentImageResolver implements DockerImageNameResolver {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(OfficialAgentImageResolver.class);
     final static String REPO = "jetbrains/teamcity-agent";
@@ -60,23 +57,13 @@ public class OfficialAgentImageResolver extends DockerImageNameResolver {
      * @throws IllegalArgumentException if any version number is negative
      */
     public OfficialAgentImageResolver(String version, DockerRegistryClientFactory registryClientFty) {
-        super(new DockerImageDefaultResolver());
         this.version = DockerCloudUtils.requireNonNull(version, "Version string cannot be null.");
         this.registryClientFty = DockerCloudUtils.requireNonNull(registryClientFty, "Registry client factory cannot be null.");
     }
 
-    /**
-     * Perform the resolution process. This method is a potentially I/O bound operation and may not return immediately.
-     *
-     * @return the resolved image, including the version tag
-     */
-    @Nullable
+    @Nonnull
     @Override
-    protected String resolveInternal(DockerImageConfig imgConfig) {
-        if (!imgConfig.isUseOfficialTCAgentImage()) {
-            return null;
-        }
-
+    public String resolve() {
         return lock.call(() -> {
             String imageTag = this.imageTag;
             if (imageTag == null) {

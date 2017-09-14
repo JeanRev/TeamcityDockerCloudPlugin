@@ -1,7 +1,9 @@
 package run.var.teamcity.cloud.docker;
 
+import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+
 import javax.annotation.Nonnull;
-import java.math.BigInteger;
+import javax.annotation.Nullable;
 
 /**
  * Listener to track a Docker image pull progress.
@@ -13,12 +15,16 @@ public interface PullStatusListener {
      */
     int NO_PROGRESS = -1;
 
+    PullStatusListener NOOP = (status, layer, progress) -> {};
+
     /**
      * Notify a progress.
      *
-     * @param layer the current layer id
-     * @param status pull status of the layer
-     * @param percent percent of completion (between 0 and 100 inclusive).
+     * @param status status to be notified
+     * @param layer the layer to which the status relates to (if any)
+     * @param percent the progress of the pull operation in percent
      */
-    void pullInProgress(@Nonnull String layer, @Nonnull String status, int percent);
+    void pullInProgress(@Nonnull String status, @Nullable String layer, int percent);
+
+
 }
