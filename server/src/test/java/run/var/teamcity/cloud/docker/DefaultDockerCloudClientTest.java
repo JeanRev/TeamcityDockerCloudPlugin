@@ -821,17 +821,16 @@ public class DefaultDockerCloudClientTest {
                 .beforeInvoke(assertClientNotLocked)
                 .buildProxy());
 
-
-        DefaultDockerCloudClient client = new DefaultDockerCloudClient(clientConfig, clientFacadeFactory,
-                Collections.singletonList(imageConfig), dockerImageResolver, cloudState, buildServerProxy);
-
         clientFacadeFactory.addConfigurator(clientFacade -> clientFacade.localImage("resolved-image:latest"));
 
         clientFacadeFactory.setWrapper(clt ->
-        {
-            clientInterceptor = Interceptor.wrap(clt, DockerClientFacade.class);
-            return clientInterceptor.beforeInvoke(assertClientNotLocked).buildProxy();
-        });
+                                       {
+                                           clientInterceptor = Interceptor.wrap(clt, DockerClientFacade.class);
+                                           return clientInterceptor.beforeInvoke(assertClientNotLocked).buildProxy();
+                                       });
+
+        DefaultDockerCloudClient client = new DefaultDockerCloudClient(clientConfig, clientFacadeFactory,
+                Collections.singletonList(imageConfig), dockerImageResolver, cloudState, buildServerProxy);
 
 
         this.client = client;
