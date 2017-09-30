@@ -257,7 +257,7 @@ public class DefaultDockerCloudClientTest {
 
         DefaultDockerCloudClient client = createClient();
 
-        waitUntil(() -> client.getLastDockerSyncTime().isPresent());
+        waitUntil(() -> buildServer.getBuildAgentManager().getUnregisteredAgents().size() == 2);
 
         List<TestSBuildAgent> unregisteredAgents = buildServer.getBuildAgentManager().getUnregisteredAgents();
 
