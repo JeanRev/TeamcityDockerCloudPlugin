@@ -20,7 +20,7 @@ Browser requirements are the same than TeamCity itself (IE9+ or recent version o
 ## Quick start
 1. Upload the plugin archive using the "_Administration_ | _Plugin List_" section of your TeamCity instance, or copy it
 to the _plugins_ subfolder in the TeamCity Data Directory.
-2. Access the cloud configuration page for your project ("_Administration_ | _<Your Project>_ | _Cloud Profiles_") and add a new cloud profile using _Docker_ as Cloud type (for TeamCity 10.x, the cloud configuration page is located at the top level of the Administration section).
+2. Access the cloud configuration page for your project ("_Administration_ | &lt;_;Your Project_&gt; | _Cloud Profiles_") and add a new cloud profile using _Docker_ as Cloud type (for TeamCity 10.x, the cloud configuration page is located at the top level of the Administration section).
 3. Configure the access settings to your Docker instance.
 4. Register and configure a Docker image hosting the build agent. You can test the image directly from the same configuration page.
 
