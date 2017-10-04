@@ -32,14 +32,14 @@ subprojects {
         add("provided", "org.apache.logging.log4j:log4j-api:2.5")
         // Provides null-check annotations in the javax.annotation namespace.
         add("provided", "com.google.code.findbugs:jsr305:3.0.2")
-        testCompile("junit:junit:4.12")
-        testCompile("org.assertj:assertj-core:3.5.2")
-        testCompile("io.takari.junit:takari-cpsuite:1.2.7")
+        "testCompile"("junit:junit:4.12")
+        "testCompile"("org.assertj:assertj-core:3.5.2")
+        "testCompile"("io.takari.junit:takari-cpsuite:1.2.7")
     }
 
     val sourceSets = the<JavaPluginConvention>().sourceSets
-    val mainSourceSet = sourceSets.getByName("main")!!
-    val testSourceSet = sourceSets.getByName("test")!!
+    val mainSourceSet = sourceSets.getByName("main")
+    val testSourceSet = sourceSets.getByName("test")
 
     mainSourceSet.compileClasspath += configurations.getByName("provided")
     testSourceSet.compileClasspath += configurations.getByName("provided")
@@ -62,7 +62,7 @@ task<Zip>("tcdist") {
     }
     into("server") {
         from(tasks.getByPath(":server:jar"))
-        from(project(":server").configurations.runtime)
+        from(project(":server").configurations.get("runtime"))
     }
 
     val parsedVersion = "((?:[0-9]\\.)*[0-9])(-SNAPSHOT)?".toRegex().matchEntire(project.version.toString())!!
