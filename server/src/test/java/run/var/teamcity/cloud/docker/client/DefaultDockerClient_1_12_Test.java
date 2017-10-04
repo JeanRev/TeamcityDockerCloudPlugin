@@ -7,8 +7,10 @@ import run.var.teamcity.cloud.docker.util.Stopwatch;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.time.Duration;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.data.Offset.offset;
 
 public class DefaultDockerClient_1_12_Test extends DefaultDockerClientAllVersionsITest {
@@ -40,6 +42,18 @@ public class DefaultDockerClient_1_12_Test extends DefaultDockerClientAllVersion
     @Override // Not a test.
     public void streamServiceLogs() throws IOException {
         // Getting log from service is not available from this Daemon version.
+    }
+
+    @Test
+    public void registryFailedAuthPrivateRegistry() throws URISyntaxException {
+        String registryAddress = getRegistryAddress();
+
+        DefaultDockerClient client = createClient(createClientConfig());
+
+        Stream.of(DockerRegistryCredentials.ANONYMOUS, DockerRegistryCredentials.from("invalid", "credentials"))
+                .forEach(credentials ->
+                        assertThatExceptionOfType(UnauthorizedException.class).isThrownBy(
+                                () -> client.createImage(registryAddress + "/" + TEST_IMAGE, null, credentials)));
     }
 
     @Override

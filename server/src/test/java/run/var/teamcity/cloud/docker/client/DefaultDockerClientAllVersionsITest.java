@@ -522,7 +522,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
 
         Stream.of(DockerRegistryCredentials.ANONYMOUS, DockerRegistryCredentials.from("invalid", "credentials"))
                 .forEach(credentials ->
-                assertThatExceptionOfType(UnauthorizedException.class).isThrownBy(
+                assertThatExceptionOfType(InvocationFailedException.class).isThrownBy(
                         () -> client.createImage(registryAddress + "/" + TEST_IMAGE, null, credentials)));
     }
 
@@ -574,7 +574,7 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         return client = DefaultDockerClient.newInstance(config);
     }
 
-    private DockerClientConfig createClientConfig() {
+    protected DockerClientConfig createClientConfig() {
         return createClientConfig(getApiTargetVersion());
     }
 
@@ -590,11 +590,11 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         }
     }
 
-    private DefaultDockerClient createClient(DockerClientConfig clientConfig) {
+    protected DefaultDockerClient createClient(DockerClientConfig clientConfig) {
         return client = DefaultDockerClient.newInstance(clientConfig);
     }
 
-    private String getRegistryAddress() {
+    protected String getRegistryAddress() {
         String registryAddress = System.getProperty("docker.test.registry.address");
         Assume.assumeNotNull(registryAddress);
         return registryAddress;
