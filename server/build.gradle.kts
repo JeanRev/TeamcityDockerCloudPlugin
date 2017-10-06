@@ -30,6 +30,7 @@ val tcpTlsInstanceProp = "docker.test.tcp.ssl.address"
 val npipeInstanceProp = "docker.test.npipe.address"
 val registryInstanceProp = "docker.test.registry.address"
 val dockerCertPath = "docker.test.tcp.ssl.certpath"
+val yarnExecPathProp = "yarn.exec.path"
 
 val dockerTestInstancesProps = mutableMapOf<String, String>()
 listOf(dockerHubTestRepo, dockerHubTestUser, dockerHubTestPwd, unixSocketInstanceProp, tcpInstance_1_12Prop,
@@ -55,6 +56,26 @@ dependencies {
 val jar = tasks.getByPath("jar") as Jar
 
 jar.baseName = "docker-cloud-server"
+
+jar.dependsOn("buildDockerCloudJS")
+
+val jsSrcDir: File = project.file("src/main/js")
+
+jar.apply {
+    into("buildServerResources") {
+        from(jsSrcDir.resolve("dist"))
+        from(jsSrcDir.resolve("image-settings.html"))
+        from(jsSrcDir.resolve("docker-cloud.css"))
+    }
+}
+
+val clean = tasks.getByPath("clean")
+
+clean.doLast {
+    delete(jsSrcDir.resolve("dist"))
+    delete(jsSrcDir.resolve("node_modules"))
+    delete(jsSrcDir.resolve("test-results"))
+}
 
 tasks.withType<JavaCompile> {
     sourceCompatibility = "1.8"
@@ -126,11 +147,21 @@ task<Test>("windowsDaemonTest") {
     include("run/var/teamcity/cloud/docker/test/WindowsDaemonTestSuite.class")
 }
 
-task("karmaTest").doFirst({
-    val proc = ProcessBuilder("karma", "start", "--single-run").redirectErrorStream(true).directory(projectDir).start()
-    proc.inputStream.reader().readLines().forEach { println(it) }
-    proc.waitFor()
+val yarnExecPath: String = if (project.hasProperty(yarnExecPathProp)) project.properties[yarnExecPathProp]
+        .toString() else "yarn"
+
+
+task("installDockerCloudJS").doFirst({
+    run(jsSrcDir, yarnExecPath, "install", "--frozen-lockfile")
 })
+
+task("testDockerCloudJS").doFirst({
+    run(jsSrcDir, yarnExecPath, "test")
+}).dependsOn("installDockerCloudJS")
+
+task("buildDockerCloudJS").doFirst({
+    run(jsSrcDir, yarnExecPath, "build")
+}).dependsOn("installDockerCloudJS")
 
 val setupTestImages = task("setupTestImages") {
 
@@ -162,6 +193,15 @@ val setupTestImages = task("setupTestImages") {
         if (tcpTlsInstance != null) {
             buildTestImage("https://$tcpTlsInstance", true)
         }
+    }
+}
+
+fun run(wd: File = projectDir, vararg cmd: String) {
+    val proc = ProcessBuilder(cmd.asList()).redirectErrorStream(true).directory(wd).start()
+    proc.inputStream.reader().readLines().forEach { println(it) }
+    val exitCode: Int = proc.waitFor()
+    if (exitCode != 0) {
+        throw RuntimeException("Command \"${cmd.joinToString(" ")}\" returned with non-zero exit code: $exitCode")
     }
 }
 

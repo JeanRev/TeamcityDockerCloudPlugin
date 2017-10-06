@@ -17,7 +17,7 @@ public class DefaultDockerClientFacadeFactory extends DockerClientFacadeFactory 
             case CONTAINER:
                 return new DefaultDockerClientFacade(dockerClient);
             case SWARM:
-                return new SwarmDockerClientFacade(dockerClient);
+                return new DefaultDockerClientFacade(dockerClient);
             default:
                 throw new AssertionError("Unknown enum member: " + type);
         }

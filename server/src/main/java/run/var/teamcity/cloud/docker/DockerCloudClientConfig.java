@@ -184,7 +184,7 @@ public class DockerCloudClientConfig {
                     DockerClientConfig dockerConfig = new DockerClientConfig(instanceURI,
                             DockerCloudUtils.DOCKER_API_TARGET_VERSION).usingTls(usingTls);
                     try {
-                        clientFacadeFactory.createFacade(dockerConfig, DockerClientFacadeFactory.Type.SWARM);
+                        clientFacadeFactory.createFacade(dockerConfig, DockerClientFacadeFactory.Type.CONTAINER);
                     } catch (IllegalArgumentException e) {
                         invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, e.getMessage()));
                     }

@@ -669,7 +669,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
             // Creates the Docker client upon first sync. We do this here to benefit from the retry mechanism if
             // the API negotiation fails.
             if (clientFacade == null) {
-                clientFacade = dockerClientFactory.createFacade(dockerClientConfig, DockerClientFacadeFactory.Type.SWARM);
+                clientFacade = dockerClientFactory.createFacade(dockerClientConfig, DockerClientFacadeFactory.Type.CONTAINER);
                 LOG.info("Docker client instantiated.");
             }
 
