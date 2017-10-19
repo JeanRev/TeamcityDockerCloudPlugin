@@ -337,6 +337,24 @@ public class DefaultDockerClientFacadeTest {
     }
 
     @Test
+    public void listAgentContainersSourceImageIdNotSet() {
+        DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
+
+        TestImage image = dockerClient.newLocalImage("image-1", "latest");
+
+        Container container = new Container().
+                label("foo", "bar").
+                image(image);
+
+        dockerClient.container(container);
+
+        List<ContainerInfo> containers = facade.listActiveAgentContainers("foo", "bar");
+
+        assertThat(containers).isEmpty();
+
+    }
+
+    @Test
     public void getLogs() {
         DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
 

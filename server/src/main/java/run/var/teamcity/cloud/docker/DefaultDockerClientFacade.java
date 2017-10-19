@@ -95,9 +95,9 @@ public class DefaultDockerClientFacade implements DockerClientFacade {
         return containerNodes.getArrayValues().stream()
                 .filter(containerNode -> {
                     String sourceImageId = containerNode.getObject("Labels", Node.EMPTY_OBJECT).getAsString(DockerCloudUtils
-                            .SOURCE_IMAGE_ID_LABEL);
+                            .SOURCE_IMAGE_ID_LABEL, null);
                     String currentImageId = containerNode.getAsString("ImageID");
-                    return sourceImageId.equals(currentImageId);
+                    return sourceImageId != null && sourceImageId.equals(currentImageId);
                 })
                 .map(this::parseContainerInfo)
                 .collect(Collectors.toList());
