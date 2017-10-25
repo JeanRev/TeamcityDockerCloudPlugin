@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import run.var.teamcity.cloud.docker.client.BadRequestException;
 import run.var.teamcity.cloud.docker.client.ContainerAlreadyStoppedException;
 import run.var.teamcity.cloud.docker.client.DockerClient;
+import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.client.NotFoundException;
 import run.var.teamcity.cloud.docker.client.StdioType;
@@ -39,7 +40,7 @@ public class DefaultDockerClientFacade extends BaseDockerClientFacade {
      */
     public static final String CONTAINER_RUNNING_STATE = "running";
 
-    DefaultDockerClientFacade(@Nonnull DockerClient client) {
+    public DefaultDockerClientFacade(@Nonnull DockerClient client) {
         super(DockerCloudUtils.requireNonNull(client, "Docker client cannot be null."));
     }
 

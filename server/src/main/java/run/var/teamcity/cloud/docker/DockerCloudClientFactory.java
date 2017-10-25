@@ -4,15 +4,15 @@ import jetbrains.buildServer.clouds.CloudClientEx;
 import jetbrains.buildServer.clouds.CloudClientFactory;
 import jetbrains.buildServer.clouds.CloudClientParameters;
 import jetbrains.buildServer.clouds.CloudImageParameters;
-import jetbrains.buildServer.clouds.CloudRegistrar;
 import jetbrains.buildServer.clouds.CloudState;
 import jetbrains.buildServer.serverSide.AgentDescription;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
+import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
-import run.var.teamcity.cloud.docker.web.DockerCloudSettingsController;
+import run.var.teamcity.cloud.docker.util.Resources;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
@@ -22,34 +22,29 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Docker {@link CloudClientFactory}.
+ * Base class for a Docker {@link CloudClientFactory}.
  */
 public class DockerCloudClientFactory implements CloudClientFactory {
 
+    private final DockerCloudSupport cloudSupport;
+    private final DockerCloudSupportRegistry cloudSupportRegistry;
     private final String editProfileUrl;
     private final SBuildServer buildServer;
-    private final DockerClientFacadeFactory clientFacadeFactory;
 
-    public DockerCloudClientFactory(@Nonnull final SBuildServer buildServer,
-                                    @Nonnull final CloudRegistrar cloudRegistrar,
-                                    @Nonnull final PluginDescriptor pluginDescriptor) {
-        this(buildServer, cloudRegistrar, pluginDescriptor, DockerClientFacadeFactory.getDefault());
-    }
-
-    DockerCloudClientFactory(@Nonnull final SBuildServer buildServer,
-                             @Nonnull final CloudRegistrar cloudRegistrar,
-                             @Nonnull final PluginDescriptor pluginDescriptor,
-                             @Nonnull final DockerClientFacadeFactory clientFacadeFactory) {
-        this.editProfileUrl = pluginDescriptor.getPluginResourcesPath(DockerCloudSettingsController.EDIT_PATH);
-        cloudRegistrar.registerCloudFactory(this);
+    public DockerCloudClientFactory(
+            @Nonnull DockerCloudSupport cloudSupport,
+            @Nonnull DockerCloudSupportRegistry cloudSupportRegistry,
+            @Nonnull final SBuildServer buildServer,
+            @Nonnull final PluginDescriptor pluginDescriptor) {
+        this.cloudSupport = cloudSupport;
+        this.cloudSupportRegistry = cloudSupportRegistry;
+        this.editProfileUrl = pluginDescriptor.getPluginResourcesPath(cloudSupport.resources().text("cloud.settingsPath"));
         this.buildServer = buildServer;
-        this.clientFacadeFactory = clientFacadeFactory;
     }
-
 
     @Nonnull
     @Override
-    public CloudClientEx createNewClient(@Nonnull CloudState state, @Nonnull CloudClientParameters params) {
+    public final CloudClientEx createNewClient(@Nonnull CloudState state, @Nonnull CloudClientParameters params) {
         Collection<String> paramNames = params.listParameterNames();
         Map<String, String> properties = new HashMap<>(paramNames.size());
         for (String paramName : paramNames) {
@@ -62,44 +57,33 @@ public class DockerCloudClientFactory implements CloudClientFactory {
         properties.put(CloudImageParameters.SOURCE_IMAGES_JSON,
                 CloudImageParameters.collectionToJson(params.getCloudImages()));
 
-        DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(properties, clientFacadeFactory);
-        List<DockerImageConfig> imageConfigs = DockerImageConfig.processParams(properties);
+        DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(properties, cloudSupportRegistry);
+
+        if (!clientConfig.getCloudSupport().equals(cloudSupport)) {
+            throw new IllegalArgumentException("Cloud type mismatch, expected: " + cloudSupport + " got: " +
+                    clientConfig.getCloudSupport());
+        }
+
+        List<DockerImageConfig> imageConfigs = DockerImageConfig.processParams(cloudSupport.createImageConfigParser(),
+                properties);
 
         final int threadPoolSize = Math.min(imageConfigs.size() * 2, Runtime.getRuntime().availableProcessors() + 1);
         clientConfig.getDockerClientConfig()
                 .connectionPoolSize(threadPoolSize);
 
-        return new DefaultDockerCloudClient(clientConfig, clientFacadeFactory, imageConfigs,
-                                            OfficialAgentImageResolver
-                                                    .forCurrentServer(DockerRegistryClientFactory.getDefault()), state,
-                                            buildServer);
+        return new DefaultDockerCloudClient(clientConfig, imageConfigs,
+                OfficialAgentImageResolver.forCurrentServer(DockerRegistryClientFactory.getDefault()), state,
+                buildServer);
     }
 
     @Nonnull
     @Override
-    public String getCloudCode() {
-        return DockerCloudUtils.CLOUD_CODE;
-    }
-
-    @Nonnull
-    @Override
-    public String getDisplayName() {
-        return "Docker";
-    }
-
-    @Nonnull
-    @Override
-    public String getEditProfileUrl() {
-        return editProfileUrl;
-    }
-
-    @Nonnull
-    @Override
-    public Map<String, String> getInitialParameterValues() {
+    public final Map<String, String> getInitialParameterValues() {
         HashMap<String, String> params = new HashMap<>();
         // The cloud client UUID is generated here for new cloud profiles. It will be then persisted in the profile
         // plugin configuration.
-        params.put(DockerCloudUtils.CLIENT_UUID, UUID.randomUUID().toString());
+        params.put(DockerCloudUtils.CLOUD_TYPE_PARAM, cloudSupport.code());
+        params.put(DockerCloudUtils.CLIENT_UUID_PARAM, UUID.randomUUID().toString());
         params.put(DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM,
                 String.valueOf(DockerCloudUtils.isDefaultDockerSocketAvailable()));
         params.put(DockerCloudUtils.USE_DEFAULT_WIN_NAMED_PIPE_PARAM,
@@ -107,14 +91,32 @@ public class DockerCloudClientFactory implements CloudClientFactory {
         return params;
     }
 
+    @NotNull
+    @Override
+    public String getCloudCode() {
+        return cloudSupport.code();
+    }
+
+    @NotNull
+    @Override
+    public String getDisplayName() {
+        return cloudSupport.resources().text("cloud.title");
+    }
+
     @Nonnull
     @Override
-    public jetbrains.buildServer.serverSide.PropertiesProcessor getPropertiesProcessor() {
-        return new DockerCloudPropertiesProcessor();
+    public final String getEditProfileUrl() {
+        return editProfileUrl;
+    }
+
+    @Nonnull
+    @Override
+    public final jetbrains.buildServer.serverSide.PropertiesProcessor getPropertiesProcessor() {
+        return new DockerCloudPropertiesProcessor(cloudSupportRegistry, cloudSupport.createImageConfigParser());
     }
 
     @Override
-    public boolean canBeAgentOfType(@Nonnull AgentDescription description) {
+    public final boolean canBeAgentOfType(@Nonnull AgentDescription description) {
         return DockerCloudUtils.getClientId(description) != null;
     }
 }

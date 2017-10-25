@@ -2,24 +2,26 @@
 const Logger = require('Logger');
 const Utils = require('Utils');
 const Validators = require('Validators');
+const html = require('image-settings.html');
 
 function Schema() {
 
-    const $image = Utils.getElt('Image');
-    const $useOfficialDockerImage = Utils.getElt('UseOfficialTCAgentImage');
-    const $registryUser = Utils.getElt('RegistryUser');
-    const $registryPassword = Utils.getElt('RegistryPassword');
-    const $swapUnit = Utils.getElt('MemorySwapUnit');
-    const $swapUnlimited = Utils.getElt('MemorySwapUnlimited');
-    const $memoryUnit = Utils.getElt('MemoryUnit');
-    const $memory = Utils.getElt('Memory');
+    const $html = $j(html);
+
+    const $image = Utils.getElt('Image', $html);
+    const $useOfficialDockerImage = Utils.getElt('UseOfficialTCAgentImage', $html);
+    const $registryUser = Utils.getElt('RegistryUser', $html);
+    const $registryPassword = Utils.getElt('RegistryPassword', $html);
+    const $swapUnit = Utils.getElt('MemorySwapUnit', $html);
+    const $swapUnlimited = Utils.getElt('MemorySwapUnlimited', $html);
+    const $memoryUnit = Utils.getElt('MemoryUnit', $html);
+    const $memory = Utils.getElt('Memory', $html);
 
     this.initializeSettings = initializeSettings;
+    this.getImage = getImage;
     this.convertViewModelToSettings = convertViewModelToSettings;
     this.convertSettingsToViewModel = convertSettingsToViewModel;
     this.migrateSettings = migrateSettings;
-
-    _initHandlers();
 
     function initializeSettings(context) {
         return {
@@ -33,6 +35,10 @@ function Schema() {
                 MemorySwapUnit: 'bytes'
             }
         };
+    }
+
+    function getImage(agentHolderSpec) {
+        return agentHolderSpec.Image;
     }
 
     function _copy(source, target, fieldName, conversionFunction) {
@@ -259,7 +265,7 @@ function Schema() {
             container.HostConfig = hostConfig;
         }
         if (Object.keys(container).length) {
-            settings.Container = container;
+            settings.AgentHolderSpec = container;
         }
         if (Object.keys(editor).length) {
             settings.Editor = editor;
@@ -272,7 +278,7 @@ function Schema() {
         let viewModel = {};
 
         let admin = settings.Administration || {};
-        let container = settings.Container || {};
+        let container = settings.AgentHolderSpec || {};
         let hostConfig = container.HostConfig || {};
         let editor = settings.Editor || {};
 
@@ -282,7 +288,6 @@ function Schema() {
         _copy(admin, viewModel, 'MaxInstanceCount');
         _copy(admin, viewModel, 'UseOfficialTCAgentImage');
         _copy(admin, viewModel, 'RegistryUser');
-
         _copy(admin, viewModel, 'RegistryPassword', Utils.base64Utf16BEDecode);
 
         _copy(container, viewModel, 'Hostname');
@@ -527,46 +532,23 @@ function Schema() {
                         }
                     }
                 });
+            case 4:
+                Logger.logInfo("Performing migration to version 5.");
+                if (imageData.Container) {
+                    imageData.AgentHolderSpec = imageData.Container;
+                    delete imageData.Container;
+                }
         }
     }
 
     const validators = {
-        Profile: [Validators.requiredValidator, function($elt) {
-            if (!/^\w+$/.test($elt.val())) {
-                return {msg: 'Only alphanumerical characters (without diacritic) and underscores' +
-                ' allowed.'}
-            }
-        }, function($elt, context) {
-            let newProfile = $elt.val();
-            let currentProfile = context.profile;
-            if (newProfile !== currentProfile && context.getImagesData()[newProfile]) {
-                return {msg: 'An image profile with this name already exists.'}
-            }
-        }],
-        Image: [Validators.requiredValidator],
-        UseOfficialTCAgentImage: [Validators.noWindowsValidator],
-        MaxInstanceCount: [Validators.positiveIntegerValidator, function($elt) {
-            let value = $elt.val();
-            if (value && parseInt(value) < 1) {
-                return {msg: "At least one instance must be permitted."};
-            }
-        }],
-        RegistryUser: [function ($elt, context){
-            Validators.autoTrim($elt);
-            let pass = $registryPassword.val();
-            let user = $elt.val();
-            if (pass && !user) {
-                return {msg: 'Must specify user if password set.'}
-            }
-        }],
-        RegistryPassword: [function ($elt, context){
-            let user = $registryUser.val().trim();
-            let pass = $elt.val();
-            if (user && !pass) {
-                return {msg: 'Must specify password if user set.'}
-            }
-        }],
-        StopTimeout: [Validators.positiveIntegerValidator, Validators.versionValidator.bind(this, '1.25')],
+        Profile: Validators.profileValidators,
+        Image: Validators.imageValidators,
+        UseOfficialTCAgentImage: Validators.useOfficialTCAgentImageValidators,
+        MaxInstanceCount: Validators.maxInstanceCountValidators,
+        RegistryUser: Validators.registryUserValidatorsFn($registryPassword),
+        RegistryPassword: Validators.registryPasswordValidatorsFn($registryUser),
+        StopTimeout: [Validators.positiveIntegerValidator, Validators.api1_25RequiredValidator],
         Entrypoint_IDX: [function ($elt) {
             if ($elt.closest("tr").index() === 0) {
                 let value = Validators.autoTrim($elt);
@@ -577,9 +559,8 @@ function Schema() {
         }],
         Volumes_IDX_PathInContainer: [Validators.requiredValidator],
         Ports_IDX_HostIp: [Validators.ipv4OrIpv6Validator],
-        Ports_IDX_HostPort: [Validators.positiveIntegerValidator, Validators.portNumberValidator],
-        Ports_IDX_ContainerPort: [Validators.requiredValidator, Validators.positiveIntegerValidator,
-            Validators.portNumberValidator],
+        Ports_IDX_HostPort: Validators.portNumberValidators,
+        Ports_IDX_ContainerPort: [Validators.requiredValidator].concat(Validators.portNumberValidators),
         Dns_IDX: [Validators.requiredValidator],
         DnsSearch_IDX: [Validators.requiredValidator],
         ExtraHosts_IDX_Name: [Validators.requiredValidator],
@@ -598,18 +579,8 @@ function Schema() {
         Labels_IDX_Key: [Validators.requiredValidator],
         SecurityOpt_IDX: [Validators.requiredValidator],
         StorageOpt_IDX_Key: [Validators.requiredValidator],
-        Memory: [Validators.positiveIntegerValidator, function ($elt) {
-            let value = $elt.val();
-            if (!value) {
-                return;
-            }
-            let number = parseInt(value);
-            let multiplier = Validators.units_multiplier[$memoryUnit.val()];
-            if ((number * multiplier) < 4194304) {
-                return {msg: "Memory must be at least 4Mb."}
-            }
-        }],
-        CPUs: [Validators.cpusValidator, Validators.versionValidator.bind(this, '1.25')],
+        Memory: Validators.memoryValidatorsFn($memoryUnit),
+        CPUs: [Validators.cpusValidator, Validators.api1_25RequiredValidator],
         CpuQuota: [Validators.positiveIntegerValidator, function($elt) {
             let value = $elt.val();
             if (!value) {
@@ -679,32 +650,32 @@ function Schema() {
         '<td class="edit highlight"><a href="#/" class="editImageLink">edit</a></td>\
 <td class="remove"><a href="#/" class="removeImageLink">delete</a></td>' +
         '</tr>',
-            Entrypoint: '<td><input type="text" id="dockerCloudImage_Entrypoint_IDX"/><span class="error" id="dockerCloudImage_Entrypoint_IDX_error"></span></td>',
-            CapAdd: '<td><input type="text" id="dockerCloudImage_CapAdd_IDX"/><span class="error" id="dockerCloudImage_CapAdd_IDX_error"></span></td>',
-            CapDrop: '<td><input type="text" id="dockerCloudImage_CapDrop_IDX"/><span class="error" id="dockerCloudImage_CapDrop_IDX_error"></span></td>',
-            Cmd: '<td><input type="text" id="dockerCloudImage_Cmd_IDX"/></td>',
-            Volumes: '<td><input type="text" id="dockerCloudImage_Volumes_IDX_PathOnHost" /></td>\
+        Entrypoint: '<td><input type="text" id="dockerCloudImage_Entrypoint_IDX"/><span class="error" id="dockerCloudImage_Entrypoint_IDX_error"></span></td>',
+        CapAdd: '<td><input type="text" id="dockerCloudImage_CapAdd_IDX"/><span class="error" id="dockerCloudImage_CapAdd_IDX_error"></span></td>',
+        CapDrop: '<td><input type="text" id="dockerCloudImage_CapDrop_IDX"/><span class="error" id="dockerCloudImage_CapDrop_IDX_error"></span></td>',
+        Cmd: '<td><input type="text" id="dockerCloudImage_Cmd_IDX"/></td>',
+        Volumes: '<td><input type="text" id="dockerCloudImage_Volumes_IDX_PathOnHost" /></td>\
         <td><input type="text" id="dockerCloudImage_Volumes_IDX_PathInContainer" /><span class="error" id="dockerCloudImage_Volumes_IDX_PathInContainer_error"></span></td>\
         <td class="center"><input type="checkbox" id="dockerCloudImage_Volumes_IDX_ReadOnly" /></td>',
-            Devices: '<td><input type="text" id="dockerCloudImage_Devices_IDX_PathOnHost" /></td>\
+        Devices: '<td><input type="text" id="dockerCloudImage_Devices_IDX_PathOnHost" /></td>\
         <td><input type="text" id="dockerCloudImage_Devices_IDX_PathInContainer" /></td>\
         <td><input type="text" id="dockerCloudImage_Devices_IDX_CgroupPermissions" /></td>',
-            Env: '<td><input type="text" id="dockerCloudImage_Env_IDX_Name" /><span class="error" id="dockerCloudImage_Env_IDX_Name_error"></span></td>\
+        Env: '<td><input type="text" id="dockerCloudImage_Env_IDX_Name" /><span class="error" id="dockerCloudImage_Env_IDX_Name_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_Env_IDX_Value" /></td>',
-            Labels: '<td><input type="text" id="dockerCloudImage_Labels_IDX_Key" /><span class="error" id="dockerCloudImage_Labels_IDX_Key_error"></span></td>\
+        Labels: '<td><input type="text" id="dockerCloudImage_Labels_IDX_Key" /><span class="error" id="dockerCloudImage_Labels_IDX_Key_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_Labels_IDX_Value" /></td>',
-            Links: '<td><input type="text" id="dockerCloudImage_Links_IDX_Container" /><span class="error" id="dockerCloudImage_Links_IDX_Container_error"></span></td>\
+        Links: '<td><input type="text" id="dockerCloudImage_Links_IDX_Container" /><span class="error" id="dockerCloudImage_Links_IDX_Container_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_Links_IDX_Alias" /><span class="error" id="dockerCloudImage_Links_IDX_Alias_error"></span></td>',
-            LogConfig: '<td><input type="text" id="dockerCloudImage_LogConfig_IDX_Key" /><span class="error" id="dockerCloudImage_LogConfig_IDX_Key_error"></span></td>\
+        LogConfig: '<td><input type="text" id="dockerCloudImage_LogConfig_IDX_Key" /><span class="error" id="dockerCloudImage_LogConfig_IDX_Key_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_LogConfig_IDX_Value" /></td>',
-            SecurityOpt: '<td><input type="text" id="dockerCloudImage_SecurityOpt_IDX"/><span' +
+        SecurityOpt: '<td><input type="text" id="dockerCloudImage_SecurityOpt_IDX"/><span' +
         ' class="error" id="dockerCloudImage_SecurityOpt_IDX_error"></span></td>',
-            StorageOpt: '<td><input type="text" id="dockerCloudImage_StorageOpt_IDX_Key" /><span class="error" id="dockerCloudImage_StorageOpt_IDX_Key_error"></span></td>\
+        StorageOpt: '<td><input type="text" id="dockerCloudImage_StorageOpt_IDX_Key" /><span class="error" id="dockerCloudImage_StorageOpt_IDX_Key_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_StorageOpt_IDX_Value" /></td>',
-            Ulimits: ' <td><input type="text" id="dockerCloudImage_Ulimits_IDX_Name" /><span class="error" id="dockerCloudImage_Ulimits_IDX_Name_error"></span></td>\
+        Ulimits: ' <td><input type="text" id="dockerCloudImage_Ulimits_IDX_Name" /><span class="error" id="dockerCloudImage_Ulimits_IDX_Name_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_Ulimits_IDX_Soft" /><span class="error" id="dockerCloudImage_Ulimits_IDX_Soft_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_Ulimits_IDX_Hard" /><span class="error" id="dockerCloudImage_Ulimits_IDX_Hard_error"></span></td>',
-            Ports: '<td class="center"><input type="text" id="dockerCloudImage_Ports_IDX_HostIp" />\
+        Ports: '<td class="center"><input type="text" id="dockerCloudImage_Ports_IDX_HostIp" />\
                 <span class="error" id="dockerCloudImage_Ports_IDX_HostIp_error"></td>\
         <td class="center"><input type="text" id="dockerCloudImage_Ports_IDX_HostPort" size="5"/><span class="error"\
          id="dockerCloudImage_Ports_IDX_HostPort_error"></td>\
@@ -713,16 +684,28 @@ function Schema() {
             <option value="tcp" selected="selected">tcp</option>\
             <option value="udp">udp</option>\
         </select></td>',
-            Dns: '<td><input type="text" id="dockerCloudImage_Dns_IDX"/><span class="error" id="dockerCloudImage_Dns_IDX_error"></span></td>',
-            DnsSearch: '<td><input type="text" id="dockerCloudImage_DnsSearch_IDX"/><span class="error" id="dockerCloudImage_DnsSearch_IDX_error"></span></td>',
-            ExtraHosts: ' <td><input type="text" id="dockerCloudImage_ExtraHosts_IDX_Name" /><span class="error" id="dockerCloudImage_ExtraHosts_IDX_Name_error"></span></td>\
+        Dns: '<td><input type="text" id="dockerCloudImage_Dns_IDX"/><span class="error" id="dockerCloudImage_Dns_IDX_error"></span></td>',
+        DnsSearch: '<td><input type="text" id="dockerCloudImage_DnsSearch_IDX"/><span class="error" id="dockerCloudImage_DnsSearch_IDX_error"></span></td>',
+        ExtraHosts: ' <td><input type="text" id="dockerCloudImage_ExtraHosts_IDX_Name" /><span class="error" id="dockerCloudImage_ExtraHosts_IDX_Name_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_ExtraHosts_IDX_Ip" /><span class="error" id="dockerCloudImage_ExtraHosts_IDX_Ip_error"></span></td>'
     };
 
+    const tabs = [{ id: 'dockerCloudImageTab_general', lbl: 'General' },
+        { id: 'dockerCloudImageTab_run', lbl: 'Run' },
+        { id: 'dockerCloudImageTab_network', lbl: 'Network' },
+        { id: 'dockerCloudImageTab_resources', lbl: 'Resources' },
+        { id: 'dockerCloudImageTab_security', lbl: 'Security' },
+        { id: 'dockerCloudImageTab_advanced', lbl: 'Advanced' }];
+
+    this.html = $html;
     this.validators = validators;
     this.arrayTemplates = arrayTemplates;
+    this.tabs = tabs;
+    this.cloudType = 'VANILLA';
 
-    function _initHandlers() {
+    _initHandlers($html);
+
+    function _initHandlers($html) {
         $useOfficialDockerImage.change(function () {
             let useOfficialAgentImage = $useOfficialDockerImage.is(':checked');
             $image.prop('disabled', useOfficialAgentImage);
@@ -742,9 +725,9 @@ function Schema() {
             $registryUser.blur();
         }).change();
 
-        let networkMode = Utils.getElt('NetworkMode');
-        let customNetwork = Utils.getElt('NetworkCustom');
-        let containerNetwork = Utils.getElt('NetworkContainer');
+        let networkMode = Utils.getElt('NetworkMode', $html);
+        let customNetwork = Utils.getElt('NetworkCustom', $html);
+        let containerNetwork = Utils.getElt('NetworkContainer', $html);
 
         networkMode.change(function () {
             let mode = networkMode.val();

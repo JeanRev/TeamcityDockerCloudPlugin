@@ -27,6 +27,7 @@ public class DockerCloudClientConfig {
     static final Duration DEFAULT_DOCKER_SYNC_RATE = Duration.ofSeconds(30);
     static final Duration DEFAULT_TASK_TIMEOUT_MILLIS = Duration.ofMinutes(10);
 
+    private final DockerCloudSupport cloudType;
     private final UUID uuid;
     private final DockerClientConfig dockerClientConfig;
     private final boolean usingDaemonThreads;
@@ -37,21 +38,25 @@ public class DockerCloudClientConfig {
     /**
      * Creates a new configuration instance.
      *
+     * @param cloudType          the Docker profile cloud type
      * @param uuid               the cloud client UUID
      * @param dockerClientConfig the Docker client configuration
      * @param usingDaemonThreads {@code true} if the client must use daemon threads to manage containers
      * @param serverURL          the server URL to be configured on the agents
      * @throws NullPointerException if any argument is {@code null}
      */
-    public DockerCloudClientConfig(@Nonnull UUID uuid, @Nonnull DockerClientConfig dockerClientConfig,
+    public DockerCloudClientConfig(@Nonnull DockerCloudSupport cloudType, @Nonnull UUID uuid, @Nonnull DockerClientConfig
+            dockerClientConfig,
                                    boolean usingDaemonThreads, @Nullable URL serverURL) {
-        this(uuid, dockerClientConfig, usingDaemonThreads, DEFAULT_DOCKER_SYNC_RATE, DEFAULT_TASK_TIMEOUT_MILLIS,
+        this(cloudType, uuid, dockerClientConfig, usingDaemonThreads, DEFAULT_DOCKER_SYNC_RATE,
+                DEFAULT_TASK_TIMEOUT_MILLIS,
                 serverURL);
     }
 
     /**
      * Creates a new configuration instance.
      *
+     * @param cloudType          the Docker profile cloud type
      * @param uuid               the cloud client UUID
      * @param dockerClientConfig the Docker client configuration
      * @param usingDaemonThreads {@code true} if the client must use daemon threads to manage containers
@@ -60,9 +65,10 @@ public class DockerCloudClientConfig {
      * @throws NullPointerException     if any argument is {@code null}
      * @throws IllegalArgumentException if the Docker sync rate is below 2 seconds
      */
-    public DockerCloudClientConfig(@Nonnull UUID uuid, @Nonnull DockerClientConfig dockerClientConfig,
-                                   boolean usingDaemonThreads, Duration dockerSyncRate, Duration taskTimeout,
-                                   @Nullable URL serverURL) {
+    public DockerCloudClientConfig(@Nonnull DockerCloudSupport cloudType, @Nonnull UUID uuid, @Nonnull DockerClientConfig
+            dockerClientConfig, boolean usingDaemonThreads, Duration dockerSyncRate, Duration taskTimeout,
+            @Nullable URL serverURL) {
+        DockerCloudUtils.requireNonNull(cloudType, "Cloud profile type cannot be null.");
         DockerCloudUtils.requireNonNull(uuid, "Client UUID cannot be null.");
         DockerCloudUtils.requireNonNull(dockerClientConfig, "Docker client configuration cannot be null.");
         if (dockerSyncRate.getSeconds() < 2) {
@@ -71,12 +77,23 @@ public class DockerCloudClientConfig {
         if (taskTimeout.getSeconds() < 10) {
             throw new IllegalArgumentException("Task timeout must be of at least 10 seconds.");
         }
+        this.cloudType = cloudType;
         this.uuid = uuid;
         this.dockerClientConfig = dockerClientConfig;
         this.usingDaemonThreads = usingDaemonThreads;
         this.dockerSyncRate = dockerSyncRate;
         this.taskTimeout = taskTimeout;
         this.serverURL = serverURL;
+    }
+
+    /**
+     * Gets the client profile type.
+     *
+     * @return zhr client profile type
+     */
+    @Nonnull
+    public DockerCloudSupport getCloudSupport() {
+        return cloudType;
     }
 
     /**
@@ -145,21 +162,36 @@ public class DockerCloudClientConfig {
      * @throws DockerCloudClientConfigException if no valid configuration could be build from the properties map
      */
     @Nonnull
-    public static DockerCloudClientConfig processParams(@Nonnull Map<String, String> properties,
-                                                        @Nonnull DockerClientFacadeFactory clientFacadeFactory) {
+    public static DockerCloudClientConfig processParams(@Nonnull Map<String, String> properties, @Nonnull
+            DockerCloudSupportRegistry supportRegistry) {
         DockerCloudUtils.requireNonNull(properties, "Properties map cannot be null.");
-        DockerCloudUtils.requireNonNull(properties, "Docker client factory cannot be null.");
+        DockerCloudUtils.requireNonNull(supportRegistry, "Docker cloud support registry cannot be null.");
 
         List<InvalidProperty> invalidProperties = new ArrayList<>();
 
-        String clientUuidStr = notEmpty("Cloud UUID ist not set", DockerCloudUtils.CLIENT_UUID, properties,
+        String cloudTypeStr =  properties.get(DockerCloudUtils.CLOUD_TYPE_PARAM);
+
+        DockerCloudSupport cloudSupport = null;
+        if (cloudTypeStr != null && !cloudTypeStr.isEmpty()) {
+            try {
+                cloudSupport = supportRegistry.getSupport(cloudTypeStr);
+            } catch (IllegalArgumentException e) {
+                invalidProperties.add(new InvalidProperty(DockerCloudUtils.CLOUD_TYPE_PARAM, "Invalid cloud type " +
+                        cloudTypeStr + "."));
+            }
+        } else {
+            cloudSupport = DefaultDockerCloudSupport.VANILLA;
+        }
+
+
+        String clientUuidStr = notEmpty("Cloud UUID ist not set", DockerCloudUtils.CLIENT_UUID_PARAM, properties,
                 invalidProperties);
         UUID clientUuid = null;
         if (clientUuidStr != null) {
             try {
                 clientUuid = UUID.fromString(clientUuidStr);
             } catch (IllegalArgumentException e) {
-                invalidProperties.add(new InvalidProperty(DockerCloudUtils.CLIENT_UUID, "Invalid client UUID."));
+                invalidProperties.add(new InvalidProperty(DockerCloudUtils.CLIENT_UUID_PARAM, "Invalid client UUID."));
             }
         }
 
@@ -183,10 +215,12 @@ public class DockerCloudClientConfig {
                     instanceURI = new URI(instanceURLStr);
                     DockerClientConfig dockerConfig = new DockerClientConfig(instanceURI,
                             DockerCloudUtils.DOCKER_API_TARGET_VERSION).usingTls(usingTls);
-                    try {
-                        clientFacadeFactory.createFacade(dockerConfig, DockerClientFacadeFactory.Type.CONTAINER);
-                    } catch (IllegalArgumentException e) {
-                        invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, e.getMessage()));
+                    if (cloudSupport != null) {
+                        try {
+                            cloudSupport.createClientFacade(dockerConfig);
+                        } catch (IllegalArgumentException e) {
+                            invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, e.getMessage()));
+                        }
                     }
                 } catch (URISyntaxException e) {
                     invalidProperties.add(new InvalidProperty(DockerCloudUtils.INSTANCE_URI, "Not a valid URI"));
@@ -210,12 +244,12 @@ public class DockerCloudClientConfig {
             throw new DockerCloudClientConfigException(invalidProperties);
         }
 
-        assert clientUuid != null && instanceURI != null;
+        assert cloudSupport != null && clientUuid != null && instanceURI != null;
 
         DockerClientConfig dockerClientConfig =
                 new DockerClientConfig(instanceURI, DockerCloudUtils.DOCKER_API_TARGET_VERSION).usingTls(usingTls);
 
-        return new DockerCloudClientConfig(clientUuid, dockerClientConfig, true, serverURL);
+        return new DockerCloudClientConfig(cloudSupport, clientUuid, dockerClientConfig, true, serverURL);
     }
 
     private static boolean optionalFlag(String key, Map<String, String> properties) {

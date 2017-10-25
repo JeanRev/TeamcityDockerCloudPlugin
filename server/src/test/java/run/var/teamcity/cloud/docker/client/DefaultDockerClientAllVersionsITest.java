@@ -7,6 +7,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import run.var.teamcity.cloud.docker.StreamHandler;
+import run.var.teamcity.cloud.docker.SwarmDockerClientFacade;
 import run.var.teamcity.cloud.docker.test.Integration;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
@@ -36,9 +37,11 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
 import static org.assertj.core.data.Offset.offset;
 import static run.var.teamcity.cloud.docker.test.TestUtils.listOf;
 import static run.var.teamcity.cloud.docker.test.TestUtils.repeat;
+import static run.var.teamcity.cloud.docker.test.TestUtils.waitMillis;
 import static run.var.teamcity.cloud.docker.util.DockerCloudUtils.mapOf;
 import static run.var.teamcity.cloud.docker.util.DockerCloudUtils.pair;
 
@@ -166,12 +169,22 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
 
         serviceIdsForCleanup.add(serviceId);
 
-        List<Node> tasks = client.listTasks(serviceId).getArrayValues();
+        List<Node> tasks;
+
+        int tryCount = 0;
+        do {
+            tasks = client.listTasks(serviceId).getArrayValues();
+            if (!tasks.isEmpty()) {
+                break;
+            }
+            waitMillis(500);
+        } while (tryCount++ < 3);
 
         assertThat(tasks.size()).isEqualTo(1);
 
-        assertThat(tasks.get(0).getObject("Status").getAsString("State")).isIn("running", "pending", "allocated",
-                                                                               "new");
+        String state = tasks.get(0).getObject("Status").getAsString("State");
+
+        assertThat(SwarmDockerClientFacade.TaskRunningState.isRunning(state)).describedAs(state).isTrue();
     }
 
     @Test

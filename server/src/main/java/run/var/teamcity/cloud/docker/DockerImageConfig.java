@@ -10,17 +10,14 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import javax.annotation.Nonnull;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-
-import static com.intellij.openapi.util.text.StringUtil.isNotEmpty;
 
 /**
  * A {@link DockerImage} configuration.
@@ -30,7 +27,7 @@ public class DockerImageConfig {
     private static final Logger LOG = DockerCloudUtils.getLogger(DockerImageConfig.class);
 
     private final String profileName;
-    private final Node containerSpec;
+    private final Node agentHolderSpec;
     private final boolean pullOnCreate;
     private final boolean rmOnExit;
     private final boolean useOfficialTCAgentImage;
@@ -38,18 +35,18 @@ public class DockerImageConfig {
     private final Integer agentPoolId;
     private final DockerRegistryCredentials registryCredentials;
 
-    public DockerImageConfig(@Nonnull String profileName, @Nonnull Node containerSpec, boolean pullOnCreate,
+    public DockerImageConfig(@Nonnull String profileName, @Nonnull Node agentHolderSpec, boolean pullOnCreate,
                              boolean rmOnExit, boolean useOfficialTCAgentImage,
                              @Nonnull DockerRegistryCredentials registryCredentials, int maxInstanceCount,
                              @Nullable Integer agentPoolId) {
         DockerCloudUtils.requireNonNull(profileName, "Profile name cannot be null.");
         DockerCloudUtils.requireNonNull(registryCredentials, "Registry credentials cannot be null.");
-        DockerCloudUtils.requireNonNull(containerSpec, "Container specification cannot be null.");
+        DockerCloudUtils.requireNonNull(agentHolderSpec, "Agent holder specification cannot be null.");
         if (maxInstanceCount < 1) {
             throw new IllegalArgumentException("At least 1 instance must be allowed.");
         }
         this.profileName = profileName;
-        this.containerSpec = containerSpec;
+        this.agentHolderSpec = agentHolderSpec;
         this.pullOnCreate = pullOnCreate;
         this.rmOnExit = rmOnExit;
         this.useOfficialTCAgentImage = useOfficialTCAgentImage;
@@ -69,13 +66,13 @@ public class DockerImageConfig {
     }
 
     /**
-     * Gets the image container specification.
+     * Gets the image agent holder specification.
      *
-     * @return the container specification
+     * @return the agent holder specification
      */
     @Nonnull
-    public Node getContainerSpec() {
-        return containerSpec;
+    public Node getAgentHolderSpec() {
+        return agentHolderSpec;
     }
 
     /**
@@ -117,11 +114,11 @@ public class DockerImageConfig {
     /**
      * Gets the agent pool ID associated with this cloud image (if any).
      *
-     * @return the agent pool id or {@code null}
+     * @return the agent pool id if any
      */
-    @Nullable
-    public Integer getAgentPoolId() {
-        return agentPoolId;
+    @Nonnull
+    public Optional<Integer> getAgentPoolId() {
+        return Optional.ofNullable(agentPoolId);
     }
 
     /**
@@ -138,22 +135,25 @@ public class DockerImageConfig {
      * Load a list of cloud images from a configuration properties map. The ordering of the images will be the same
      * than the one specified in the underlying JSON definition.
      *
+     * @param imageParser the image configuration parser
      * @param properties the map of properties
      *
      * @return the loaded list of images
      *
-     * @throws NullPointerException             if the properties map is {@code null}
+     * @throws NullPointerException             if any argument is {@code null}
      * @throws DockerCloudClientConfigException if the image configuration is not valid
      */
     @Nonnull
-    public static List<DockerImageConfig> processParams(@Nonnull Map<String, String> properties) {
+    public static List<DockerImageConfig> processParams(@Nonnull DockerImageConfigParser imageParser,
+            @Nonnull Map<String, String> properties) {
+        DockerCloudUtils.requireNonNull(imageParser, "Image parser cannot be null.");
         DockerCloudUtils.requireNonNull(properties, "Properties map cannot be null.");
 
         List<InvalidProperty> invalidProperties = new ArrayList<>();
 
         String imagesJSon = properties.get(DockerCloudUtils.IMAGES_PARAM);
         String imageParametersJson = properties.get(CloudImageParameters.SOURCE_IMAGES_JSON);
-        Collection<CloudImageParameters> imagesParameters = null;
+        Collection<CloudImageParameters> imagesParameters = Collections.emptyList();
         if (imageParametersJson != null) {
             try {
                 imagesParameters = CloudImageParameters.collectionFromJson(imageParametersJson);
@@ -170,7 +170,7 @@ public class DockerImageConfig {
                 Node imagesNode = Node.parse(imagesJSon);
                 images = new ArrayList<>(imagesNode.getArrayValues().size());
                 for (Node imageNode : imagesNode.getArrayValues()) {
-                    DockerImageConfig imageConfig = DockerImageConfig.fromJSon(imageNode, imagesParameters);
+                    DockerImageConfig imageConfig = imageParser.fromJSon(imageNode, imagesParameters);
                     boolean duplicateProfileName = !profileNames.add(imageConfig.getProfileName());
                     if (duplicateProfileName) {
                         invalidProperties.add(new InvalidProperty(DockerCloudUtils.IMAGES_PARAM, "Duplicate profile name: " + imageConfig.getProfileName()));
@@ -195,83 +195,5 @@ public class DockerImageConfig {
         assert images != null;
 
         return images;
-    }
-
-    /**
-     * Load an image configuration from a JSON node.
-     *
-     * @param node the JSON node
-     * @param imagesParameters images parameters provided from the Cloud API if any
-     *
-     * @return the loaded configuration
-     *
-     * @throws NullPointerException     if {@code node} is {@code null}
-     * @throws IllegalArgumentException if no valid configuration could be build from the provided JSON node
-     */
-    @Nonnull
-    public static DockerImageConfig fromJSon(@Nonnull Node node, @Nullable Collection<CloudImageParameters> imagesParameters) {
-        DockerCloudUtils.requireNonNull(node, "JSON node cannot be null.");
-        try {
-            Node admin = node.getObject("Administration");
-            LOG.info("Loading cloud profile configuration version " + admin.getAsInt("Version") + ".");
-
-            Node container = node.getObject("Container");
-
-            Node env = container.getArray("Env", Node.EMPTY_ARRAY);
-            for (Node value : env.getArrayValues()) {
-                String envValue = value.getAsString();
-                if (envValue.startsWith(DockerCloudUtils.ENV_PREFIX)) {
-                    throw new IllegalArgumentException("Variable start with reserved prefix: " + envValue);
-                }
-            }
-
-            Node labels = container.getObject("Labels", Node.EMPTY_OBJECT);
-            assert labels != null;
-            for (String key : labels.getObjectValues().keySet()) {
-                if (key.startsWith(DockerCloudUtils.NS_PREFIX)) {
-                    throw new IllegalArgumentException("Label key start with reserved prefix: " + key);
-                }
-            }
-
-            String profileName = admin.getAsString("Profile");
-            boolean pullOnCreate = admin.getAsBoolean("PullOnCreate", true);
-            boolean deleteOnExit = admin.getAsBoolean("RmOnExit");
-            boolean useOfficialTCAgentImage = admin.getAsBoolean("UseOfficialTCAgentImage");
-
-            Integer agentPoolId = null;
-            if (imagesParameters != null) {
-                for (CloudImageParameters imageParameter : imagesParameters) {
-                    if (profileName.equals(imageParameter.getId())) {
-                        agentPoolId = imageParameter.getAgentPoolId();
-                        break;
-                    }
-                }
-            }
-
-            DockerRegistryCredentials dockerRegistryCredentials =  registryAuthentication(admin);
-
-            return new DockerImageConfig(profileName, node.getObject("Container"), pullOnCreate, deleteOnExit,
-                    useOfficialTCAgentImage, dockerRegistryCredentials, admin.getAsInt("MaxInstanceCount", -1), agentPoolId);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Failed to parse image JSON definition:\n" + node, e);
-        }
-    }
-
-    /**
-     * Extract Registry user and password required to pull image.
-     *
-     * @param admin the docker instance for which the container will be created
-     * @return authentication details or anonymous
-     */
-    private static DockerRegistryCredentials registryAuthentication(Node admin)
-    {
-        String registryUser = admin.getAsString("RegistryUser", null);
-        String registryPassword = admin.getAsString("RegistryPassword", null);
-        DockerRegistryCredentials dockerRegistryCredentials = DockerRegistryCredentials.ANONYMOUS;
-        if (isNotEmpty(registryUser) && isNotEmpty(registryPassword)){
-            String decodedPassword = new String(Base64.getDecoder().decode(registryPassword), StandardCharsets.UTF_16BE);
-            dockerRegistryCredentials = DockerRegistryCredentials.from(registryUser, decodedPassword);
-        }
-        return dockerRegistryCredentials;
     }
 }

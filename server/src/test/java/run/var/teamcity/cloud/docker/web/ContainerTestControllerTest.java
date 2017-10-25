@@ -3,7 +3,11 @@ package run.var.teamcity.cloud.docker.web;
 import jetbrains.buildServer.serverSide.auth.Permission;
 import org.junit.Before;
 import org.junit.Test;
-import run.var.teamcity.cloud.docker.TestDockerClientFacadeFactory;
+import run.var.teamcity.cloud.docker.DockerImageConfig;
+import run.var.teamcity.cloud.docker.DockerImageConfigBuilder;
+import run.var.teamcity.cloud.docker.TestDockerCloudSupport;
+import run.var.teamcity.cloud.docker.TestDockerCloudSupportRegistry;
+import run.var.teamcity.cloud.docker.TestDockerImageConfigParser;
 import run.var.teamcity.cloud.docker.test.TestHttpServletRequest;
 import run.var.teamcity.cloud.docker.test.TestHttpServletResponse;
 import run.var.teamcity.cloud.docker.test.TestPluginDescriptor;
@@ -11,6 +15,7 @@ import run.var.teamcity.cloud.docker.test.TestSBuildServer;
 import run.var.teamcity.cloud.docker.test.TestSUser;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.test.TestWebControllerManager;
+import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.web.ContainerTestController.Action;
@@ -31,16 +36,27 @@ public class ContainerTestControllerTest {
     private TestHttpServletRequest request;
     private TestHttpServletResponse response;
     private TestContainerTestManager testMgr;
+    private TestDockerCloudSupportRegistry testCloudSupportRegistry;
     private EditableNode responseNode;
 
     @Before
     public void init() {
         testMgr = new TestContainerTestManager();
 
-        request = createAuthorizedRequest().
-                parameters(TestUtils.getSampleDockerConfigParams()).
-                parameters(TestUtils.getSampleTestImageConfigParams());
 
+        DockerImageConfig imageConfig = DockerImageConfigBuilder.
+                newBuilder("Test", Node.EMPTY_OBJECT).
+                build();
+
+        request = createAuthorizedRequest().
+                parameters(TestUtils.getSampleDockerConfigParams());
+
+        testCloudSupportRegistry = new TestDockerCloudSupportRegistry();
+        TestDockerCloudSupport testCloudSupport = testCloudSupportRegistry.getCloudSupport();
+        TestDockerImageConfigParser parser = testCloudSupport.getImageParser();
+        parser.addConfig(imageConfig);
+        request.parameter(DockerCloudUtils.TC_PROPERTY_PREFIX + DockerCloudUtils.TEST_IMAGE_PARAM, parser
+                .getImageParam(0).toString());
         resetResponse();
     }
 
@@ -208,8 +224,9 @@ public class ContainerTestControllerTest {
     }
 
     private ContainerTestController createController() {
-        return new ContainerTestController(new TestDockerClientFacadeFactory(), new TestSBuildServer(),
-                new TestPluginDescriptor(), new TestWebControllerManager(), testMgr);
+
+        return new ContainerTestController(testCloudSupportRegistry,
+                new TestSBuildServer(), new TestPluginDescriptor(), new TestWebControllerManager(), testMgr);
     }
 
 }

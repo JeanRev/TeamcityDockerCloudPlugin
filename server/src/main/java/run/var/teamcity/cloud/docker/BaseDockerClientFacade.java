@@ -5,7 +5,6 @@ import run.var.teamcity.cloud.docker.client.StdioInputStream;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 
-import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Map;
 
@@ -15,6 +14,7 @@ abstract class BaseDockerClientFacade implements DockerClientFacade {
 
     BaseDockerClientFacade(DockerClient client) {
         assert client != null;
+
         this.client = client;
     }
 

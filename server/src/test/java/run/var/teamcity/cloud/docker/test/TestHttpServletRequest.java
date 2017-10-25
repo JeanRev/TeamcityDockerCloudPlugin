@@ -374,7 +374,7 @@ public class TestHttpServletRequest implements HttpServletRequest {
     }
 
     public TestHttpServletRequest parameters(Map<String, String> parameters) {
-        parameters.entrySet().forEach(e -> this.parameters.put(e.getKey(), new String[]{e.getValue()}));
+        parameters.forEach((key, value) -> this.parameters.put(key, new String[]{value}));
         return this;
     }
 }

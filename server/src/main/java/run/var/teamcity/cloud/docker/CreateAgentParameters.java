@@ -227,7 +227,7 @@ public class CreateAgentParameters {
     public static CreateAgentParameters fromImageConfig(@Nonnull DockerImageConfig imageConfig,
                                                         @Nonnull DockerImageNameResolver resolver,
                                                         boolean  ignorePullFailure) {
-        CreateAgentParameters createAgentParameters = new CreateAgentParameters(imageConfig.getContainerSpec());
+        CreateAgentParameters createAgentParameters = new CreateAgentParameters(imageConfig.getAgentHolderSpec());
 
         PullStrategy pullStrategy;
         if (imageConfig.isPullOnCreate()) {

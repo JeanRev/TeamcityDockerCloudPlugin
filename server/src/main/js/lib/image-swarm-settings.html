@@ -1,0 +1,339 @@
+
+<!-- HTML fragment for displaying the cloud image settings. -->
+
+<div id="dockerCloudImageTabContainer" class="simpleTabs"></div>
+
+<div class="dockerCloudSettings" id="dockerCloudImageContainer">
+    <div id="dockerCloudImageTab_general">
+        <table class="dockerCloudSettings runnerFormTable">
+            <tr>
+                <th><label for="dockerCloudImage_Profile">Profile name:&nbsp;<l:star/></label></th>
+                <td>
+                    <input type="text" id="dockerCloudImage_Profile" class="mediumField"/>
+                    <span class="error" id="dockerCloudImage_Profile_error"></span>
+                </td>
+            </tr>
+            <tr>
+                <th><label for="dockerCloudImage_Image">Docker image:&nbsp;<l:star/></label>
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">Docker image name to be started, using the usual syntax: <code>[registry[:registry_port]/]name[:tag]</code>. If
+        no tag is specified, <code>latest</code> will be used as a default. The image name may also be prefixed with a
+        registry hostname and port from which the image must be pulled. If you do not specify a registry hostname, the
+        default Docker public registry will be used instead.</span>
+                </th>
+                <td>
+                    <p>
+                        <input type="checkbox" id="dockerCloudImage_UseOfficialTCAgentImage"/>
+                        <label for="dockerCloudImage_UseOfficialTCAgentImage">Use official TeamCity agent
+                            image (Linux)</label>
+                        <div class="warning" id="dockerCloudImage_UseOfficialTCAgentImage_warning"></div>
+                    </p>
+                    <p>
+                        <input type="text" id="dockerCloudImage_Image" class="mediumField"/>
+                        <span class="error" id="dockerCloudImage_Image_error"></span>
+                    </p>
+                    <span class="smallNote">
+      Docker image name to be started.
+    </span>
+                </td>
+            </tr>
+            <tr>
+                <th><label for="dockerCloudImage_Image">Maximum instance count:&nbsp;</label></th>
+                <td>
+                    <input type="text" id="dockerCloudImage_MaxInstanceCount" class="mediumField"/>
+                    <span class="error" id="dockerCloudImage_MaxInstanceCount_error"></span>
+                </td>
+            </tr>
+            <tr>
+                <th><label for="dockerCloudImage_RegistryUser">Registry User:</label></th>
+                <td>
+                    <p>
+                        <input type="text" id="dockerCloudImage_RegistryUser" class="mediumField"/>
+                        <span class="error" id="dockerCloudImage_RegistryUser_error"></span>
+                    </p>
+                </td>
+            </tr>
+            <tr>
+                <th><label for="dockerCloudImage_RegistryPassword">Registry Password:</label></th>
+                <td>
+                    <p>
+                        <input type="password" id="dockerCloudImage_RegistryPassword" class="mediumField"/>
+                        <span class="error" id="dockerCloudImage_RegistryPassword_error"></span>
+                    </p>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div id="dockerCloudImageTab_run">
+
+        <table class="dockerCloudSettings runnerFormTable">
+            <tr>
+                <th><label for="dockerCloudImage_User">User:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">A string value specifying the user inside the container.</span>
+                </label></th>
+                <td>
+                    <input type="text" id="dockerCloudImage_User"/>
+                </td>
+            </tr>
+            <tr>
+                <th>
+                    <label for="dockerCloudImage_Dir">Working <span style="white-space: nowrap">
+                            directory:
+                            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                            <span class="tooltiptext">A string specifying the working directory for commands to run
+                                in.</span>
+                            </span>
+                    </label>
+                </th>
+                <td>
+                    <input type="text" id="dockerCloudImage_Dir"/>
+                </td>
+            </tr>
+            <tr>
+                <th><label for="dockerCloudImage_StopSignal">Stop signal:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">Signal to stop the containers.</span>
+                </label></th>
+                <td>
+                    <input type="text" id="dockerCloudImage_StopSignal"/>
+                </td>
+            </tr>
+            <tr>
+                <th><label for="dockerCloudImage_StopGracePeriod">Stop timeout:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">Amount of time to wait for the container to terminate before forcefully killing it.</span>
+                </label></th>
+                <td>
+                    <input type="text" id="dockerCloudImage_StopGracePeriod"/>
+                    <select id="dockerCloudImage_StopGracePeriodUnit">
+                        <option value="ns">ns</option>
+                        <option value="us">&micro;s</option>
+                        <option value="ms">ms</option>
+                        <option value="s" selected="selected">s</option>
+                        <option value="h">h</option>
+                    </select>
+                    <span class="error" id="dockerCloudImage_Memory_error"></span>
+                    <span class="error" id="dockerCloudImage_StopGracePeriod_error"></span>
+                    <div class="warning" id="dockerCloudImage_StopGracePeriod_warning"></div>
+                </td>
+            </tr>
+        </table>
+        <h4>Command:</h4>
+        <div class="dockerCloudSimpleTables" style="text-align:center">
+            <table class="settings">
+                <thead>
+                <tr>
+                    <th class="name" style="width: 82%;">
+                        Command executable / args
+                        <i class="icon icon16 tc-icon_help_small tooltip">
+                        </i>
+                        <span class="tooltiptext">
+                            The command and arguments to be run in the image.
+                        </span>
+
+
+                    </th>
+                    <th class="dockerCloudCtrlCell"></th>
+                </tr>
+                </thead>
+                <tbody id="dockerCloudImage_Command">
+                </tbody>
+            </table>
+        </div>
+        <h4>
+            Environment variables:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">Set environment variables.</span>
+        </h4>
+        <table class="settings">
+            <thead>
+            <tr>
+                <th class="name" style="width: 45%;">Name&nbsp;<l:star/></th>
+                <th class="name" style="width: 45%;">Value</th>
+                <th class="dockerCloudCtrlCell"></th>
+            </tr>
+            </thead>
+            <tbody id="dockerCloudImage_Env">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="dockerCloudImageTab_network">
+        <table class="dockerCloudSettings runnerFormTable">
+            <tr>
+                <th>
+                    <label for="dockerCloudImage_Hostname">
+                        Hostname:
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">A string value containing the hostname to use for the container. This
+                            must be a valid RFC 1123 hostname.</span>
+                    </label></th>
+                <td>
+                    <input type="text" id="dockerCloudImage_Hostname"/>
+                </td>
+            </tr>
+        </table>
+        <h4>Exposed/published ports:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">List of exposed ports that this service is accessible on from the outside.
+            </span>
+        </h4>
+        <table class="settings">
+            <thead>
+            <tr>
+                <th class="name center" style="width: 20%">Host port</th>
+                <th class="name center" style="width: 20%">Container Port&nbsp;<l:star/></th>
+                <th class="name center" style="width: 20%">Protocol</th>
+                <th class="dockerCloudCtrlCell"></th>
+            </tr>
+            </thead>
+            <tbody id="dockerCloudImage_Ports">
+            </tbody>
+        </table>
+        <h4>DNS:</h4>
+        <div class="dockerCloudSimpleTables" style="text-align:center">
+            <table class="settings">
+                <thead>
+                <tr>
+                    <th class="name" style="width: 82%;">Server Address&nbsp;<l:star/>
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">A list of DNS servers for the container to use.
+                        <br/><b>Requires API:</b> v1.25</span>
+                    </th>
+                    <th class="dockerCloudCtrlCell"></th>
+                </tr>
+                </thead>
+                <tbody id="dockerCloudImage_Dns">
+                </tbody>
+            </table>
+            <table class="settings">
+                <thead>
+                <tr>
+                    <th class="name" style="width: 82%;">Search domains&nbsp;<l:star/>
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">A list of DNS search domains.
+                        <br/><b>Requires API:</b> v1.25</span>
+                    </th>
+                    <th class="dockerCloudCtrlCell"></th>
+                </tr>
+                </thead>
+                <tbody id="dockerCloudImage_DnsSearch">
+                </tbody>
+            </table>
+        </div>
+        <h4>Hosts:</h4>
+        <div class="dockerCloudSimpleTables" style="text-align:center">
+            <table class="settings">
+                <thead>
+                <tr>
+                    <th class="name" style="width: 82%;">Hosts&nbsp;<l:star/>
+                        <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                        <span class="tooltiptext">A list of hostname/IP mappings to add to the container's <code>/etc
+                            /hosts</code> file using the syntax: <code>IP_address canonical_hostname [aliases...]</code></span>
+                    </th>
+                    <th class="dockerCloudCtrlCell"></th>
+                </tr>
+                </thead>
+                <tbody id="dockerCloudImage_Hosts">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="dockerCloudImageTab_resources">
+        <table class="dockerCloudSettings runnerFormTable">
+            <tr>
+                <th><label for="dockerCloudImage_MemoryBytesLimit">Memory limit:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">Memory limit.</span>
+                </label></th>
+                <td>
+                    <input type="text" class="textField" id="dockerCloudImage_MemoryBytesLimit"/>
+                    <select id="dockerCloudImage_MemoryBytesLimitUnit">
+                        <option value="bytes" selected="selected">bytes</option>
+                        <option value="KiB">KiB</option>
+                        <option value="MiB">MiB</option>
+                        <option value="GiB">GiB</option>
+                    </select>
+                    <span class="error" id="dockerCloudImage_MemoryBytesLimit_error"></span>
+                </td>
+            </tr>
+            <tr>
+                <th><label for="dockerCloudImage_CPUs">Number of CPUs:
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">Limit the number of CPUs available for execution by the container.
+                            Decimal values can be specified (e.g. <code>1.5</code> to allocate at most 1.5 CPU to the
+                            container). This option is equivalent to the <code>--cpus</code> CLI flag and is effective
+                            for both Linux and Windows containers.</span></label>
+                </th>
+                <td>
+                    <input type="text" id="dockerCloudImage_CPUs" class="textField"/>
+                    <span class="error" id="dockerCloudImage_CPUs_error"></span>
+                    <div class="warning" id="dockerCloudImage_CPUs_warning"></div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div id="dockerCloudImageTab_advanced">
+        <table class="dockerCloudSettings runnerFormTable">
+            <tr>
+                <th>
+                    <label for="dockerCloudImage_LogDriver">Logging driver:</label>
+                    <i class="icon icon16 tc-icon_help_small tooltip"></i>
+                    <span class="tooltiptext">Log configuration for the container.</span>
+                </th>
+                <td>
+                    <input id="dockerCloudImage_LogDriver" type="text">
+                </td>
+            </tr>
+        </table>
+        <h4>Logging options:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">Configuration map for the logging driver.</span>
+        </h4>
+        <table class="settings">
+            <thead>
+            <tr>
+                <th class="name" style="width: 45%;">Option Key&nbsp;<l:star/></th>
+                <th class="name" style="width: 45%;">Option Value</th>
+                <th class="dockerCloudCtrlCell"></th>
+            </tr>
+            </thead>
+            <tbody id="dockerCloudImage_LogOptions">
+            </tbody>
+        </table>
+        <h4>Volumes:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">Defines volumes, and optionally, their bound location on the host file system.</span>
+        </h4>
+        <table class="settings">
+            <thead>
+            <tr>
+                <th class="name" style="width: 35%">Host path</th>
+                <th class="name" style="width: 35%">Container path&nbsp;<l:star/></th>
+                <th class="name center" style="width: 20%;">Read only</th>
+                <th class="dockerCloudCtrlCell"></th>
+            </tr>
+            </thead>
+            <tbody id="dockerCloudImage_Volumes">
+            </tbody>
+        </table>
+        <h4>Labels:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">Adds a map of labels to a container.</span>
+        </h4>
+        <table class="settings">
+            <thead>
+            <tr>
+                <th class="name" style="width: 45%;">Key&nbsp;<l:star/></th>
+                <th class="name" style="width: 45%;">Value</th>
+                <th class="dockerCloudCtrlCell"></th>
+            </tr>
+            </thead>
+            <tbody id="dockerCloudImage_Labels">
+            </tbody>
+        </table>
+    </div>
+</div>

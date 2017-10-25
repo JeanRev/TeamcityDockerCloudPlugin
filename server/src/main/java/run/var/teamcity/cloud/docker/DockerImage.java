@@ -37,7 +37,6 @@ public class DockerImage implements CloudImage {
     DockerImage(DefaultDockerCloudClient cloudClient, DockerImageConfig config) {
         this.cloudClient = cloudClient;
         this.config = config;
-        imageName = config.getContainerSpec().getAsString("Image", null);
     }
 
     public DefaultDockerCloudClient getCloudClient() {
@@ -127,7 +126,7 @@ public class DockerImage implements CloudImage {
     @Nullable
     @Override
     public Integer getAgentPoolId() {
-        return getConfig().getAgentPoolId();
+        return getConfig().getAgentPoolId().orElse(null);
     }
 
     @Nullable

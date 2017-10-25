@@ -2,6 +2,7 @@ package run.var.teamcity.cloud.docker;
 
 import com.intellij.openapi.diagnostic.Logger;
 import run.var.teamcity.cloud.docker.client.DockerClient;
+import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.StdioType;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
@@ -18,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class SwarmDockerClientFacade extends BaseDockerClientFacade {
@@ -34,6 +36,10 @@ public class SwarmDockerClientFacade extends BaseDockerClientFacade {
          * Resources for the task were allocated.
          */
         PENDING,
+        /**
+         * Resources for the task were allocated (legacy).
+         */
+        ALLOCATED,
         /**
          * Docker assigned the task to nodes.
          */
@@ -55,7 +61,7 @@ public class SwarmDockerClientFacade extends BaseDockerClientFacade {
          */
         RUNNING;
 
-        static boolean isRunning(String state) {
+        public static boolean isRunning(String state) {
             try {
                 TaskRunningState.valueOf(state.toUpperCase());
                 return true;
@@ -86,20 +92,20 @@ public class SwarmDockerClientFacade extends BaseDockerClientFacade {
                                                        " supported when in swarm mode.");
         }
 
-        EditableNode editableServiceSpec = Node.EMPTY_OBJECT.editNode();
+        EditableNode editableServiceSpec = createAgentParameters.getAgentHolderSpec().editNode();
 
         Optional<String> imageName = createAgentParameters.getImageName();
-        imageName.ifPresent(image -> editableServiceSpec.put("Image", image));
+
 
         editableServiceSpec.getOrCreateObject("Mode").
                 getOrCreateObject("Replicated").
                 put("Replicas", 0);
 
-        EditableNode taskTemplate = editableServiceSpec.
+        EditableNode editableContainerSpec = editableServiceSpec.
                 getOrCreateObject("TaskTemplate").
-                put("ContainerSpec", createAgentParameters.getAgentHolderSpec());
+                getOrCreateObject("ContainerSpec");
 
-        EditableNode editableContainerSpec = taskTemplate.getOrCreateObject("ContainerSpec");
+        imageName.ifPresent(image -> editableContainerSpec.put("Image", image));
 
         applyEnv(editableContainerSpec, createAgentParameters.getEnv());
 
@@ -177,7 +183,23 @@ public class SwarmDockerClientFacade extends BaseDockerClientFacade {
     }
 
     private String queryTaskId(@Nonnull String serviceId) {
-        List<Node> node = client.listTasks(serviceId).getArrayValues();
+        final int maxRetry = 3;
+        final long retryDelay = 500;
+
+        int tryCount = 0;
+
+        List<Node> node;
+        do {
+            node = client.listTasks(serviceId).getArrayValues();
+            if (!node.isEmpty()) {
+                break;
+            }
+            try {
+                Thread.sleep(retryDelay);
+            } catch (InterruptedException e) {
+                throw new DockerClientFacadeException("Interrupted.", e);
+            }
+        } while (tryCount++ < maxRetry);
 
         if (node.size() != 1) {
             throw new DockerClientFacadeException("Cannot resolved task ID, service was externally scaled (available " +

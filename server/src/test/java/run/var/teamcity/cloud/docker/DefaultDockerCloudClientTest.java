@@ -53,10 +53,10 @@ import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
 @Category(LongRunning.class)
 public class DefaultDockerCloudClientTest {
 
+    private TestDockerCloudSupport testCloudSupport;
     private DefaultDockerCloudClient client;
     private DockerRegistryCredentials registryCredentials;
     private Interceptor<DockerClientFacade> clientInterceptor;
-    private TestDockerClientFacadeFactory clientFacadeFactory;
     private Node containerSpec;
     private boolean pullOnCreate;
     private boolean rmOnExit;
@@ -71,8 +71,7 @@ public class DefaultDockerCloudClientTest {
 
     @Before
     public void init() throws MalformedURLException {
-        clientFacadeFactory = new TestDockerClientFacadeFactory();
-
+        testCloudSupport = new TestDockerCloudSupport();
         registryCredentials = DockerRegistryCredentials.ANONYMOUS;
         serverURL = new URL("http://not.a.real.server.url");
         defaultServerURL = new URL("http://not.a.real.default.server.url");
@@ -95,11 +94,8 @@ public class DefaultDockerCloudClientTest {
 
         DockerImage image = waitForImage(client);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
-        assertThat(clientFacade).isNotNull();
-
-        assertThat(image.getImageName()).isEqualTo("image:latest");
         assertThat(image.getInstances()).isEmpty();
         assertThat(image.getAgentPoolId()).isEqualTo(111);
 
@@ -176,7 +172,7 @@ public class DefaultDockerCloudClientTest {
 
         waitUntil(() -> image.getInstances().isEmpty());
 
-        assertThat(clientFacadeFactory.createFacade().getAgentHolders().isEmpty());
+        assertThat(testCloudSupport.getClientFacade().getAgentHolders().isEmpty());
     }
 
     @Test
@@ -212,7 +208,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         assertThat(clientFacade.getAgentHolders()).hasSize(1);
 
@@ -430,7 +426,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         waitUntilNextSync(client);
 
@@ -444,7 +440,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForImage(client);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         clientFacade.agentHolder(new AgentHolder().
             label(DockerCloudUtils.CLIENT_ID_LABEL, client.getUuid().toString()).
@@ -465,7 +461,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         clientFacade.agentHolder(new AgentHolder().
                 label(DockerCloudUtils.CLIENT_ID_LABEL, client.getUuid().toString()).
@@ -488,7 +484,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         clientFacade.removeAgentHolder(instance.getAgentHolderId().get());
 
@@ -506,7 +502,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         clientFacade.getAgentHolders().get(0).running(false);
 
@@ -524,7 +520,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         clientFacade.agentHolder(new AgentHolder().label(DockerCloudUtils.CLIENT_ID_LABEL,
                 TestUtils.TEST_UUID.toString()));
@@ -554,7 +550,7 @@ public class DefaultDockerCloudClientTest {
         assertThat(client.getErrorInfo()).isNull();
         assertThat(client.canStartNewInstance(image)).isTrue();
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         DockerClientProcessingException exception = new DockerClientProcessingException("Test failure");
         clientFacade.setFailOnAccessException(exception);
@@ -573,7 +569,7 @@ public class DefaultDockerCloudClientTest {
 
     @Test
     public void clientErrorOnStartupHandling() {
-        clientFacadeFactory.setCreationFailureException(new DockerClientException("Simulated failure."));
+        testCloudSupport.setFacadeCreationFailure(new DockerClientException("Simulated failure."));
 
         DefaultDockerCloudClient client = createClient();
 
@@ -581,7 +577,7 @@ public class DefaultDockerCloudClientTest {
 
         assertThat(client.getErrorInfo()).isNotNull();
 
-        clientFacadeFactory.setCreationFailureException(null);
+        testCloudSupport.setFacadeCreationFailure(null);
 
         waitUntil(() -> client.getErrorInfo() == null);
 
@@ -600,7 +596,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        assertThat(clientFacadeFactory.createFacade().getAgentHolders().get(0).
+        assertThat(testCloudSupport.getClientFacade().getAgentHolders().get(0).
                 getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(defaultServerURL.toString());
     }
 
@@ -632,7 +628,7 @@ public class DefaultDockerCloudClientTest {
 
         dockerImageResolver.image("registry-only-image");
 
-        clientFacadeFactory.createFacade().
+        testCloudSupport.getClientFacade().
                 registryImage("registry-only-image").
                 registryCredentials(DockerRegistryCredentials.from("user", "password"));
 
@@ -652,7 +648,7 @@ public class DefaultDockerCloudClientTest {
 
         dockerImageResolver.image("registry-only-image");
 
-        clientFacadeFactory.createFacade().
+        testCloudSupport.getClientFacade().
                 registryImage("registry-only-image").
                 registryCredentials(DockerRegistryCredentials.from("user", "password"));
 
@@ -675,7 +671,7 @@ public class DefaultDockerCloudClientTest {
 
         dockerImageResolver.image("registry-only-image");
 
-        clientFacadeFactory.createFacade().
+        testCloudSupport.getClientFacade().
                 registryImage("registry-only-image").
                 registryCredentials(DockerRegistryCredentials.from("user", "password"));
 
@@ -691,7 +687,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerImage image = waitForImage(client);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         clientFacade.setFailOnCreateException(new DockerClientException("Simulated exception."));
 
@@ -746,7 +742,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         // Destroy the newly created container. During the next sync the instance should be marked in error state.
         clientFacade.removeAgentHolder(instance.getAgentHolderId().get());
@@ -773,7 +769,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         clientFacade.getAgentHolders().get(0).running(false);
 
@@ -802,7 +798,7 @@ public class DefaultDockerCloudClientTest {
 
         waitUntil(() -> instance.getStatus() == InstanceStatus.STOPPED);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         clientFacade.getAgentHolders().get(0).running(true);
 
@@ -824,7 +820,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         client.terminateInstance(instance);
 
@@ -847,7 +843,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         client.dispose();
 
@@ -865,7 +861,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerImage image = waitForImage(client);
 
-        clientFacadeFactory.createFacade().agentConfigurator((container -> container.name("test_container_name")));
+        testCloudSupport.getClientFacade().agentConfigurator((container -> container.name("test_container_name")));
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
@@ -896,7 +892,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerImage image = waitForImage(client);
 
-        clientFacadeFactory.createFacade().agentConfigurator((container -> container.name("test_container_name")));
+        testCloudSupport.getClientFacade().agentConfigurator((container -> container.name("test_container_name")));
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
@@ -923,7 +919,7 @@ public class DefaultDockerCloudClientTest {
 
         DockerImage image = waitForImage(client);
 
-        clientFacadeFactory.createFacade().agentConfigurator((container -> container.name("test_container_name")));
+        testCloudSupport.getClientFacade().agentConfigurator((container -> container.name("test_container_name")));
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
@@ -941,13 +937,13 @@ public class DefaultDockerCloudClientTest {
 
         DockerImage image = waitForImage(client);
 
-        clientFacadeFactory.createFacade().agentConfigurator((container -> container.name("test_container_name")));
+        testCloudSupport.getClientFacade().agentConfigurator((container -> container.name("test_container_name")));
 
         DockerInstance instance = client.startNewInstance(image, userData);
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        AgentHolder container = clientFacadeFactory.createFacade().getAgentHolders().get(0);
+        AgentHolder container = testCloudSupport.getClientFacade().getAgentHolders().get(0);
 
         assertThat(instance.getContainerName()).isEqualTo("test_container_name");
 
@@ -974,7 +970,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        AgentHolder container = clientFacadeFactory.createFacade().getAgentHolders().get(0);
+        AgentHolder container = testCloudSupport.getClientFacade().getAgentHolders().get(0);
 
         assertThat(instance.getTaskId().get()).isEqualTo(container.getTaskId());
     }
@@ -989,7 +985,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        AgentHolder agentHolder = clientFacadeFactory.createFacade().getAgentHolders().get(0);
+        AgentHolder agentHolder = testCloudSupport.getClientFacade().getAgentHolders().get(0);
 
         assertThat(instance.getAgentHolderId().get()).isEqualTo(agentHolder.getId());
     }
@@ -1025,8 +1021,8 @@ public class DefaultDockerCloudClientTest {
 
         DockerClientConfig dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
-        DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig,
-                false, Duration.ofSeconds(2), Duration.ofMinutes(10), serverURL);
+        DockerCloudClientConfig clientConfig = new DockerCloudClientConfig(testCloudSupport, TestUtils
+                .TEST_UUID, dockerClientConfig, false, Duration.ofSeconds(2), Duration.ofMinutes(10), serverURL);
         DockerImageConfig imageConfig = new DockerImageConfig("UnitTest", containerSpec, pullOnCreate, rmOnExit, false,
                 registryCredentials, maxInstanceCount, 111);
 
@@ -1046,17 +1042,18 @@ public class DefaultDockerCloudClientTest {
                 .beforeInvoke(assertClientNotLocked)
                 .buildProxy());
 
-        clientFacadeFactory.addConfigurator(clientFacade -> clientFacade.
+        TestDockerClientFacade facade = testCloudSupport.getClientFacade();
+
+        facade.
                 localImage("resolved-image:latest").
-                localImage("image:latest"));
+                localImage("image:latest");
 
-        clientFacadeFactory.setWrapper(clt ->
-                                       {
-                                           clientInterceptor = Interceptor.wrap(clt, DockerClientFacade.class);
-                                           return clientInterceptor.beforeInvoke(assertClientNotLocked).buildProxy();
-                                       });
 
-        DefaultDockerCloudClient client = new DefaultDockerCloudClient(clientConfig, clientFacadeFactory,
+        clientInterceptor = Interceptor.wrap(facade, DockerClientFacade.class);
+        DockerClientFacade wrappedFacade = clientInterceptor.beforeInvoke(assertClientNotLocked).buildProxy();
+        testCloudSupport.setFacadeWrapper(wrappedFacade);
+
+        DefaultDockerCloudClient client = new DefaultDockerCloudClient(clientConfig,
                 Collections.singletonList(imageConfig), dockerImageResolver, cloudState, buildServerProxy);
 
 

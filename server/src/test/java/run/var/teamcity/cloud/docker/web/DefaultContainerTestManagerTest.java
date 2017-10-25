@@ -8,7 +8,8 @@ import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.TestDockerClientFacade;
 import run.var.teamcity.cloud.docker.TestDockerClientFacade.AgentHolder;
-import run.var.teamcity.cloud.docker.TestDockerClientFacadeFactory;
+import run.var.teamcity.cloud.docker.TestDockerCloudSupport;
+import run.var.teamcity.cloud.docker.TestDockerCloudSupportRegistry;
 import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
@@ -44,7 +45,7 @@ public class DefaultContainerTestManagerTest {
     private Duration testMaxIdleTime;
     private Duration cleanupRate;
 
-    private TestDockerClientFacadeFactory clientFacadeFactory;
+    private TestDockerCloudSupport testCloudSupport;
     private DockerClientConfig dockerClientConfig;
     private DockerCloudClientConfig clientConfig;
     private boolean pullOnCreate;
@@ -57,19 +58,21 @@ public class DefaultContainerTestManagerTest {
 
     @Before
     public void init() throws MalformedURLException {
-        clientFacadeFactory = new TestDockerClientFacadeFactory();
-        clientFacadeFactory.addConfigurator(clientFacade ->
-                clientFacade.
-                        localImage("image:1.0").
-                        localImage("resolved-image:1.0").
-                        registryImage("resolved-image:1.0").
-                        registryImage("image:1.0"));
+        TestDockerCloudSupportRegistry testCloudSupportRegistry = new TestDockerCloudSupportRegistry();
+        testCloudSupport = testCloudSupportRegistry.getCloudSupport();
+
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
+        clientFacade.
+                localImage("image:1.0").
+                localImage("resolved-image:1.0").
+                registryImage("resolved-image:1.0").
+                registryImage("image:1.0");
 
         serverURL = new URL("http://not.a.real.server");
 
         dockerClientConfig = new DockerClientConfig(TestDockerClient.TEST_CLIENT_URI, DockerAPIVersion.DEFAULT);
-        clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false,
-                serverURL);
+        clientConfig = new DockerCloudClientConfig(testCloudSupport, TestUtils.TEST_UUID,
+                dockerClientConfig, false, serverURL);
 
         pullOnCreate = true;
         containerSpec = Node.EMPTY_OBJECT.editNode().put("Image", "image:1.0").saveNode();
@@ -91,7 +94,7 @@ public class DefaultContainerTestManagerTest {
 
         mgr.setListener(testUuid, testListener);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         queryUntilSuccess(Phase.CREATE);
 
@@ -131,7 +134,7 @@ public class DefaultContainerTestManagerTest {
 
         ContainerTestManager mgr = createManager();
         imageResolver.image("local-only:1.0");
-        clientFacadeFactory.addConfigurator(clientFacade -> clientFacade.localImage("local-only:1.0"));
+        testCloudSupport.getClientFacade().localImage("local-only:1.0");
 
         UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
         mgr.setListener(testUuid, testListener);
@@ -149,7 +152,7 @@ public class DefaultContainerTestManagerTest {
 
         ContainerTestManager mgr = createManager();
         imageResolver.image("local-only:1.0");
-        clientFacadeFactory.addConfigurator(clientFacade -> clientFacade.localImage("local-only:1.0"));
+        testCloudSupport.getClientFacade().localImage("local-only:1.0");
 
         UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
 
@@ -170,7 +173,7 @@ public class DefaultContainerTestManagerTest {
 
         queryUntilSuccess(Phase.CREATE);
 
-        TestDockerClientFacade clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         assertThat(clientFacade.getAgentHolders()).hasSize(1);
 
@@ -178,15 +181,21 @@ public class DefaultContainerTestManagerTest {
 
         assertThat(clientFacade.getAgentHolders()).isEmpty();
         assertThat(clientFacade.isClosed()).isTrue();
+    }
+
+    @Test
+    public void diposeWhenContainerDoesNotExistsAnymore() {
+
+        ContainerTestManager mgr = createManager();
 
         // Cancelling a test related to an already removed container.
         testListener = new TestContainerTestStatusListener();
 
-        testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
 
         mgr.setListener(testUuid, testListener);
 
-        clientFacade = clientFacadeFactory.createFacade();
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
 
         queryUntilSuccess(Phase.CREATE);
 
@@ -225,7 +234,8 @@ public class DefaultContainerTestManagerTest {
 
     @Test
     public void handlingOfDefaultServerUrl() {
-        clientConfig = new DockerCloudClientConfig(TestUtils.TEST_UUID, dockerClientConfig, false, null);
+        clientConfig = new DockerCloudClientConfig(testCloudSupport, TestUtils.TEST_UUID,
+                dockerClientConfig, false, null);
 
         ContainerTestManager mgr = createManager();
 
@@ -235,7 +245,7 @@ public class DefaultContainerTestManagerTest {
 
         queryUntilSuccess();
 
-        assertThat(clientFacadeFactory.createFacade().getAgentHolders().get(0).
+        assertThat(testCloudSupport.getClientFacade().getAgentHolders().get(0).
                 getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(TestRootUrlHolder.HOLDER_URL);
 
     }
@@ -279,7 +289,7 @@ public class DefaultContainerTestManagerTest {
     }
 
     private ContainerTestManager createManager() {
-        return new DefaultContainerTestManager(imageResolver, clientFacadeFactory,
+        return new DefaultContainerTestManager(imageResolver,
                 buildServer, new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRate);
     }
 }

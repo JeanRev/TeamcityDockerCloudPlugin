@@ -27,6 +27,12 @@ public class EditableNode extends AbstractNode<EditableNode> {
     }
 
     @Nonnull
+    public EditableNode add(@Nonnull Node node) {
+        getArrayNode().add(node.node.deepCopy());
+        return this;
+    }
+
+    @Nonnull
     public EditableNode addObject() {
         return newNode(getArrayNode().addObject());
     }
@@ -70,6 +76,12 @@ public class EditableNode extends AbstractNode<EditableNode> {
     public EditableNode put(@Nonnull String key, @Nullable Object value) {
         DockerCloudUtils.requireNonNull(key, "Key cannot be null.");
         getObjectNode().put(key, value != null ? value.toString() : null);
+        return this;
+    }
+
+    public EditableNode remove(@Nonnull String key) {
+        DockerCloudUtils.requireNonNull(key, "Key cannot be null.");
+        getObjectNode().remove(key);
         return this;
     }
 

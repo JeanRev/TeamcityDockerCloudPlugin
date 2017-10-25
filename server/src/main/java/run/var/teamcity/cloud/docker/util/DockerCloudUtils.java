@@ -57,9 +57,13 @@ public final class DockerCloudUtils {
      */
     public static final String TEST_INSTANCE_ID_LABEL = NS_PREFIX + "test_instance_id";
     /**
+     * Docker cloud parameter: cloud type.
+     */
+    public static final String CLOUD_TYPE_PARAM = NS_PREFIX + "cloud_type";
+    /**
      * Docker cloud parameter: UUID of the cloud client. Persisted in the plugin configuration.
      */
-    public static final String CLIENT_UUID = NS_PREFIX + "client_uuid";
+    public static final String CLIENT_UUID_PARAM = NS_PREFIX + "client_uuid";
     /**
      * Docker cloud parameter: use default server URL.
      */
@@ -137,14 +141,6 @@ public final class DockerCloudUtils {
      * Debug flag system property.
      */
     public static final String DEBUG_SYSPROP = NS_PREFIX + "debug";
-    /**
-     * Cloud clode.
-     */
-    public static final String CLOUD_CODE = "VRDC";
-
-    static {
-        assert CLOUD_CODE.length() == 4 : "Per spec, the cloud code must be 4 chars long.";
-    }
 
     /**
      * Prefix for environment variables to be published.

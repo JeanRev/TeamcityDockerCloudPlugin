@@ -7,11 +7,10 @@ import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import jetbrains.buildServer.web.util.SessionUser;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.ModelAndView;
-import run.var.teamcity.cloud.docker.DockerClientFacadeFactory;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfigException;
+import run.var.teamcity.cloud.docker.DockerCloudSupportRegistry;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
@@ -23,6 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,26 +45,16 @@ public class ContainerTestController extends BaseFormJsonController {
     public static final String PATH = "test-container.html";
 
     private final ContainerTestManager testMgr;
-    private final DockerClientFacadeFactory clientFacadeFactory;
+    private final DockerCloudSupportRegistry cloudSupportRegistry;
 
-    @Autowired
-    ContainerTestController(@Nonnull SBuildServer buildServer,
-                            @Nonnull PluginDescriptor pluginDescriptor,
-                            @Nonnull WebControllerManager manager,
-                            @Nonnull ContainerTestManager testMgr) {
-        this(DockerClientFacadeFactory.getDefault(), buildServer, pluginDescriptor, manager, testMgr);
-    }
 
-    ContainerTestController(@Nonnull DockerClientFacadeFactory clientFacadeFactory,
+    ContainerTestController(@Nonnull DockerCloudSupportRegistry cloudSupportRegistry,
                             @Nonnull SBuildServer buildServer,
                             @Nonnull PluginDescriptor pluginDescriptor,
                             @Nonnull WebControllerManager manager,
                             @Nonnull ContainerTestManager testMgr) {
-
-
-        this.clientFacadeFactory = clientFacadeFactory;
+        this.cloudSupportRegistry = cloudSupportRegistry;
         this.testMgr = testMgr;
-
         buildServer.addListener(new BuildServerListener());
         manager.registerController(pluginDescriptor.getPluginResourcesPath(PATH), this);
         manager.registerController("/app/docker-cloud/test-container", this);
@@ -108,11 +98,10 @@ public class ContainerTestController extends BaseFormJsonController {
             DockerImageConfig imageConfig;
 
             try {
-                clientConfig = DockerCloudClientConfig.processParams(params, clientFacadeFactory);
-                // Note: we let the cloud image parameters here to "null" because the test container will actually not
-                // be started through the cloud API.
-                imageConfig = DockerImageConfig
-                        .fromJSon(Node.parse(params.get(DockerCloudUtils.TEST_IMAGE_PARAM)), null);
+                clientConfig = DockerCloudClientConfig.processParams(params, cloudSupportRegistry);
+                imageConfig = clientConfig.getCloudSupport().createImageConfigParser().
+                        fromJSon(Node.parse(params.get(DockerCloudUtils.TEST_IMAGE_PARAM)),
+                                Collections.emptyList());
             } catch (DockerCloudClientConfigException e) {
                 LOG.error("Invalid cloud client configuration.", e);
                 sendErrorQuietly(response, HttpServletResponse.SC_BAD_REQUEST,
@@ -126,8 +115,8 @@ public class ContainerTestController extends BaseFormJsonController {
 
             UUID testUuid = testMgr.createNewTestContainer(clientConfig, imageConfig);
 
-            ContainerTestReference testRef = ContainerTestReference.newTestReference(testUuid,
-                    clientConfig.getDockerClientConfig());
+            ContainerTestReference testRef = ContainerTestReference.newTestReference(clientConfig.getCloudSupport(),
+                    testUuid, clientConfig.getDockerClientConfig());
 
             HttpSession httpSession = request.getSession();
             testRef.persistInHttpSession(httpSession);

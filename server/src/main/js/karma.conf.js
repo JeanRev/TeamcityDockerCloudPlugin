@@ -11,8 +11,7 @@ module.exports = function(config) {
         files: [
             'node_modules/jquery/dist/jquery.js',
             'karma-global.js',
-            'lib/*.test.js',
-            'static/image-settings.html',
+            'lib/*.test.js'
         ],
 
         preprocessors: {

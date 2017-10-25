@@ -64,8 +64,7 @@ val jsSrcDir: File = project.file("src/main/js")
 jar.apply {
     into("buildServerResources") {
         from(jsSrcDir.resolve("dist"))
-        from(jsSrcDir.resolve("image-settings.html"))
-        from(jsSrcDir.resolve("docker-cloud.css"))
+        from(jsSrcDir.resolve("static"))
     }
 }
 

@@ -6,6 +6,7 @@ import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.springframework.web.servlet.ModelAndView;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
+import run.var.teamcity.cloud.docker.util.Resources;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -18,26 +19,25 @@ import static run.var.teamcity.cloud.docker.web.WebSocketDeploymentStatusProvide
 
 public class DockerCloudSettingsController extends BaseController {
 
-    public final static String EDIT_PATH = "docker-cloud-settings.html";
-
     private final WebSocketDeploymentStatusProvider wsDeploymentStatusProvider;
     private final PluginDescriptor pluginDescriptor;
     private final String jspPath;
-    private final String htmlPath;
+    private final Resources resources;
 
     public DockerCloudSettingsController(@Nonnull WebSocketDeploymentStatusProvider wsDeploymentStatusProvider,
-                                         @Nonnull SBuildServer server,
-                                         @Nonnull PluginDescriptor pluginDescriptor,
-                                         @Nonnull WebControllerManager manager) {
+            @Nonnull SBuildServer server,
+            @Nonnull PluginDescriptor pluginDescriptor,
+            @Nonnull WebControllerManager manager,
+            @Nonnull Resources resources){
+
         super(server);
 
         this.wsDeploymentStatusProvider = wsDeploymentStatusProvider;
         this.pluginDescriptor = pluginDescriptor;
-
-        htmlPath = pluginDescriptor.getPluginResourcesPath(EDIT_PATH);
-        jspPath = pluginDescriptor.getPluginResourcesPath("docker-cloud-settings.jsp");
-        manager.registerController(htmlPath, this);
-
+        this.jspPath = pluginDescriptor.getPluginResourcesPath("docker-cloud-settings.jsp");
+        this.resources = resources;
+        manager.registerController(pluginDescriptor.getPluginResourcesPath(resources.text("cloud.settingsPath")),
+                this);
     }
 
     @Nullable
@@ -45,7 +45,7 @@ public class DockerCloudSettingsController extends BaseController {
     protected ModelAndView doHandle(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response) throws Exception {
         ModelAndView mv = new ModelAndView(jspPath);
         Map<String, Object> model = mv.getModel();
-        model.put("resPath", pluginDescriptor.getPluginResourcesPath());
+        model.put("pluginResPath", pluginDescriptor.getPluginResourcesPath());
         model.put("debugEnabled", DockerCloudUtils.isDebugEnabled());
 
         boolean defaultLocalInstanceAvailable;
@@ -67,6 +67,7 @@ public class DockerCloudSettingsController extends BaseController {
         model.put("defaultLocalInstanceURI", defaultLocalInstanceURI);
         model.put("windowsHost", windowsHost);
         model.put("webSocketEndpointsAvailable", wsDeploymentStatusProvider.getDeploymentStatus() == SUCCESS);
+        model.put("resources", resources);
         return mv;
     }
 }

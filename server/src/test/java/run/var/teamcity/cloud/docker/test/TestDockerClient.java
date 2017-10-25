@@ -191,7 +191,7 @@ public class TestDockerClient implements DockerClient {
 
             Service service = new Service();
 
-            service.image(serviceSpec.getAsString("Image"));
+            service.image(serviceSpec.getObject("TaskTemplate").getObject("ContainerSpec").getAsString("Image"));
 
             serviceSpec.getObject("Labels").
                     getObjectValues().forEach((key, node) ->

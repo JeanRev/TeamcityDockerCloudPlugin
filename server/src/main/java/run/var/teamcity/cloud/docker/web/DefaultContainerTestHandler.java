@@ -1,7 +1,6 @@
 package run.var.teamcity.cloud.docker.web;
 
 import run.var.teamcity.cloud.docker.DockerClientFacade;
-import run.var.teamcity.cloud.docker.DockerClientFacadeFactory;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.LockHandler;
@@ -46,13 +45,10 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
         notifyInteraction();
     }
 
-    public static DefaultContainerTestHandler newTestInstance(@Nonnull DockerCloudClientConfig clientConfig,
-                                                              @Nonnull DockerClientFacadeFactory clientFacadeFactory) {
+    public static DefaultContainerTestHandler newTestInstance(@Nonnull DockerCloudClientConfig clientConfig) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
-        DockerCloudUtils.requireNonNull(clientFacadeFactory, "Docker client facade factory cannot be null.");
-        DockerClientFacade clientFacade = clientFacadeFactory
-                .createFacade(clientConfig.getDockerClientConfig().connectionPoolSize(1),
-                              DockerClientFacadeFactory.Type.SWARM);
+        DockerClientFacade clientFacade = clientConfig.getCloudSupport().createClientFacade(clientConfig.getDockerClientConfig()
+                        .connectionPoolSize(1));
         return new DefaultContainerTestHandler(clientFacade);
     }
 
@@ -173,7 +169,7 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
 
     @Override
     public void notifyStatus(@Nonnull Phase phase, @Nonnull Status status, @Nullable String msg,
-                             @Nullable Throwable failure, @Nonnull List<String> warnings) {
+            @Nullable Throwable failure, @Nonnull List<String> warnings) {
         DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
         DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
         DockerCloudUtils.requireNonNull(status, "Warnings list cannot be null.");

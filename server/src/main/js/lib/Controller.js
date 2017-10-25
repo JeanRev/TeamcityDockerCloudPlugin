@@ -8,10 +8,10 @@ const Utils = require('Utils');
 import Clipboard from 'clipboard';
 import UAParser from 'ua-parser';
 
-const IMAGE_VERSION = 4;
+const IMAGE_VERSION = 5;
 
 function Controller(bs, oo, tabbedPane, params, schema) {
-    Logger.logInfo('Initializing Docker Cloud JS support.');
+    Logger.logInfo('Initializing Docker Cloud JS ' + schema.cloudType + ' support.');
 
     const BS = bs;
     const OO = oo;
@@ -26,6 +26,8 @@ function Controller(bs, oo, tabbedPane, params, schema) {
     if (hasXTermSupport) {
         Logger.logInfo('XTerm support enabled.')
     }
+
+    $j('#DockerCloudImageDialogContent').append(schema.html);
 
     const defaultLocalInstanceURI = params.defaultLocalInstanceURI;
     const checkConnectivityCtrlURL = params.checkConnectivityCtrlURL;
@@ -112,6 +114,7 @@ function Controller(bs, oo, tabbedPane, params, schema) {
     let testStatusSocket = null;
     let logStreamingSocket;
 
+    _initGlobal();
     _initDaemonInfo();
     _initTabs();
     _setupTooltips();
@@ -120,6 +123,27 @@ function Controller(bs, oo, tabbedPane, params, schema) {
     _renderImagesTable();
 
     /* Initialization */
+
+    function _initGlobal() {
+        // Tells webpack where from where to load our external chunks.
+        __webpack_public_path__ = params.assetsBasePath;
+
+        // Global flag to enable debug settings.
+        window.debugEnabled = params.debugEnabled;
+
+        $j(window).on("error", function(msg, url, lineNo, columnNo, error) {
+            if (error) {
+                Logger.logError(error);
+                return;
+            }
+            if (msg.originalEvent && msg.originalEvent.error) {
+                Logger.logError(msg.originalEvent.error);
+                return;
+            }
+            let logMsg = $j.type(msg) === 'string' ? msg : "Error encountered.";
+            Logger.logError(logMsg + "@" + url + ":" + lineNo + ":" + columnNo);
+        });
+    }
 
     function _initDaemonInfo() {
 
@@ -144,12 +168,7 @@ function Controller(bs, oo, tabbedPane, params, schema) {
     function _initTabs() {
         Logger.logDebug('Initializing dialog tabs.');
 
-        tabs = [{ id: 'dockerCloudImageTab_general', lbl: 'General' },
-            { id: 'dockerCloudImageTab_run', lbl: 'Run' },
-            { id: 'dockerCloudImageTab_network', lbl: 'Network' },
-            { id: 'dockerCloudImageTab_resources', lbl: 'Resources' },
-            { id: 'dockerCloudImageTab_security', lbl: 'Security' },
-            { id: 'dockerCloudImageTab_advanced', lbl: 'Advanced' }];
+        tabs = schema.tabs;
 
         $j.each(tabs, function(i, val) {
             tabbedPane.addTab(val.id, {
@@ -334,7 +353,9 @@ function Controller(bs, oo, tabbedPane, params, schema) {
 
             $testContainerLabel.text('Starting test...');
             testPhase = 'CREATE';
-            _invokeTestAction('create', BS.Clouds.Admin.CreateProfileForm.serializeParameters())
+
+            let params = BS.Clouds.Admin.CreateProfileForm.serializeParameters();
+            _invokeTestAction('create', params)
                 .done(function (response) {
                     testUuid = JSON.parse(response.responseText).testUuid;
                     _queryTestStatus();
@@ -446,7 +467,7 @@ function Controller(bs, oo, tabbedPane, params, schema) {
 
     function _renderImageRow(image) {
         let imageLabel = image.Administration.UseOfficialTCAgentImage ? 'Official TeamCity agent image' :
-            image.Container.Image;
+            schema.getImage(image.AgentHolderSpec);
         return $imagesTable.append($j('<tr><td>' + image.Administration.Profile + '</td>' +
             '<td>' + imageLabel + '</td>' +
             '<td class="center">' + (image.Administration.MaxInstanceCount ? image.Administration.MaxInstanceCount : 'unlimited') + '</td>' +
@@ -636,7 +657,9 @@ function Controller(bs, oo, tabbedPane, params, schema) {
         });
         $j('span[id$="_error"], span[id$="_warning"]', $dialog).empty();
 
-        let viewModel = schema.convertSettingsToViewModel(imagesData[profileName] || Model.initializeSettings());
+        let viewModel = schema.convertSettingsToViewModel(imagesData[profileName] || schema.initializeSettings({
+            daemonOs: daemonOs
+        }));
         viewModelAccessor.applyViewModel(viewModel);
         tableHelper.updateAllTablesMandoryStarsVisibility($dialogTables);
 
@@ -1042,7 +1065,6 @@ function Controller(bs, oo, tabbedPane, params, schema) {
 
     function _prepareDiagnosticDialogWithLink($container, msg, details) {
         let viewDetailsLink = $j('<a href="#/">view details</a>)').click(function () {
-            Logger.logInfo('will display: ' + BS.DockerDiagnosticDialog);
             prepareDiagnosticDialog(msg, details);
             BS.DockerDiagnosticDialog.showCentered();
         });

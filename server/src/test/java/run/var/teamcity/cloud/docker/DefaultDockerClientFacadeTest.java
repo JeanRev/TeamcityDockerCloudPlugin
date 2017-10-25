@@ -12,7 +12,6 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import java.math.BigInteger;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -20,12 +19,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus.CREATED;
-import static run.var.teamcity.cloud.docker.test.TestDockerClient.ContainerStatus.STARTED;
 import static run.var.teamcity.cloud.docker.test.TestUtils.listOf;
 import static run.var.teamcity.cloud.docker.util.DockerCloudUtils.mapOf;
 import static run.var.teamcity.cloud.docker.util.DockerCloudUtils.pair;
 
+/**
+ * {@link DefaultDockerClientFacade} test suite.
+ */
 public class DefaultDockerClientFacadeTest extends DockerClientFacadeTest {
 
     @Test

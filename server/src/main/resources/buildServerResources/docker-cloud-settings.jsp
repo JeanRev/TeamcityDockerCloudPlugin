@@ -7,12 +7,13 @@
 <%@ taglib prefix="bs" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="forms" tagdir="/WEB-INF/tags/forms" %>
 <!-- Disable IDEA warnings about unused variables. -->
-<%--@elvariable id="resPath" type="java.lang.String"--%>
 <%--@elvariable id="defaultTCUrl" type="java.net.URL"--%>
 <%--@elvariable id="debugEnabled" type="java.lang.Boolean"--%>
 <%--@elvariable id="defaultLocalInstanceAvailable" type="java.lang.Boolean"--%>
 <%--@elvariable id="defaultLocalInstanceParam" type="java.lang.String"--%>
 <%--@elvariable id="defaultLocalInstanceURI" type="java.net.URI"--%>
+<%--@elvariable id="pluginResPath" type="java.lang.String"--%>
+<%--@elvariable id="resources" type="run.var.teamcity.cloud.docker.util.Resources"--%>
 <%--@elvariable id="windowsHost" type="java.lang.Boolean"--%>
 <%--@elvariable id="webSocketEndpointsAvailable" type="java.lang.Boolean"--%>
 <c:set var="paramName" value="<%=DockerCloudUtils.IMAGES_PARAM%>"/>
@@ -29,13 +30,13 @@
 
 <div class="dockerCloudSettings">
 
-<h2 class="noBorder section-header">Docker Connection Settings</h2>
+<h2 class="noBorder section-header">${resources.text('web.settings.title')}</h2>
 
 <script type="text/javascript">
-    BS.LoadStyleSheetDynamically("<c:url value='${resPath}docker-cloud.css'/>");
-    BS.LoadStyleSheetDynamically("<c:url value='${resPath}xterm.css'/>");
+    BS.LoadStyleSheetDynamically("<c:url value='${pluginResPath}docker-cloud.css'/>");
+    BS.LoadStyleSheetDynamically("<c:url value='${pluginResPath}xterm.css'/>");
 </script>
-
+    <c:url value="${pluginResPath}${resources.string('web.settings.js')}"/>
 <table class="runnerFormTable">
     <tbody>
     <tr>
@@ -100,7 +101,9 @@
                                                        id="error_<%=DockerCloudUtils.IMAGES_PARAM%>"></span></h2>
 
 <props:hiddenProperty name="<%=DockerCloudUtils.TEST_IMAGE_PARAM%>"/>
-<props:hiddenProperty name="<%=DockerCloudUtils.CLIENT_UUID%>"/>
+<props:hiddenProperty name="<%=DockerCloudUtils.CLIENT_UUID_PARAM%>"/>
+<props:hiddenProperty name="<%=DockerCloudUtils.CLOUD_TYPE_PARAM%>"/>
+
 <jsp:useBean id="propertiesBean" scope="request" type="jetbrains.buildServer.controllers.BasePropertiesBean"/>
 <c:set var="sourceImagesJson" value="${propertiesBean.properties['source_images_json']}"/>
 <input type="hidden" name="prop:source_images_json" id="source_images_json" value="<c:out value='${sourceImagesJson}'/>" data-err-id="source_images_json"/>
@@ -143,7 +146,7 @@
 
 <bs:dialog dialogId="DockerCloudImageDialog" title="Add Image" closeCommand="BS.DockerImageDialog.close()"
            titleId="DockerImageDialogTitle">
-    <%@include file="image-settings.html" %>
+    <div id="DockerCloudImageDialogContent">
     </div>
     <div class="popupSaveButtonsBlock dockerCloudBtnBlock">
         <input type="button" class="btn" id="dockerTestImageButton" value="Test container"/>
@@ -165,11 +168,11 @@
         <span class="hidden" id="dockerCloudTestContainerLoader"><i class="icon-refresh icon-spin"></i>
         </span>
         <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerSuccess"
-             src="<c:url value="${resPath}img/checked.png"/>">
+             src="<c:url value="${pluginResPath}img/checked.png"/>">
         <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerWarning"
-             src="<c:url value="${resPath}img/warning.png"/>">
+             src="<c:url value="${pluginResPath}img/warning.png"/>">
         <img class="hidden dockerCloudStatusIcon" id="dockerCloudTestContainerError"
-             src="<c:url value="${resPath}img/error.png"/>">
+             src="<c:url value="${pluginResPath}img/error.png"/>">
         <span id="dockerCloudTestContainerLabel"></span>
 
         <p id="dockerTestExecInfo">
@@ -200,14 +203,14 @@
 </bs:dialog>
 <script type="text/javascript">
     $j.ajax({
-        url: "<c:url value="${resPath}docker-cloud.js"/>",
+        url: "<c:url value="${pluginResPath}${resources.string('web.settings.js')}"/>",
         dataType: "script",
         success: function () {
             DockerCloud.init(BS, OO, new TabbedPane(), {
                 defaultLocalInstanceURI: '${defaultLocalInstanceURI}',
-                assetsBasePath: '<c:url value="${resPath}"/>',
-                checkConnectivityCtrlURL: '<c:url value="${resPath}checkconnectivity.html"/>',
-                testContainerCtrlURL: '<c:url value="${resPath}test-container.html"/>',
+                assetsBasePath: '<c:url value="${pluginResPath}"/>',
+                checkConnectivityCtrlURL: '<c:url value="${pluginResPath}checkconnectivity.html"/>',
+                testContainerCtrlURL: '<c:url value="${pluginResPath}test-container.html"/>',
                 useTlsParam: '<%=DockerCloudUtils.USE_TLS%>',
                 imagesParam: '<%=DockerCloudUtils.IMAGES_PARAM%>',
                 tcImagesDetails: '<%= CloudImageParameters.SOURCE_IMAGES_JSON %>',

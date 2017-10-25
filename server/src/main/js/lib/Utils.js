@@ -84,8 +84,8 @@ module.exports = {
         }
     },
 
-    getElt: function(id) {
-        return $j('#' + ELT_ID_PREFIX + id);
+    getElt: function(id, elt) {
+        return $j('#' + ELT_ID_PREFIX + id, elt);
     },
 
     trimIdPrefix: function(id) {

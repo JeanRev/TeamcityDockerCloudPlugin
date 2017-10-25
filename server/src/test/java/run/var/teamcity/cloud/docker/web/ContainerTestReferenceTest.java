@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker.web;
 
 import org.junit.Test;
+import run.var.teamcity.cloud.docker.TestDockerCloudSupport;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.test.TestHttpSession;
 import run.var.teamcity.cloud.docker.test.TestUtils;
@@ -21,8 +22,11 @@ public class ContainerTestReferenceTest {
         DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
-        ContainerTestReference testRef = ContainerTestReference.newTestReference(TestUtils.TEST_UUID, clientConfig);
+        TestDockerCloudSupport testCloudSupport = new TestDockerCloudSupport();
+        ContainerTestReference testRef = ContainerTestReference.newTestReference(testCloudSupport, TestUtils
+                        .TEST_UUID, clientConfig);
 
+        assertThat(testRef.getCloudSupport()).isEqualTo(testCloudSupport);
         assertThat(testRef.getTestUuid()).isEqualTo(TestUtils.TEST_UUID);
         assertThat(testRef.getClientConfig()).isSameAs(clientConfig);
         assertThat(testRef.getContainerId().isPresent()).isFalse();
@@ -34,9 +38,14 @@ public class ContainerTestReferenceTest {
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
         assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> ContainerTestReference.newTestReference(null, clientConfig));
+                .isThrownBy(() -> ContainerTestReference.newTestReference(null,TestUtils
+                                .TEST_UUID, clientConfig));
         assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> ContainerTestReference.newTestReference(TestUtils.TEST_UUID, null));
+                .isThrownBy(() -> ContainerTestReference.newTestReference(new TestDockerCloudSupport(),null,
+                        clientConfig));
+        assertThatExceptionOfType(NullPointerException.class)
+                .isThrownBy(() -> ContainerTestReference.newTestReference(new TestDockerCloudSupport(), TestUtils
+                        .TEST_UUID, null));
     }
 
     @Test
@@ -44,7 +53,8 @@ public class ContainerTestReferenceTest {
         DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
-        ContainerTestReference testRef = ContainerTestReference.newTestReference(TestUtils.TEST_UUID, clientConfig);
+        ContainerTestReference testRef = ContainerTestReference.newTestReference(new TestDockerCloudSupport(),
+                TestUtils.TEST_UUID, clientConfig);
 
         ContainerTestReference newTestRef = testRef.registerContainer("container_id");
 
@@ -57,7 +67,8 @@ public class ContainerTestReferenceTest {
         DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
-        ContainerTestReference testRef = ContainerTestReference.newTestReference(TestUtils.TEST_UUID, clientConfig);
+        ContainerTestReference testRef = ContainerTestReference.newTestReference(new TestDockerCloudSupport(),
+                TestUtils.TEST_UUID, clientConfig);
 
         ContainerTestReference newTestRef = testRef.registerContainer("container_id_1");
 
@@ -72,7 +83,8 @@ public class ContainerTestReferenceTest {
         DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
-        ContainerTestReference testRef = ContainerTestReference.newTestReference(TestUtils.TEST_UUID, clientConfig);
+        ContainerTestReference testRef = ContainerTestReference.newTestReference(new TestDockerCloudSupport(),
+                TestUtils.TEST_UUID, clientConfig);
 
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> testRef.registerContainer(null));
     }
@@ -84,9 +96,11 @@ public class ContainerTestReferenceTest {
         DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
-        ContainerTestReference testRef1 = ContainerTestReference.newTestReference(TestUtils.TEST_UUID, clientConfig);
+        ContainerTestReference testRef1 = ContainerTestReference.newTestReference(new TestDockerCloudSupport(),
+                TestUtils.TEST_UUID, clientConfig);
 
-        ContainerTestReference testRef2 = ContainerTestReference.newTestReference(TestUtils.TEST_UUID_2, clientConfig);
+        ContainerTestReference testRef2 = ContainerTestReference.newTestReference(new TestDockerCloudSupport(),
+                TestUtils.TEST_UUID_2, clientConfig);
 
         testRef1.persistInHttpSession(httpSession);
 
@@ -108,7 +122,8 @@ public class ContainerTestReferenceTest {
         DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
-        ContainerTestReference testRef = ContainerTestReference.newTestReference(TestUtils.TEST_UUID, clientConfig);
+        ContainerTestReference testRef = ContainerTestReference.newTestReference(new TestDockerCloudSupport(),
+                TestUtils.TEST_UUID, clientConfig);
 
         httpSession.invalidate();
 
@@ -124,7 +139,8 @@ public class ContainerTestReferenceTest {
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
 
-        ContainerTestReference testRef = ContainerTestReference.newTestReference(TestUtils.TEST_UUID, clientConfig);
+        ContainerTestReference testRef = ContainerTestReference.newTestReference(new TestDockerCloudSupport(),
+                TestUtils.TEST_UUID, clientConfig);
 
         testRef.persistInHttpSession(httpSession);
 
@@ -139,7 +155,8 @@ public class ContainerTestReferenceTest {
         DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
-        ContainerTestReference testRef = ContainerTestReference.newTestReference(TestUtils.TEST_UUID, clientConfig);
+        ContainerTestReference testRef = ContainerTestReference.newTestReference(new TestDockerCloudSupport(),
+                TestUtils.TEST_UUID, clientConfig);
 
         testRef.persistInHttpSession(httpSession);
 
@@ -154,7 +171,8 @@ public class ContainerTestReferenceTest {
         DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
-        ContainerTestReference testRef = ContainerTestReference.newTestReference(TestUtils.TEST_UUID, clientConfig);
+        ContainerTestReference testRef = ContainerTestReference.newTestReference(new TestDockerCloudSupport(),
+                TestUtils.TEST_UUID, clientConfig);
 
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> testRef.persistInHttpSession(null));
     }
@@ -176,7 +194,8 @@ public class ContainerTestReferenceTest {
         DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
-        ContainerTestReference testRef = ContainerTestReference.newTestReference(TestUtils.TEST_UUID, clientConfig);
+        ContainerTestReference testRef = ContainerTestReference.newTestReference(new TestDockerCloudSupport(),
+                TestUtils.TEST_UUID, clientConfig);
 
         testRef.persistInHttpSession(httpSession);
 
@@ -197,7 +216,8 @@ public class ContainerTestReferenceTest {
         DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
-        ContainerTestReference testRef = ContainerTestReference.newTestReference(TestUtils.TEST_UUID, clientConfig);
+        ContainerTestReference testRef = ContainerTestReference.newTestReference(new TestDockerCloudSupport(),
+                TestUtils.TEST_UUID, clientConfig);
 
         testRef.clearFromHttpSession(httpSession);
     }
@@ -209,7 +229,8 @@ public class ContainerTestReferenceTest {
         DockerClientConfig clientConfig = new DockerClientConfig(DockerCloudUtils.DOCKER_DEFAULT_SOCKET_URI,
                 DockerCloudUtils.DOCKER_API_TARGET_VERSION);
 
-        ContainerTestReference testRef = ContainerTestReference.newTestReference(TestUtils.TEST_UUID, clientConfig);
+        ContainerTestReference testRef = ContainerTestReference.newTestReference(new TestDockerCloudSupport(),
+                TestUtils.TEST_UUID, clientConfig);
 
         testRef.persistInHttpSession(httpSession);
 

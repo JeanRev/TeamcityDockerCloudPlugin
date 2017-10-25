@@ -1,19 +1,20 @@
 
 
 const Schema = require('Schema');
-const TableHelper = require('TableHelper');
 const Utils = require('Utils');
 const ValidationHandler = require('ValidationHandler');
 const Validators = require('Validators');
-
-
-const $j = jQuery.noConflict();
+const ValidatorTester = require('Validators.test');
 
 describe('Migrating images settings', function () {
 
-    $j('body').load('base/static/image-settings.html');
+    let schema;
 
-    const schema = new Schema();
+    beforeEach(function() {
+        schema = new Schema();
+
+        $j('body').html(schema.html);
+    });
 
     it('should migrate empty image to latest version', function () {
         let image = {
@@ -143,6 +144,25 @@ describe('Migrating images settings', function () {
             });
         });
     });
+
+    it('should rename Container object when image V4', function () {
+        let imageData = {
+            Administration: { Version: 4 }
+        };
+
+        schema.migrateSettings(imageData);
+
+        expect(imageData).toEqual({Administration: {Version: 4}});
+
+        imageData = {
+            Administration: { Version: 4 },
+            Container: { foo: 'bar' }
+        };
+
+        schema.migrateSettings(imageData);
+
+        expect(imageData).toEqual({Administration: {Version: 4}, AgentHolderSpec: { foo: 'bar' }});
+    });
 });
 
 let settingsConverterFixtures = [
@@ -185,75 +205,75 @@ let settingsConverterFixtures = [
     },
     {
         name: 'should handle Hostname', fixtures: [{
-        settings: {Container: {Hostname: 'localhost'}}, viewModel: {Hostname: 'localhost'}
+        settings: {AgentHolderSpec: {Hostname: 'localhost'}}, viewModel: {Hostname: 'localhost'}
     }]
     },
     {
         name: 'should handle Domainname', fixtures: [{
-        settings: {Container: {Domainname: 'test.com'}},
+        settings: {AgentHolderSpec: {Domainname: 'test.com'}},
         viewModel: {Domainname: 'test.com'}
     }]
     },
     {
         name: 'should handle User', fixtures: [{
-        settings: {Container: {User: 'test'}}, viewModel: {User: 'test'}
+        settings: {AgentHolderSpec: {User: 'test'}}, viewModel: {User: 'test'}
     }]
     },
     {
         name: 'should handle WorkingDir', fixtures: [{
-        settings: {Container: {WorkingDir: '/root'}}, viewModel: {WorkingDir: '/root'}
+        settings: {AgentHolderSpec: {WorkingDir: '/root'}}, viewModel: {WorkingDir: '/root'}
     }]
     },
     {
         name: 'should handle StopTimeout', fixtures: [{
-        settings: {Container: {StopTimeout: 42}}, viewModel: {StopTimeout: 42}
+        settings: {AgentHolderSpec: {StopTimeout: 42}}, viewModel: {StopTimeout: 42}
     }]
     },
     {
         name: 'should handle StopSignal', fixtures: [{
-        settings: {Container: {StopSignal: 'SIGKILL'}}, viewModel: {StopSignal: 'SIGKILL'}
+        settings: {AgentHolderSpec: {StopSignal: 'SIGKILL'}}, viewModel: {StopSignal: 'SIGKILL'}
     }]
     },
     {
         name: 'should handle Env', fixtures: [{
-        settings: {Container: {Env: ['var1=value1', 'var2=value2']}},
+        settings: {AgentHolderSpec: {Env: ['var1=value1', 'var2=value2']}},
         viewModel: {Env: [{Name: 'var1', Value: 'value1'}, {Name: 'var2', Value: 'value2'}]}
     }]
     },
     {
         name: 'should handle Cmd', fixtures: [{
-        settings: {Container: {Cmd: ['/usr/bin/test', 'arg1']}},
+        settings: {AgentHolderSpec: {Cmd: ['/usr/bin/test', 'arg1']}},
         viewModel: {Cmd: ['/usr/bin/test', 'arg1']}
     }]
     },
     {
         name: 'should handle Entrypoint', fixtures: [{
-        settings: {Container: {Entrypoint: ['/usr/bin/test', 'arg1']}},
+        settings: {AgentHolderSpec: {Entrypoint: ['/usr/bin/test', 'arg1']}},
         viewModel: {Entrypoint: ['/usr/bin/test', 'arg1']}
     }]
     },
     {
         name: 'should handle Image', fixtures: [{
-        settings: {Container: {Image: 'jetbrains/teamcity-agent:9.99'}},
+        settings: {AgentHolderSpec: {Image: 'jetbrains/teamcity-agent:9.99'}},
         viewModel: {Image: 'jetbrains/teamcity-agent:9.99'}
     }]
     },
     {
         name: 'should handle Labels', fixtures: [{
-        settings: {Container: {Labels: {key1: 'value1', key2: 'value2'}}},
+        settings: {AgentHolderSpec: {Labels: {key1: 'value1', key2: 'value2'}}},
         viewModel: {Labels: [{Key: 'key1', Value: 'value1'}, {Key: 'key2', Value: 'value2'}]}
     }]
     },
     {
         name: 'should handle Volumes', fixtures: [{
-        settings: {Container: {Volumes: {'/tmp/container_path1': {}, '/tmp/container_path2': {}}}},
+        settings: {AgentHolderSpec: {Volumes: {'/tmp/container_path1': {}, '/tmp/container_path2': {}}}},
         viewModel: {Volumes: [{PathInContainer: '/tmp/container_path1'}, {PathInContainer: '/tmp/container_path2'}]}
     }]
     },
     {
         name: 'should handle Binds', fixtures: [{
         settings: {
-            Container: {
+            AgentHolderSpec: {
                 HostConfig: {
                     Binds: ['/tmp/host_path1:/tmp/container_path:ro', 'C:\\host_path2:volume:rw']
                 }
@@ -275,7 +295,7 @@ let settingsConverterFixtures = [
     {
         name: 'should handle Links', fixtures: [{
         settings: {
-            Container: {
+            AgentHolderSpec: {
                 HostConfig: {
                     Links: ['container_name1:alias1', 'container_name2:alias2']
                 }
@@ -289,15 +309,15 @@ let settingsConverterFixtures = [
     {
         name: 'should handle Memory', fixtures: [
         {
-            settings: {Container: {HostConfig: {Memory: 1}}, Editor: {MemoryUnit: 'bytes'}},
+            settings: {AgentHolderSpec: {HostConfig: {Memory: 1}}, Editor: {MemoryUnit: 'bytes'}},
             viewModel: {Memory: '1', MemoryUnit: 'bytes'}
         },
         {
-            settings: {Container: {HostConfig: {Memory: 1048576}}, Editor: {MemoryUnit: 'MiB'}},
+            settings: {AgentHolderSpec: {HostConfig: {Memory: 1048576}}, Editor: {MemoryUnit: 'MiB'}},
             viewModel: {Memory: '1', MemoryUnit: 'MiB'}
         },
         {
-            settings: {Container: {HostConfig: {Memory: 10737418240}}, Editor: {MemoryUnit: 'GiB'}},
+            settings: {AgentHolderSpec: {HostConfig: {Memory: 10737418240}}, Editor: {MemoryUnit: 'GiB'}},
             viewModel: {Memory: '10', MemoryUnit: 'GiB'}
         }
     ]
@@ -305,65 +325,65 @@ let settingsConverterFixtures = [
     {
         name: 'should handle MemorySwap', fixtures: [
         {
-            settings: {Container: {HostConfig: {MemorySwap: 1}}, Editor: {MemorySwapUnit: 'bytes'}},
+            settings: {AgentHolderSpec: {HostConfig: {MemorySwap: 1}}, Editor: {MemorySwapUnit: 'bytes'}},
             viewModel: {MemorySwap: '1', MemorySwapUnit: 'bytes'}
         },
         {
-            settings: {Container: {HostConfig: {MemorySwap: 1048576}}, Editor: {MemorySwapUnit: 'MiB'}},
+            settings: {AgentHolderSpec: {HostConfig: {MemorySwap: 1048576}}, Editor: {MemorySwapUnit: 'MiB'}},
             viewModel: {MemorySwap: '1', MemorySwapUnit: 'MiB'}
         }
     ]
     },
     {
         name: 'should handle NanoCPUs', fixtures: [{
-        settings: {Container: {HostConfig: {NanoCPUs: 1500000000}}},
+        settings: {AgentHolderSpec: {HostConfig: {NanoCPUs: 1500000000}}},
         viewModel: {CPUs: '1.5'}
     }]
     },
     {
         name: 'should handle CpuQuota', fixtures: [{
-        settings: {Container: {HostConfig: {CpuQuota: 42}}},
+        settings: {AgentHolderSpec: {HostConfig: {CpuQuota: 42}}},
         viewModel: {CpuQuota: '42'}
     }]
     },
     {
         name: 'should handle CpuShares', fixtures: [{
-        settings: {Container: {HostConfig: {CpuShares: 42}}},
+        settings: {AgentHolderSpec: {HostConfig: {CpuShares: 42}}},
         viewModel: {CpuShares: '42'}
     }]
     },
     {
         name: 'should handle CpuPeriod', fixtures: [{
-        settings: {Container: {HostConfig: {CpuPeriod: 42}}},
+        settings: {AgentHolderSpec: {HostConfig: {CpuPeriod: 42}}},
         viewModel: {CpuPeriod: '42'}
     }]
     },
     {
         name: 'should handle CpusetCpus', fixtures: [{
-        settings: {Container: {HostConfig: {CpusetCpus: '1-2,3-4'}}},
+        settings: {AgentHolderSpec: {HostConfig: {CpusetCpus: '1-2,3-4'}}},
         viewModel: {CpusetCpus: '1-2,3-4'}
     }]
     },
     {
         name: 'should handle CpusetMems', fixtures: [{
-        settings: {Container: {HostConfig: {CpusetMems: '1-2,3-4'}}},
+        settings: {AgentHolderSpec: {HostConfig: {CpusetMems: '1-2,3-4'}}},
         viewModel: {CpusetMems: '1-2,3-4'}
     }]
     },
     {
         name: 'should handle OomKillDisable', fixtures: [{
-        settings: {Container: {HostConfig: {OomKillDisable: true}}},
+        settings: {AgentHolderSpec: {HostConfig: {OomKillDisable: true}}},
         viewModel: {OomKillDisable: true}
     },
         {
-            settings: {Container: {HostConfig: {OomKillDisable: false}}},
+            settings: {AgentHolderSpec: {HostConfig: {OomKillDisable: false}}},
             viewModel: {OomKillDisable: false}
         }]
     },
     {
         name: 'should handle Ports', fixtures: [{
         settings: {
-            Container: {
+            AgentHolderSpec: {
                 HostConfig: {
                     PortBindings: {
                         '8080/tcp': [{HostIp: '127.0.0.1', HostPort: '80'}],
@@ -399,41 +419,41 @@ let settingsConverterFixtures = [
     {
         name: 'should handle PublishAllPorts', fixtures: [
         {
-            settings: {Container: {HostConfig: {PublishAllPorts: true}}},
+            settings: {AgentHolderSpec: {HostConfig: {PublishAllPorts: true}}},
             viewModel: {PublishAllPorts: true}
         },
         {
-            settings: {Container: {HostConfig: {PublishAllPorts: false}}},
+            settings: {AgentHolderSpec: {HostConfig: {PublishAllPorts: false}}},
             viewModel: {PublishAllPorts: false}
         }]
     },
     {
         name: 'should handle Privileged flag', fixtures: [
         {
-            settings: {Container: {HostConfig: {Privileged: true}}},
+            settings: {AgentHolderSpec: {HostConfig: {Privileged: true}}},
             viewModel: {Privileged: true}
         },
         {
-            settings: {Container: {HostConfig: {Privileged: false}}},
+            settings: {AgentHolderSpec: {HostConfig: {Privileged: false}}},
             viewModel: {Privileged: false}
         }]
     },
     {
         name: 'should handle Dns', fixtures: [{
-        settings: {Container: {HostConfig: {Dns: ['4.4.4.4', '8.8.8.8']}}},
+        settings: {AgentHolderSpec: {HostConfig: {Dns: ['4.4.4.4', '8.8.8.8']}}},
         viewModel: {Dns: ['4.4.4.4', '8.8.8.8']}
     }]
     },
     {
         name: 'should handle DnsSearch', fixtures: [{
-        settings: {Container: {HostConfig: {DnsSearch: ['domain1.com', 'domain2.com']}}},
+        settings: {AgentHolderSpec: {HostConfig: {DnsSearch: ['domain1.com', 'domain2.com']}}},
         viewModel: {DnsSearch: ['domain1.com', 'domain2.com']}
     }]
     },
     {
         name: 'should handle ExtraHosts', fixtures: [{
         settings: {
-            Container: {
+            AgentHolderSpec: {
                 HostConfig: {
                     ExtraHosts: ['host1:1.1.1.1', 'host2:2.2.2.2']
                 }
@@ -446,7 +466,7 @@ let settingsConverterFixtures = [
     {
         name: 'should handle CapAdd', fixtures: [{
         settings: {
-            Container: {
+            AgentHolderSpec: {
                 HostConfig: {
                     CapAdd: ['SETPCAP', 'MKNOD']
                 }
@@ -459,7 +479,7 @@ let settingsConverterFixtures = [
     {
         name: 'should handle CapDrop', fixtures: [{
         settings: {
-            Container: {
+            AgentHolderSpec: {
                 HostConfig: {
                     CapDrop: ['SETPCAP', 'MKNOD']
                 }
@@ -472,30 +492,30 @@ let settingsConverterFixtures = [
     {
         name: 'should handle NetworkMode', fixtures: [
         {
-            settings: {Container: {HostConfig: {NetworkMode: 'bridge'}}},
+            settings: {AgentHolderSpec: {HostConfig: {NetworkMode: 'bridge'}}},
             viewModel: {NetworkMode: 'bridge'}
         },
         {
-            settings: {Container: {HostConfig: {NetworkMode: 'host'}}},
+            settings: {AgentHolderSpec: {HostConfig: {NetworkMode: 'host'}}},
             viewModel: {NetworkMode: 'host'}
         },
         {
-            settings: {Container: {HostConfig: {NetworkMode: 'none'}}},
+            settings: {AgentHolderSpec: {HostConfig: {NetworkMode: 'none'}}},
             viewModel: {NetworkMode: 'none'}
         },
         {
-            settings: {Container: {HostConfig: {NetworkMode: 'container:container_name'}}},
+            settings: {AgentHolderSpec: {HostConfig: {NetworkMode: 'container:container_name'}}},
             viewModel: {NetworkMode: 'container', NetworkContainer: 'container_name'}
         },
         {
-            settings: {Container: {HostConfig: {NetworkMode: 'my_custom_net'}}},
+            settings: {AgentHolderSpec: {HostConfig: {NetworkMode: 'my_custom_net'}}},
             viewModel: {NetworkMode: 'custom', NetworkCustom: 'my_custom_net'}
         }]
     },
     {
         name: 'should handle Devices', fixtures: [{
         settings: {
-            Container: {
+            AgentHolderSpec: {
                 HostConfig: {
                     Devices: [
                         {PathOnHost: '/dev/sda1', PathInContainer: '/dev/sdb1', CgroupPermissions: 'rwm'},
@@ -514,7 +534,7 @@ let settingsConverterFixtures = [
     {
         name: 'should handle Ulimits', fixtures: [{
         settings: {
-            Container: {
+            AgentHolderSpec: {
                 HostConfig: {
                     Devices: [
                         {Name: 'nofile', Soft: '123', Hard: '456'},
@@ -534,12 +554,12 @@ let settingsConverterFixtures = [
         name: 'should handle LogType',
         fixtures: [
             {
-                settings: {Container: {HostConfig: {LogConfig: {Type: 'none'}}}},
+                settings: {AgentHolderSpec: {HostConfig: {LogConfig: {Type: 'none'}}}},
                 viewModel: {LogType: 'none'}
             },
             {
                 settings: {
-                    Container: {
+                    AgentHolderSpec: {
                         HostConfig: {
                             LogConfig: {
                                 Type: 'json-file',
@@ -560,7 +580,7 @@ let settingsConverterFixtures = [
     {
         name: 'should handle SecurityOpt', fixtures: [{
         settings: {
-            Container: {
+            AgentHolderSpec: {
                 HostConfig:{
                     SecurityOpt: ['label 1', 'label 2', 'label 3']
                 }
@@ -572,7 +592,7 @@ let settingsConverterFixtures = [
     {
         name: 'should handle StorageOpt', fixtures: [{
         settings: {
-            Container: {
+            AgentHolderSpec: {
                 HostConfig:{
                     StorageOpt: {key1: 'value1', key2: 'value2'}
                 }
@@ -583,7 +603,7 @@ let settingsConverterFixtures = [
     },
     {
         name: 'should handle CgroupParent', fixtures: [{
-        settings: {Container: {HostConfig: {CgroupParent: '/docker'}}},
+        settings: {AgentHolderSpec: {HostConfig: {CgroupParent: '/docker'}}},
         viewModel: {CgroupParent: '/docker'}
     }]
     }
@@ -637,437 +657,205 @@ describe('Converting settings to view model', function () {
 });
 
 describe('Validators', function() {
-
+    let v;
     let schema;
     let validationHandler;
-    let tableHelper;
-
-    const emptyTemplates = {
-        deleteCell: '',
-        settingsCell: '<span></span></a>',
-        insertAddButton: function() {}
-    };
 
     beforeEach(function() {
-        $j('body').load('base/static/image-settings.html');
-
         schema = new Schema();
+
+        $j('body').html(schema.html);
+
         validationHandler = new ValidationHandler(schema.validators);
-        tableHelper = new TableHelper(emptyTemplates, schema.arrayTemplates);
+        v = new ValidatorTester(validationHandler, schema.arrayTemplates);
     });
 
-    let Table = function(id) {
-        this.addRow = function() {
-            let $tbody = $j('#dockerCloudImage_' + id);
-            tableHelper.addTableRow($tbody);
-            return new Row($j.data($tbody.get(0), "index"), id);
-        }
-    };
-
-    let Row = function(index, eltId) {
-        this.singleField = function() {
-            return { $elt: $j('#dockerCloudImage_' + eltId + '_' + index), eltId: eltId + '_IDX' };
-        };
-        this.field = function(name){
-            return { $elt: $j('#dockerCloudImage_' + eltId + '_' + index + '_' + name),
-                eltId: eltId + '_IDX_' + name };
-        };
-    };
-
-    let loadElt = function(id) {
-        let effectiveId = 'dockerCloudImage_' + id;
-        let $elt = $j('#' + effectiveId);
-        expect($elt.length).toEqual(1);
-        return { $elt: $elt, eltId: id }
-    };
-
-    let verifyOk = function(eltHandle, value, context) {
-        context = context || {};
-        eltHandle.$elt.val(value);
-        let result = validationHandler.validate(eltHandle.$elt, eltHandle.eltId, context);
-        expect(result).toEqual({ error: null, warnings: [] });
-    };
-
-    let verifySingleWarn = function(eltHandle, value, context) {
-        eltHandle.$elt.val(value);
-        let result = validationHandler.validate(eltHandle.$elt, eltHandle.eltId, context);
-        expect(result.error).toEqual(null);
-        expect(result.warnings.length).toEqual(1);
-    };
-
-    let verifyFailure = function(eltHandle, value, context) {
-        context = context || {};
-        eltHandle.$elt.val(value);
-        let result = validationHandler.validate(eltHandle.$elt, eltHandle.eltId, context);
-        expect(result.error).not.toEqual(null);
-    };
-
-    let verifyMandatory = function(eltHandle, context) {
-        verifyAutoTrim(eltHandle, context);
-        verifyFailure(eltHandle, '', context);
-        verifyFailure(eltHandle, '  ', context);
-        verifyFailure(eltHandle, '\t', context);
-    };
-
-    let verifyMinApi1_25 = function(eltHandle, value) {
-        verifyOk(eltHandle, '');
-
-        verifyOk(eltHandle, value);
-
-        let context = {};
-
-        context.effectiveApiVersion = '1.25';
-        verifyOk(eltHandle, value, context);
-
-        context.effectiveApiVersion = '1.26';
-        verifyOk(eltHandle, value, context);
-
-        context.effectiveApiVersion = '1.24';
-        verifySingleWarn(eltHandle, value, context);
-    };
-
-    let verifyNoWindows = function(eltHandle, value) {
-
-        let context = {};
-
-        let checkbox = eltHandle.$elt.is(':checkbox');
-        if (checkbox) {
-            eltHandle.$elt.prop('checked', false);
-            verifyOk(eltHandle, undefined, context);
-        } else {
-            verifyOk(eltHandle, '', context);
-        }
-
-        if (checkbox) {
-            eltHandle.$elt.prop('checked', true);
-            verifyOk(eltHandle, undefined, context);
-        } else {
-            verifyOk(eltHandle, value, context);
-        }
-
-        context.daemonOs = 'windows';
-
-        if (checkbox) {
-            eltHandle.$elt.prop('checked', true);
-            verifySingleWarn(eltHandle, undefined, context);
-        } else {
-            verifySingleWarn(eltHandle, value, context);
-        }
-    };
-
-    let verifyAutoTrim = function(eltHandle, context) {
-        context = context || {};
-        validationHandler.validate(eltHandle.$elt.val('  '), eltHandle.eltId, context);
-        expect(eltHandle.$elt.val()).toEqual('');
-        validationHandler.validate(eltHandle.$elt.val('\t'), eltHandle.eltId, context);
-        expect(eltHandle.$elt.val()).toEqual('');
-        validationHandler.validate(eltHandle.$elt.val(' abc\t'), eltHandle.eltId, context);
-        expect(eltHandle.$elt.val()).toEqual('abc');
-    };
-
-    let verifyPortNumber = function(eltHandle) {
-        verifyInteger(eltHandle, 1, 65535);
-    };
-
-    let verifyInteger = function(eltHandle, lowerBound, upperBound) {
-        if (typeof lowerBound === 'undefined') {
-            lowerBound = 0;
-        }
-        let upperBoundTestValue;
-        if (typeof upperBound === 'undefined') {
-            upperBound = 9000000000000000000;
-            upperBoundTestValue = 9100000000000000000;
-        } else {
-            upperBoundTestValue = upperBound + 1;
-        }
-        verifyAutoTrim(eltHandle);
-
-        // Lower bound
-        verifyFailure(eltHandle, lowerBound - 1);
-        verifyOk(eltHandle, lowerBound);
-
-        // Upper bound
-        verifyOk(eltHandle, upperBound);
-        verifyFailure(eltHandle, upperBoundTestValue);
-
-        // Strict parsing.
-        verifyFailure(eltHandle, '1.0');
-        verifyFailure(eltHandle, '1a');
-        verifyFailure(eltHandle, 'a1');
-
-        // Trim leading zeroes
-        validationHandler.validate(eltHandle.$elt.val(0), eltHandle.eltId, {});
-        expect(eltHandle.$elt.val()).toEqual('0');
-        validationHandler.validate(eltHandle.$elt.val('00'), eltHandle.eltId, {});
-        expect(eltHandle.$elt.val()).toEqual('0');
-        validationHandler.validate(eltHandle.$elt.val('0042'), eltHandle.eltId, {});
-        expect(eltHandle.$elt.val()).toEqual('42');
-    };
-
-    let verifyIPAddress = function(eltHandle) {
-        verifyAutoTrim(eltHandle);
-        verifyOk(eltHandle, '127.0.0.1');
-        verifyOk(eltHandle, '0000:0000:0000:0000:0000:0000:0000:0001');
-        verifyOk(eltHandle, 'aced::a11:7e57');
-        verifyOk(eltHandle, '::1');
-        verifyFailure(eltHandle, 'hostname');
-    };
-
-    let verifyCpuSet = function(eltHandle) {
-        verifyAutoTrim(eltHandle);
-        verifyOk(eltHandle, '');
-        verifyOk(eltHandle, '0,1,2');
-        verifyOk(eltHandle, '0-1');
-        verifyOk(eltHandle, '0-1,2-3,4-5');
-        verifyFailure(eltHandle, '0-1, 2-3,4-5');
-        verifyFailure(eltHandle, '-1');
-        verifyFailure(eltHandle, '0-a');
-        verifyNoWindows(eltHandle, 0);
-    };
-
     it('should perform profile name validation', function() {
-        // New profile
-
-        let imagesData = {};
-        let context = {
-          getImagesData: function() {
-              return imagesData;
-          }
-        };
-
-        let eltHandle = loadElt('Profile');
-        verifyOk(eltHandle, 'profile_name', context);
-
-        verifyMandatory(eltHandle, context);
-
-        // Invalid chars.
-        verifyFailure(eltHandle, 'profile name', context);
-        verifyFailure(eltHandle, 'profile%name', context);
-        verifyFailure(eltHandle, 'profilé_name', context);
-
-        // Existing profile.
-        context.profile = 'profile_name';
-        imagesData['profile_name'] = {};
-
-        verifyOk(eltHandle, 'profile_name', context);
-
-        // Duplicated profile name.
-        context.profile = 'profile_name2';
-        imagesData['profile_name2'] = {};
-
-        verifyFailure(eltHandle, 'profile_name', context);
+        v.verifyProfile(v.loadElt('Profile'));
     });
 
     it('should perform official agent image checkbox validation', function() {
-        verifyNoWindows(loadElt('UseOfficialTCAgentImage'));
+        v.verifyUseOfficialTCAgentImage(v.loadElt('UseOfficialTCAgentImage'));
     });
 
     it('should perform image name validation', function() {
-        let eltHandle = loadElt('Image');
-
-        verifyOk(eltHandle, 'image:1.0');
-        verifyMandatory(eltHandle);
+        v.verifyImage(v.loadElt('Image'));
     });
 
     it('should perform max instance count validation', function() {
-        let eltHandle = loadElt('MaxInstanceCount');
-
-        verifyInteger(eltHandle, 1);
+        v.verifyMaxInstanceCount(v.loadElt('MaxInstanceCount'));
     });
 
     it('should perform registry user and password validation', function() {
-        let userEltHandle = loadElt('RegistryUser');
-        let pwdEltHandle = loadElt('RegistryPassword');
-
-        verifyAutoTrim(userEltHandle);
-
-        // Both user and password must be specified or none.
-        verifyOk(userEltHandle, '');
-        verifyOk(pwdEltHandle, '');
-
-        verifyOk(userEltHandle, 'user');
-        verifyFailure(pwdEltHandle, '');
-
-        verifyOk(pwdEltHandle, 'pwd');
-        verifyFailure(userEltHandle, '');
-
-        // Whitespaces are preserved.
-        verifyOk(pwdEltHandle, ' ');
-        expect(pwdEltHandle.$elt.val()).toEqual(' ');
+        v.verifyRegistryUserAndPassword(v.loadElt('RegistryUser'),
+            v.loadElt('RegistryPassword'))
     });
 
     it('should perform stop timeout validation', function() {
-        let eltHandle = loadElt('StopTimeout');
+        let eltHandle = v.loadElt('StopTimeout');
 
-        verifyInteger(eltHandle);
-        verifyMinApi1_25(eltHandle, '2');
+        v.verifyInteger(eltHandle);
+        v.verifyMinApi1_25(eltHandle, '2');
     });
 
     it('should perform entrypoint validation', function() {
-        let table = new Table('Entrypoint');
+        let table = new v.Table('Entrypoint');
         let eltHandle = table.addRow().singleField();
         // First entry is mandatory.
-        verifyMandatory(eltHandle);
-        verifyOk(eltHandle, '/usr/bin');
+        v.verifyMandatory(eltHandle);
+        v.verifyOk(eltHandle, '/usr/bin');
         eltHandle = table.addRow().singleField();
         // Subsequent entries are optional.
-        verifyOk(eltHandle, '');
+        v.verifyOk(eltHandle, '');
     });
 
     it('should perform volumes validation', function() {
-        let tableRow = new Table('Volumes').addRow();
-        verifyMandatory(tableRow.field('PathInContainer'));
-        verifyOk(tableRow.field('PathOnHost'), '');
+        let tableRow = new v.Table('Volumes').addRow();
+        v.verifyMandatory(tableRow.field('PathInContainer'));
+        v.verifyOk(tableRow.field('PathOnHost'), '');
     });
 
     it('should perform port binding validation', function() {
-        let tableRow = new Table('Ports').addRow();
+        let tableRow = new v.Table('Ports').addRow();
         let containerPort = tableRow.field('ContainerPort');
-        verifyPortNumber(containerPort);
-        verifyMandatory(containerPort);
-        verifyPortNumber(tableRow.field('HostPort'));
-        verifyIPAddress(tableRow.field('HostIp'));
+        v.verifyPortNumber(containerPort);
+        v.verifyMandatory(containerPort);
+        v.verifyPortNumber(tableRow.field('HostPort'));
+        v.verifyIPAddress(tableRow.field('HostIp'));
     });
 
     it('should perform DNS validation', function() {
-        verifyMandatory(new Table('Dns').addRow().singleField());
+        v.verifyMandatory(new v.Table('Dns').addRow().singleField());
     });
 
     it('should perform search DNS validation', function() {
-        verifyMandatory(new Table('DnsSearch').addRow().singleField());
+        v.verifyMandatory(new v.Table('DnsSearch').addRow().singleField());
     });
 
     it('should perform extra hosts validation', function() {
-        let tableRow = new Table('ExtraHosts').addRow();
-        verifyMandatory(tableRow.field('Name'));
+        let tableRow = new v.Table('ExtraHosts').addRow();
+        v.verifyMandatory(tableRow.field('Name'));
         let ip = tableRow.field('Ip');
-        verifyMandatory(ip);
-        verifyIPAddress(ip);
+        v.verifyMandatory(ip);
+        v.verifyIPAddress(ip);
     });
 
     it('should perform custom network validation', function() {
-        verifyMandatory(loadElt('NetworkCustom'));
+        v.verifyMandatory(v.loadElt('NetworkCustom'));
     });
 
     it('should perform container network validation', function() {
-        verifyMandatory(loadElt('NetworkContainer'));
+        v.verifyMandatory(v.loadElt('NetworkContainer'));
     });
 
     it('should perform network links validation', function() {
-        let tableRow = new Table('Links').addRow();
-        verifyMandatory(tableRow.field('Container'));
-        verifyMandatory(tableRow.field('Alias'));
+        let tableRow = new v.Table('Links').addRow();
+        v.verifyMandatory(tableRow.field('Container'));
+        v.verifyMandatory(tableRow.field('Alias'));
     });
 
     it('should perform ulimits validation', function() {
-        let tableRow = new Table('Ulimits').addRow();
-        verifyMandatory(tableRow.field('Name'));
+        let tableRow = new v.Table('Ulimits').addRow();
+        v.verifyMandatory(tableRow.field('Name'));
         let softLimit = tableRow.field('Soft');
-        verifyMandatory(softLimit);
-        verifyInteger(softLimit);
+        v.verifyMandatory(softLimit);
+        v.verifyInteger(softLimit);
         let hardLimit = tableRow.field('Hard');
-        verifyMandatory(hardLimit);
-        verifyInteger(hardLimit);
+        v.verifyMandatory(hardLimit);
+        v.verifyInteger(hardLimit);
     });
 
     it('should perform logging configuration validation', function() {
-        let tableRow = new Table('LogConfig').addRow();
-        verifyMandatory(tableRow.field('Key'));
-        verifyOk(tableRow.field('Value'), '');
+        let tableRow = new v.Table('LogConfig').addRow();
+        v.verifyMandatory(tableRow.field('Key'));
+        v.verifyOk(tableRow.field('Value'), '');
     });
 
     it('should perform security options validation', function() {
-        verifyMandatory(new Table('SecurityOpt').addRow().singleField());
+        v.verifyMandatory(new v.Table('SecurityOpt').addRow().singleField());
     });
 
     it('should perform storage options validation', function() {
-        let tableRow = new Table('StorageOpt').addRow();
-        verifyMandatory(tableRow.field('Key'));
-        verifyOk(tableRow.field('Value'), '');
+        let tableRow = new v.Table('StorageOpt').addRow();
+        v.verifyMandatory(tableRow.field('Key'));
+        v.verifyOk(tableRow.field('Value'), '');
     });
 
     it('should perform devices validation', function() {
-        let tableRow = new Table('Devices').addRow();
-        verifyMandatory(tableRow.field('PathOnHost'));
-        verifyMandatory(tableRow.field('PathInContainer'));
-        verifyOk(tableRow.field('CgroupPermissions'));
+        let tableRow = new v.Table('Devices').addRow();
+        v.verifyMandatory(tableRow.field('PathOnHost'));
+        v.verifyMandatory(tableRow.field('PathInContainer'));
+        v.verifyOk(tableRow.field('CgroupPermissions'));
     });
 
     it('should perform env variables validation', function() {
-        let tableRow = new Table('Env').addRow();
-        verifyMandatory(tableRow.field('Name'));
-        verifyOk(tableRow.field('Value'));
+        let tableRow = new v.Table('Env').addRow();
+        v.verifyMandatory(tableRow.field('Name'));
+        v.verifyOk(tableRow.field('Value'));
     });
 
     it('should perform labels validation', function() {
-        let tableRow = new Table('Labels').addRow();
-        verifyMandatory(tableRow.field('Key'));
-        verifyOk(tableRow.field('Value'));
+        let tableRow = new v.Table('Labels').addRow();
+        v.verifyMandatory(tableRow.field('Key'));
+        v.verifyOk(tableRow.field('Value'));
     });
 
     it('should perform memory validation', function() {
-        let eltHandle = loadElt('Memory');
-        // Test 4MiB limit
-        const $memoryUnit = Utils.getElt('MemoryUnit').val('bytes');
-        verifyInteger(eltHandle, 4194304);
-        $memoryUnit.val('KiB');
-        verifyInteger(eltHandle, 4096);
-        $memoryUnit.val('MiB');
-        verifyInteger(eltHandle, 4);
+        v.verifyMemory(v.loadElt('Memory'), Utils.getElt('MemoryUnit'))
     });
 
     it('should perform cpus count validation', function() {
-        let eltHandle = loadElt('CPUs');
-        verifyOk(eltHandle, '');
-        verifyFailure(eltHandle, -1);
-        verifyOk(eltHandle, 0);
+        let eltHandle = v.loadElt('CPUs');
+        v.verifyOk(eltHandle, '');
+        v.verifyFailure(eltHandle, -1);
+        v.verifyOk(eltHandle, 0);
         expect(eltHandle.$elt.val()).toEqual('0');
-        verifyOk(eltHandle, '0.0');
+        v.verifyOk(eltHandle, '0.0');
         expect(eltHandle.$elt.val()).toEqual('0.0');
-        verifyOk(eltHandle, '00.0');
+        v.verifyOk(eltHandle, '00.0');
         expect(eltHandle.$elt.val()).toEqual('0.0');
-        verifyOk(eltHandle, 1.1234);
+        v.verifyOk(eltHandle, 1.1234);
         expect(eltHandle.$elt.val()).toEqual('1.1234');
-        verifyOk(eltHandle, '0001.1234');
+        v.verifyOk(eltHandle, '0001.1234');
         expect(eltHandle.$elt.val()).toEqual('1.1234');
 
         // Upper bound
-        verifyOk(eltHandle, 9000000000);
-        verifyFailure(eltHandle, 9100000000);
+        v.verifyOk(eltHandle, 9000000000);
+        v.verifyFailure(eltHandle, 9100000000);
         // Max value precision.
-        verifyOk(eltHandle, 1.900000001);
-        verifyFailure(eltHandle, 1.9000000001);
-        verifyMinApi1_25(eltHandle, 0);
+        v.verifyOk(eltHandle, 1.900000001);
+        v.verifyFailure(eltHandle, 1.9000000001);
+        v.verifyMinApi1_25(eltHandle, 0);
     });
 
     it('should perform CPU quota validation', function() {
-        let eltHandle = loadElt('CpuQuota');
-        verifyInteger(eltHandle, 1000);
-        verifyOk(eltHandle, '');
+        let eltHandle = v.loadElt('CpuQuota');
+        v.verifyInteger(eltHandle, 1000);
+        v.verifyOk(eltHandle, '');
     });
 
     it ('should perform cpuset-cpus validation', function () {
-        verifyCpuSet(loadElt('CpusetCpus'));
+        v.verifyCpuSet(v.loadElt('CpusetCpus'));
     });
 
     it('should perform cpuset-mems validation', function() {
-        verifyCpuSet(loadElt('CpusetMems'));
+        v.verifyCpuSet(v.loadElt('CpusetMems'));
     });
 
     it('should perform CPU shares validation', function() {
-        verifyInteger(loadElt('CpuShares'));
+        v.verifyInteger(v.loadElt('CpuShares'));
     });
 
     it('should perform CPU period validation', function() {
-        let eltHandle = loadElt('CpuPeriod');
-        verifyInteger(eltHandle, 1000, 1000000);
-        verifyNoWindows(eltHandle, 1000);
+        let eltHandle = v.loadElt('CpuPeriod');
+        v.verifyInteger(eltHandle, 1000, 1000000);
+        v.verifyNoWindows(eltHandle, 1000);
     });
 
     it('should perform Blkio-weight validation', function() {
-        let eltHandle = loadElt('BlkioWeight');
-        verifyInteger(eltHandle, 10, 1000);
-        verifyNoWindows(eltHandle, 10);
+        let eltHandle = v.loadElt('BlkioWeight');
+        v.verifyInteger(eltHandle, 10, 1000);
+        v.verifyNoWindows(eltHandle, 10);
     });
 
     it('should perform swap validation', function() {
@@ -1077,38 +865,38 @@ describe('Validators', function() {
         const $memoryUnit = Utils.getElt('MemoryUnit').val('bytes');
         const $memory = Utils.getElt('Memory');
 
-        let eltHandle = loadElt('MemorySwap');
+        let eltHandle = v.loadElt('MemorySwap');
 
         // Swap without memory is illegal.
-        verifyOk(eltHandle, '');
-        verifyFailure(eltHandle, 1);
+        v.verifyOk(eltHandle, '');
+        v.verifyFailure(eltHandle, 1);
 
         // Swap must be greater or equal than memory.
         $memory.val(100);
-        verifyFailure(eltHandle, 100);
-        verifyOk(eltHandle, 101);
+        v.verifyFailure(eltHandle, 100);
+        v.verifyOk(eltHandle, 101);
 
         $swapUnlimited.prop('checked', true);
         // Skip validation if swap unlimited.
-        verifyOk(eltHandle, 100);
+        v.verifyOk(eltHandle, 100);
         $swapUnlimited.prop('checked', false);
 
         // Cross units comparison
         $memoryUnit.val('MiB');
         $memory.val(1);
         $swapUnit.val('KiB');
-        verifyFailure(eltHandle, 1024);
-        verifyOk(eltHandle, 1025);
+        v.verifyFailure(eltHandle, 1024);
+        v.verifyOk(eltHandle, 1025);
 
-        verifyNoWindows(eltHandle, 99999999);
+        v.verifyNoWindows(eltHandle, 99999999);
     });
 
     it('should perform CgroupParent validation', function() {
-        verifyNoWindows(loadElt('CgroupParent'), 'system.slice');
+        v.verifyNoWindows(v.loadElt('CgroupParent'), 'system.slice');
     });
 
     it('should perform disabled OOM-killer validation', function() {
-        verifyNoWindows(loadElt('OomKillDisable'));
+        v.verifyNoWindows(v.loadElt('OomKillDisable'));
     });
 });
 
@@ -1117,9 +905,9 @@ describe('initializeSettings', function() {
     let schema;
 
     beforeEach(function() {
-        $j('body').load('base/static/image-settings.html');
-
         schema = new Schema();
+
+        $j('body').html(schema.html);
     });
 
     it('should convert to view model and backward', function() {

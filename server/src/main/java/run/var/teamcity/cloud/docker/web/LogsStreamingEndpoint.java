@@ -3,8 +3,9 @@ package run.var.teamcity.cloud.docker.web;
 
 import com.intellij.openapi.diagnostic.Logger;
 import run.var.teamcity.cloud.docker.DockerClientFacade;
-import run.var.teamcity.cloud.docker.DockerClientFacadeFactory;
+import run.var.teamcity.cloud.docker.DockerCloudSupport;
 import run.var.teamcity.cloud.docker.StreamHandler;
+import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.StdioInputStream;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.NamedThreadFactory;
@@ -16,6 +17,7 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -46,11 +48,9 @@ public class LogsStreamingEndpoint {
             return;
         }
 
-        String testUuidStr = null;
-        List<String> params = session.getRequestParameterMap().get("testUuid");
-        if (params != null && !params.isEmpty()) {
-            testUuidStr = params.get(0);
-        }
+        Map<String, List<String>> params = session.getRequestParameterMap();
+
+        String testUuidStr = getParam(params, "testUuid");
 
         if (testUuidStr == null) {
             session.close(new CloseReason(VIOLATED_POLICY, "Missing test UUID parameter."));
@@ -83,6 +83,14 @@ public class LogsStreamingEndpoint {
         executorService.submit(logsWorker);
     }
 
+    private String getParam(Map<String, List<String>> params, String name) {
+        List<String> paramList = params.get(name);
+        if (paramList != null && !paramList.isEmpty()) {
+            return paramList.get(0);
+        }
+        return null;
+    }
+
     @OnClose
     public void close(Session session) {
         try {
@@ -110,9 +118,13 @@ public class LogsStreamingEndpoint {
         @Override
         public void run() {
             assert containerTestReference.getContainerId().isPresent();
-            try (DockerClientFacade client = DockerClientFacadeFactory.getDefault()
-                    .createFacade(containerTestReference.getClientConfig(), DockerClientFacadeFactory.Type.CONTAINER)) {
-                try (StreamHandler streamHandler = client.streamLogs(containerTestReference.getContainerId().get())) {
+
+            String containerId = containerTestReference.getContainerId().get();
+            DockerCloudSupport cloudSupport = containerTestReference.getCloudSupport();
+            DockerClientConfig clientConfig = containerTestReference.getClientConfig();
+
+            try (DockerClientFacade client = cloudSupport.createClientFacade(clientConfig)) {
+                try (StreamHandler streamHandler = client.streamLogs(containerId)) {
                     this.streamHandler = streamHandler;
 
                     while (true) {

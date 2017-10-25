@@ -33,6 +33,7 @@ describe('validateHandler', function() {
         const OO = { extend: _ => { return { afterClose: NOOP } } };
 
         controller = new Controller(BS, OO, tabbedPane, {}, {
+            tabs: [],
             validators: validators
         });
         emptyValidation = {

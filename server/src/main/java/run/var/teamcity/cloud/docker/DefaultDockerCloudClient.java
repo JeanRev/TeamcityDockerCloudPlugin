@@ -50,6 +50,11 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     private final Logger LOG = DockerCloudUtils.getLogger(DefaultDockerCloudClient.class);
 
     /**
+     * Type of this cloud client.
+     */
+    private final DockerCloudSupport cloudType;
+
+    /**
      * Client UUID.
      */
     private final UUID uuid;
@@ -114,7 +119,6 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     private final SBuildServer buildServer;
     private final BuildAgentManager agentMgr;
 
-    private final DockerClientFacadeFactory dockerClientFactory;
     private final DockerClientConfig dockerClientConfig;
 
     /**
@@ -136,7 +140,6 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     private final BuildServerListener buildServerListener;
 
     DefaultDockerCloudClient(@Nonnull DockerCloudClientConfig clientConfig,
-                             @Nonnull final DockerClientFacadeFactory clientFacadeFactory,
                              @Nonnull final List<DockerImageConfig> imageConfigs,
                              @Nonnull final DockerImageNameResolver resolver,
                              @Nonnull CloudState cloudState,
@@ -150,6 +153,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         if (imageConfigs.isEmpty()) {
             throw new IllegalArgumentException("At least one image must be provided.");
         }
+        this.cloudType = clientConfig.getCloudSupport();
         this.uuid = clientConfig.getUuid();
         this.resolver = resolver;
         this.cloudState = cloudState;
@@ -195,7 +199,6 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         }
         LOG.info(images.size() + " image definitions loaded: " + images);
 
-        this.dockerClientFactory = clientFacadeFactory;
         this.dockerClientConfig = clientConfig.getDockerClientConfig();
 
         // Register our agent name generator.
@@ -669,7 +672,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
             // Creates the Docker client upon first sync. We do this here to benefit from the retry mechanism if
             // the API negotiation fails.
             if (clientFacade == null) {
-                clientFacade = dockerClientFactory.createFacade(dockerClientConfig, DockerClientFacadeFactory.Type.CONTAINER);
+                clientFacade = cloudType.createClientFacade(dockerClientConfig);
                 LOG.info("Docker client instantiated.");
             }
 

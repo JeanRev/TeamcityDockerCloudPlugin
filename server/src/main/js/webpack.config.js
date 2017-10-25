@@ -1,10 +1,13 @@
 const path = require('path');
 
 module.exports = {
-    entry: 'DockerCloud',
+    entry: {
+        vanilla: 'DockerCloud',
+        swarm: 'DockerCloudSwarm'
+    },
     output: {
         path: __dirname + "/dist",
-        filename: 'docker-cloud.js',
+        filename: 'docker-cloud-[name].js',
         library: 'DockerCloud',
     },
     devtool: 'source-map',
@@ -33,6 +36,15 @@ module.exports = {
                                 "presets": ["minify"]
                             }
                         }
+                    }
+                }
+            },
+            {
+                test: /\.html$/,
+                use: {
+                    loader: 'html-loader',
+                    options: {
+                        minimize: true
                     }
                 }
             }

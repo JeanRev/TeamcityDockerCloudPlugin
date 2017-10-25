@@ -6,13 +6,14 @@ import org.junit.Test;
 import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -28,18 +29,18 @@ public class DockerImageConfigTest {
         DockerImageConfig config = new DockerImageConfig("test", Node.EMPTY_OBJECT,  true,false, false, DockerRegistryCredentials.ANONYMOUS, 42, 111);
 
         assertThat(config.getProfileName()).isEqualTo("test");
-        assertThat(config.getContainerSpec()).isSameAs(Node.EMPTY_OBJECT);
+        assertThat(config.getAgentHolderSpec()).isSameAs(Node.EMPTY_OBJECT);
         assertThat(config.isPullOnCreate()).isTrue();
         assertThat(config.isRmOnExit()).isFalse();
         assertThat(config.isUseOfficialTCAgentImage()).isFalse();
         assertThat(config.getMaxInstanceCount()).isEqualTo(42);
-        assertThat(config.getAgentPoolId()).isEqualTo(111);
+        assertThat(config.getAgentPoolId()).isEqualTo(Optional.of(111));
 
         config = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, true, false, DockerRegistryCredentials.ANONYMOUS, 42, null);
         assertThat(config.isPullOnCreate()).isFalse();
         assertThat(config.isRmOnExit()).isTrue();
         assertThat(config.isUseOfficialTCAgentImage()).isFalse();
-        assertThat(config.getAgentPoolId()).isNull();
+        assertThat(config.getAgentPoolId()).isEmpty();
 
         config = new DockerImageConfig("test", Node.EMPTY_OBJECT, false, false, true, DockerRegistryCredentials.ANONYMOUS, 42, null);
         assertThat(config.isPullOnCreate()).isFalse();
@@ -72,105 +73,82 @@ public class DockerImageConfigTest {
     public void fromValidConfigMap() {
         Map<String, String> params = new HashMap<>();
 
-        EditableNode imagesNode = Node.EMPTY_ARRAY.editNode();
-
-        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
-
         CloudImageParameters imageParameters = new CloudImageParameters();
         imageParameters.setParameter(CloudImageParameters.SOURCE_ID_FIELD, "TestProfile");
         imageParameters.setParameter(CloudImageParameters.AGENT_POOL_ID_FIELD, "42");
 
-        EditableNode imageNode = imagesNode.addObject();
-        imageNode.getOrCreateObject("Administration").
-                put("Version", 42).
-                put("Profile", "TestProfile").
-                put("RmOnExit", true).
-                put("MaxInstanceCount", 2).
-                put("UseOfficialTCAgentImage", false);
+        Collection<CloudImageParameters> cloudImageParameters = Collections.singleton(imageParameters);
 
-        imageNode.getOrCreateObject("Container").put("Image", "test-image");
-
-        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
         params.put(CloudImageParameters.SOURCE_IMAGES_JSON,
-                CloudImageParameters.collectionToJson(Collections.singleton(imageParameters)));
+                CloudImageParameters.collectionToJson(cloudImageParameters));
 
-        List<DockerImageConfig> images = DockerImageConfig.processParams(params);
+        DockerImageConfig imageConfig = DockerImageConfigBuilder.
+                newBuilder("TestProfile", Node.EMPTY_OBJECT).
+                build();
 
-        assertThat(images).hasSize(1);
+        TestDockerImageConfigParser imageParser = new TestDockerImageConfigParser();
+        imageParser.addConfig(imageConfig);
 
-        DockerImageConfig imageConfig = images.get(0);
-        assertThat(imageConfig.getProfileName()).isEqualTo("TestProfile");
-        assertThat(imageConfig.getAgentPoolId()).isEqualTo(42);
-        assertThat(imageConfig.isUseOfficialTCAgentImage()).isFalse();
-        assertThat(imageConfig.isPullOnCreate()).isTrue(); // Default value
+        params.put(DockerCloudUtils.IMAGES_PARAM, imageParser.getImagesParams().toString());
 
-        imageNode = imagesNode.addObject();
-        imageNode.getOrCreateObject("Administration").
-                put("Version", 42).
-                put("Profile", "TestProfile2").
-                put("RmOnExit", true).
-                put("MaxInstanceCount", 2).
-                put("UseOfficialTCAgentImage", true).
-                put("PullOnCreate", false);
+        List<DockerImageConfig> images = DockerImageConfig.processParams(imageParser, params);
+        assertThat(images).containsExactly(imageConfig);
 
-        imageNode.getOrCreateObject("Container").put("Image", "test-image");
-
-        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
-
-        images = DockerImageConfig.processParams(params);
-        assertThat(images).hasSize(2);
-
-        imageConfig = images.get(1);
-        assertThat(imageConfig.getProfileName()).isEqualTo("TestProfile2");
-        assertThat(imageConfig.isUseOfficialTCAgentImage()).isTrue();
-        assertThat(imageConfig.isPullOnCreate()).isFalse();
-        assertThat(imageConfig.getAgentPoolId()).isNull();
-
+        List<Collection<CloudImageParameters>> imagesParametersList = imageParser.getImagesParametersList();
+        assertThat(imagesParametersList).hasSize(1);
+        assertThat(TestUtils.areImageParametersEqual(imagesParametersList.get(0), cloudImageParameters)).isTrue();
     }
 
     @Test
     public void duplicateProfileName() {
         Map<String, String> params = new HashMap<>();
-        EditableNode imagesNode = Node.EMPTY_ARRAY.editNode();
 
-        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(),"TestProfile1");
-        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(),"TestProfile2");
-        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
+        DockerImageConfig imageConfig1 = DockerImageConfigBuilder.
+                newBuilder("TestProfile", Node.EMPTY_OBJECT).
+                build();
+
+        DockerImageConfig imageConfig2 = DockerImageConfigBuilder.
+                newBuilder("TestProfile2", Node.EMPTY_OBJECT).
+                build();
+
+        TestDockerImageConfigParser parser = new TestDockerImageConfigParser();
+        parser.addConfig(imageConfig1).addConfig(imageConfig2);
+
+        params.put(DockerCloudUtils.IMAGES_PARAM, parser.getImagesParams().toString());
 
         // OK
-        DockerImageConfig.processParams(params);
+        DockerImageConfig.processParams(parser, params);
 
-        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(),"TestProfile2");
-        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
+        imageConfig2 = DockerImageConfigBuilder.
+                newBuilder("TestProfile", Node.EMPTY_OBJECT).
+                build();
 
-        assertInvalidProperty(params, DockerCloudUtils.IMAGES_PARAM);
+        parser = new TestDockerImageConfigParser();
+        parser.addConfig(imageConfig1).addConfig(imageConfig2);
+
+        params.put(DockerCloudUtils.IMAGES_PARAM, parser.getImagesParams().toString());
+
+        assertInvalidProperty(parser, params, DockerCloudUtils.IMAGES_PARAM);
     }
 
     @Test
     public void noImageProvided() {
         Map<String, String> params = new HashMap<>();
+        TestDockerImageConfigParser parser = new TestDockerImageConfigParser();
 
         // Empty image definition.
-        assertInvalidProperty(params, DockerCloudUtils.IMAGES_PARAM);
-
-        EditableNode imagesNode = Node.EMPTY_ARRAY.editNode();
+        assertInvalidProperty(parser, params, DockerCloudUtils.IMAGES_PARAM);
 
         // Empty image list
-        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
-
-        assertInvalidProperty(params, DockerCloudUtils.IMAGES_PARAM);
-
-        TestUtils.getSampleImageConfigSpec(imagesNode.addObject(),"TestProfile");
-
-        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
-
-        // OK
-        DockerImageConfig.processParams(params);
+        params.put(DockerCloudUtils.IMAGES_PARAM, parser.getImagesParams().toString());
+        assertInvalidProperty(parser, params, DockerCloudUtils.IMAGES_PARAM);
     }
 
 
-    private void assertInvalidProperty(Map<String, String> params, String name) {
-        Throwable throwable = catchThrowable(() -> DockerImageConfig.processParams(params));
+    private void assertInvalidProperty(TestDockerImageConfigParser parser, Map<String, String> params, String name) {
+
+        Throwable throwable = catchThrowable(() -> DockerImageConfig.processParams(parser,
+                params));
         assertThat(throwable).isInstanceOf(DockerCloudClientConfigException.class);
 
         List<InvalidProperty> invalidProperties = ((DockerCloudClientConfigException) throwable).getInvalidProperties();

@@ -1,8 +1,12 @@
 package run.var.teamcity.cloud.docker.test;
 
+import jetbrains.buildServer.clouds.CloudImageParameters;
+import run.var.teamcity.cloud.docker.TestDockerCloudSupport;
+import run.var.teamcity.cloud.docker.TestResourceBundle;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
+import run.var.teamcity.cloud.docker.util.Resources;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -14,8 +18,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -42,6 +48,11 @@ public final class TestUtils {
 
     private final static int WAIT_DEFAULT_REFRESH_RATE_MSEC = 300;
     private final static int WAIT_DEFAULT_MAX_WAIT_TIME_SEC = 20;
+    private final static Resources TEST_RESOURCES = new Resources(new TestResourceBundle());
+
+    public static Resources testResources() {
+        return TEST_RESOURCES;
+    }
 
     public static void waitSec(long sec) {
         waitMillis(TimeUnit.SECONDS.toMillis(sec));
@@ -152,10 +163,12 @@ public final class TestUtils {
         String prefix = withPrefix ? DockerCloudUtils.TC_PROPERTY_PREFIX : "";
 
         Map<String, String> params = new HashMap<>();
-        params.put(prefix + DockerCloudUtils.CLIENT_UUID, TEST_UUID.toString());
+        params.put(prefix + DockerCloudUtils.CLIENT_UUID_PARAM, TEST_UUID.toString());
         params.put(prefix + DockerCloudUtils.INSTANCE_URI, TestDockerClient.TEST_CLIENT_URI.toString());
         params.put(prefix + DockerCloudUtils.USE_TLS, "false");
         params.put(prefix + DockerCloudUtils.USE_DEFAULT_UNIX_SOCKET_PARAM, "false");
+        params.put(prefix + DockerCloudUtils.CLOUD_TYPE_PARAM, TestDockerCloudSupport.CODE);
+
         return params;
     }
 
@@ -215,6 +228,23 @@ public final class TestUtils {
 
         parent.getOrCreateObject("Container").put("Image", "test-image");
         return parent.saveNode();
+    }
+
+    public static boolean areImageParametersEqual(Collection<CloudImageParameters> params1,
+            Collection<CloudImageParameters> params2) {
+        if (params1.size() != params2.size()) {
+            return false;
+        }
+        Iterator<CloudImageParameters> itr1 = params1.iterator();
+        Iterator<CloudImageParameters> itr2 = params2.iterator();
+
+        while(itr1.hasNext()) {
+            if (!itr1.next().getParameters().equals(itr2.next().getParameters())) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     @SafeVarargs

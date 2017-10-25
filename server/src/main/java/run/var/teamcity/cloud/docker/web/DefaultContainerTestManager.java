@@ -10,7 +10,6 @@ import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.WebLinks;
 import org.springframework.beans.factory.annotation.Autowired;
 import run.var.teamcity.cloud.docker.DockerClientFacade;
-import run.var.teamcity.cloud.docker.DockerClientFacadeFactory;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.DockerImageNameResolver;
@@ -57,7 +56,6 @@ public class DefaultContainerTestManager implements ContainerTestManager {
     private final LockHandler lock = LockHandler.newReentrantLock();
     private final Map<UUID, DefaultContainerTestHandler> tests = new HashMap<>();
     private final DockerImageNameResolver imageNameResolver;
-    private final DockerClientFacadeFactory clientFacadeFactory;
     private final Duration testMaxIdleTime;
     private final Duration cleanupRate;
     private final SBuildServer buildServer;
@@ -70,25 +68,24 @@ public class DefaultContainerTestManager implements ContainerTestManager {
     @Autowired
     DefaultContainerTestManager(SBuildServer buildServer, WebLinks webLinks) {
         this(OfficialAgentImageResolver.forCurrentServer(DockerRegistryClientFactory.getDefault()),
-             DockerClientFacadeFactory.getDefault(), buildServer, webLinks, TEST_DEFAULT_IDLE_TIME,
+             buildServer, webLinks, TEST_DEFAULT_IDLE_TIME,
              CLEANUP_DEFAULT_TASK_RATE);
     }
 
 
     DefaultContainerTestManager(DockerImageNameResolver imageNameResolver,
-                                DockerClientFacadeFactory clientFacadeFactory, SBuildServer buildServer,
+                                SBuildServer buildServer,
                                 WebLinks webLinks) {
-        this(imageNameResolver, clientFacadeFactory, buildServer, webLinks, TEST_DEFAULT_IDLE_TIME,
+        this(imageNameResolver, buildServer, webLinks, TEST_DEFAULT_IDLE_TIME,
                 CLEANUP_DEFAULT_TASK_RATE);
     }
 
 
     DefaultContainerTestManager(DockerImageNameResolver imageNameResolver,
-                                DockerClientFacadeFactory clientFacadeFactory, SBuildServer buildServer, WebLinks
+                                SBuildServer buildServer, WebLinks
                                         webLinks,
                                 Duration testMaxIdleTime, Duration cleanupRate) {
         this.imageNameResolver = imageNameResolver;
-        this.clientFacadeFactory = clientFacadeFactory;
         this.testMaxIdleTime = testMaxIdleTime;
         this.cleanupRate = cleanupRate;
         this.buildServer = buildServer;
@@ -266,8 +263,7 @@ public class DefaultContainerTestManager implements ContainerTestManager {
 
     private DefaultContainerTestHandler newTestInstance(DockerCloudClientConfig clientConfig) {
         return lock.call(() -> {
-            DefaultContainerTestHandler test = DefaultContainerTestHandler.newTestInstance(clientConfig,
-                    clientFacadeFactory);
+            DefaultContainerTestHandler test = DefaultContainerTestHandler.newTestInstance(clientConfig);
 
             boolean duplicate = tests.put(test.getUuid(), test) != null;
             assert !duplicate;

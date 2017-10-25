@@ -13,6 +13,7 @@
     "babel-preset-env": "1.6.0",
     "bundle-loader": "0.5.5",
     "css-loader": "0.28.7",
+    "html-loader": "0.5.1",
     "jasmine-core": "2.8.0",
     "jquery": "2.1.1",
     "karma": "1.7.1",

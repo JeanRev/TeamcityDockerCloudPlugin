@@ -1,5 +1,6 @@
 package run.var.teamcity.cloud.docker.web;
 
+import run.var.teamcity.cloud.docker.DockerCloudSupport;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 
@@ -23,15 +24,28 @@ public class ContainerTestReference implements Serializable {
 
     private final static String CONTAINER_REF_SESSION_ATTRIBUTE = DockerCloudUtils.NS_PREFIX + "container_test_refs";
 
+    private final DockerCloudSupport cloudType;
     private final UUID testUuid;
     private final String containerId;
     private final DockerClientConfig clientConfig;
 
-    private ContainerTestReference(UUID testUuid, DockerClientConfig clientConfig, String containerId) {
-        assert testUuid != null && clientConfig != null;
+    private ContainerTestReference(DockerCloudSupport cloudType, UUID testUuid, DockerClientConfig clientConfig,
+            String containerId) {
+        assert cloudType != null && testUuid != null && clientConfig != null;
+        this.cloudType = cloudType;
         this.testUuid = testUuid;
         this.clientConfig = clientConfig;
         this.containerId = containerId;
+    }
+
+    /**
+     * Gets the cloud profile support.
+     *
+     * @return the cloud profile support.
+     */
+    @Nonnull
+    public DockerCloudSupport getCloudSupport() {
+        return cloudType;
     }
 
     /**
@@ -116,6 +130,7 @@ public class ContainerTestReference implements Serializable {
     /**
      * Creates a new test reference for the given UUID and Docker client config.
      *
+     * @param cloudType the cloud profile type
      * @param testUuid the test UUID
      * @param clientConfig the Docker client configuration
      *
@@ -124,11 +139,12 @@ public class ContainerTestReference implements Serializable {
      * @throws NullPointerException if any argument is {@code null}
      */
     @Nonnull
-    public static ContainerTestReference newTestReference(@Nonnull UUID testUuid, @Nonnull DockerClientConfig
-            clientConfig) {
+    public static ContainerTestReference newTestReference(@Nonnull DockerCloudSupport cloudType, @Nonnull UUID testUuid,
+            @Nonnull DockerClientConfig clientConfig) {
+        DockerCloudUtils.requireNonNull(cloudType, "Cloud profile type cannot be null.");
         DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
-        return new ContainerTestReference(testUuid, clientConfig, null);
+        return new ContainerTestReference(cloudType, testUuid, clientConfig, null);
     }
 
     /**
@@ -148,7 +164,7 @@ public class ContainerTestReference implements Serializable {
             throw new IllegalStateException("Cannot register container " + containerId + ". Container " +
                     this.containerId + " already registered.");
         }
-        return new ContainerTestReference(testUuid, clientConfig, containerId);
+        return new ContainerTestReference(cloudType, testUuid, clientConfig, containerId);
     }
 
     /**
