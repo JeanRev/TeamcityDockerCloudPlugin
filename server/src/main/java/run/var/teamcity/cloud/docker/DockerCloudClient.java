@@ -18,4 +18,12 @@ public interface DockerCloudClient extends DockerCloudErrorHandler, CloudClientE
      */
     @Nonnull
     UUID getUuid();
+
+    /**
+     * Gets the cloud support associated with this client.
+     *
+     * @return the cloud support
+     */
+    @Nonnull
+    DockerCloudSupport getCloudSupport();
 }

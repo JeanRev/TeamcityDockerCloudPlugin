@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker.web;
 
 import run.var.teamcity.cloud.docker.DockerClientFacade;
+import run.var.teamcity.cloud.docker.util.Resources;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 
@@ -10,9 +11,9 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * A container test task handler. Provides callback function to the test lifecycle.
+ * An agent holder test task handler. Provides callback function to the test lifecycle.
  */
-public interface ContainerTestHandler {
+public interface AgentHolderTestHandler {
 
     /**
      * Retrieves the Docker client facade instance to be used for the test.
@@ -23,20 +24,28 @@ public interface ContainerTestHandler {
     DockerClientFacade getDockerClientFacade();
 
     /**
-     * Notify the handler that the test container ID is available. This callback is not expected to be called more
-     * than once for a complete test.
+     * Gets the resources holder for statuses texts.
      *
-     * @param containerId the container test ID
+     * @return the resources holder for statuses texts.
      */
-    void notifyContainerId(@Nonnull String containerId);
+    @Nonnull
+    Resources getResources();
 
     /**
-     * Notify the handler that the test container has been started. This callback is not expected to be called more
+     * Notify the handler that the test agent holder ID is available. This callback is not expected to be called more
      * than once for a complete test.
      *
-     * @param containerStartTime the container start time
+     * @param agentHolderId the agent holder test ID
      */
-    void notifyContainerStarted(@Nonnull Instant containerStartTime);
+    void notifyAgentHolderId(@Nonnull String agentHolderId);
+
+    /**
+     * Notify the handler that the test agent holder has been started. This callback is not expected to be called more
+     * than once for a complete test.
+     *
+     * @param agentHolderStartTime the container start time
+     */
+    void notifyAgentHolderStarted(@Nonnull Instant agentHolderStartTime);
 
     /**
      * Notify the test status back to the user.

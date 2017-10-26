@@ -13,15 +13,18 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TestResourceBundle extends ResourceBundle {
 
     private Map<String, String> resourcesMap = new ConcurrentHashMap<>();
+    private final boolean ignoreMissingResources;
 
     public TestResourceBundle() {
-        ResourceBundle bundle = ResourceBundle.getBundle("run.var.teamcity.cloud.docker.testResources");
-        bundle.keySet().forEach(key -> resourcesMap.put(key, bundle.getString(key)));
+        this(false);
+    }
+    public TestResourceBundle(boolean ignoreMissingResources) {
+        this.ignoreMissingResources = ignoreMissingResources;
     }
 
     @Override
     protected Object handleGetObject(@NotNull String key) {
-        return resourcesMap.get(key);
+        return resourcesMap.getOrDefault(key, ignoreMissingResources ? key : null);
     }
 
     @NotNull
@@ -33,4 +36,6 @@ public class TestResourceBundle extends ResourceBundle {
     public Map<String, String> getResourcesMap() {
         return resourcesMap;
     }
+
+
 }

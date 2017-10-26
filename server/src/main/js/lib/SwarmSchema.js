@@ -327,10 +327,19 @@ function SwarmSchema() {
         { id: 'dockerCloudImageTab_resources', lbl: 'Resources' },
         { id: 'dockerCloudImageTab_advanced', lbl: 'Advanced' }];
 
+    const translations = {
+        'test.create.success': 'Service {0} successfully created',
+        'test.create.warning': 'Service {0} created with warnings:',
+        'test.logs': 'Service logs:',
+        'test.wait.success': 'Agent connection detected for service {0}.',
+        'test.wait.warning': 'Agent connection detected for service {0}:'
+    };
+
     this.html = $html;
     this.validators = validators;
     this.arrayTemplates = arrayTemplates;
     this.tabs = tabs;
+    this.translations = translations;
     this.cloudType = 'SWARM';
 
     function _initHandlers() {

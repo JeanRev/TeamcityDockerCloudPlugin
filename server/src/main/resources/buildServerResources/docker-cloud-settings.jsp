@@ -36,7 +36,6 @@
     BS.LoadStyleSheetDynamically("<c:url value='${pluginResPath}docker-cloud.css'/>");
     BS.LoadStyleSheetDynamically("<c:url value='${pluginResPath}xterm.css'/>");
 </script>
-    <c:url value="${pluginResPath}${resources.string('web.settings.js')}"/>
 <table class="runnerFormTable">
     <tbody>
     <tr>
@@ -149,20 +148,20 @@
     <div id="DockerCloudImageDialogContent">
     </div>
     <div class="popupSaveButtonsBlock dockerCloudBtnBlock">
-        <input type="button" class="btn" id="dockerTestImageButton" value="Test container"/>
+        <input type="button" class="btn" id="dockerTestImageButton"
+               value="${resources.text('web.settings.test.testAgentHolderBtn')}"/>
         <input type="button" class="btn btn_primary" id="dockerAddImageButton" value="Add"/>
         <input type="button" class="btn" id="dockerCancelAddImageButton" value="Cancel"/>
     </div>
 </bs:dialog>
 
-<bs:dialog dialogId="DockerTestContainerDialog" title="Test Container"
+<bs:dialog dialogId="DockerTestContainerDialog" title="${resources.text('web.settings.test.title')}"
            closeCommand="BS.Clouds.Docker.cancelTest()">
     <div>
         <p>
-            This test will create a container using the provided settings, which can then be started in order to ensure
-            that the agent is able to connect to your TeamCity instance.
+            ${resources.text('web.settings.test.instructions')}
         </p>
-        <h4 id="dockerTestContainerOutputTitle">Container live logs:</h4>
+        <h4 id="dockerTestContainerOutputTitle">${resources.text('web.settings.test.liveLogs')}</h4>
         <div id="dockerTestContainerOutput">
         </div>
         <span class="hidden" id="dockerCloudTestContainerLoader"><i class="icon-refresh icon-spin"></i>
@@ -178,9 +177,11 @@
         <p id="dockerTestExecInfo">
         </p>
         <div class="dockerCloudBtnBlock">
-            <input type="button" class="btn" id="dockerCreateImageTest" value="Create container"/>
-            <input type="button" class="btn" id="dockerStartImageTest" value="Start container"/>
-            <input type="button" class="btn" id="dockerCloudTestContainerContainerLogsBtn" value="Container logs"/>
+            <input type="button" class="btn" id="dockerCreateImageTest" value="${resources.text('web.settings.test.createAgentHolderBtn')}"/>
+            <input type="button" class="btn" id="dockerStartImageTest"
+                   value="${resources.text('web.settings.test.startAgentHolderBtn')}"/>
+            <input type="button" class="btn" id="dockerCloudTestContainerContainerLogsBtn"
+                   value="${resources.text('web.settings.test.agentHolderLogsBtn')}"/>
             <input type="button" class="btn" id="dockerCloudTestContainerCancelBtn" value="Cancel"/>
             <input type="button" class="btn" id="dockerCloudTestContainerCloseBtn" value="Close"/>
         </div>

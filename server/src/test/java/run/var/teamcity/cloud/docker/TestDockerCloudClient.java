@@ -18,6 +18,7 @@ public class TestDockerCloudClient implements DockerCloudClient {
 
     private final UUID uuid = UUID.randomUUID();
 
+    private final TestDockerCloudSupport testCloudSupport = new TestDockerCloudSupport();
     private volatile CloudErrorInfo errorInfo;
     private volatile String lastNotifiedFailureMsg;
     private volatile Throwable lastNotifiedFailure;
@@ -25,6 +26,12 @@ public class TestDockerCloudClient implements DockerCloudClient {
     @Override
     public UUID getUuid() {
         return uuid;
+    }
+
+    @Nonnull
+    @Override
+    public DockerCloudSupport getCloudSupport() {
+        return testCloudSupport;
     }
 
     @Override

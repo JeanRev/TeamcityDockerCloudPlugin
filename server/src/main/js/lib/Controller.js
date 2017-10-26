@@ -1,9 +1,10 @@
 
-const ValidationHandler = require('ValidationHandler');
-const ViewModelAccessor = require('ViewModelAccessor');
+const I18n = require('I18n');
 const Logger = require('Logger');
 const TableHelper = require('TableHelper');
 const Utils = require('Utils');
+const ValidationHandler = require('ValidationHandler');
+const ViewModelAccessor = require('ViewModelAccessor');
 
 import Clipboard from 'clipboard';
 import UAParser from 'ua-parser';
@@ -96,6 +97,7 @@ function Controller(bs, oo, tabbedPane, params, schema) {
         }
     };
 
+    const i18n = new I18n(schema.translations);
     const tableHelper = new TableHelper(templates, schema.arrayTemplates);
     const viewModelAccessor = new ViewModelAccessor(templates, schema.arrayTemplates);
     const imagesData = _loadImageData();
@@ -395,7 +397,7 @@ function Controller(bs, oo, tabbedPane, params, schema) {
             _invokeTestAction('logs', null, true)
                 .done(function(response) {
                     let logs = JSON.parse(response.responseText).logs;
-                    prepareDiagnosticDialog('Container logs:', logs);
+                    prepareDiagnosticDialog(i18n.text('test.logs'), logs);
                     $testContainerLoader.hide();
                     BS.DockerDiagnosticDialog.showCentered();
                 });
@@ -819,7 +821,7 @@ function Controller(bs, oo, tabbedPane, params, schema) {
             ' Warnings: ' + responseMap.warnings.length);
 
         if (testPhase !== responseMap.phase) {
-            logDebug('Ignoring spurious status message.');
+            Logger.logDebug('Ignoring spurious status message.');
             return;
         }
         $testContainerLabel.text(Utils.shortenString(responseMap.msg, 300));
@@ -907,16 +909,16 @@ function Controller(bs, oo, tabbedPane, params, schema) {
                 if (responseMap.phase === 'CREATE') {
                     $testContainerStartBtn.show();
                     if (hasWarning) {
-                        $testContainerLabel.text('Container ' + responseMap.containerId + ' created with warnings:');
+                        $testContainerLabel.text(i18n.text('test.create.warning', responseMap.containerId));
                     } else {
-                        $testContainerLabel.text('Container ' + responseMap.containerId + ' successfully created.');
+                        $testContainerLabel.text(i18n.text('test.create.success', responseMap.containerId));
                     }
                 } else if (responseMap.phase === 'START') {
 
                     if (hasWarning) {
-                        $testContainerLabel.text('Agent connection detected for container ' + responseMap.containerId + ':');
+                        $testContainerLabel.text(i18n.text('test.wait.warning', responseMap.containerId));
                     } else {
-                        $testContainerLabel.text('Agent connection detected for container ' + responseMap.containerId + '.');
+                        $testContainerLabel.text(i18n.text('test.wait.success', responseMap.containerId));
                     }
                 }
 

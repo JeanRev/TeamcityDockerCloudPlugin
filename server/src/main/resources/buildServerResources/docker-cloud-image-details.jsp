@@ -7,6 +7,7 @@
 <%@ page import="java.time.format.FormatStyle" %>
 <%@ page import="java.util.Locale" %>
 <%@ page import="java.util.Optional" %>
+<%@ page import="run.var.teamcity.cloud.docker.util.Resources" %>
 
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 
@@ -17,15 +18,20 @@
 </script>
 
 <div class="dockerCloudImageDetails">
-    <h4>Registered containers:</h4>
+
+    <%
+        Resources resources = image.getCloudClient().getCloudSupport().resources();
+    %>
+
+    <h4><%= resources.text("web.imageDetails.title") %></h4>
     <div style="margin: 5px 10%; width: 90%">
         <table style="width: 80%;">
             <thead>
             <tr>
-                <th style="width: 30%;">Container ID</th>
+                <th style="width: 30%;"><%= resources.text("web.imageDetails.col.agentHolderId") %></th>
                 <th style="width: 20%;">Created</th>
                 <th style="width: 20%;">State</th>
-                <th style="width: 30%;">Names</th>
+                <th style="width: 30%;">Name</th>
             </tr>
             </thead>
             <tbody>

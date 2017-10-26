@@ -15,11 +15,11 @@ import javax.annotation.Nullable;
 import java.util.UUID;
 
 /**
- * {@link ContainerTestTask} to create a test container.
+ * {@link AgentHolderTestTask} to create a test container.
  */
-class CreateContainerTestTask extends ContainerTestTask {
+class CreateAgentHolderTestTask extends AgentHolderTestTask {
 
-    private final static Logger LOG = DockerCloudUtils.getLogger(CreateContainerTestTask.class);
+    private final static Logger LOG = DockerCloudUtils.getLogger(CreateAgentHolderTestTask.class);
 
     private final DockerImageConfig imageConfig;
     private final String serverUrl;
@@ -30,15 +30,15 @@ class CreateContainerTestTask extends ContainerTestTask {
      * Creates a new task instance.
      *
      * @param testTaskHandler the test task handler
-     * @param imageConfig     the cloud image configuration to use for creating the container
+     * @param imageConfig     the cloud image configuration to use for creating the agent holder
      * @param serverUrl       the TeamCity server URL for the agent to connect
-     * @param instanceUuid    the container test instance UUID to be published (will be used to detect connection from
-     *                        the test agent latter)
+     * @param instanceUuid    the agent holder test instance UUID to be published (will be used to detect connection
+     * from the test agent)
      * @param imageResolver   resolver for agent images
      *
      * @throws NullPointerException if any argument is {@code null}
      */
-    CreateContainerTestTask(@Nonnull ContainerTestHandler testTaskHandler, @Nonnull DockerImageConfig imageConfig,
+    CreateAgentHolderTestTask(@Nonnull AgentHolderTestHandler testTaskHandler, @Nonnull DockerImageConfig imageConfig,
                             @Nonnull String serverUrl, @Nonnull UUID instanceUuid,
                             @Nonnull DockerImageNameResolver imageResolver) {
         super(testTaskHandler, TestContainerStatusMsg.Phase.CREATE);
@@ -51,11 +51,11 @@ class CreateContainerTestTask extends ContainerTestTask {
     @Override
     Status work() {
 
-        LOG.info("Creating test container for instance: " + instanceUuid + ". Server URL: " + serverUrl);
+        LOG.info("Creating test agent holder for instance: " + instanceUuid + ". Server URL: " + serverUrl);
 
         DockerClientFacade clientFacade = testTaskHandler.getDockerClientFacade();
 
-        msg("Creating container");
+        msg(testTaskHandler.getResources().text("test.create.starting"));
 
         CreateAgentParameters createAgentParameters = CreateAgentParameters.
                 fromImageConfig(imageConfig, imageResolver, false);
@@ -70,7 +70,7 @@ class CreateContainerTestTask extends ContainerTestTask {
 
         containerInfo.getWarnings().forEach(this::warning);
 
-        testTaskHandler.notifyContainerId(containerInfo.getId());
+        testTaskHandler.notifyAgentHolderId(containerInfo.getId());
 
         return Status.SUCCESS;
     }

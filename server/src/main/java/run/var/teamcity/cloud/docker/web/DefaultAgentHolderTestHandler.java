@@ -2,8 +2,10 @@ package run.var.teamcity.cloud.docker.web;
 
 import run.var.teamcity.cloud.docker.DockerClientFacade;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
+import run.var.teamcity.cloud.docker.DockerCloudSupport;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.LockHandler;
+import run.var.teamcity.cloud.docker.util.Resources;
 import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
 import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
@@ -16,13 +18,14 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Default {@link ContainerTestHandler} implementation.
+ * Default {@link AgentHolderTestHandler} implementation.
  */
-public class DefaultContainerTestHandler implements ContainerTestHandler {
+public class DefaultAgentHolderTestHandler implements AgentHolderTestHandler {
 
     private final UUID uuid = UUID.randomUUID();
     private final LockHandler lock = LockHandler.newReentrantLock();
     private final DockerClientFacade clientFacade;
+    private final Resources resources;
 
     @Nullable
     private ContainerTestListener testListener;
@@ -35,21 +38,23 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
     private Instant containerStartTime;
     private boolean buildAgentDetected = false;
 
-    private ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTaskFuture = null;
+    private ScheduledFutureWithRunnable<? extends AgentHolderTestTask> currentTaskFuture = null;
 
-    private DefaultContainerTestHandler(DockerClientFacade clientFacade) {
-        assert clientFacade != null;
+    private DefaultAgentHolderTestHandler(DockerClientFacade clientFacade, Resources resources) {
+        assert clientFacade != null && resources != null;
 
         this.clientFacade = clientFacade;
+        this.resources = resources;
 
         notifyInteraction();
     }
 
-    public static DefaultContainerTestHandler newTestInstance(@Nonnull DockerCloudClientConfig clientConfig) {
+    public static DefaultAgentHolderTestHandler newTestInstance(@Nonnull DockerCloudClientConfig clientConfig) {
         DockerCloudUtils.requireNonNull(clientConfig, "Client config cannot be null.");
-        DockerClientFacade clientFacade = clientConfig.getCloudSupport().createClientFacade(clientConfig.getDockerClientConfig()
+        DockerCloudSupport cloudSupport = clientConfig.getCloudSupport();
+        DockerClientFacade clientFacade = cloudSupport.createClientFacade(clientConfig.getDockerClientConfig()
                         .connectionPoolSize(1));
-        return new DefaultContainerTestHandler(clientFacade);
+        return new DefaultAgentHolderTestHandler(clientFacade, cloudSupport.resources());
     }
 
     /**
@@ -94,6 +99,12 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
         return clientFacade;
     }
 
+    @Nonnull
+    @Override
+    public Resources getResources() {
+        return resources;
+    }
+
     /**
      * Notify a user interaction for this test.
      */
@@ -117,7 +128,7 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
      * @return the task
      */
     @Nullable
-    public ScheduledFutureWithRunnable<? extends ContainerTestTask> getCurrentTaskFuture() {
+    public ScheduledFutureWithRunnable<? extends AgentHolderTestTask> getCurrentTaskFuture() {
         return lock.call(() -> currentTaskFuture);
     }
 
@@ -128,7 +139,7 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
      *
      * @throws NullPointerException if {@code currentTask} is {@code null}
      */
-    public void setCurrentTaskFuture(@Nonnull ScheduledFutureWithRunnable<? extends ContainerTestTask> currentTask) {
+    public void setCurrentTaskFuture(@Nonnull ScheduledFutureWithRunnable<? extends AgentHolderTestTask> currentTask) {
         DockerCloudUtils.requireNonNull(currentTask, "Current task cannot be null.");
         lock.run(() -> {
             this.currentTaskFuture = currentTask;
@@ -137,17 +148,17 @@ public class DefaultContainerTestHandler implements ContainerTestHandler {
     }
 
     @Override
-    public void notifyContainerId(@Nonnull String containerId) {
-        DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
+    public void notifyAgentHolderId(@Nonnull String agentHolderId) {
+        DockerCloudUtils.requireNonNull(agentHolderId, "Container ID cannot be null.");
 
-        lock.run(() -> this.containerId = containerId);
+        lock.run(() -> this.containerId = agentHolderId);
     }
 
     @Override
-    public void notifyContainerStarted(@Nonnull Instant containerStartTime) {
-        DockerCloudUtils.requireNonNull(containerStartTime, "Start time cannot be null.");
+    public void notifyAgentHolderStarted(@Nonnull Instant agentHolderStartTime) {
+        DockerCloudUtils.requireNonNull(agentHolderStartTime, "Start time cannot be null.");
 
-        lock.run(() -> this.containerStartTime = containerStartTime);
+        lock.run(() -> this.containerStartTime = agentHolderStartTime);
     }
 
     public void setListener(@Nonnull ContainerTestListener testListener) {

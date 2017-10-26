@@ -1,7 +1,5 @@
 package run.var.teamcity.cloud.docker;
 
-import run.var.teamcity.cloud.docker.DockerClientFacade;
-import run.var.teamcity.cloud.docker.DockerImageConfigParser;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.util.Resources;
 

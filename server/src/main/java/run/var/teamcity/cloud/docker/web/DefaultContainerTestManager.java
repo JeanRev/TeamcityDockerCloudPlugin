@@ -54,7 +54,7 @@ public class DefaultContainerTestManager implements ContainerTestManager {
     final static Duration TEST_DEFAULT_IDLE_TIME = Duration.ofMinutes(10);
 
     private final LockHandler lock = LockHandler.newReentrantLock();
-    private final Map<UUID, DefaultContainerTestHandler> tests = new HashMap<>();
+    private final Map<UUID, DefaultAgentHolderTestHandler> tests = new HashMap<>();
     private final DockerImageNameResolver imageNameResolver;
     private final Duration testMaxIdleTime;
     private final Duration cleanupRate;
@@ -104,12 +104,12 @@ public class DefaultContainerTestManager implements ContainerTestManager {
         DockerCloudUtils.requireNonNull(clientConfig, "Client configuration cannot be null.");
         DockerCloudUtils.requireNonNull(imageConfig, "Image configuration cannot be null.");
 
-        DefaultContainerTestHandler test = newTestInstance(clientConfig);
+        DefaultAgentHolderTestHandler test = newTestInstance(clientConfig);
 
         URL serverURL = clientConfig.getServerURL();
         String serverURLStr = serverURL != null ? serverURL.toString() : webLinks.getRootUrl();
 
-        CreateContainerTestTask testTask = new CreateContainerTestTask(test, imageConfig, serverURLStr, test
+        CreateAgentHolderTestTask testTask = new CreateAgentHolderTestTask(test, imageConfig, serverURLStr, test
                 .getUuid(), imageNameResolver);
         test.setCurrentTaskFuture(schedule(testTask));
 
@@ -120,7 +120,7 @@ public class DefaultContainerTestManager implements ContainerTestManager {
     public void startTestContainer(@Nonnull UUID testUuid) {
         DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
 
-        DefaultContainerTestHandler test = retrieveTestInstance(testUuid);
+        DefaultAgentHolderTestHandler test = retrieveTestInstance(testUuid);
 
         String containerId = test.getContainerId();
 
@@ -130,7 +130,7 @@ public class DefaultContainerTestManager implements ContainerTestManager {
 
         assert containerId != null;
 
-        StartContainerTestTask testTask = new StartContainerTestTask(test, containerId, test.getUuid());
+        StartAgentHolderTestTask testTask = new StartAgentHolderTestTask(test, containerId, test.getUuid());
         test.setCurrentTaskFuture(schedule(testTask));
     }
 
@@ -141,7 +141,7 @@ public class DefaultContainerTestManager implements ContainerTestManager {
     public String getLogs(@Nonnull UUID testUuid) {
         DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
 
-        DefaultContainerTestHandler test = retrieveTestInstance(testUuid);
+        DefaultAgentHolderTestHandler test = retrieveTestInstance(testUuid);
 
         String containerId = test.getContainerId();
 
@@ -158,7 +158,7 @@ public class DefaultContainerTestManager implements ContainerTestManager {
     public void dispose(@Nonnull UUID testUuid) {
         DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
 
-        DefaultContainerTestHandler test = lock.call(() -> tests.get(testUuid));
+        DefaultAgentHolderTestHandler test = lock.call(() -> tests.get(testUuid));
 
         if (test == null) {
             return;
@@ -171,7 +171,7 @@ public class DefaultContainerTestManager implements ContainerTestManager {
     public void setListener(@Nonnull UUID testUuid, @Nonnull ContainerTestListener listener) {
         DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
         DockerCloudUtils.requireNonNull(listener, "Test listener cannot be null.");
-        DefaultContainerTestHandler test = retrieveTestInstance(testUuid);
+        DefaultAgentHolderTestHandler test = retrieveTestInstance(testUuid);
         test.setListener(listener);
     }
 
@@ -179,14 +179,14 @@ public class DefaultContainerTestManager implements ContainerTestManager {
     @Override
     public Optional<TestContainerStatusMsg> retrieveStatus(UUID testUuid) {
         DockerCloudUtils.requireNonNull(testUuid, "Test UUID cannot be null.");
-        DefaultContainerTestHandler test = retrieveTestInstance(testUuid);
+        DefaultAgentHolderTestHandler test = retrieveTestInstance(testUuid);
         test.notifyInteraction();
         return test.getLastStatusMsg();
     }
 
-    private DefaultContainerTestHandler retrieveTestInstance(UUID testUuid) {
+    private DefaultAgentHolderTestHandler retrieveTestInstance(UUID testUuid) {
 
-        DefaultContainerTestHandler test = lock.call(() -> tests.get(testUuid));
+        DefaultAgentHolderTestHandler test = lock.call(() -> tests.get(testUuid));
 
         if (test == null) {
             throw new ContainerTestException("Bad or expired token: " + testUuid);
@@ -214,7 +214,7 @@ public class DefaultContainerTestManager implements ContainerTestManager {
         }
     }
 
-    private void dispose(DefaultContainerTestHandler test) {
+    private void dispose(DefaultAgentHolderTestHandler test) {
 
         LOG.info("Disposing test task: " + test.getUuid());
 
@@ -261,9 +261,9 @@ public class DefaultContainerTestManager implements ContainerTestManager {
         }
     }
 
-    private DefaultContainerTestHandler newTestInstance(DockerCloudClientConfig clientConfig) {
+    private DefaultAgentHolderTestHandler newTestInstance(DockerCloudClientConfig clientConfig) {
         return lock.call(() -> {
-            DefaultContainerTestHandler test = DefaultContainerTestHandler.newTestInstance(clientConfig);
+            DefaultAgentHolderTestHandler test = DefaultAgentHolderTestHandler.newTestInstance(clientConfig);
 
             boolean duplicate = tests.put(test.getUuid(), test) != null;
             assert !duplicate;
@@ -289,10 +289,10 @@ public class DefaultContainerTestManager implements ContainerTestManager {
                 WrappedRunnableScheduledFuture<Runnable, ?> future = (WrappedRunnableScheduledFuture<Runnable, ?>) r;
                 Runnable task = future.getTask();
 
-                if (task instanceof ContainerTestTask) {
+                if (task instanceof AgentHolderTestTask) {
 
-                    ContainerTestTask containerTestTask = (ContainerTestTask) task;
-                    DefaultContainerTestHandler test = (DefaultContainerTestHandler) containerTestTask
+                    AgentHolderTestTask agentHolderTestTask = (AgentHolderTestTask) task;
+                    DefaultAgentHolderTestHandler test = (DefaultAgentHolderTestHandler) agentHolderTestTask
                             .getTestTaskHandler();
 
                     if (t == null && future.isDone()) {
@@ -303,7 +303,7 @@ public class DefaultContainerTestManager implements ContainerTestManager {
                         }
                     }
                     if (t == null) {
-                        if (containerTestTask.getStatus() == TestContainerStatusMsg.Status.PENDING) {
+                        if (agentHolderTestTask.getStatus() == TestContainerStatusMsg.Status.PENDING) {
                             schedule(task, REFRESH_TASK_RATE.toNanos(), TimeUnit.NANOSECONDS);
                         }
                     } else if (t instanceof InterruptedException || t instanceof CancellationException) {
@@ -323,7 +323,7 @@ public class DefaultContainerTestManager implements ContainerTestManager {
         };
     }
 
-    private <T extends ContainerTestTask> ScheduledFutureWithRunnable<T> schedule(T task) {
+    private <T extends AgentHolderTestTask> ScheduledFutureWithRunnable<T> schedule(T task) {
         return lock.call(() -> {
             if (executorService == null) {
                 activate();
@@ -341,10 +341,10 @@ public class DefaultContainerTestManager implements ContainerTestManager {
         @Override
         public void run() {
 
-            List<DefaultContainerTestHandler> toDispose = new ArrayList<>();
+            List<DefaultAgentHolderTestHandler> toDispose = new ArrayList<>();
 
             lock.run(() -> {
-                for (DefaultContainerTestHandler test : DefaultContainerTestManager.this.tests.values()) {
+                for (DefaultAgentHolderTestHandler test : DefaultContainerTestManager.this.tests.values()) {
                     if (test.getCurrentTaskFuture() != null) {
                         if (Duration.between(test.getLastInteraction(), Instant.now()).compareTo
                                 (testMaxIdleTime) > 0) {
@@ -354,7 +354,7 @@ public class DefaultContainerTestManager implements ContainerTestManager {
                 }
             });
 
-            for (DefaultContainerTestHandler test : toDispose) {
+            for (DefaultAgentHolderTestHandler test : toDispose) {
                 dispose(test);
             }
 
@@ -414,7 +414,7 @@ public class DefaultContainerTestManager implements ContainerTestManager {
                 return;
             }
 
-            for (DefaultContainerTestHandler test : new ArrayList<>(tests.values())) {
+            for (DefaultAgentHolderTestHandler test : new ArrayList<>(tests.values())) {
                 dispose(test);
             }
 
@@ -437,7 +437,7 @@ public class DefaultContainerTestManager implements ContainerTestManager {
                 lock.run(() -> {
                     agentToRemove.add(testInstanceUuid);
                     activate();
-                    DefaultContainerTestHandler test = tests.get(testInstanceUuid);
+                    DefaultAgentHolderTestHandler test = tests.get(testInstanceUuid);
                     if (test != null) {
                         test.setBuildAgentDetected(true);
                     }

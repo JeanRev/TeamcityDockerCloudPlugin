@@ -14,7 +14,7 @@ import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
 /**
  * {@link Runnable} base class for container test tasks. This class is responsible for managing the test
  * {@link TestContainerStatusMsg.Status status} and provide helper methods to interact with the
- * {@link ContainerTestHandler test task handler}.
+ * {@link AgentHolderTestHandler test task handler}.
  * <p>
  * A test task can covers multiple test {@link TestContainerStatusMsg.Phase phases}, and has one initial phase
  * which can be queried before the test has started running.
@@ -24,9 +24,9 @@ import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
  * status accordingly and notify the test handler.
  * </p>
  */
-abstract class ContainerTestTask implements Runnable {
+abstract class AgentHolderTestTask implements Runnable {
 
-    private final static Logger LOG = DockerCloudUtils.getLogger(ContainerTestTask.class);
+    private final static Logger LOG = DockerCloudUtils.getLogger(AgentHolderTestTask.class);
 
     private final LockHandler lock = LockHandler.newReentrantLock();
 
@@ -34,7 +34,7 @@ abstract class ContainerTestTask implements Runnable {
     private Status status = Status.PENDING;
     private String msg = "";
     private Phase phase;
-    ContainerTestHandler testTaskHandler;
+    AgentHolderTestHandler testTaskHandler;
 
     /**
      * Creates a new task instance.
@@ -44,7 +44,7 @@ abstract class ContainerTestTask implements Runnable {
      *
      * @throws NullPointerException if any argument is {@code null}
      */
-    ContainerTestTask(@Nonnull ContainerTestHandler testTaskHandler, @Nonnull Phase initialPhase) {
+    AgentHolderTestTask(@Nonnull AgentHolderTestHandler testTaskHandler, @Nonnull Phase initialPhase) {
         this.testTaskHandler = DockerCloudUtils.requireNonNull(testTaskHandler, "Test task handler cannot be null.");
         this.phase = DockerCloudUtils.requireNonNull(initialPhase, "Initial phase cannot be null.");
     }
@@ -90,7 +90,7 @@ abstract class ContainerTestTask implements Runnable {
      * @return the handler
      */
     @Nonnull
-    public ContainerTestHandler getTestTaskHandler() {
+    public AgentHolderTestHandler getTestTaskHandler() {
         return testTaskHandler;
     }
 

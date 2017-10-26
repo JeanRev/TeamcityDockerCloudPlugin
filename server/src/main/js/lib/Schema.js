@@ -697,10 +697,19 @@ function Schema() {
         { id: 'dockerCloudImageTab_security', lbl: 'Security' },
         { id: 'dockerCloudImageTab_advanced', lbl: 'Advanced' }];
 
+    const translations = {
+        'test.create.success': 'Container {0} successfully created',
+        'test.create.warning': 'Container {0} created with warnings:',
+        'test.logs': 'Container logs:',
+        'test.wait.success': 'Agent connection detected for container {0}.',
+        'test.wait.warning': 'Agent connection detected for container {0}:'
+    };
+
     this.html = $html;
     this.validators = validators;
     this.arrayTemplates = arrayTemplates;
     this.tabs = tabs;
+    this.translations = translations;
     this.cloudType = 'VANILLA';
 
     _initHandlers($html);

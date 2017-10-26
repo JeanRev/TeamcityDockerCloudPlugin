@@ -18,9 +18,9 @@ import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status.PE
 import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status.SUCCESS;
 
 /**
- * {@link ContainerTestTask} to start the test container.
+ * {@link AgentHolderTestTask} to start the test agent holder.
  */
-class StartContainerTestTask extends ContainerTestTask {
+class StartAgentHolderTestTask extends AgentHolderTestTask {
 
     private final static Duration AGENT_WAIT_TIMEOUT = Duration.ofSeconds(120);
 
@@ -34,13 +34,13 @@ class StartContainerTestTask extends ContainerTestTask {
      * Creates a new task instance.
      *
      * @param testTaskHandler the test task handler
-     * @param containerId the ID of the container to be started
-     * @param instanceUuid the container test instance UUID
+     * @param agentHolderId the ID of the agent holder to be started
+     * @param instanceUuid the agent holder test instance UUID
      */
-    StartContainerTestTask(@Nonnull ContainerTestHandler testTaskHandler, @Nonnull String containerId,
+    StartAgentHolderTestTask(@Nonnull AgentHolderTestHandler testTaskHandler, @Nonnull String agentHolderId,
                            @Nonnull UUID instanceUuid) {
         super(testTaskHandler, Phase.START);
-        this.containerId = DockerCloudUtils.requireNonNull(containerId, "Container ID cannot be null.");
+        this.containerId = DockerCloudUtils.requireNonNull(agentHolderId, "Container ID cannot be null.");
         this.instanceUuid = DockerCloudUtils.requireNonNull(instanceUuid, "Test instance UUID cannot be null.");
     }
 
@@ -57,7 +57,7 @@ class StartContainerTestTask extends ContainerTestTask {
 
             taskId = clientFacade.startAgent(containerId);
 
-            testTaskHandler.notifyContainerStarted(containerStartTime);
+            testTaskHandler.notifyAgentHolderStarted(containerStartTime);
 
             msg("Waiting for agent to connect");
 
@@ -73,7 +73,7 @@ class StartContainerTestTask extends ContainerTestTask {
                 findFirst();
 
         if (!agentHolder.isPresent()) {
-            throw new ContainerTestTaskException("Container was prematurely destroyed.");
+            throw new ContainerTestTaskException(testTaskHandler.getResources().text("test.start.prematurelyDestroyed"));
         }
 
         if (agentHolder.get().isRunning()) {
@@ -81,8 +81,8 @@ class StartContainerTestTask extends ContainerTestTask {
                 throw new ContainerTestTaskException("Timeout: no agent connection after " + AGENT_WAIT_TIMEOUT.getSeconds() + " seconds.");
             }
         } else {
-            throw new ContainerTestTaskException("Container exited prematurely (" + agentHolder.get().getStateMsg() +
-                    ")");
+            throw new ContainerTestTaskException(testTaskHandler.getResources().text("test.start.prematurelyExited",
+                    agentHolder.get().getStateMsg()));
         }
 
         return PENDING;

@@ -15,7 +15,7 @@ public class TestDockerCloudSupport implements DockerCloudSupport {
     private final TestDockerClientFacade clientFacade = new TestDockerClientFacade();
     private final TestDockerImageConfigParser imageParser = new TestDockerImageConfigParser();
 
-    private final TestResourceBundle resourceBundle = new TestResourceBundle();
+    private final TestResourceBundle resourceBundle = new TestResourceBundle(true);
     private final Resources resources = new Resources(resourceBundle);
     private DockerClientFacade facadeWrapper;
     private DockerClientException facadeCreationFailure;

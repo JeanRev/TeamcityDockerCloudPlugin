@@ -52,7 +52,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     /**
      * Type of this cloud client.
      */
-    private final DockerCloudSupport cloudType;
+    private final DockerCloudSupport cloudSupport;
 
     /**
      * Client UUID.
@@ -153,7 +153,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         if (imageConfigs.isEmpty()) {
             throw new IllegalArgumentException("At least one image must be provided.");
         }
-        this.cloudType = clientConfig.getCloudSupport();
+        this.cloudSupport = clientConfig.getCloudSupport();
         this.uuid = clientConfig.getUuid();
         this.resolver = resolver;
         this.cloudState = cloudState;
@@ -253,6 +253,13 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
     @Override
     public UUID getUuid() {
         return uuid;
+    }
+
+
+    @Nonnull
+    @Override
+    public DockerCloudSupport getCloudSupport() {
+        return cloudSupport;
     }
 
     @Override
@@ -672,7 +679,7 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
             // Creates the Docker client upon first sync. We do this here to benefit from the retry mechanism if
             // the API negotiation fails.
             if (clientFacade == null) {
-                clientFacade = cloudType.createClientFacade(dockerClientConfig);
+                clientFacade = cloudSupport.createClientFacade(dockerClientConfig);
                 LOG.info("Docker client instantiated.");
             }
 

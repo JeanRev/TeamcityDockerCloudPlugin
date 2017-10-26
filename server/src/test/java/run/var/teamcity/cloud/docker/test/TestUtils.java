@@ -48,7 +48,7 @@ public final class TestUtils {
 
     private final static int WAIT_DEFAULT_REFRESH_RATE_MSEC = 300;
     private final static int WAIT_DEFAULT_MAX_WAIT_TIME_SEC = 20;
-    private final static Resources TEST_RESOURCES = new Resources(new TestResourceBundle());
+    private final static Resources TEST_RESOURCES = new Resources(new TestResourceBundle(true));
 
     public static Resources testResources() {
         return TEST_RESOURCES;
