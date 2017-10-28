@@ -159,7 +159,11 @@ task("testDockerCloudJS").doFirst({
 }).dependsOn("installDockerCloudJS")
 
 task("buildDockerCloudJS").doFirst({
-    run(jsSrcDir, yarnExecPath, "build")
+    val cmd = mutableListOf(yarnExecPath, "build")
+    if (!(ext.get("snapshotVersion") as Boolean)) {
+        cmd.add("-p")
+    }
+    run(jsSrcDir, *cmd.toTypedArray())
 }).dependsOn("installDockerCloudJS")
 
 val setupTestImages = task("setupTestImages") {

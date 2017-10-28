@@ -6,9 +6,17 @@ import org.gradle.api.tasks.compile.JavaCompile
 version = "0.6.0-SNAPSHOT"
 group = "var.run.docker.cloud"
 val commitId = gitCommitId()
+
+val parsedVersion = "((?:[0-9]\\.)*[0-9])(-SNAPSHOT)?".toRegex().matchEntire(project.version.toString())!!
+val baseVersion = parsedVersion.groups[1]!!.value
+val snapshotVersion = parsedVersion.groups[2] != null
 allprojects {
     group = project.group
     version = project.version
+
+    project.ext {
+        set("snapshotVersion", snapshotVersion)
+    }
 }
 
 subprojects {
@@ -64,10 +72,6 @@ task<Zip>("tcdist") {
         from(tasks.getByPath(":server:jar"))
         from(project(":server").configurations.get("runtime"))
     }
-
-    val parsedVersion = "((?:[0-9]\\.)*[0-9])(-SNAPSHOT)?".toRegex().matchEntire(project.version.toString())!!
-    val snapshotVersion = parsedVersion.groups[2] != null
-
     var versionSuffix = project.version as String
     if (snapshotVersion) {
         versionSuffix += "_${commitId.substring(0,7)}"
@@ -83,7 +87,7 @@ task<Zip>("tcdist") {
     // older build for the same plugin version to be considered outdated.
     from("teamcity-plugin.xml") {
         filter<ReplaceTokens>("tokens" to mapOf(
-                "version" to "${parsedVersion.groups[1]!!.value}.${System.currentTimeMillis()}",
+                "version" to "$baseVersion.${System.currentTimeMillis()}",
                 "buildInfo" to "build: $commitId, ${if(snapshotVersion) "SNAPSHOT" else "RELEASE"}"))
     }
 }
