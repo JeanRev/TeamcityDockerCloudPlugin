@@ -368,7 +368,7 @@ function Controller(bs, oo, tabbedPane, params, schema) {
         });
 
         $testContainerCloseBtn.click(function() {
-            _cancelTest();
+            BS.DockerTestContainerDialog.close();
         });
 
         $testContainerContainerLogsBtn.click(function() {
@@ -380,8 +380,6 @@ function Controller(bs, oo, tabbedPane, params, schema) {
                     BS.DockerDiagnosticDialog.showCentered();
                 });
         });
-
-        BS.DockerTestContainerDialog.afterClose(_cancelTest);
 
         $imageTestContainerBtn.click(function() {
 
@@ -414,6 +412,10 @@ function Controller(bs, oo, tabbedPane, params, schema) {
             OO.extend(BS.AbstractModalDialog, {
                 getContainer: function () {
                     return $('DockerTestContainerDialog');
+                },
+                close: function() {
+                    _cancelTest();
+                    BS.AbstractModalDialog.close.bind(this)();
                 }
             });
 
@@ -922,8 +924,6 @@ function Controller(bs, oo, tabbedPane, params, schema) {
             _invokeTestAction('cancel', null, true);
             testUuid = null;
         }
-
-        BS.DockerTestContainerDialog.close();
     }
 
     function _closeStatusSocket() {

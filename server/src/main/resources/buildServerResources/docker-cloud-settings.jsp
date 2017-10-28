@@ -156,7 +156,7 @@
 </bs:dialog>
 
 <bs:dialog dialogId="DockerTestContainerDialog" title="${resources.text('web.settings.test.title')}"
-           closeCommand="BS.Clouds.Docker.cancelTest()">
+           closeCommand="BS.DockerTestContainerDialog.close()">
     <div>
         <p>
             ${resources.text('web.settings.test.instructions')}
