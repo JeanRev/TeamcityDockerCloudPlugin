@@ -1,6 +1,7 @@
 {
   "private": true,
   "dependencies": {
+    "babel-polyfill": "6.26.0",
     "base64-js": "1.2.1",
     "clipboard": "1.7.1",
     "ua-parser-js": "0.7.14",
