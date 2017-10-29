@@ -54,13 +54,17 @@ public class CheckConnectivityControllerTest {
         EditableNode responseNode = Node.EMPTY_OBJECT.editNode();
         ctrl.doPost(request, new TestHttpServletResponse(), responseNode);
 
-        assertThat(responseNode.getObject("info", null)).isNotNull();
+        assertThat(responseNode.getObject("version", null)).isNotNull();
 
         TestDockerClient client = dockerClientFty.getClient();
 
         Node version = client.getVersion();
+        EditableNode versionNode = responseNode.getObject("version");
+        assertThat(versionNode).isEqualTo(version);
+
+        Node info = client.getInfo();
         EditableNode infoNode = responseNode.getObject("info");
-        assertThat(infoNode).isEqualTo(version);
+        assertThat(infoNode).isEqualTo(info);
 
         EditableNode meta = responseNode.getObject("meta");
 
@@ -72,7 +76,6 @@ public class CheckConnectivityControllerTest {
     }
 
     private CheckConnectivityController createController() {
-        return new CheckConnectivityController(new TestSBuildServer(), new TestPluginDescriptor(),
-                new TestWebControllerManager(), dockerClientFty);
+        return new CheckConnectivityController(new TestPluginDescriptor(), new TestWebControllerManager(), dockerClientFty);
     }
 }

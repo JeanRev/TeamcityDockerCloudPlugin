@@ -1,6 +1,5 @@
 package run.var.teamcity.cloud.docker.web;
 
-import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.springframework.web.servlet.ModelAndView;
@@ -29,14 +28,12 @@ public class CheckConnectivityController extends BaseFormJsonController {
     private final DockerClientFactory dockerClientFactory;
 
 
-    public CheckConnectivityController(@Nonnull SBuildServer server,
-                                       @Nonnull PluginDescriptor pluginDescriptor,
+    public CheckConnectivityController(@Nonnull PluginDescriptor pluginDescriptor,
                                        @Nonnull WebControllerManager manager) {
-        this(server, pluginDescriptor, manager, DockerClientFactory.getDefault());
+        this(pluginDescriptor, manager, DockerClientFactory.getDefault());
     }
 
-    CheckConnectivityController(@Nonnull SBuildServer server,
-                                @Nonnull PluginDescriptor pluginDescriptor,
+    CheckConnectivityController(@Nonnull PluginDescriptor pluginDescriptor,
                                 @Nonnull WebControllerManager manager,
                                 @Nonnull DockerClientFactory dockerClientFactory) {
         this.dockerClientFactory = dockerClientFactory;
@@ -70,9 +67,12 @@ public class CheckConnectivityController extends BaseFormJsonController {
 
             DockerAPIVersion effectiveApiVersion = client.getApiVersion();
 
-            Node version = client.getVersion();
+            Node versionNode = client.getVersion();
+            Node infoNode = client.getInfo();
 
-            responseNode.put("info", version);
+            responseNode.put("version", versionNode);
+
+            responseNode.put("info", infoNode);
             responseNode.getOrCreateObject("meta")
                     .put("serverTime", System.currentTimeMillis())
                     .put("effectiveApiVersion", effectiveApiVersion.getVersionString());

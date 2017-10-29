@@ -25,6 +25,12 @@
     font-weight: bold;
 }
 
+.dockerCloudSettings .message p {
+    /* No additional spacing when using paragraph inside of messages. */
+    margin: 0;
+    padding: 0;
+}
+
 .dockerCloudSettings .errorMessage {
     background-color: #FEEDEB;
 }

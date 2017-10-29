@@ -128,7 +128,9 @@ public class TestDockerClient implements DockerClient {
     @Nonnull
     @Override
     public Node getInfo() {
-        throw new UnsupportedOperationException("Not implemented yet.");
+        return Node.EMPTY_OBJECT.editNode().
+                put("ID", "AAAA:BBBB:CCCC:DDDD:EEEE:FFFF:GGGG:HHHH:IIII:JJJJ:KKKK:LLLL").
+                saveNode();
     }
 
     @Nonnull

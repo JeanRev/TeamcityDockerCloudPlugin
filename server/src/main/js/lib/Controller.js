@@ -491,21 +491,29 @@ function Controller(bs, oo, tabbedPane, params, schema) {
         }).done(function (daemonInfo) {
 
             effectiveApiVersion = daemonInfo.meta.effectiveApiVersion;
-            daemonOs = daemonInfo.info.Os;
+            daemonOs = daemonInfo.version.Os;
 
             $checkConnectionResult.addClass('infoMessage');
-            $checkConnectionResult.text('Connection successful to Docker v' + daemonInfo.info.Version
+            $checkConnectionResult.text('Connection successful to Docker v' + daemonInfo.version.Version
                 + ' (API v ' + effectiveApiVersion + ') on '
-                + daemonInfo.info.Os + '/' + daemonInfo.info.Arch).show();
+                + daemonInfo.version.Os + '/' + daemonInfo.version.Arch).show();
 
             if (Utils.compareVersionNumbers(effectiveApiVersion, daemonMinVersion) < 0 ||
                 Utils.compareVersionNumbers(effectiveApiVersion, daemonTargetVersion) > 0) {
                 $checkConnectionWarning
-                    .append('Warning: daemon API version is outside of supported version range (v'
-                        + daemonMinVersion + ' - v' + daemonTargetVersion + ').').show();
+                    .append('<p>Warning: daemon API version is outside of supported version range (v'
+                        + daemonMinVersion + ' - v' + daemonTargetVersion + ').</p>').show();
 
                 // Prevent further version check.
                 effectiveApiVersion = null;
+            }
+
+            if (schema.cloudType === 'SWARM') {
+                let partOfSwarm = daemonInfo.info.Swarm && daemonInfo.info.Swarm.Cluster && daemonInfo.info.Swarm.Cluster.ID;
+                if (!partOfSwarm) {
+                    $checkConnectionWarning
+                        .append('<p>Warning: daemon does not seem to be part of a swarm.</p>').show();
+                }
             }
         }).always(function () {
             $checkConnectionLoader.hide();
