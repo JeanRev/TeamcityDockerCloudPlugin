@@ -7,14 +7,14 @@
     <div id="dockerCloudImageTab_general">
         <table class="dockerCloudSettings runnerFormTable">
             <tr>
-                <th><label for="dockerCloudImage_Profile">Profile name:&nbsp;<l:star/></label></th>
+                <th><label for="dockerCloudImage_Profile">Profile name:&nbsp;<span class="mandatoryAsterix">*</span></label></th>
                 <td>
                     <input type="text" id="dockerCloudImage_Profile" class="mediumField"/>
                     <span class="error" id="dockerCloudImage_Profile_error"></span>
                 </td>
             </tr>
             <tr>
-                <th><label for="dockerCloudImage_Image">Docker image:&nbsp;<l:star/></label>
+                <th><label for="dockerCloudImage_Image">Docker image:&nbsp;<span class="mandatoryAsterix">*</span></label>
                     <i class="icon icon16 tc-icon_help_small tooltip"></i>
                     <span class="tooltiptext">Docker image name to be started, using the usual syntax: <code>[registry[:registry_port]/]name[:tag]</code>. If
         no tag is specified, <code>latest</code> will be used as a default. The image name may also be prefixed with a
@@ -149,7 +149,7 @@
         <table class="settings">
             <thead>
             <tr>
-                <th class="name" style="width: 45%;">Name&nbsp;<l:star/></th>
+                <th class="name" style="width: 45%;">Name&nbsp;<span class="mandatoryAsterix">*</span></th>
                 <th class="name" style="width: 45%;">Value</th>
                 <th class="dockerCloudCtrlCell"></th>
             </tr>
@@ -183,7 +183,7 @@
             <thead>
             <tr>
                 <th class="name center" style="width: 20%">Host port</th>
-                <th class="name center" style="width: 20%">Container Port&nbsp;<l:star/></th>
+                <th class="name center" style="width: 20%">Container Port&nbsp;<span class="mandatoryAsterix">*</span></th>
                 <th class="name center" style="width: 20%">Protocol</th>
                 <th class="dockerCloudCtrlCell"></th>
             </tr>
@@ -196,7 +196,7 @@
             <table class="settings">
                 <thead>
                 <tr>
-                    <th class="name" style="width: 82%;">Server Address&nbsp;<l:star/>
+                    <th class="name" style="width: 82%;">Server Address&nbsp;<span class="mandatoryAsterix">*</span>
                         <i class="icon icon16 tc-icon_help_small tooltip"></i>
                         <span class="tooltiptext">A list of DNS servers for the container to use.
                         <br/><b>Requires API:</b> v1.25</span>
@@ -210,7 +210,7 @@
             <table class="settings">
                 <thead>
                 <tr>
-                    <th class="name" style="width: 82%;">Search domains&nbsp;<l:star/>
+                    <th class="name" style="width: 82%;">Search domains&nbsp;<span class="mandatoryAsterix">*</span>
                         <i class="icon icon16 tc-icon_help_small tooltip"></i>
                         <span class="tooltiptext">A list of DNS search domains.
                         <br/><b>Requires API:</b> v1.25</span>
@@ -227,7 +227,7 @@
             <table class="settings">
                 <thead>
                 <tr>
-                    <th class="name" style="width: 82%;">Hosts&nbsp;<l:star/>
+                    <th class="name" style="width: 82%;">Hosts&nbsp;<span class="mandatoryAsterix">*</span>
                         <i class="icon icon16 tc-icon_help_small tooltip"></i>
                         <span class="tooltiptext">A list of hostname/IP mappings to add to the container's <code>/etc
                             /hosts</code> file using the syntax: <code>IP_address canonical_hostname [aliases...]</code></span>
@@ -296,7 +296,7 @@
         <table class="settings">
             <thead>
             <tr>
-                <th class="name" style="width: 45%;">Option Key&nbsp;<l:star/></th>
+                <th class="name" style="width: 45%;">Option Key&nbsp;<span class="mandatoryAsterix">*</span></th>
                 <th class="name" style="width: 45%;">Option Value</th>
                 <th class="dockerCloudCtrlCell"></th>
             </tr>
@@ -312,7 +312,7 @@
             <thead>
             <tr>
                 <th class="name" style="width: 35%">Host path</th>
-                <th class="name" style="width: 35%">Container path&nbsp;<l:star/></th>
+                <th class="name" style="width: 35%">Container path&nbsp;<span class="mandatoryAsterix">*</span></th>
                 <th class="name center" style="width: 20%;">Read only</th>
                 <th class="dockerCloudCtrlCell"></th>
             </tr>
@@ -327,7 +327,7 @@
         <table class="settings">
             <thead>
             <tr>
-                <th class="name" style="width: 45%;">Key&nbsp;<l:star/></th>
+                <th class="name" style="width: 45%;">Key&nbsp;<span class="mandatoryAsterix">*</span></th>
                 <th class="name" style="width: 45%;">Value</th>
                 <th class="dockerCloudCtrlCell"></th>
             </tr>
