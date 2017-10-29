@@ -573,6 +573,15 @@ public class DefaultDockerClientAllVersionsITest extends DefaultDockerClientTest
         }
     }
 
+    @Test
+    public void queryDaemonInfo() {
+        DefaultDockerClient client = createClient(createClientConfig());
+
+        Node infoNode = client.getInfo();
+
+        assertThat(infoNode.getAsString("ID")).isNotEmpty();
+    }
+
     protected DefaultDockerClient createClient() {
         return createClient(1);
     }

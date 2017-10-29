@@ -127,6 +127,12 @@ public class TestDockerClient implements DockerClient {
 
     @Nonnull
     @Override
+    public Node getInfo() {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Nonnull
+    @Override
     public Node createContainer(@Nonnull Node containerSpec, @Nullable String name) {
 
         waitMillis(300);

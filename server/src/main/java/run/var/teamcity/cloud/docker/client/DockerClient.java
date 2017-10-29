@@ -44,7 +44,7 @@ public interface DockerClient extends Closeable {
     void setApiVersion(@Nonnull DockerAPIVersion apiVersion);
 
     /**
-     * Query the daemon version.
+     * Queries the daemon version.
      *
      * @return the daemon version node
      *
@@ -52,6 +52,14 @@ public interface DockerClient extends Closeable {
      */
     @Nonnull
     Node getVersion();
+
+    /**
+     * Queries system information about the daemon.
+     *
+     * @return the daemon system information
+     */
+    @Nonnull
+    Node getInfo();
 
     /**
      * Creates a new container with the given container specification.

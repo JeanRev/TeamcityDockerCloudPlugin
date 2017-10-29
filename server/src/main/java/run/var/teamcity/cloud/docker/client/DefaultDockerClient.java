@@ -141,6 +141,13 @@ public class DefaultDockerClient extends DockerAbstractClient implements DockerC
 
     @Nonnull
     @Override
+    public Node getInfo() {
+        return invoke(target().path("/info"), HttpMethod.GET, null, prepareHeaders(DockerRegistryCredentials.ANONYMOUS)
+                , null);
+    }
+
+    @Nonnull
+    @Override
     public Node createContainer(@Nonnull Node containerSpec, @Nullable String name) {
         DockerCloudUtils.requireNonNull(containerSpec, "Container JSON specification cannot be null.");
         WebTarget target = target().path("/containers/create");
