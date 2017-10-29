@@ -256,8 +256,21 @@ public class SwarmDockerClientFacade extends BaseDockerClientFacade {
 
                 for (Node task : tasks) {
                     String taskId = task.getAsString("ID");
-                    String state = task.getObject("Status").getAsString("State");
-                    agentHolderInfos.add(new AgentHolderInfo(id, taskId, labels, state, name, creationTimestamp,
+                    Node status = task.getObject("Status");
+                    String state = status.getAsString("State");
+                    String msg = status.getAsString("Message", "");
+                    String err = status.getAsString("Err", "");
+
+                    String stateMsg = state;
+                    String sep = " - ";
+                    if (!msg.isEmpty()) {
+                        stateMsg += sep + msg;
+                        sep = ": ";
+                    }
+                    if (!err.isEmpty()) {
+                        stateMsg += sep + err;
+                    }
+                    agentHolderInfos.add(new AgentHolderInfo(id, taskId, labels, stateMsg, name, creationTimestamp,
                             TaskRunningState.isRunning(state)));
                 }
             }
