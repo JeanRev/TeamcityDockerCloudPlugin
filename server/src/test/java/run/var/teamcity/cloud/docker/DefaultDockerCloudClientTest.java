@@ -37,6 +37,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -417,7 +418,7 @@ public class DefaultDockerCloudClientTest {
     }
 
     @Test
-    public void mustPreserveDockerInstanceWhenContainerIsLive() {
+    public void mustSyncAgentHolderInfo() {
         DefaultDockerCloudClient client = createClient();
 
         DockerImage dockerImage = waitForImage(client);
@@ -432,6 +433,12 @@ public class DefaultDockerCloudClientTest {
 
         assertThat(clientFacade.getAgentHolders()).hasSize(1);
         assertThat(instance.getErrorInfo()).isNull();
+
+        AgentHolder agentHolder = clientFacade.getAgentHolders().get(0);
+
+        AgentHolderInfo agentHolderInfo = instance.getAgentHolderInfo().get();
+        assertThat(agentHolderInfo.getId()).isEqualTo(agentHolder.getId());
+        assertThat(agentHolderInfo.isRunning()).isTrue();
     }
 
     @Test

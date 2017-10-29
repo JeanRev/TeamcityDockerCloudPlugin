@@ -768,6 +768,8 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
                             continue;
                         }
 
+                        instance.setAgentHolderInfo(agentHolder);
+
                         spottedInstances.add(instanceUuid);
 
                         InstanceStatus instanceStatus = instance.getStatus();
