@@ -95,12 +95,23 @@ let settingsConverterFixtures = [
     {
         name: 'should handle Volumes', fixtures: [{
         settings: {AgentHolderSpec: {TaskTemplate: {ContainerSpec: {Mounts: [
-            {Source: '/tmp/host_path1', Target: '/tmp/container_path1', ReadOnly: false, Type: 'volume'},
+            {Source: 'volume_name', Target: '/tmp/container_path1', ReadOnly: false, Type: 'volume'},
             {Target: '/tmp/container_path2', ReadOnly: true, Type: 'volume' }
             ]}}}},
         viewModel: {Volumes: [
-            {PathOnHost: '/tmp/host_path1', PathInContainer: '/tmp/container_path1', ReadOnly: false},
-            {PathInContainer: '/tmp/container_path2', ReadOnly: true}]}
+            {Source: 'volume_name', Target: '/tmp/container_path1', ReadOnly: false},
+            {Target: '/tmp/container_path2', ReadOnly: true}]}
+    }]
+    },
+    {
+        name: 'should handle Binds', fixtures: [{
+        settings: {AgentHolderSpec: {TaskTemplate: {ContainerSpec: {Mounts: [
+            {Source: '/tmp/host_path1', Target: '/tmp/container_path1', ReadOnly: false, Type: 'bind'},
+            {Source: '/tmp/host_path2', Target: '/tmp/container_path2', ReadOnly: false, Type: 'bind'}
+        ]}}}},
+        viewModel: {Binds: [
+            {Source: '/tmp/host_path1', Target: '/tmp/container_path1', ReadOnly: false},
+            {Source: '/tmp/host_path2', Target: '/tmp/container_path2', ReadOnly: false}]}
     }]
     },
     {

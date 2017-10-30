@@ -146,10 +146,12 @@ function SwarmSchema() {
 
         let mounts = [];
         Utils.safeEach(viewModel.Volumes, function(volume) {
-            let mount = { Target: volume.PathInContainer,  Type: 'volume',
-                ReadOnly: volume.ReadOnly};
-            _copyFromTo(volume, mount, 'PathOnHost', 'Source');
+            let mount = { Target: volume.Target, ReadOnly: volume.ReadOnly, Type: 'volume' };
+            _copy(volume, mount, 'Source');
             mounts.push(mount);
+        });
+        Utils.safeEach(viewModel.Binds, function(bind) {
+            mounts.push({ Source: bind.Source, Target: bind.Target, ReadOnly: bind.ReadOnly, Type: 'bind'});
         });
         if (Utils.notEmpty(mounts)) {
             containerSpec.Mounts = mounts;
@@ -247,14 +249,24 @@ function SwarmSchema() {
             viewModel.LogOptions = logOptions;
         }
         let volumes = [];
+        let binds = [];
         Utils.safeEach(containerSpec.Mounts, function(mount) {
-            let volume = { PathInContainer: mount.Target, ReadOnly: mount.ReadOnly };
-            _copyFromTo(mount, volume, 'Source', 'PathOnHost');
-            volumes.push(volume);
+            if (mount.Type === 'volume') {
+                let volume = {Target: mount.Target, ReadOnly: mount.ReadOnly};
+                _copy(mount, volume, 'Source');
+                volumes.push(volume);
+            }
+            if (mount.Type === 'bind') {
+                binds.push({Target: mount.Target, ReadOnly: mount.ReadOnly, Source: mount.Source});
+            }
         });
 
         if (volumes.length) {
             viewModel.Volumes = volumes;
+        }
+
+        if (binds.length) {
+            viewModel.Binds = binds;
         }
 
         return viewModel;
@@ -296,8 +308,13 @@ function SwarmSchema() {
         Command: '<td><input type="text" id="dockerCloudImage_Command_IDX"/></td>',
         Env: '<td><input type="text" id="dockerCloudImage_Env_IDX_Name" /><span class="error" id="dockerCloudImage_Env_IDX_Name_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_Env_IDX_Value" /></td>',
-        Volumes: '<td><input type="text" id="dockerCloudImage_Volumes_IDX_PathOnHost" /></td>\
-        <td><input type="text" id="dockerCloudImage_Volumes_IDX_PathInContainer" /><span class="error" id="dockerCloudImage_Volumes_IDX_PathInContainer_error"></span></td>\
+        Binds: '<td><input type="text" id="dockerCloudImage_Binds_IDX_Source" /></td>\
+        <td><input type="text" id="dockerCloudImage_Binds_IDX_Target" /><span class="error"\
+         id="dockerCloudImage_Binds_IDX_Target_error"></span></td>\
+        <td class="center"><input type="checkbox" id="dockerCloudImage_Volumes_IDX_ReadOnly" /></td>',
+        Volumes: '<td><input type="text" id="dockerCloudImage_Volumes_IDX_Source" /></td>\
+        <td><input type="text" id="dockerCloudImage_Volumes_IDX_Target" /><span class="error"\
+         id="dockerCloudImage_Volumes_IDX_Target_error"></span></td>\
         <td class="center"><input type="checkbox" id="dockerCloudImage_Volumes_IDX_ReadOnly" /></td>',
         Labels: '<td><input type="text" id="dockerCloudImage_Labels_IDX_Key" /><span class="error" id="dockerCloudImage_Labels_IDX_Key_error"></span></td>\
         <td><input type="text" id="dockerCloudImage_Labels_IDX_Value" /></td>',

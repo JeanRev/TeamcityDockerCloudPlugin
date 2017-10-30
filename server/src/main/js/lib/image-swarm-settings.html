@@ -306,18 +306,34 @@
         </table>
         <h4>Volumes:
             <i class="icon icon16 tc-icon_help_small tooltip"></i>
-            <span class="tooltiptext">Defines volumes, and optionally, their bound location on the host file system.</span>
+            <span class="tooltiptext">Creates a volume with the given name and options (or uses a pre-existing volume with the same name and options). </span>
         </h4>
         <table class="settings">
             <thead>
             <tr>
-                <th class="name" style="width: 35%">Host path</th>
+                <th class="name" style="width: 35%">Volume name</th>
                 <th class="name" style="width: 35%">Container path&nbsp;<span class="mandatoryAsterix">*</span></th>
                 <th class="name center" style="width: 20%;">Read only</th>
                 <th class="dockerCloudCtrlCell"></th>
             </tr>
             </thead>
             <tbody id="dockerCloudImage_Volumes">
+            </tbody>
+        </table>
+        <h4>Binds:
+            <i class="icon icon16 tc-icon_help_small tooltip"></i>
+            <span class="tooltiptext">Mounts a file or directory from the host into the container. Must exist prior to creating the container.</span>
+        </h4>
+        <table class="settings">
+            <thead>
+            <tr>
+                <th class="name" style="width: 35%">Host path&nbsp;<span class="mandatoryAsterix">*</span></th>
+                <th class="name" style="width: 35%">Container path&nbsp;<span class="mandatoryAsterix">*</span></th>
+                <th class="name center" style="width: 20%;">Read only</th>
+                <th class="dockerCloudCtrlCell"></th>
+            </tr>
+            </thead>
+            <tbody id="dockerCloudImage_Binds">
             </tbody>
         </table>
         <h4>Labels:
