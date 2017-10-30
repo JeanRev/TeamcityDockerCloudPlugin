@@ -2,7 +2,6 @@ package run.var.teamcity.cloud.docker;
 
 import com.intellij.openapi.diagnostic.Logger;
 import run.var.teamcity.cloud.docker.client.DockerClient;
-import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.StdioType;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
@@ -19,7 +18,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class SwarmDockerClientFacade extends BaseDockerClientFacade {

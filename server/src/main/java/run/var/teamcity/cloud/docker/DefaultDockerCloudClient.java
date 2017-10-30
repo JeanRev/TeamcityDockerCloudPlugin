@@ -205,15 +205,16 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
         buildServer.registerExtension(AgentNameGenerator.class, agentNameGeneratorUuid.toString(), sBuildAgent -> {
             DockerInstance instance = findInstanceByAgent(sBuildAgent);
             if (instance != null) {
-                String name = instance.getContainerName();
-                if (name == null) {
-                    LOG.warn("Cloud agent connected for instance " + instance + " no known container name.");
-                } else {
+                Optional<String> agentHolderName = instance.getAgentHolderName();
+                if (agentHolderName.isPresent()) {
+                    String agentName =  agentHolderName.get();
                     String address = sBuildAgent.getHostAddress();
                     if (address != null && address.length() > 0) {
-                        name += "/" + address;
+                        agentName += "/" + address;
                     }
-                    return name;
+                    return agentName;
+                } else {
+                    LOG.warn("Cloud agent connected for instance " + instance + " no known container name.");
                 }
             }
 
@@ -430,14 +431,10 @@ public class DefaultDockerCloudClient extends BuildServerAdapter implements Dock
 
                             NewAgentHolderInfo agentHolder = clientFacade.createAgent(createAgentParameters);
 
+                            instance.bindWithAgentHolder(agentHolder);
+
                             String agentHolderId = agentHolder.getId();
-
-                            instance.setContainerName(agentHolder.getName());
-                            dockerImage.setImageName(agentHolder.getResolvedImage());
-
                             String taskId = clientFacade.startAgent(agentHolderId);
-
-                            instance.setAgentHolderId(agentHolderId);
                             instance.setTaskId(taskId);
 
                             LOG.info("New container " + agentHolderId + " created.");

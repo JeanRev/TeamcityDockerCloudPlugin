@@ -148,7 +148,6 @@ public class DefaultDockerCloudClientTest {
             return status == InstanceStatus.STOPPED;
         });
 
-        assertThat(image.getImageName()).isEqualTo("image:latest");
         assertThat(instance.getErrorInfo()).isNull();
         assertThat(instance.getStatus()).isSameAs(InstanceStatus.STOPPED);
 
@@ -213,24 +212,44 @@ public class DefaultDockerCloudClientTest {
 
         assertThat(clientFacade.getAgentHolders()).hasSize(1);
 
-        AgentHolder container = clientFacade.getAgentHolders().iterator().next();
+        AgentHolder agentHolder = clientFacade.getAgentHolders().iterator().next();
 
-        String containerId = container.getId();
+        String agentHolderId = agentHolder.getId();
 
-        assertThat(instance.getAgentHolderId().get()).isEqualTo(containerId);
+        assertThat(instance.getAgentHolderId().get()).isEqualTo(agentHolderId);
 
         client.terminateInstance(instance);
 
         waitUntil(() -> instance.getStatus() == InstanceStatus.STOPPED);
 
-        assertThat(clientFacade.getAgentHolders()).containsOnly(container);
+        assertThat(clientFacade.getAgentHolders()).containsOnly(agentHolder);
 
         client.startNewInstance(dockerImage, userData);
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        assertThat(instance.getAgentHolderId().get()).isEqualTo(containerId);
-        assertThat(clientFacade.getAgentHolders()).containsOnly(container);
+        assertThat(instance.getAgentHolderId().get()).isEqualTo(agentHolderId);
+        assertThat(clientFacade.getAgentHolders()).containsOnly(agentHolder);
+    }
+
+    @Test
+    public void mustBindAgentHolderToInstance() {
+
+        client = createClient();
+
+        DockerImage image = waitForImage(client);
+
+        DockerInstance instance = client.startNewInstance(image, userData);
+
+        waitForInstanceStatus(instance, InstanceStatus.RUNNING);
+
+        TestDockerClientFacade clientFacade = testCloudSupport.getClientFacade();
+
+        AgentHolder agentHolder = clientFacade.getAgentHolders().iterator().next();
+
+        assertThat(instance.getAgentHolderId()).isEqualTo(Optional.of(agentHolder.getId()));
+        assertThat(instance.getResolvedImageName()).isEqualTo(Optional.of("image:latest"));
+        assertThat(instance.getAgentHolderName()).isEqualTo(Optional.of(agentHolder.getName()));
     }
 
     @Test
@@ -932,7 +951,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        assertThat(instance.getContainerName()).isEqualTo("test_container_name");
+        assertThat(instance.getAgentHolderName()).isEqualTo("test_container_name");
     }
 
     @Test
@@ -952,7 +971,7 @@ public class DefaultDockerCloudClientTest {
 
         AgentHolder container = testCloudSupport.getClientFacade().getAgentHolders().get(0);
 
-        assertThat(instance.getContainerName()).isEqualTo("test_container_name");
+        assertThat(instance.getAgentHolderName()).isEqualTo("test_container_name");
 
         client.terminateInstance(instance);
 
@@ -964,7 +983,7 @@ public class DefaultDockerCloudClientTest {
 
         assertThat(newInstance).isSameAs(instance);
 
-        assertThat(instance.getContainerName()).isEqualTo("test_container_name");
+        assertThat(instance.getAgentHolderName()).isEqualTo("test_container_name");
     }
 
     @Test

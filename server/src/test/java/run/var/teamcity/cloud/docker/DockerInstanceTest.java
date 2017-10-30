@@ -5,7 +5,9 @@ import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.Node;
 
+import java.util.Collections;
 import java.util.Date;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -44,11 +46,57 @@ public class DockerInstanceTest {
         assertThat(instance.getAgentHolderId()).isEmpty();
 
         String id = TestUtils.createRandomSha256();
-        instance.setAgentHolderId(id);
+        NewAgentHolderInfo agentHolderInfo = new NewAgentHolderInfo(id, "", "", Collections.emptyList());
+
+        instance.bindWithAgentHolder(agentHolderInfo);
 
         assertThat(instance.getAgentHolderId().get()).isEqualTo(id);
+    }
 
-        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> instance.setAgentHolderId(null));
+    @Test
+    public void getAgentHolderName() {
+        DockerInstance instance = createInstance();
+
+        assertThat(instance.getAgentHolderName()).isEmpty();
+
+        NewAgentHolderInfo agentHolderInfo = new NewAgentHolderInfo(TestUtils.createRandomSha256(),
+                "agent_holder_name", "", Collections.emptyList());
+
+        instance.bindWithAgentHolder(agentHolderInfo);
+
+        assertThat(instance.getAgentHolderName()).isEqualTo(Optional.of("agent_holder_name"));
+    }
+
+    @Test
+    public void getResolvedImageName() {
+        DockerInstance instance = createInstance();
+
+        assertThat(instance.getResolvedImageName()).isEmpty();
+
+        NewAgentHolderInfo agentHolderInfo = new NewAgentHolderInfo(TestUtils.createRandomSha256(),
+                "", "resolved_image", Collections.emptyList());
+
+        instance.bindWithAgentHolder(agentHolderInfo);
+
+        assertThat(instance.getResolvedImageName()).isEqualTo(Optional.of("resolved_image"));
+    }
+
+    @Test
+    public void bindWithAgentHolderInvalidInput() {
+        DockerInstance instance = createInstance();
+        assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> instance.bindWithAgentHolder(null));
+    }
+
+    @Test
+    public void bindWithAgentHolderTwice() {
+        DockerInstance instance = createInstance();
+
+        NewAgentHolderInfo agentHolderInfo = new NewAgentHolderInfo(TestUtils.createRandomSha256(),
+                "", "", Collections.emptyList());
+
+        instance.bindWithAgentHolder(agentHolderInfo);
+
+        assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> instance.bindWithAgentHolder(agentHolderInfo));
     }
 
     @Test

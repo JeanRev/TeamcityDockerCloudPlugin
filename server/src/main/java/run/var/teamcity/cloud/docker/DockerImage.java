@@ -31,9 +31,6 @@ public class DockerImage implements CloudImage {
 
     private final Map<UUID, DockerInstance> instances = new ConcurrentHashMap<>();
 
-    @Nullable
-    private String imageName;
-
     DockerImage(DefaultDockerCloudClient cloudClient, DockerImageConfig config) {
         this.cloudClient = cloudClient;
         this.config = config;
@@ -62,22 +59,7 @@ public class DockerImage implements CloudImage {
     @Nonnull
     @Override
     public String getName() {
-        return lock.call(() -> {
-            String name = config.getProfileName();
-            if (imageName != null) {
-                name += " (" + imageName + ")";
-            }
-            return name;
-        });
-    }
-
-    @Nullable
-    public String getImageName() {
-        return lock.call(() -> imageName);
-    }
-
-    void setImageName(@Nonnull String imageName) {
-        lock.run(() -> this.imageName = imageName);
+        return lock.call(config::getProfileName);
     }
 
     /**

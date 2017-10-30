@@ -27,7 +27,8 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     // This lock ensure a thread-safe usage of all the variables below.
     private final LockHandler lock = LockHandler.newReentrantLock();
 
-    private String containerName = null;
+    private String agentHolderName = null;
+    private String resolvedImageName = null;
     private String agentHolderId;
     private String taskId;
     private AgentHolderInfo agentHolderInfo;
@@ -68,27 +69,14 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     }
 
     /**
-     * Gets the Docker agent holder ID associated with this cloud instance. It could be {@code null} if the agent
-     * holder is not known yet or is not available anymore.
+     * Gets the Docker agent holder ID associated with this cloud instance.  Only available once the agent holder has
+     * been bound with this instance.
      *
      * @return the agent holder ID or {@code null}
      */
     @Nonnull
     Optional<String> getAgentHolderId() {
         return Optional.ofNullable(lock.call(() -> this.agentHolderId));
-    }
-
-    /**
-     * Sets the Docker container ID.
-     *
-     * @param agentHolderId the agent holder ID
-     *
-     * @throws NullPointerException if {@code agentHolderId} is {@code null}
-     */
-    void setAgentHolderId(@Nonnull String agentHolderId) {
-        DockerCloudUtils.requireNonNull(agentHolderId, "Agent holder id cannot be null.");
-
-        lock.run(() -> this.agentHolderId = agentHolderId);
     }
 
     /**
@@ -110,25 +98,55 @@ public class DockerInstance implements CloudInstance, DockerCloudErrorHandler {
     @Nonnull
     @Override
     public String getName() {
-        return lock.call(() -> containerName == null ? "<Unknown>" : containerName);
-    }
-
-    @Nullable
-    String getContainerName() {
-        return lock.call(() -> containerName);
+        return lock.call(() -> agentHolderName == null ? "<Unknown>" : agentHolderName);
     }
 
     /**
-     * Sets the instance name.
+     * Gets the agent holder name associated with this instance. Only available once the agent holder has been bound
+     * with this instance.
      *
-     * @param containerName the instance name
+     * @return the agent holder name
      *
-     * @throws NullPointerException if {@code name} is {@code null}
+     * @see #bindWithAgentHolder(NewAgentHolderInfo)
      */
-    void setContainerName(@Nonnull String containerName) {
-        DockerCloudUtils.requireNonNull(containerName, "Container name cannot be null.");
+    @Nonnull
+    public Optional<String> getAgentHolderName() {
+        return Optional.ofNullable(lock.call(() -> agentHolderName));
+    }
 
-        lock.run(() -> this.containerName = containerName);
+    /**
+     * Gets the instance resolved image name.  Only available once the agent holder has been bound
+     * with this instance.
+     *
+     * @return agent holder resolved image name
+     *
+     * @see #bindWithAgentHolder(NewAgentHolderInfo)
+     */
+    @Nonnull
+    public Optional<String> getResolvedImageName() {
+        return Optional.ofNullable(lock.call(() -> resolvedImageName));
+    }
+
+    /**
+     * Bind a docker instance with a newly created agent holder.
+     *
+     * @param agentHolderInfo the new agent holder information set
+     *
+     * @throws NullPointerException if {@code agentHolderInfo} is {@code null}
+     * @throws IllegalArgumentException if this instance is already bound with an agent holder
+     */
+    public void bindWithAgentHolder(@Nonnull NewAgentHolderInfo agentHolderInfo) {
+        DockerCloudUtils.requireNonNull(agentHolderInfo, "Agent holder info cannot be null.");
+
+        lock.run(() -> {
+            if (this.agentHolderId != null) {
+                assert agentHolderName != null && resolvedImageName != null;
+                throw new IllegalStateException("Docker instance already bound with agent holder.");
+            }
+            this.agentHolderId = agentHolderInfo.getId();
+            this.agentHolderName = agentHolderInfo.getName();
+            this.resolvedImageName = agentHolderInfo.getResolvedImage();
+        });
     }
 
     @Nonnull

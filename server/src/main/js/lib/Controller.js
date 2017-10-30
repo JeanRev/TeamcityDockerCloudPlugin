@@ -110,6 +110,7 @@ function Controller(bs, oo, tabbedPane, params, schema) {
     let tooltipHolder;
     let queryDaemonInfoReq;
     let tabs;
+    let logsAvailable;
     let testCancelled;
     let testUuid;
     let testPhase;

@@ -25,13 +25,14 @@
 
     <h4><%= resources.text("web.imageDetails.title") %></h4>
     <div style="margin: 5px 10%; width: 90%">
-        <table style="width: 80%;">
+        <table style="width: 85%;">
             <thead>
             <tr>
-                <th style="width: 30%;"><%= resources.text("web.imageDetails.col.agentHolderId") %></th>
+                <th style="width: 20%;"><%= resources.text("web.imageDetails.col.agentHolderId") %></th>
                 <th style="width: 20%;">Created</th>
                 <th style="width: 20%;">State</th>
-                <th style="width: 30%;">Name</th>
+                <th style="width: 20%;">Name</th>
+                <th style="width: 20%;">Image</th>
             </tr>
             </thead>
             <tbody>
@@ -54,6 +55,8 @@
                 <td><%= agentHolderInfo.getStateMsg() %>
                 </td>
                 <td><%= agentHolderInfo.getName() %>
+                </td>
+                <td><%= instance.getResolvedImageName().orElse("") %>
                 </td>
             </tr>
             <%
