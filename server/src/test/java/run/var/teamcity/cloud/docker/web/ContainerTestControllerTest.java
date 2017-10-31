@@ -19,8 +19,8 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 import run.var.teamcity.cloud.docker.web.ContainerTestController.Action;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Phase;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Status;
 
 import javax.servlet.http.HttpServletResponse;
 import java.util.Collections;
@@ -35,13 +35,13 @@ public class ContainerTestControllerTest {
 
     private TestHttpServletRequest request;
     private TestHttpServletResponse response;
-    private TestContainerTestManager testMgr;
+    private TestAgentHolderTestManager testMgr;
     private TestDockerCloudSupportRegistry testCloudSupportRegistry;
     private EditableNode responseNode;
 
     @Before
     public void init() {
-        testMgr = new TestContainerTestManager();
+        testMgr = new TestAgentHolderTestManager();
 
 
         DockerImageConfig imageConfig = DockerImageConfigBuilder.
@@ -105,8 +105,8 @@ public class ContainerTestControllerTest {
         request.parameter("action", Action.CREATE.name());
         ctrl.doPost(request, response, responseNode);
 
-        testMgr.getListener().notifyStatus(new TestContainerStatusMsg(TestUtils.TEST_UUID, Phase.CREATE, Status
-                .PENDING, null, null, null, null, Collections.emptyList()));
+        testMgr.getListener().notifyStatus(new TestAgentHolderStatusMsg(TestUtils.TEST_UUID, Phase.CREATE, Status
+                .PENDING, null, null, null, false,null, Collections.emptyList()));
 
         request.
                 parameter("action", Action.QUERY.name()).

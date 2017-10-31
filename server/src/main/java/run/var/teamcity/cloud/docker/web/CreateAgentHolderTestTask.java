@@ -8,7 +8,7 @@ import run.var.teamcity.cloud.docker.DockerImageNameResolver;
 import run.var.teamcity.cloud.docker.NewAgentHolderInfo;
 import run.var.teamcity.cloud.docker.PullStatusListener;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Status;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -41,7 +41,7 @@ class CreateAgentHolderTestTask extends AgentHolderTestTask {
     CreateAgentHolderTestTask(@Nonnull AgentHolderTestHandler testTaskHandler, @Nonnull DockerImageConfig imageConfig,
                             @Nonnull String serverUrl, @Nonnull UUID instanceUuid,
                             @Nonnull DockerImageNameResolver imageResolver) {
-        super(testTaskHandler, TestContainerStatusMsg.Phase.CREATE);
+        super(testTaskHandler, TestAgentHolderStatusMsg.Phase.CREATE);
         this.imageConfig = DockerCloudUtils.requireNonNull(imageConfig, "Cloud image configuration cannot be null.");
         this.serverUrl = DockerCloudUtils.requireNonNull(serverUrl, "Server URL cannot be null.");
         this.instanceUuid = DockerCloudUtils.requireNonNull(instanceUuid, "Test instance UUID cannot be null.");

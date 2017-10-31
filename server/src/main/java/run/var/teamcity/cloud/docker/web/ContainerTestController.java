@@ -44,7 +44,7 @@ public class ContainerTestController extends BaseFormJsonController {
 
     public static final String PATH = "test-container.html";
 
-    private final ContainerTestManager testMgr;
+    private final AgentHolderTestManager testMgr;
     private final DockerCloudSupportRegistry cloudSupportRegistry;
 
 
@@ -52,7 +52,7 @@ public class ContainerTestController extends BaseFormJsonController {
                             @Nonnull SBuildServer buildServer,
                             @Nonnull PluginDescriptor pluginDescriptor,
                             @Nonnull WebControllerManager manager,
-                            @Nonnull ContainerTestManager testMgr) {
+                            @Nonnull AgentHolderTestManager testMgr) {
         this.cloudSupportRegistry = cloudSupportRegistry;
         this.testMgr = testMgr;
         buildServer.addListener(new BuildServerListener());
@@ -121,9 +121,9 @@ public class ContainerTestController extends BaseFormJsonController {
             HttpSession httpSession = request.getSession();
             testRef.persistInHttpSession(httpSession);
 
-            testMgr.setListener(testUuid, new ContainerTestListener() {
+            testMgr.setListener(testUuid, new AgentHolderTestListener() {
                 @Override
-                public void notifyStatus(@Nonnull TestContainerStatusMsg statusMsg) {
+                public void notifyStatus(@Nonnull TestAgentHolderStatusMsg statusMsg) {
                     // Nothing to do.
                 }
 
@@ -161,13 +161,13 @@ public class ContainerTestController extends BaseFormJsonController {
         }
 
         if (action == Action.QUERY) {
-            Optional<TestContainerStatusMsg> lastStatus = testMgr.retrieveStatus(testUuid);
+            Optional<TestAgentHolderStatusMsg> lastStatus = testMgr.retrieveStatus(testUuid);
             if (lastStatus.isPresent()) {
-                TestContainerStatusMsg statusMsg = lastStatus.get();
+                TestAgentHolderStatusMsg statusMsg = lastStatus.get();
                 responseNode.put("statusMsg", statusMsg.toExternalForm());
-                String containerId = statusMsg.getContainerId();
-                if (containerId != null && !testRef.getContainerId().isPresent()) {
-                    testRef.registerContainer(containerId).persistInHttpSession(request.getSession());
+                Optional<String> agentHolderId = statusMsg.getAgentHolderId();
+                if (agentHolderId.isPresent() && !testRef.getContainerId().isPresent()) {
+                    testRef.registerContainer(agentHolderId.get()).persistInHttpSession(request.getSession());
                 }
             }
             return;

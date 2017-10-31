@@ -4,8 +4,8 @@ import run.var.teamcity.cloud.docker.AgentHolderInfo;
 import run.var.teamcity.cloud.docker.DockerClientFacade;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Stopwatch;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Phase;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Status;
 
 import javax.annotation.Nonnull;
 import java.time.Duration;
@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status.PENDING;
-import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status.SUCCESS;
+import static run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Status.PENDING;
+import static run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Status.SUCCESS;
 
 /**
  * {@link AgentHolderTestTask} to start the test agent holder.
@@ -57,7 +57,7 @@ class StartAgentHolderTestTask extends AgentHolderTestTask {
 
             taskId = clientFacade.startAgent(containerId);
 
-            testTaskHandler.notifyAgentHolderStarted(containerStartTime);
+            testTaskHandler.notifyAgentHolderStarted(containerStartTime, clientFacade.supportQueryingLogs());
 
             msg("Waiting for agent to connect");
 

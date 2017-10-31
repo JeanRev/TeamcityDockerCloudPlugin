@@ -9,12 +9,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Container test manager.
+ * Agent holder test manager.
  */
-interface ContainerTestManager {
+interface AgentHolderTestManager {
 
     /**
-     * Create a new test container.
+     * Create a new test agent holder.
      *
      * @param clientConfig the cloud client configuration
      * @param imageConfig the image configuration from which the test container will be created
@@ -22,30 +22,30 @@ interface ContainerTestManager {
      * @return the create test UUID
      *
      * @throws NullPointerException if any argument is {@code null}
-     * @throws ContainerTestException if an error prevented the container creation
+     * @throws ContainerTestException if an error prevented the agent holder creation
      */
     @Nonnull
     UUID createNewTestContainer(@Nonnull DockerCloudClientConfig clientConfig,
                                          @Nonnull DockerImageConfig imageConfig);
     /**
-     * Start the test container for the given test UUID.
+     * Start the test agent holder for the given test UUID.
      *
      * @param testUuid the test UUID
      *
      * @throws NullPointerException if {@code testUuid} is {@code null}
-     * @throws ContainerTestException if an error prevented the container from being started
+     * @throws ContainerTestException if an error prevented the agent holder from being started
      */
     void startTestContainer(@Nonnull UUID testUuid);
 
     /**
-     * Gets the containers logs for the given test UUID.
+     * Gets the agent holder logs for the given test UUID.
      *
      * @param testUuid the test UUID
      *
-     * @return the container logs
+     * @return the agent holder logs
      *
      * @throws NullPointerException if {@code testUuid} is {@code null}
-     * @throws ContainerTestException if an error prevented querying the container logs
+     * @throws ContainerTestException if an error prevented querying the agent holder logs
      */
     @Nonnull
     String getLogs(@Nonnull UUID testUuid);
@@ -67,10 +67,10 @@ interface ContainerTestManager {
      *
      * @throws NullPointerException if any argument is {@code null}
      */
-    void setListener(@Nonnull UUID testUuid, @Nonnull ContainerTestListener listener);
+    void setListener(@Nonnull UUID testUuid, @Nonnull AgentHolderTestListener listener);
 
     @Nonnull
-    Optional<TestContainerStatusMsg> retrieveStatus(UUID testUuid);
+    Optional<TestAgentHolderStatusMsg> retrieveStatus(UUID testUuid);
 
     /**
      * Dispose the test manager.

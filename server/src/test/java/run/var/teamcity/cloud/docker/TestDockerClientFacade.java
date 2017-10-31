@@ -38,6 +38,7 @@ public class TestDockerClientFacade implements DockerClientFacade {
     private DockerRegistryCredentials registryCredentials = DockerRegistryCredentials.ANONYMOUS;
 
     private boolean closed = false;
+    private boolean supportsQueryingLogs = true;
     private DockerClientException failOnCreateException = null;
     private DockerClientException failOnAccessException = null;
 
@@ -157,6 +158,11 @@ public class TestDockerClientFacade implements DockerClientFacade {
     }
 
     @Override
+    public boolean supportQueryingLogs() {
+        return supportsQueryingLogs;
+    }
+
+    @Override
     public void close() {
         lock.run(() -> closed = true);
     }
@@ -190,6 +196,10 @@ public class TestDockerClientFacade implements DockerClientFacade {
 
     public void setFailOnCreateException(DockerClientException failOnCreateException) {
         lock.run(() -> this.failOnCreateException = failOnCreateException);
+    }
+
+    public void setSupportsQueryingLogs(boolean supportsQueryingLogs) {
+        this.supportsQueryingLogs = supportsQueryingLogs;
     }
 
     public void lock() {

@@ -13,7 +13,7 @@ import run.var.teamcity.cloud.docker.TestDockerCloudSupportRegistry;
 import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
-import run.var.teamcity.cloud.docker.client.TestContainerTestStatusListener;
+import run.var.teamcity.cloud.docker.client.TestAgentHolderTestStatusListener;
 import run.var.teamcity.cloud.docker.test.LongRunning;
 import run.var.teamcity.cloud.docker.test.TestBuildAgentManager;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
@@ -24,8 +24,8 @@ import run.var.teamcity.cloud.docker.test.TestSBuildServer;
 import run.var.teamcity.cloud.docker.test.TestUtils;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Node;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Phase;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Status;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -40,7 +40,7 @@ import static run.var.teamcity.cloud.docker.test.TestUtils.waitUntil;
  * {@link ContainerTestController} test suite.
  */
 @Category(LongRunning.class)
-public class DefaultContainerTestManagerTest {
+public class DefaultAgentHolderTestManagerTest {
 
     private Duration testMaxIdleTime;
     private Duration cleanupRate;
@@ -54,7 +54,7 @@ public class DefaultContainerTestManagerTest {
     private TestBuildAgentManager agentMgr;
     private TestDockerImageResolver imageResolver;
     private URL serverURL;
-    private TestContainerTestStatusListener testListener;
+    private TestAgentHolderTestStatusListener testListener;
 
     @Before
     public void init() throws MalformedURLException {
@@ -79,16 +79,16 @@ public class DefaultContainerTestManagerTest {
         buildServer = new TestSBuildServer();
         agentMgr = buildServer.getTestBuildAgentManager();
 
-        testMaxIdleTime = DefaultContainerTestManager.TEST_DEFAULT_IDLE_TIME;
-        cleanupRate = DefaultContainerTestManager.CLEANUP_DEFAULT_TASK_RATE;
+        testMaxIdleTime = DefaultAgentHolderTestManager.TEST_DEFAULT_IDLE_TIME;
+        cleanupRate = DefaultAgentHolderTestManager.CLEANUP_DEFAULT_TASK_RATE;
         imageResolver = new TestDockerImageResolver("resolved-image:1.0");
-        testListener = new TestContainerTestStatusListener();
+        testListener = new TestAgentHolderTestStatusListener();
     }
 
     @Test
     public void fullTest() {
 
-        ContainerTestManager mgr = createManager();
+        AgentHolderTestManager mgr = createManager();
 
         UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
 
@@ -106,7 +106,7 @@ public class DefaultContainerTestManagerTest {
         mgr.startTestContainer(testUuid);
 
         waitUntil(() -> mgr.
-                retrieveStatus(testUuid).map(msg -> msg.getContainerStartTime() != null).
+                retrieveStatus(testUuid).map(msg -> msg.getAgentHolderStartTime() != null).
                 orElse(false));
 
         assertThat(clientFacade.getAgentHolders()).hasSize(1);
@@ -118,7 +118,7 @@ public class DefaultContainerTestManagerTest {
         agentMgr.registeredAgent(agent);
 
         waitUntil(() -> mgr.
-                retrieveStatus(testUuid).map(msg -> msg.getContainerStartTime() != null).
+                retrieveStatus(testUuid).map(msg -> msg.getAgentHolderStartTime() != null).
                 orElse(false));
 
         mgr.dispose(testUuid);
@@ -132,7 +132,7 @@ public class DefaultContainerTestManagerTest {
     public void errorHandling() {
         pullOnCreate = true;
 
-        ContainerTestManager mgr = createManager();
+        AgentHolderTestManager mgr = createManager();
         imageResolver.image("local-only:1.0");
         testCloudSupport.getClientFacade().localImage("local-only:1.0");
 
@@ -150,7 +150,7 @@ public class DefaultContainerTestManagerTest {
     public void createNoPull() {
         pullOnCreate = false;
 
-        ContainerTestManager mgr = createManager();
+        AgentHolderTestManager mgr = createManager();
         imageResolver.image("local-only:1.0");
         testCloudSupport.getClientFacade().localImage("local-only:1.0");
 
@@ -165,7 +165,7 @@ public class DefaultContainerTestManagerTest {
 
     @Test
     public void diposeTest() {
-        ContainerTestManager mgr = createManager();
+        AgentHolderTestManager mgr = createManager();
 
         UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
 
@@ -186,10 +186,10 @@ public class DefaultContainerTestManagerTest {
     @Test
     public void diposeWhenContainerDoesNotExistsAnymore() {
 
-        ContainerTestManager mgr = createManager();
+        AgentHolderTestManager mgr = createManager();
 
         // Cancelling a test related to an already removed container.
-        testListener = new TestContainerTestStatusListener();
+        testListener = new TestAgentHolderTestStatusListener();
 
         UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
 
@@ -212,14 +212,14 @@ public class DefaultContainerTestManagerTest {
         // To test listener disposal.
         setupFastCleanupRate();
 
-        ContainerTestManager mgr = createManager();
+        AgentHolderTestManager mgr = createManager();
         UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
 
         mgr.setListener(testUuid, testListener);
 
         waitUntil(() -> !testListener.getMsgs().isEmpty());
 
-        TestContainerStatusMsg statusMsg = testListener.getMsgs().getLast();
+        TestAgentHolderStatusMsg statusMsg = testListener.getMsgs().getLast();
 
         assertThat(statusMsg.getStatus()).isIn(Status.PENDING, Status.SUCCESS);
 
@@ -237,17 +237,64 @@ public class DefaultContainerTestManagerTest {
         clientConfig = new DockerCloudClientConfig(testCloudSupport, TestUtils.TEST_UUID,
                 dockerClientConfig, false, null);
 
-        ContainerTestManager mgr = createManager();
+        AgentHolderTestManager mgr = createManager();
 
         UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
 
         mgr.setListener(testUuid, testListener);
 
-        queryUntilSuccess();
+        queryUntilSuccess(Phase.CREATE);
 
         assertThat(testCloudSupport.getClientFacade().getAgentHolders().get(0).
                 getEnv().get(DockerCloudUtils.ENV_SERVER_URL)).isEqualTo(TestRootUrlHolder.HOLDER_URL);
 
+    }
+
+    @Test
+    public void reportLogsAvailable() {
+
+        clientConfig = new DockerCloudClientConfig(testCloudSupport, TestUtils.TEST_UUID,
+                dockerClientConfig, false, null);
+
+        testCloudSupport.getClientFacade().setSupportsQueryingLogs(true);
+
+        AgentHolderTestManager mgr = createManager();
+
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
+
+        mgr.setListener(testUuid, testListener);
+
+        queryUntilSuccess(Phase.CREATE);
+
+        assertThat(testListener.getMsgs().getLast().isLogsAvailable()).isFalse();
+
+        mgr.startTestContainer(testUuid);
+
+        queryUntilStatus(Status.PENDING, Phase.START);
+
+        assertThat(testListener.getMsgs().getLast().isLogsAvailable()).isTrue();
+    }
+
+    @Test
+    public void reportLogsNotAvailable() {
+        clientConfig = new DockerCloudClientConfig(testCloudSupport, TestUtils.TEST_UUID,
+                dockerClientConfig, false, null);
+
+        testCloudSupport.getClientFacade().setSupportsQueryingLogs(false);
+
+        AgentHolderTestManager mgr = createManager();
+
+        UUID testUuid = mgr.createNewTestContainer(clientConfig, createImageConfig());
+
+        mgr.setListener(testUuid, testListener);
+
+        queryUntilSuccess(Phase.CREATE);
+
+        mgr.startTestContainer(testUuid);
+
+        queryUntilStatus(Status.PENDING, Phase.START);
+
+        assertThat(testListener.getMsgs().getLast().isLogsAvailable()).isFalse();
     }
 
     private void setupFastCleanupRate() {
@@ -255,31 +302,40 @@ public class DefaultContainerTestManagerTest {
         testMaxIdleTime = Duration.ofSeconds(3);
     }
 
-    private void queryUntilSuccess(Phase... allowedPhases) {
-        queryUntilStatus(Status.SUCCESS, allowedPhases);
+    private void queryUntilSuccess(Phase targetPhase) {
+        queryUntilStatus(Status.SUCCESS, targetPhase);
     }
 
-    private void queryUntilFailure(Phase... allowedPhases) {
-        queryUntilStatus(Status.FAILURE, allowedPhases);
+    private void queryUntilFailure(Phase targetPhase) {
+        queryUntilStatus(Status.FAILURE, targetPhase);
     }
 
-    private void queryUntilStatus(Status targetStatus, Phase... allowedPhases) {
+    private void queryUntilStatus(Status targetStatus, Phase targetPhase) {
         waitUntil(() -> {
             if (testListener.getMsgs().isEmpty()) {
                 return false;
             }
-            TestContainerStatusMsg queryMsg = testListener.getMsgs().getLast();
+
+
+            TestAgentHolderStatusMsg queryMsg = testListener.getMsgs().getLast();
+            Phase phase = queryMsg.getPhase();
             Status status = queryMsg.getStatus();
-            if (targetStatus != Status.PENDING && status != Status.PENDING) {
-                // Terminal state expected, terminal state reached.
-                assertThat(targetStatus).isSameAs(status);
+
+            if (status == Status.FAILURE) {
+                // Terminal state reached. Only valid when expected for the target phase.
+                assertThat(phase).isEqualTo(targetPhase);
+                assertThat(targetStatus).isEqualTo(Status.FAILURE);
                 return true;
             }
 
-            if (allowedPhases != null && allowedPhases.length > 0) {
-                assertThat(queryMsg.getPhase()).isIn((Object[]) allowedPhases);
-            }
-            return status == targetStatus;
+            int phaseCmp = phase.compareTo(targetPhase);
+
+            // Check that we dind't got beyond the target phase.
+            assertThat(phaseCmp).isLessThanOrEqualTo(0);
+
+            // The target phase is either not reached yet, or the target status does not match.
+            return phaseCmp >= 0 && status == targetStatus;
+
         });
     }
 
@@ -288,8 +344,8 @@ public class DefaultContainerTestManagerTest {
                 DockerRegistryCredentials.ANONYMOUS, 1, null);
     }
 
-    private ContainerTestManager createManager() {
-        return new DefaultContainerTestManager(imageResolver,
+    private AgentHolderTestManager createManager() {
+        return new DefaultAgentHolderTestManager(imageResolver,
                 buildServer, new WebLinks(new TestRootUrlHolder()), testMaxIdleTime, cleanupRate);
     }
 }

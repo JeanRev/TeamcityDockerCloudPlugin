@@ -3,20 +3,20 @@ package run.var.teamcity.cloud.docker.web;
 import com.intellij.openapi.diagnostic.Logger;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.LockHandler;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Phase;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
-import static run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
+import static run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Status;
 
 /**
  * {@link Runnable} base class for container test tasks. This class is responsible for managing the test
- * {@link TestContainerStatusMsg.Status status} and provide helper methods to interact with the
+ * {@link TestAgentHolderStatusMsg.Status status} and provide helper methods to interact with the
  * {@link AgentHolderTestHandler test task handler}.
  * <p>
- * A test task can covers multiple test {@link TestContainerStatusMsg.Phase phases}, and has one initial phase
+ * A test task can covers multiple test {@link TestAgentHolderStatusMsg.Phase phases}, and has one initial phase
  * which can be queried before the test has started running.
  * </p>
  * <p>

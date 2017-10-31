@@ -27,14 +27,14 @@ public class ContainerTestListenerEndpoint {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(ContainerTestListenerEndpoint.class);
 
-    private final ContainerTestManager testMgr;
+    private final AgentHolderTestManager testMgr;
 
     /**
      * Creates a new endpoint instance.
      *
      * @param testMgr the test manager
      */
-    public ContainerTestListenerEndpoint(@Nonnull ContainerTestManager testMgr) {
+    public ContainerTestListenerEndpoint(@Nonnull AgentHolderTestManager testMgr) {
         this.testMgr = testMgr;
     }
 
@@ -85,7 +85,7 @@ public class ContainerTestListenerEndpoint {
         }
     }
 
-    private class TestListener implements ContainerTestListener {
+    private class TestListener implements AgentHolderTestListener {
 
         final LockHandler lock = LockHandler.newReentrantLock();
         final Session session;
@@ -100,15 +100,15 @@ public class ContainerTestListenerEndpoint {
         }
 
         @Override
-        public void notifyStatus(@Nonnull TestContainerStatusMsg statusMsg) {
+        public void notifyStatus(@Nonnull TestAgentHolderStatusMsg statusMsg) {
             lock.run(() -> {
                 if (!session.isOpen()) {
                     return;
                 }
 
-                String containerId = statusMsg.getContainerId();
-                if (!testRef.getContainerId().isPresent() && containerId != null) {
-                    testRef.registerContainer(containerId).persistInHttpSession(httpSession);
+                Optional<String> agentHolderId = statusMsg.getAgentHolderId();
+                if (!testRef.getContainerId().isPresent() && agentHolderId.isPresent()) {
+                    testRef.registerContainer(agentHolderId.get()).persistInHttpSession(httpSession);
                 }
 
                 EditableNode responseNode = Node.EMPTY_OBJECT.editNode();

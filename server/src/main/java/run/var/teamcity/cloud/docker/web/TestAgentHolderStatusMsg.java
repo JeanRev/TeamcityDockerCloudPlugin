@@ -8,12 +8,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
  * A container test status message to be transmitted to the client.
  */
-public class TestContainerStatusMsg {
+public class TestAgentHolderStatusMsg {
 
     /**
      * Status of the test.
@@ -49,9 +50,10 @@ public class TestContainerStatusMsg {
 
     private final String msg;
     @Nullable
-    private final String containerId;
+    private final String agentHolderId;
     @Nullable
-    private final Instant containerStartTime;
+    private final Instant agentHolderStartTime;
+    private final boolean logsAvailable;
     private final Status status;
     private final UUID taskUuid;
     private final Phase phase;
@@ -69,16 +71,16 @@ public class TestContainerStatusMsg {
      *
      * @throws NullPointerException if {@code uuid}, {@code phase}, or {@code status} are {@code null}
      */
-    public TestContainerStatusMsg(@Nonnull UUID uuid, @Nonnull Phase phase, @Nonnull Status status, @Nullable String
-            msg,
-                                  @Nullable String containerId, @Nullable Instant containerStartTime,
-                                  @Nullable Throwable failure, @Nonnull List<String> warnings) {
+    public TestAgentHolderStatusMsg(@Nonnull UUID uuid, @Nonnull Phase phase, @Nonnull Status status, @Nullable String
+            msg, @Nullable String agentHolderId, @Nullable Instant agentHolderStartTime, boolean logsAvailable,
+            @Nullable Throwable failure, @Nonnull List<String> warnings) {
         this.taskUuid = DockerCloudUtils.requireNonNull(uuid, "Test UUID cannot be null.");
         this.phase = DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
         this.status = DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
         this.msg = msg;
-        this.containerId = containerId;
-        this.containerStartTime = containerStartTime;
+        this.agentHolderId = agentHolderId;
+        this.agentHolderStartTime = agentHolderStartTime;
+        this.logsAvailable = logsAvailable;
         this.throwable = failure;
         this.warnings = DockerCloudUtils.requireNonNull(warnings, "Warnings list cannot be null.");
     }
@@ -128,19 +130,19 @@ public class TestContainerStatusMsg {
      *
      * @return the failure cause
      */
-    @Nullable
-    public Throwable getThrowable() {
-        return throwable;
+    @Nonnull
+    public Optional<Throwable> getThrowable() {
+        return Optional.ofNullable(throwable);
     }
 
     /**
      * Gets the created container id if any.
      *
-     * @return the created container id or {@code null}
+     * @return the created container id
      */
-    @Nullable
-    public String getContainerId() {
-        return containerId;
+    @Nonnull
+    public Optional<String> getAgentHolderId() {
+        return Optional.ofNullable(agentHolderId);
     }
 
     /**
@@ -148,9 +150,18 @@ public class TestContainerStatusMsg {
      *
      * @return the container start time or {@code null} if not already started
      */
-    @Nullable
-    public Instant getContainerStartTime() {
-        return containerStartTime;
+    @Nonnull
+    public Optional<Instant> getAgentHolderStartTime() {
+        return Optional.ofNullable(agentHolderStartTime);
+    }
+
+    /**
+     * Checks if logs are available for the agent holder.
+     *
+     * @return {@code true} if logs are available
+     */
+    public boolean isLogsAvailable() {
+        return logsAvailable;
     }
 
     /**
@@ -164,8 +175,9 @@ public class TestContainerStatusMsg {
 
         statusMsg
                 .put("msg", msg)
-                .put("containerId", containerId != null ? DockerCloudUtils.toShortId(containerId) : null)
-                .put("containerStartTime", containerStartTime != null ? containerStartTime.toEpochMilli() : null)
+                .put("agentHolderId", agentHolderId != null ? DockerCloudUtils.toShortId(agentHolderId) : null)
+                .put("agentHolderStartTime", agentHolderStartTime != null ? agentHolderStartTime.toEpochMilli() : null)
+                .put("logsAvailable", logsAvailable)
                 .put("status", status)
                 .put("phase", phase)
                 .put("taskUuid", taskUuid);

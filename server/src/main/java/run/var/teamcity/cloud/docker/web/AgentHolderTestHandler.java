@@ -2,8 +2,8 @@ package run.var.teamcity.cloud.docker.web;
 
 import run.var.teamcity.cloud.docker.DockerClientFacade;
 import run.var.teamcity.cloud.docker.util.Resources;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Phase;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Status;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -32,7 +32,7 @@ public interface AgentHolderTestHandler {
     Resources getResources();
 
     /**
-     * Notify the handler that the test agent holder ID is available. This callback is not expected to be called more
+     * Notifies the handler that the test agent holder ID is available. This callback is not expected to be called more
      * than once for a complete test.
      *
      * @param agentHolderId the agent holder test ID
@@ -40,15 +40,16 @@ public interface AgentHolderTestHandler {
     void notifyAgentHolderId(@Nonnull String agentHolderId);
 
     /**
-     * Notify the handler that the test agent holder has been started. This callback is not expected to be called more
+     * Notifies the handler that the test agent holder has been started. This callback is not expected to be called more
      * than once for a complete test.
      *
-     * @param agentHolderStartTime the container start time
+     * @param agentHolderStartTime the agent holder start time
+     * @param logsAvailable if querying logs is possible for this agent
      */
-    void notifyAgentHolderStarted(@Nonnull Instant agentHolderStartTime);
+    void notifyAgentHolderStarted(@Nonnull Instant agentHolderStartTime, boolean logsAvailable);
 
     /**
-     * Notify the test status back to the user.
+     * Notifies the test status back to the user.
      *
      * @param phase the test phase
      * @param status the test status
@@ -62,7 +63,7 @@ public interface AgentHolderTestHandler {
                       @Nullable Throwable failureCause, @Nonnull List<String> warnings);
 
     /**
-     * Query the handler to check if the build agent has been detected yet.
+     * Queries the handler to check if the build agent has been detected yet.
      *
      * @return {@code true} if the build agent has been detected
      */

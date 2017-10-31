@@ -951,7 +951,7 @@ public class DefaultDockerCloudClientTest {
 
         waitForInstanceStatus(instance, InstanceStatus.RUNNING);
 
-        assertThat(instance.getAgentHolderName()).isEqualTo("test_container_name");
+        assertThat(instance.getAgentHolderName()).isEqualTo(Optional.of("test_container_name"));
     }
 
     @Test
@@ -971,7 +971,7 @@ public class DefaultDockerCloudClientTest {
 
         AgentHolder container = testCloudSupport.getClientFacade().getAgentHolders().get(0);
 
-        assertThat(instance.getAgentHolderName()).isEqualTo("test_container_name");
+        assertThat(instance.getAgentHolderName()).isEqualTo(Optional.of("test_container_name"));
 
         client.terminateInstance(instance);
 
@@ -983,7 +983,7 @@ public class DefaultDockerCloudClientTest {
 
         assertThat(newInstance).isSameAs(instance);
 
-        assertThat(instance.getAgentHolderName()).isEqualTo("test_container_name");
+        assertThat(instance.getAgentHolderName()).isEqualTo(Optional.of("test_container_name"));
     }
 
     @Test

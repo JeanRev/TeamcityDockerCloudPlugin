@@ -93,6 +93,20 @@ public class DockerAPIVersion implements Comparable<DockerAPIVersion>, Serializa
     }
 
     /**
+     * Checks if this version is greater or equal to the one provided.
+     *
+     * @param otherVersion the other version
+     *
+     * @return {@code true} if this version is greater or equal
+     *
+     * @throws NullPointerException if {@code otherVersion} is {@code null}
+     */
+    public boolean isGreaterOrEqualTo(DockerAPIVersion otherVersion) {
+        DockerCloudUtils.requireNonNull(otherVersion, "Other version cannot be null.");
+        return compareTo(otherVersion) >= 0;
+    }
+
+    /**
      * Checks if this version is smaller than the one provided.
      *
      * @param otherVersion the other version

@@ -82,6 +82,27 @@ public class DockerAPIVersionTest {
         assertThat(v("2.5").isInRange(v("2.0"), v("2.4"))).isFalse();
     }
 
+    @Test
+    public void isGreaterThan() {
+        assertThat(v("1.24").isGreaterThan(v("1.25"))).isFalse();
+        assertThat(v("1.24").isGreaterThan(v("1.24"))).isFalse();
+        assertThat(v("1.25").isGreaterThan(v("1.24"))).isTrue();
+    }
+
+    @Test
+    public void isSmallerThan() {
+        assertThat(v("1.24").isSmallerThan(v("1.25"))).isTrue();
+        assertThat(v("1.24").isSmallerThan(v("1.24"))).isFalse();
+        assertThat(v("1.25").isSmallerThan(v("1.24"))).isFalse();
+    }
+
+    @Test
+    public void isGreaterOrEqualTo() {
+        assertThat(v("1.24").isGreaterOrEqualTo(v("1.25"))).isFalse();
+        assertThat(v("1.24").isGreaterOrEqualTo(v("1.24"))).isTrue();
+        assertThat(v("1.25").isGreaterOrEqualTo(v("1.24"))).isTrue();
+    }
+
     private DockerAPIVersion v(String version) {
         return DockerAPIVersion.parse(version);
     }

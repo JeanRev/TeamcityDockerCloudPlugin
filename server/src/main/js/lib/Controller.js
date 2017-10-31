@@ -806,7 +806,7 @@ function Controller(bs, oo, tabbedPane, params, schema) {
     function _processTestStatusResponse(responseMap) {
 
         Logger.logDebug('Phase: ' + responseMap.phase + ' Status: ' + responseMap.status + ' Msg: ' +
-            responseMap.msg + ' Container ID: ' + responseMap.containerId + ' Uuid: ' + responseMap.testUuid +
+            responseMap.msg + ' Container ID: ' + responseMap.agentHolderId + ' Uuid: ' + responseMap.testUuid +
             ' Warnings: ' + responseMap.warnings.length);
 
         if (testPhase !== responseMap.phase) {
@@ -814,14 +814,14 @@ function Controller(bs, oo, tabbedPane, params, schema) {
             return;
         }
         $testContainerLabel.text(Utils.shortenString(responseMap.msg, 300));
-        let agentStarted = responseMap.containerStartTime !== null &&
-            responseMap.containerStartTime !== undefined;
+        let agentStarted = responseMap.agentHolderStartTime !== null &&
+            responseMap.agentHolderStartTime !== undefined;
 
         if (responseMap.status === 'PENDING') {
             if (agentStarted) {
                 // Note: streaming log on Windows Docker daemons is currently not functional:
                 // See: https://github.com/moby/moby/issues/30046
-                if (hasXTermSupport && !logStreamingSocket && daemonOs !== 'windows') {
+                if (responseMap.logsAvailable && hasXTermSupport && !logStreamingSocket && daemonOs !== 'windows') {
                     Logger.logInfo('Opening live logs socket now.');
                     let url = _resolveWebSocketURL(streamSocketPath + '?testUuid=' + testUuid);
                     logStreamingSocket = new WebSocket(url);
@@ -860,13 +860,15 @@ function Controller(bs, oo, tabbedPane, params, schema) {
             $testContainerLoader.hide();
             $testContainerCloseBtn.show();
 
-            if (agentStarted) {
+            if (agentStarted && responseMap.logsAvailable) {
                 $testContainerContainerLogsBtn.show();
-                $testExecInfo.append('Note: you can access the running container by using the <code>exec</code> ' +
-                    'command on the the Docker daemon host. For example: ' +
-                    '<p class="mono">docker exec -t -i ' + responseMap.containerId + ' ' +
-                    (daemonOs === 'windows' ? 'powershell' : '/bin/bash') +'</p>');
-                $testExecInfo.slideDown();
+                if (schema.cloudType === 'VANILLA') {
+                    $testExecInfo.append('Note: you can access the running container by using the <code>exec</code> ' +
+                        'command on the the Docker daemon host. For example: ' +
+                        '<p class="mono">docker exec -t -i ' + responseMap.agentHolderId + ' ' +
+                        (daemonOs === 'windows' ? 'powershell' : '/bin/bash') +'</p>');
+                    $testExecInfo.slideDown();
+                }
             }
 
             if (responseMap.status === 'FAILURE') {
@@ -898,16 +900,16 @@ function Controller(bs, oo, tabbedPane, params, schema) {
                 if (responseMap.phase === 'CREATE') {
                     $testContainerStartBtn.show();
                     if (hasWarning) {
-                        $testContainerLabel.text(i18n.text('test.create.warning', responseMap.containerId));
+                        $testContainerLabel.text(i18n.text('test.create.warning', responseMap.agentHolderId));
                     } else {
-                        $testContainerLabel.text(i18n.text('test.create.success', responseMap.containerId));
+                        $testContainerLabel.text(i18n.text('test.create.success', responseMap.agentHolderId));
                     }
                 } else if (responseMap.phase === 'START') {
 
                     if (hasWarning) {
-                        $testContainerLabel.text(i18n.text('test.wait.warning', responseMap.containerId));
+                        $testContainerLabel.text(i18n.text('test.wait.warning', responseMap.agentHolderId));
                     } else {
-                        $testContainerLabel.text(i18n.text('test.wait.success', responseMap.containerId));
+                        $testContainerLabel.text(i18n.text('test.wait.success', responseMap.agentHolderId));
                     }
                 }
 

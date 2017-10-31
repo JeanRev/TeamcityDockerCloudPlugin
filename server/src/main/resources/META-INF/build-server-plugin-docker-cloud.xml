@@ -13,6 +13,6 @@
   <bean class="run.var.teamcity.cloud.docker.web.ContainerTestController"/>
   <bean class="run.var.teamcity.cloud.docker.web.SpringConfiguration"/>
   <bean class="run.var.teamcity.cloud.docker.web.ContainerTestListenerEndpoint" scope="prototype"/>
-    <bean class="run.var.teamcity.cloud.docker.web.DefaultContainerTestManager"/>
+    <bean class="run.var.teamcity.cloud.docker.web.DefaultAgentHolderTestManager"/>
   <bean class="run.var.teamcity.cloud.docker.web.LogsStreamingEndpoint"/>
 </beans>

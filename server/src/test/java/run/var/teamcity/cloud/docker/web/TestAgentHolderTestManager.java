@@ -3,18 +3,18 @@ package run.var.teamcity.cloud.docker.web;
 import run.var.teamcity.cloud.docker.DockerCloudClientConfig;
 import run.var.teamcity.cloud.docker.DockerImageConfig;
 import run.var.teamcity.cloud.docker.test.TestUtils;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Phase;
 
 import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 
-public class TestContainerTestManager implements ContainerTestManager {
+public class TestAgentHolderTestManager implements AgentHolderTestManager {
 
     private DockerCloudClientConfig clientConfig;
     private DockerImageConfig imageConfig;
-    private ContainerTestListener listener;
+    private AgentHolderTestListener listener;
     private Phase involvedPhase = null;
 
     @Nonnull
@@ -46,17 +46,17 @@ public class TestContainerTestManager implements ContainerTestManager {
     }
 
     @Override
-    public void setListener(@Nonnull UUID testUuid, @Nonnull ContainerTestListener listener) {
+    public void setListener(@Nonnull UUID testUuid, @Nonnull AgentHolderTestListener listener) {
         checkUuid(testUuid);
         this.listener = listener;
     }
 
     @Nonnull
     @Override
-    public Optional<TestContainerStatusMsg> retrieveStatus(UUID testUuid) {
+    public Optional<TestAgentHolderStatusMsg> retrieveStatus(UUID testUuid) {
         checkUuid(testUuid);
-        return Optional.of(new TestContainerStatusMsg(testUuid, Phase.CREATE, TestContainerStatusMsg.Status.PENDING,
-                "Dummy status", "dummy_container_id", null, null,
+        return Optional.of(new TestAgentHolderStatusMsg(testUuid, Phase.CREATE, TestAgentHolderStatusMsg.Status.PENDING,
+                "Dummy status", "dummy_container_id", null, false, null,
                 Collections.emptyList()));
     }
 
@@ -79,7 +79,7 @@ public class TestContainerTestManager implements ContainerTestManager {
         return imageConfig;
     }
 
-    public ContainerTestListener getListener() {
+    public AgentHolderTestListener getListener() {
         return listener;
     }
 

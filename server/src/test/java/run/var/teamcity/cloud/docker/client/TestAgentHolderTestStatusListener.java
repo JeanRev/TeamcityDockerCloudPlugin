@@ -1,21 +1,21 @@
 package run.var.teamcity.cloud.docker.client;
 
-import run.var.teamcity.cloud.docker.web.ContainerTestListener;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg;
+import run.var.teamcity.cloud.docker.web.AgentHolderTestListener;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
 
-public class TestContainerTestStatusListener implements ContainerTestListener {
+public class TestAgentHolderTestStatusListener implements AgentHolderTestListener {
 
     private boolean disposed = false;
 
-    private final Deque<TestContainerStatusMsg> msgs = new ArrayDeque<>();
+    private final Deque<TestAgentHolderStatusMsg> msgs = new ArrayDeque<>();
 
     @Override
-    public synchronized void notifyStatus(@Nullable TestContainerStatusMsg statusMsg) {
+    public synchronized void notifyStatus(@Nullable TestAgentHolderStatusMsg statusMsg) {
         if (statusMsg != null) {
             msgs.add(statusMsg);
         }
@@ -30,7 +30,7 @@ public class TestContainerTestStatusListener implements ContainerTestListener {
         return disposed;
     }
 
-    public synchronized Deque<TestContainerStatusMsg> getMsgs() {
+    public synchronized Deque<TestAgentHolderStatusMsg> getMsgs() {
         return new ArrayDeque<>(msgs);
     }
 }

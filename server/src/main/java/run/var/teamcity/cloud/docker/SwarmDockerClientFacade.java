@@ -1,6 +1,7 @@
 package run.var.teamcity.cloud.docker;
 
 import com.intellij.openapi.diagnostic.Logger;
+import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.client.DockerClient;
 import run.var.teamcity.cloud.docker.client.StdioType;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
@@ -21,6 +22,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class SwarmDockerClientFacade extends BaseDockerClientFacade {
+
+    private static final DockerAPIVersion LOG_SUPPORT_MIN_VER = DockerAPIVersion.parse("1.25");
 
     /**
      * State messages for tasks in a "running" (ie. non-final) status.
@@ -71,6 +74,8 @@ public class SwarmDockerClientFacade extends BaseDockerClientFacade {
 
     private final static Logger LOG = DockerCloudUtils.getLogger(SwarmDockerClientFacade.class);
 
+    private final boolean supportsQueryingLogs;
+
     private enum Scaling {
         UP,
         DOWN
@@ -78,6 +83,8 @@ public class SwarmDockerClientFacade extends BaseDockerClientFacade {
 
     public SwarmDockerClientFacade(DockerClient client) {
         super(DockerCloudUtils.requireNonNull(client, "Docker client cannot be null."));
+
+        supportsQueryingLogs = client.getApiVersion().isGreaterOrEqualTo(LOG_SUPPORT_MIN_VER);
     }
 
     @Nonnull
@@ -297,6 +304,11 @@ public class SwarmDockerClientFacade extends BaseDockerClientFacade {
     @Override
     public StreamHandler streamLogs(@Nonnull String serviceId) {
         return client.streamServiceLogs(serviceId, 10, StdioType.all(), true, !hasTty(serviceId));
+    }
+
+    @Override
+    public boolean supportQueryingLogs() {
+        return supportsQueryingLogs;
     }
 
     private boolean hasTty(String serviceId) {

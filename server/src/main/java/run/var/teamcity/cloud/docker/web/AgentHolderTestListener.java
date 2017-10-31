@@ -1,19 +1,18 @@
 package run.var.teamcity.cloud.docker.web;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
- * Container test progress listener.
+ * Agent holder test progress listener.
  */
-public interface ContainerTestListener {
+public interface AgentHolderTestListener {
 
     /**
      * Notify some status changes.
      *
      * @param statusMsg the status message
      */
-    void notifyStatus(@Nonnull TestContainerStatusMsg statusMsg);
+    void notifyStatus(@Nonnull TestAgentHolderStatusMsg statusMsg);
 
     /**
      * Callback method invoked when the test has been disposed.

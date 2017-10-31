@@ -251,6 +251,11 @@ public class DefaultDockerClientFacade extends BaseDockerClientFacade {
         return client.streamLogs(containerId, 10000, StdioType.all(), true, !hasTty(containerId));
     }
 
+    @Override
+    public boolean supportQueryingLogs() {
+        return true;
+    }
+
     private boolean hasTty(String containerId) {
         try {
             return client.inspectContainer(containerId).getObject("Config").getAsBoolean("Tty", false);

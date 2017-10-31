@@ -9,7 +9,7 @@ import java.util.List;
 
 /**
  * Facade to manage dockerized agent instances. Instances of this class can be obtained using
- * a {@link DockerClientFacadeFactory}.
+ * a {@link DockerCloudSupport}.
  * <p>
  *     This class abstracts away the interactions with the {@link DockerClient} by providing high-level, atomic
  *     operations, to handle agent containers.
@@ -126,6 +126,13 @@ public interface DockerClientFacade extends AutoCloseable {
      */
     @Nonnull
     StreamHandler streamLogs(@Nonnull String agentHolderId);
+
+    /**
+     * Checks if the daemon supports querying the agent holder logs.
+     *
+     * @return {@code true} if the daemon supports querying the agent holder logs
+     */
+    boolean supportQueryingLogs();
 
     /**
      * Closes the facade and the underlying Docker client. This method has no effect if the Docker client is already

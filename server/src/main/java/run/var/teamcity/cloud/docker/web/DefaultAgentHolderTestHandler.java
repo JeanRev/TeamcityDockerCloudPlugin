@@ -7,8 +7,8 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.LockHandler;
 import run.var.teamcity.cloud.docker.util.Resources;
 import run.var.teamcity.cloud.docker.util.ScheduledFutureWithRunnable;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Phase;
-import run.var.teamcity.cloud.docker.web.TestContainerStatusMsg.Status;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Phase;
+import run.var.teamcity.cloud.docker.web.TestAgentHolderStatusMsg.Status;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -28,14 +28,15 @@ public class DefaultAgentHolderTestHandler implements AgentHolderTestHandler {
     private final Resources resources;
 
     @Nullable
-    private ContainerTestListener testListener;
+    private AgentHolderTestListener testListener;
     private Instant lastInteraction;
     @Nullable
-    private TestContainerStatusMsg lastStatusMsg;
+    private TestAgentHolderStatusMsg lastStatusMsg;
     @Nullable
-    private String containerId;
+    private String agentHolderId;
     @Nullable
-    private Instant containerStartTime;
+    private Instant agentHolderStartTime;
+    private boolean logsAvailable = false;
     private boolean buildAgentDetected = false;
 
     private ScheduledFutureWithRunnable<? extends AgentHolderTestTask> currentTaskFuture = null;
@@ -68,14 +69,34 @@ public class DefaultAgentHolderTestHandler implements AgentHolderTestHandler {
     }
 
     /**
-     * Gets the container ID associated with this test. May be {@code null} if the container creation did not succeed
+     * Gets the agent holder ID associated with this test. May be empty if the agent holder creation did not succeed
      * yet.
      *
-     * @return the container ID or {@code null}
+     * @return the agent holder ID
      */
-    @Nullable
-    public String getContainerId() {
-        return lock.call(() -> containerId);
+    @Nonnull
+    public Optional<String> getAgentHolderId() {
+        return Optional.ofNullable(lock.call(() -> agentHolderId));
+    }
+
+    /**
+     * Gets the agent holder start time. Will be empty if the agent holder did started yet.
+     *
+     * @return the agent start time
+     */
+    @Nonnull
+    public Optional<Instant> getAgentHolderStartTime() {
+        return Optional.ofNullable(agentHolderStartTime);
+    }
+
+    /**
+     * Returns {@code true} if logs are available for the agent holder. Implies that the agent holder started and
+     * support fetching logs.
+     *
+     * @return {@code true} if logs are available
+     */
+    public boolean isLogsAvailable() {
+        return logsAvailable;
     }
 
     /**
@@ -84,7 +105,7 @@ public class DefaultAgentHolderTestHandler implements AgentHolderTestHandler {
      * @return the listener if any
      */
     @Nonnull
-    public Optional<ContainerTestListener> getTestListener() {
+    public Optional<AgentHolderTestListener> getTestListener() {
         return Optional.ofNullable(lock.call(() -> testListener));
     }
 
@@ -127,9 +148,9 @@ public class DefaultAgentHolderTestHandler implements AgentHolderTestHandler {
      *
      * @return the task
      */
-    @Nullable
-    public ScheduledFutureWithRunnable<? extends AgentHolderTestTask> getCurrentTaskFuture() {
-        return lock.call(() -> currentTaskFuture);
+    @Nonnull
+    public Optional<ScheduledFutureWithRunnable<? extends AgentHolderTestTask>> getCurrentTaskFuture() {
+        return Optional.ofNullable(lock.call(() -> currentTaskFuture));
     }
 
     /**
@@ -151,20 +172,23 @@ public class DefaultAgentHolderTestHandler implements AgentHolderTestHandler {
     public void notifyAgentHolderId(@Nonnull String agentHolderId) {
         DockerCloudUtils.requireNonNull(agentHolderId, "Container ID cannot be null.");
 
-        lock.run(() -> this.containerId = agentHolderId);
+        lock.run(() -> this.agentHolderId = agentHolderId);
     }
 
     @Override
-    public void notifyAgentHolderStarted(@Nonnull Instant agentHolderStartTime) {
+    public void notifyAgentHolderStarted(@Nonnull Instant agentHolderStartTime, boolean logsAvailable) {
         DockerCloudUtils.requireNonNull(agentHolderStartTime, "Start time cannot be null.");
 
-        lock.run(() -> this.containerStartTime = agentHolderStartTime);
+        lock.run(() -> {
+            this.agentHolderStartTime = agentHolderStartTime;
+            this.logsAvailable = logsAvailable;
+        });
     }
 
-    public void setListener(@Nonnull ContainerTestListener testListener) {
+    public void setListener(@Nonnull AgentHolderTestListener testListener) {
         DockerCloudUtils.requireNonNull(testListener, "Test listener cannot be null.");
 
-        TestContainerStatusMsg lastStatusMsg = lock.call(() -> {
+        TestAgentHolderStatusMsg lastStatusMsg = lock.call(() -> {
             this.testListener = testListener;
             return this.lastStatusMsg;
         });
@@ -174,7 +198,7 @@ public class DefaultAgentHolderTestHandler implements AgentHolderTestHandler {
         }
     }
 
-    public Optional<TestContainerStatusMsg> getLastStatusMsg() {
+    public Optional<TestAgentHolderStatusMsg> getLastStatusMsg() {
         return Optional.ofNullable(lock.call(() -> lastStatusMsg));
     }
 
@@ -183,13 +207,13 @@ public class DefaultAgentHolderTestHandler implements AgentHolderTestHandler {
             @Nullable Throwable failure, @Nonnull List<String> warnings) {
         DockerCloudUtils.requireNonNull(phase, "Test phase cannot be null.");
         DockerCloudUtils.requireNonNull(status, "Test status cannot be null.");
-        DockerCloudUtils.requireNonNull(status, "Warnings list cannot be null.");
+        DockerCloudUtils.requireNonNull(warnings, "Warnings list cannot be null.");
 
-        TestContainerStatusMsg statusMsg = new TestContainerStatusMsg(uuid, phase, status, msg, containerId,
-                containerStartTime, failure, warnings);
+        TestAgentHolderStatusMsg statusMsg = new TestAgentHolderStatusMsg(uuid, phase, status, msg, agentHolderId,
+                agentHolderStartTime, logsAvailable, failure, warnings);
 
         lock.run(() -> this.lastStatusMsg = statusMsg);
-        ContainerTestListener testListener = lock.call(() -> this.testListener);
+        AgentHolderTestListener testListener = lock.call(() -> this.testListener);
 
         if (testListener != null) {
             testListener.notifyStatus(statusMsg);
