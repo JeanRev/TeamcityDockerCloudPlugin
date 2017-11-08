@@ -145,9 +145,9 @@ public class DefaultDockerClientFacade extends BaseDockerClientFacade {
         try {
             return containerNodes.getArrayValues().stream().filter(containerNode -> {
                 String sourceImageId = containerNode.getObject("Labels", Node.EMPTY_OBJECT).
-                        getAsString(DockerCloudUtils.SOURCE_IMAGE_ID_LABEL);
+                        getAsString(DockerCloudUtils.SOURCE_IMAGE_ID_LABEL, null);
                 String currentImageId = containerNode.getAsString("ImageID");
-                return sourceImageId.equals(currentImageId);
+                return sourceImageId != null && sourceImageId.equals(currentImageId);
             }).map(this::parseContainerInfo).collect(Collectors.toList());
         } catch (NodeProcessingException e) {
             throw new DockerClientFacadeException("Failed to list agent containers.", e);

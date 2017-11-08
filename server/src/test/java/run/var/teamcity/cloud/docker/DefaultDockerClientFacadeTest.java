@@ -400,6 +400,24 @@ public class DefaultDockerClientFacadeTest extends DockerClientFacadeTest {
     }
 
     @Test
+    public void listAgentContainersSourceImageIdNotSet() {
+        DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
+
+        TestImage image = dockerClient.newLocalImage("image-1", "latest");
+
+        Container container = new Container().
+                label("foo", "bar").
+                image(image);
+
+        dockerClient.container(container);
+
+        List<AgentHolderInfo> containers = facade.listAgentHolders("foo", "bar");
+
+        assertThat(containers).isEmpty();
+
+    }
+
+    @Test
     public void getDemuxedLogs() {
         DefaultDockerClientFacade facade = new DefaultDockerClientFacade(dockerClient);
 
