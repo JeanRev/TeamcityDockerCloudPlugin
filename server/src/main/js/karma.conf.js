@@ -18,11 +18,12 @@ module.exports = function(config) {
         files: [
             'node_modules/jquery/dist/jquery.js',
             'karma-global.js',
-            'lib/*.test.js'
+            'lib/*.test.js',
+            'lib_shared/*.test.js'
         ],
 
         preprocessors: {
-            'lib/*.js': [ 'webpack', 'sourcemap' ]
+            '+(lib|lib_shared)/*.js': [ 'webpack', 'sourcemap' ]
         },
 
         webpack: webpackConfig,

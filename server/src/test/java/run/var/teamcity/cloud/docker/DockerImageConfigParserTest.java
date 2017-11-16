@@ -1,11 +1,13 @@
 package run.var.teamcity.cloud.docker;
 
 import jetbrains.buildServer.clouds.CloudImageParameters;
+import org.junit.Before;
 import org.junit.Test;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 import run.var.teamcity.cloud.docker.util.Node;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,10 +16,35 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * {@link DockerImageConfigParser} test suite.
  */
-public abstract class DockerImageConfigParserTest {
+public class DockerImageConfigParserTest {
+
+    private TestDockerImageMigrationHandler migrationHandler;
+
+    @Before
+    public void setup() {
+        migrationHandler = new TestDockerImageMigrationHandler();
+    }
+
+    @Test
+    public void mustInvokeMigrationHandler() {
+        Spec spec = new Spec();
+        spec.administration.put("Profile", "profile_before_migration");
+        Node imageData = spec.root.saveNode();
+        spec.administration.put("Profile", "profile_after_migration");
+        Node migratedData = spec.root.saveNode();
+
+        migrationHandler.setMigratedData(migratedData);
+
+        DockerImageConfigParser parser = new DefaultDockerImageConfigParser(migrationHandler);
+        DockerImageConfig config = parser.fromJSon(imageData, emptyList());
+
+        assertThat(migrationHandler.getImageData()).isSameAs(imageData);
+        assertThat(config.getProfileName()).isEqualTo("profile_after_migration");
+    }
+
     @Test
     public void profileName() {
-        DockerImageConfigParser parser = createParser();
+        DockerImageConfigParser parser = new DefaultDockerImageConfigParser(migrationHandler);
         Spec spec = new Spec();
         spec.administration.put("Profile", "profile_name");
         DockerImageConfig config = parser.fromJSon(spec.root.saveNode(), emptyList());
@@ -31,7 +58,7 @@ public abstract class DockerImageConfigParserTest {
 
     @Test
     public void rmOnExit() {
-        DockerImageConfigParser parser = createParser();
+        DockerImageConfigParser parser = new DefaultDockerImageConfigParser(migrationHandler);
         Spec spec = new Spec();
         spec.administration.put("RmOnExit", true);
         DockerImageConfig config = parser.fromJSon(spec.root.saveNode(), emptyList());
@@ -46,7 +73,7 @@ public abstract class DockerImageConfigParserTest {
 
     @Test
     public void maxInstanceCount() {
-        DockerImageConfigParser parser = createParser();
+        DockerImageConfigParser parser = new DefaultDockerImageConfigParser(migrationHandler);
         Spec spec = new Spec();
         spec.administration.put("MaxInstanceCount", 42);
         DockerImageConfig config = parser.fromJSon(spec.root.saveNode(), emptyList());
@@ -61,7 +88,7 @@ public abstract class DockerImageConfigParserTest {
 
     @Test
     public void UseOfficialTCAgentImage() {
-        DockerImageConfigParser parser = createParser();
+        DockerImageConfigParser parser = new DefaultDockerImageConfigParser(migrationHandler);
         Spec spec = new Spec();
         spec.administration.put("UseOfficialTCAgentImage", true);
         DockerImageConfig config = parser.fromJSon(spec.root.saveNode(), emptyList());
@@ -76,7 +103,7 @@ public abstract class DockerImageConfigParserTest {
 
     @Test
     public void pullOnCreate() {
-        DockerImageConfigParser parser = createParser();
+        DockerImageConfigParser parser = new DefaultDockerImageConfigParser(migrationHandler);
         Spec spec = new Spec();
         spec.administration.put("PullOnCreate", true);
         DockerImageConfig config = parser.fromJSon(spec.root.saveNode(), emptyList());
@@ -99,7 +126,7 @@ public abstract class DockerImageConfigParserTest {
         imageParams2.setParameter(CloudImageParameters.SOURCE_ID_FIELD, "AnotherTestProfile");
         imageParams2.setParameter(CloudImageParameters.AGENT_POOL_ID_FIELD, "0");
 
-        DockerImageConfigParser parser = createParser();
+        DockerImageConfigParser parser = new DefaultDockerImageConfigParser(migrationHandler);
 
         Spec spec = new Spec();
 
@@ -113,8 +140,6 @@ public abstract class DockerImageConfigParserTest {
 
         assertThat(config.getAgentPoolId().get()).isEqualTo(42);
     }
-
-    protected abstract DockerImageConfigParser createParser();
 
     private static class Spec {
         final EditableNode root;

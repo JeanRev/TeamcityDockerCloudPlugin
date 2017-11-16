@@ -2,6 +2,7 @@
 const Utils = require('Utils');
 const Validators = require('Validators');
 const html = require('image-swarm-settings.html');
+const migrateSettings = require('SwarmSchemaMigration.js');
 
 function SwarmSchema() {
 
@@ -270,10 +271,6 @@ function SwarmSchema() {
         }
 
         return viewModel;
-    }
-
-    function migrateSettings(imageData) {
-        // Nothing to migrate yet.
     }
 
     const validators = {

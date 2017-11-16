@@ -18,6 +18,10 @@ public class TestInputStream extends FilterInputStream {
     private int skipCount = 0;
     private boolean closed = false;
 
+    public TestInputStream(String text) {
+        this(new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)));
+    }
+
     public TestInputStream(InputStream in) {
         super(in);
     }

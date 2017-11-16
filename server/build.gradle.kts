@@ -53,13 +53,23 @@ dependencies {
     testCompile("com.google.code.gson:gson:2.8.0")
 }
 
+val jsSrcDir: File = project.file("src/main/js")
+
+val processResources = tasks.getByPath("processResources") as ProcessResources
+processResources.apply {
+    into("run/var/teamcity/cloud/docker") {
+        from(jsSrcDir.resolve("lib_shared")) {
+            include("*.js")
+        }
+    }
+}
+
 val jar = tasks.getByPath("jar") as Jar
 
 jar.baseName = "docker-cloud-server"
 
 jar.dependsOn("buildDockerCloudJS")
 
-val jsSrcDir: File = project.file("src/main/js")
 
 jar.apply {
     into("buildServerResources") {

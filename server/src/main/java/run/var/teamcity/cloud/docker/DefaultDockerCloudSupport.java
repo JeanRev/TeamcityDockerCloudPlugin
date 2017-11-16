@@ -7,6 +7,7 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.Resources;
 
 import javax.annotation.Nonnull;
+import java.net.URL;
 import java.util.ResourceBundle;
 
 /**
@@ -27,7 +28,7 @@ public enum DefaultDockerCloudSupport implements DockerCloudSupport {
         @Nonnull
         @Override
         public DockerImageConfigParser createImageConfigParser() {
-            return new DefaultDockerImageConfigParser();
+            return createParser(VANILLA_MIGRATION_SCRIPT);
         }
 
         @Nonnull
@@ -36,6 +37,7 @@ public enum DefaultDockerCloudSupport implements DockerCloudSupport {
             return VANILLA_RESOURCES;
         }
     },
+
     /**
      * Docker cloud with Swarm-managed orchestration.
      */
@@ -50,7 +52,7 @@ public enum DefaultDockerCloudSupport implements DockerCloudSupport {
         @Nonnull
         @Override
         public DockerImageConfigParser createImageConfigParser() {
-            return new SwarmDockerImageConfigParser();
+            return createParser(SWARM_MIGRATION_SCRIPT);
         }
 
         @Nonnull
@@ -59,6 +61,9 @@ public enum DefaultDockerCloudSupport implements DockerCloudSupport {
             return SWARM_RESOURCES;
         }
     };
+
+    public static final URL VANILLA_MIGRATION_SCRIPT = DockerCloudSupport.class.getResource("SchemaMigration.js");
+    public static final URL SWARM_MIGRATION_SCRIPT = DockerCloudSupport.class.getResource("SwarmSchemaMigration.js");
 
     private static final Resources VANILLA_RESOURCES;
     private static final Resources SWARM_RESOURCES;
@@ -87,5 +92,9 @@ public enum DefaultDockerCloudSupport implements DockerCloudSupport {
 
     private static DockerClient createClient(DockerClientConfig clientConfig) {
         return DockerClientFactory.getDefault().createClientWithAPINegotiation(clientConfig);
+    }
+
+    private static DockerImageConfigParser createParser(URL migrationScriptName) {
+        return new DefaultDockerImageConfigParser(new DefaultDockerImageMigrationHandler(migrationScriptName));
     }
 }
