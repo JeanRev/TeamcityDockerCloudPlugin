@@ -23,6 +23,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -112,7 +113,7 @@ public class ContainerTestController extends BaseFormJsonController {
                 // Note: we let the cloud image parameters here to "null" because the test container will actually not
                 // be started through the cloud API.
                 imageConfig = DockerImageConfig
-                        .fromJSon(Node.parse(params.get(DockerCloudUtils.TEST_IMAGE_PARAM)), null);
+                        .fromJSon(Node.parse(params.get(DockerCloudUtils.TEST_IMAGE_PARAM)), Collections.emptySet());
             } catch (DockerCloudClientConfigException e) {
                 LOG.error("Invalid cloud client configuration.", e);
                 sendErrorQuietly(response, HttpServletResponse.SC_BAD_REQUEST,

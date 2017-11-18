@@ -74,8 +74,6 @@ public class DockerImageConfigTest {
 
         EditableNode imagesNode = Node.EMPTY_ARRAY.editNode();
 
-        params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
-
         CloudImageParameters imageParameters = new CloudImageParameters();
         imageParameters.setParameter(CloudImageParameters.SOURCE_ID_FIELD, "TestProfile");
         imageParameters.setParameter(CloudImageParameters.AGENT_POOL_ID_FIELD, "42");
@@ -91,10 +89,8 @@ public class DockerImageConfigTest {
         imageNode.getOrCreateObject("Container").put("Image", "test-image");
 
         params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
-        params.put(CloudImageParameters.SOURCE_IMAGES_JSON,
-                CloudImageParameters.collectionToJson(Collections.singleton(imageParameters)));
 
-        List<DockerImageConfig> images = DockerImageConfig.processParams(params);
+        List<DockerImageConfig> images = DockerImageConfig.processParams(params, Collections.singleton(imageParameters));
 
         assertThat(images).hasSize(1);
 
@@ -117,7 +113,7 @@ public class DockerImageConfigTest {
 
         params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
 
-        images = DockerImageConfig.processParams(params);
+        images = DockerImageConfig.processParams(params, Collections.emptySet());
         assertThat(images).hasSize(2);
 
         imageConfig = images.get(1);
@@ -138,7 +134,7 @@ public class DockerImageConfigTest {
         params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
 
         // OK
-        DockerImageConfig.processParams(params);
+        DockerImageConfig.processParams(params, Collections.emptySet());
 
         TestUtils.getSampleImageConfigSpec(imagesNode.addObject(),"TestProfile2");
         params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
@@ -165,12 +161,12 @@ public class DockerImageConfigTest {
         params.put(DockerCloudUtils.IMAGES_PARAM, imagesNode.toString());
 
         // OK
-        DockerImageConfig.processParams(params);
+        DockerImageConfig.processParams(params, Collections.emptySet());
     }
 
 
     private void assertInvalidProperty(Map<String, String> params, String name) {
-        Throwable throwable = catchThrowable(() -> DockerImageConfig.processParams(params));
+        Throwable throwable = catchThrowable(() -> DockerImageConfig.processParams(params, Collections.emptySet()));
         assertThat(throwable).isInstanceOf(DockerCloudClientConfigException.class);
 
         List<InvalidProperty> invalidProperties = ((DockerCloudClientConfigException) throwable).getInvalidProperties();

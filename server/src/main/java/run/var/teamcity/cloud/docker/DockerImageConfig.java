@@ -146,21 +146,13 @@ public class DockerImageConfig {
      * @throws DockerCloudClientConfigException if the image configuration is not valid
      */
     @Nonnull
-    public static List<DockerImageConfig> processParams(@Nonnull Map<String, String> properties) {
+    public static List<DockerImageConfig> processParams(@Nonnull Map<String, String> properties,
+            @Nonnull Collection<CloudImageParameters> imagesParameters) {
         DockerCloudUtils.requireNonNull(properties, "Properties map cannot be null.");
 
         List<InvalidProperty> invalidProperties = new ArrayList<>();
 
         String imagesJSon = properties.get(DockerCloudUtils.IMAGES_PARAM);
-        String imageParametersJson = properties.get(CloudImageParameters.SOURCE_IMAGES_JSON);
-        Collection<CloudImageParameters> imagesParameters = null;
-        if (imageParametersJson != null) {
-            try {
-                imagesParameters = CloudImageParameters.collectionFromJson(imageParametersJson);
-            } catch (Exception e) {
-                LOG.error("Failed to parse cloud image parameters.", e);
-            }
-        }
 
         Set<String> profileNames = new HashSet<>();
 
@@ -209,8 +201,10 @@ public class DockerImageConfig {
      * @throws IllegalArgumentException if no valid configuration could be build from the provided JSON node
      */
     @Nonnull
-    public static DockerImageConfig fromJSon(@Nonnull Node node, @Nullable Collection<CloudImageParameters> imagesParameters) {
+    public static DockerImageConfig fromJSon(@Nonnull Node node, @Nonnull Collection<CloudImageParameters>
+            imagesParameters) {
         DockerCloudUtils.requireNonNull(node, "JSON node cannot be null.");
+        DockerCloudUtils.requireNonNull(imagesParameters, "Image parameters list cannot be null.");
         try {
             Node admin = node.getObject("Administration");
             LOG.info("Loading cloud profile configuration version " + admin.getAsInt("Version") + ".");
@@ -239,12 +233,10 @@ public class DockerImageConfig {
             boolean useOfficialTCAgentImage = admin.getAsBoolean("UseOfficialTCAgentImage");
 
             Integer agentPoolId = null;
-            if (imagesParameters != null) {
-                for (CloudImageParameters imageParameter : imagesParameters) {
-                    if (profileName.equals(imageParameter.getId())) {
-                        agentPoolId = imageParameter.getAgentPoolId();
-                        break;
-                    }
+            for (CloudImageParameters imageParameter : imagesParameters) {
+                if (profileName.equals(imageParameter.getId())) {
+                    agentPoolId = imageParameter.getAgentPoolId();
+                    break;
                 }
             }
 

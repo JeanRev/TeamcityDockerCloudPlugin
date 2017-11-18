@@ -56,14 +56,8 @@ public class DockerCloudClientFactory implements CloudClientFactory {
             properties.put(paramName, params.getParameter(paramName));
         }
 
-        // Issue #12: their might be inconsistencies between the cloud client parameters map, and the cloud image
-        // parameter list that may have been "externally" (ie. not through the plugin settings) updated. To work
-        // around this, the image parameters are serialized back into the properties map.
-        properties.put(CloudImageParameters.SOURCE_IMAGES_JSON,
-                CloudImageParameters.collectionToJson(params.getCloudImages()));
-
         DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(properties, clientFacadeFactory);
-        List<DockerImageConfig> imageConfigs = DockerImageConfig.processParams(properties);
+        List<DockerImageConfig> imageConfigs = DockerImageConfig.processParams(properties, params.getCloudImages());
 
         final int threadPoolSize = Math.min(imageConfigs.size() * 2, Runtime.getRuntime().availableProcessors() + 1);
         clientConfig.getDockerClientConfig()

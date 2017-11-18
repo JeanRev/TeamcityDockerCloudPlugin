@@ -5,6 +5,7 @@ import jetbrains.buildServer.serverSide.PropertiesProcessor;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -23,7 +24,7 @@ class DockerCloudPropertiesProcessor implements PropertiesProcessor {
             invalidProperties.addAll(e.getInvalidProperties());
         }
         try {
-            DockerImageConfig.processParams(properties);
+            DockerImageConfig.processParams(properties, Collections.emptySet());
         } catch (DockerCloudClientConfigException e) {
             invalidProperties.addAll(e.getInvalidProperties());
         }
