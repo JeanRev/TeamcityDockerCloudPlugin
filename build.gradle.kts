@@ -3,7 +3,7 @@ import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.compile.JavaCompile
 
-version = "0.5.1"
+version = "0.5.2-SNAPSHOT"
 group = "var.run.docker.cloud"
 val commitId = gitCommitId()
 allprojects {
