@@ -145,22 +145,14 @@ public class DockerImageConfig {
      */
     @Nonnull
     public static List<DockerImageConfig> processParams(@Nonnull DockerImageConfigParser imageParser,
-            @Nonnull Map<String, String> properties) {
+            @Nonnull Map<String, String> properties,
+            @Nonnull Collection<CloudImageParameters> imagesParameters) {
         DockerCloudUtils.requireNonNull(imageParser, "Image parser cannot be null.");
         DockerCloudUtils.requireNonNull(properties, "Properties map cannot be null.");
 
         List<InvalidProperty> invalidProperties = new ArrayList<>();
 
         String imagesJSon = properties.get(DockerCloudUtils.IMAGES_PARAM);
-        String imageParametersJson = properties.get(CloudImageParameters.SOURCE_IMAGES_JSON);
-        Collection<CloudImageParameters> imagesParameters = Collections.emptyList();
-        if (imageParametersJson != null) {
-            try {
-                imagesParameters = CloudImageParameters.collectionFromJson(imageParametersJson);
-            } catch (Exception e) {
-                LOG.error("Failed to parse cloud image parameters.", e);
-            }
-        }
 
         Set<String> profileNames = new HashSet<>();
 

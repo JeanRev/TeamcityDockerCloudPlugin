@@ -7,6 +7,7 @@ import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -36,7 +37,7 @@ class DockerCloudPropertiesProcessor implements PropertiesProcessor {
             invalidProperties.addAll(e.getInvalidProperties());
         }
         try {
-            DockerImageConfig.processParams(imageConfigParser, properties);
+            DockerImageConfig.processParams(imageConfigParser, properties, Collections.emptySet());
         } catch (DockerCloudClientConfigException e) {
             invalidProperties.addAll(e.getInvalidProperties());
         }

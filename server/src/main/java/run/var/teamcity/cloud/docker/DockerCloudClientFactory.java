@@ -3,7 +3,6 @@ package run.var.teamcity.cloud.docker;
 import jetbrains.buildServer.clouds.CloudClientEx;
 import jetbrains.buildServer.clouds.CloudClientFactory;
 import jetbrains.buildServer.clouds.CloudClientParameters;
-import jetbrains.buildServer.clouds.CloudImageParameters;
 import jetbrains.buildServer.clouds.CloudState;
 import jetbrains.buildServer.serverSide.AgentDescription;
 import jetbrains.buildServer.serverSide.SBuildServer;
@@ -12,7 +11,6 @@ import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.client.DockerRegistryClientFactory;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.OfficialAgentImageResolver;
-import run.var.teamcity.cloud.docker.util.Resources;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
@@ -51,12 +49,6 @@ public class DockerCloudClientFactory implements CloudClientFactory {
             properties.put(paramName, params.getParameter(paramName));
         }
 
-        // Issue #12: their might be inconsistencies between the cloud client parameters map, and the cloud image
-        // parameter list that may have been "externally" (ie. not through the plugin settings) updated. To work
-        // around this, the image parameters are serialized back into the properties map.
-        properties.put(CloudImageParameters.SOURCE_IMAGES_JSON,
-                CloudImageParameters.collectionToJson(params.getCloudImages()));
-
         DockerCloudClientConfig clientConfig = DockerCloudClientConfig.processParams(properties, cloudSupportRegistry);
 
         if (!clientConfig.getCloudSupport().equals(cloudSupport)) {
@@ -65,7 +57,7 @@ public class DockerCloudClientFactory implements CloudClientFactory {
         }
 
         List<DockerImageConfig> imageConfigs = DockerImageConfig.processParams(cloudSupport.createImageConfigParser(),
-                properties);
+                properties, params.getCloudImages());
 
         final int threadPoolSize = Math.min(imageConfigs.size() * 2, Runtime.getRuntime().availableProcessors() + 1);
         clientConfig.getDockerClientConfig()

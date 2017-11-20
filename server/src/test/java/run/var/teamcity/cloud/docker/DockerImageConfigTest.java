@@ -91,12 +91,12 @@ public class DockerImageConfigTest {
 
         params.put(DockerCloudUtils.IMAGES_PARAM, imageParser.getImagesParams().toString());
 
-        List<DockerImageConfig> images = DockerImageConfig.processParams(imageParser, params);
+        List<DockerImageConfig> images = DockerImageConfig.processParams(imageParser, params, cloudImageParameters);
         assertThat(images).containsExactly(imageConfig);
 
         List<Collection<CloudImageParameters>> imagesParametersList = imageParser.getImagesParametersList();
         assertThat(imagesParametersList).hasSize(1);
-        assertThat(TestUtils.areImageParametersEqual(imagesParametersList.get(0), cloudImageParameters)).isTrue();
+        assertThat(imagesParametersList.get(0)).isSameAs(cloudImageParameters);
     }
 
     @Test
@@ -117,7 +117,7 @@ public class DockerImageConfigTest {
         params.put(DockerCloudUtils.IMAGES_PARAM, parser.getImagesParams().toString());
 
         // OK
-        DockerImageConfig.processParams(parser, params);
+        DockerImageConfig.processParams(parser, params, Collections.emptySet());
 
         imageConfig2 = DockerImageConfigBuilder.
                 newBuilder("TestProfile", Node.EMPTY_OBJECT).
@@ -148,7 +148,7 @@ public class DockerImageConfigTest {
     private void assertInvalidProperty(TestDockerImageConfigParser parser, Map<String, String> params, String name) {
 
         Throwable throwable = catchThrowable(() -> DockerImageConfig.processParams(parser,
-                params));
+                params, Collections.emptySet()));
         assertThat(throwable).isInstanceOf(DockerCloudClientConfigException.class);
 
         List<InvalidProperty> invalidProperties = ((DockerCloudClientConfigException) throwable).getInvalidProperties();
