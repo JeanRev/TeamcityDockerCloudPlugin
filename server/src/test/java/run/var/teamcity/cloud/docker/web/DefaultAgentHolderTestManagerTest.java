@@ -106,7 +106,7 @@ public class DefaultAgentHolderTestManagerTest {
         mgr.startTestContainer(testUuid);
 
         waitUntil(() -> mgr.
-                retrieveStatus(testUuid).map(msg -> msg.getAgentHolderStartTime() != null).
+                retrieveStatus(testUuid).map(msg -> msg.getAgentHolderStartTime().isPresent()).
                 orElse(false));
 
         assertThat(clientFacade.getAgentHolders()).hasSize(1);
@@ -118,7 +118,7 @@ public class DefaultAgentHolderTestManagerTest {
         agentMgr.registeredAgent(agent);
 
         waitUntil(() -> mgr.
-                retrieveStatus(testUuid).map(msg -> msg.getAgentHolderStartTime() != null).
+                retrieveStatus(testUuid).map(msg -> msg.getAgentHolderStartTime().isPresent()).
                 orElse(false));
 
         mgr.dispose(testUuid);
