@@ -73,7 +73,7 @@ public abstract class DockerClientFactory {
 
             // New attempt using the default API endpoint. This is not guaranteed to work since the default endpoint is
             // planned to be removed in a future version of Docker (we may expect then either a 400 or a 404 failure).
-            // If this fails: abort. We won't try guess a supported API version number.
+            // If this fails: abort. We won't try to guess a supported API version number.
             client.setApiVersion(DockerAPIVersion.DEFAULT);
             version = client.getVersion();
         }
