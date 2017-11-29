@@ -5,8 +5,10 @@ import run.var.teamcity.cloud.docker.client.StdioInputStream;
 import run.var.teamcity.cloud.docker.util.DockerCloudUtils;
 import run.var.teamcity.cloud.docker.util.EditableNode;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Optional;
 
 abstract class BaseDockerClientFacade implements DockerClientFacade {
 
@@ -46,6 +48,13 @@ abstract class BaseDockerClientFacade implements DockerClientFacade {
             throw new DockerClientFacadeException("Failed to fetch logs.");
         }
         return sb;
+    }
+
+    @Nonnull
+    @Override
+    public final Optional<DockerDaemonOS> getDaemonOS() {
+        String os = client.getVersion().getAsString("Os");
+        return DockerDaemonOS.fromString(os);
     }
 
     /**

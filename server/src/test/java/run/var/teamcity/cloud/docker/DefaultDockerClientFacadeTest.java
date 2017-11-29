@@ -26,7 +26,7 @@ import static run.var.teamcity.cloud.docker.util.DockerCloudUtils.pair;
 /**
  * {@link DefaultDockerClientFacade} test suite.
  */
-public class DefaultDockerClientFacadeTest extends DockerClientFacadeTest {
+public class DefaultDockerClientFacadeTest extends BaseDockerClientFacadeTest {
 
     @Test
     public void createAgentMustReturnAgentId() {

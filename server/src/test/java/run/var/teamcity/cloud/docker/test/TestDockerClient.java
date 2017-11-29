@@ -2,6 +2,7 @@ package run.var.teamcity.cloud.docker.test;
 
 import org.jetbrains.annotations.NotNull;
 import run.var.teamcity.cloud.docker.DefaultDockerClientFacade;
+import run.var.teamcity.cloud.docker.DockerDaemonOS;
 import run.var.teamcity.cloud.docker.StreamHandler;
 import run.var.teamcity.cloud.docker.SwarmDockerClientFacade;
 import run.var.teamcity.cloud.docker.client.BadRequestException;
@@ -82,6 +83,7 @@ public class TestDockerClient implements DockerClient {
     private DockerAPIVersion apiVersion;
     private String serviceCreationWarning;
     private boolean lenientVersionCheck = false;
+    private String daemonOs = DockerDaemonOS.LINUX.getAttribute();
     private final DockerRegistryCredentials dockerRegistryCredentials;
 
     public TestDockerClient(DockerClientConfig config, DockerRegistryCredentials dockerRegistryCredentials) {
@@ -111,7 +113,7 @@ public class TestDockerClient implements DockerClient {
             EditableNode node = Node.EMPTY_OBJECT.editNode().
                     put("Version", "1.0").
                     put("ApiVersion", supportedAPIVersion != null ? supportedAPIVersion.getVersionString() : "1.0").
-                    put("Os", "NotARealOS").
+                    put("Os", daemonOs).
                     put("Arch", "NotARealArch").
                     put("Kernel", "1.0").
                     put("build", "00000000").
@@ -720,6 +722,10 @@ public class TestDockerClient implements DockerClient {
 
     public void setLenientVersionCheck(boolean lenientVersionCheck) {
         lock.run(() -> this.lenientVersionCheck = lenientVersionCheck);
+    }
+
+    public void setDaemonOs(String daemonOs) {
+        lock.run(() -> this.daemonOs = daemonOs);
     }
 
     private TestImage lookupImage(Set<TestImage> src, String image) {

@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -160,6 +161,12 @@ public class TestDockerClientFacade implements DockerClientFacade {
     @Override
     public boolean supportQueryingLogs() {
         return supportsQueryingLogs;
+    }
+
+    @Nonnull
+    @Override
+    public Optional<DockerDaemonOS> getDaemonOS() {
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override

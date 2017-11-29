@@ -6,6 +6,7 @@ import run.var.teamcity.cloud.docker.client.DockerClientException;
 import javax.annotation.Nonnull;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Facade to manage dockerized agent instances. Instances of this class can be obtained using
@@ -133,6 +134,14 @@ public interface DockerClientFacade extends AutoCloseable {
      * @return {@code true} if the daemon supports querying the agent holder logs
      */
     boolean supportQueryingLogs();
+
+    /**
+     * Retrieves the Daemon operating system.
+     *
+     * @return the known daemon operating system if any
+     */
+    @Nonnull
+    Optional<DockerDaemonOS> getDaemonOS();
 
     /**
      * Closes the facade and the underlying Docker client. This method has no effect if the Docker client is already

@@ -21,7 +21,7 @@ import static run.var.teamcity.cloud.docker.util.DockerCloudUtils.pair;
 /**
  * {@link SwarmDockerClientFacade} test suite.
  */
-public class SwarmDockerClientFacadeTest extends DockerClientFacadeTest {
+public class SwarmDockerClientFacadeTest extends BaseDockerClientFacadeTest {
 
     @Test
     public void createAgentMustReturnServiceId() {

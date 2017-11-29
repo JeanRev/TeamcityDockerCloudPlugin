@@ -6,15 +6,14 @@ import run.var.teamcity.cloud.docker.client.DockerAPIVersion;
 import run.var.teamcity.cloud.docker.client.DockerClientConfig;
 import run.var.teamcity.cloud.docker.client.DockerRegistryCredentials;
 import run.var.teamcity.cloud.docker.test.TestDockerClient;
-import run.var.teamcity.cloud.docker.util.Node;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static run.var.teamcity.cloud.docker.test.TestUtils.listOf;
 
-public abstract class DockerClientFacadeTest {
+public abstract class BaseDockerClientFacadeTest {
 
     TestDockerClient dockerClient;
 
@@ -42,6 +41,23 @@ public abstract class DockerClientFacadeTest {
         assertThat(dockerClient.isClosed()).isTrue();
 
         facade.close();
+    }
+
+    @Test
+    public void getDaemonOs() {
+        DockerClientFacade facade = createFacade(dockerClient);
+
+        dockerClient.setDaemonOs(DockerDaemonOS.WINDOWS.getAttribute());
+
+        Optional<DockerDaemonOS> daemonOS = facade.getDaemonOS();
+
+        assertThat(daemonOS).isEqualTo(Optional.of(DockerDaemonOS.WINDOWS));
+
+        dockerClient.setDaemonOs("not_an_real_os");
+
+        daemonOS = facade.getDaemonOS();
+
+        assertThat(daemonOS).isEmpty();
     }
 
     protected abstract DockerClientFacade createFacade(TestDockerClient dockerClient);
