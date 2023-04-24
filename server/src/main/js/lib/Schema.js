@@ -212,6 +212,7 @@ function Schema() {
 
         _copy(viewModel, hostConfig, 'CapAdd');
         _copy(viewModel, hostConfig, 'CapDrop');
+        _copy(viewModel, hostConfig, 'GroupAdd');
 
         if (Utils.notEmpty(viewModel.NetworkMode)) {
             let networkMode = viewModel.NetworkMode;
@@ -409,6 +410,7 @@ function Schema() {
 
         _copy(hostConfig, viewModel, 'CapAdd');
         _copy(hostConfig, viewModel, 'CapDrop');
+        _copy(hostConfig, viewModel, 'GroupAdd');
 
         let networkMode = hostConfig.NetworkMode;
         if (networkMode === "bridge" || networkMode === "host" || networkMode === "none") {
@@ -576,6 +578,7 @@ function Schema() {
         Entrypoint: '<td><input type="text" id="dockerCloudImage_Entrypoint_IDX"/><span class="error" id="dockerCloudImage_Entrypoint_IDX_error"></span></td>',
         CapAdd: '<td><input type="text" id="dockerCloudImage_CapAdd_IDX"/><span class="error" id="dockerCloudImage_CapAdd_IDX_error"></span></td>',
         CapDrop: '<td><input type="text" id="dockerCloudImage_CapDrop_IDX"/><span class="error" id="dockerCloudImage_CapDrop_IDX_error"></span></td>',
+        GroupAdd: '<td><input type="text" id="dockerCloudImage_GroupAdd_IDX"/><span class="error" id="dockerCloudImage_GroupAdd_IDX_error"></span></td>',
         Cmd: '<td><input type="text" id="dockerCloudImage_Cmd_IDX"/></td>',
         Volumes: '<td><input type="text" id="dockerCloudImage_Volumes_IDX_PathOnHost" /></td>\
         <td><input type="text" id="dockerCloudImage_Volumes_IDX_PathInContainer" /><span class="error" id="dockerCloudImage_Volumes_IDX_PathInContainer_error"></span></td>\
